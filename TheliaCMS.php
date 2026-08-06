@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace TheliaCMS;
 
+use OpenStudio\PageBuilderBundle\Contract\ImageLibraryPortInterface;
+use OpenStudio\PageBuilderBundle\Contract\ImageUploadPortInterface;
 use OpenStudio\PageBuilderBundle\Contract\PageBuilderConfigProviderInterface;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
@@ -32,6 +34,8 @@ use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
 use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Install\LegalPagesSeeder;
+use TheliaCMS\Media\LibraryImageCatalog;
+use TheliaCMS\Media\LibraryImageUploader;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\CmsUrlService;
@@ -215,6 +219,11 @@ class TheliaCMS extends BaseModule
         // editor has to follow the site instead — the theme stylesheet, the
         // project palette, the theme breakpoints.
         $servicesConfigurator->alias(PageBuilderConfigProviderInterface::class, CmsBuilderConfig::class);
+
+        // Same for the image ports: the bundle aliases them to null objects
+        // that accept nothing, waiting for the host to say where images live.
+        $servicesConfigurator->alias(ImageUploadPortInterface::class, LibraryImageUploader::class);
+        $servicesConfigurator->alias(ImageLibraryPortInterface::class, LibraryImageCatalog::class);
 
         // SEOne is a soft dependency. Autodiscovering CmsPageSeoElement would
         // reflect a class implementing an interface that does not exist on a

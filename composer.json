@@ -5,16 +5,24 @@
     "description": "All-in-one CMS for Thelia 3: page tree, visual page builder, menus, forms and media.",
     "require": {
         "php": ">=8.3",
-        "thelia/installer": "~1.1",
+        "thelia/installer": "~1.6",
         "openstudio/page-builder-bundle": "^0.2.1",
         "symfony/html-sanitizer": "^7.4",
-        "thelia/thelia-library-module": "*"
+        "thelia/thelia-library-module": "dev-twig"
+    },
+    "suggest": {
+        "thelia/seone-module": "Publishes the SEO metadata, canonical and hreflang tags of CMS pages.",
+        "thelia/rewrite-url-module": "Back-office management of redirections and a log of 404s.",
+        "thelia/tnt-search-module": "Indexes CMS pages for the TntSearch front-office search.",
+        "thelia/google-tag-manager-module": "Sends CMS page views to the data layer."
     },
     "autoload": {
         "psr-4": {
             "TheliaCMS\\": ""
         }
     },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "extra": {
         "installer-name": "TheliaCMS"
     }
