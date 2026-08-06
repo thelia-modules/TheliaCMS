@@ -1,0 +1,14 @@
+{# Sidebar entry rendered into the `main.in-top-menu-items` hook. Markup and
+   class names mirror the theme's own sections so it does not read as bolted on. #}
+<li class="nav-item" data-testid="bo-nav-cms">
+    <a href="#bo-nav-cms-collapse" data-bs-toggle="collapse" aria-expanded="{{ is_active ? 'true' : 'false' }}" class="nav-link bo-side-nav__toggle {{ is_active ? 'active' : '' }}">
+        <i class="bi bi-layout-text-window me-2" aria-hidden="true"></i>
+        {{ section_label }}
+        <i class="bi bi-chevron-right ms-auto bo-side-nav__chevron" aria-hidden="true"></i>
+    </a>
+    <ul class="nav flex-column collapse {{ is_active ? 'show' : '' }}" id="bo-nav-cms-collapse">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ pages_url }}">{{ pages_label }}</a>
+        </li>
+    </ul>
+</li>

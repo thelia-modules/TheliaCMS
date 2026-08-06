@@ -20,8 +20,15 @@ use SEOne\Service\SeoDefaultModels\SeoElementInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Thelia\Core\Install\Database;
 use Thelia\Model\ConfigQuery;
+use Thelia\Model\LangQuery;
+use Thelia\Model\ProfileQuery;
+use Thelia\Model\ProfileResource;
+use Thelia\Model\Resource;
+use Thelia\Model\ResourceQuery;
 use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
+use TheliaCMS\Security\CmsAdminResourcesCompiler;
+use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Seo\CmsPageSeoElement;
 
 class TheliaCMS extends BaseModule
@@ -55,6 +62,55 @@ class TheliaCMS extends BaseModule
         }
 
         $this->createSearchIndex();
+        $this->seedAdminResources();
+    }
+
+    /**
+     * Declaring a resource to the container is not enough: permissions are read
+     * from `profile_resource`, so a resource with no row there is denied to
+     * every profile but the super administrator, and the back office offers no
+     * way to grant it.
+     */
+    private function seedAdminResources(): void
+    {
+        foreach (CmsResources::all() as $code) {
+            if (null !== ResourceQuery::create()->findOneByCode($code)) {
+                continue;
+            }
+
+            $resource = new Resource();
+            $resource->setCode($code);
+
+            foreach (LangQuery::create()->find() as $lang) {
+                $resource->setLocale($lang->getLocale())->setTitle($this->resourceTitle($code, $lang->getLocale()));
+            }
+
+            $resource->save();
+
+            // Existing profiles start with no access at all: an administrator
+            // opens them deliberately from the profile screen.
+            foreach (ProfileQuery::create()->find() as $profile) {
+                (new ProfileResource())
+                    ->setProfileId($profile->getId())
+                    ->setResourceId($resource->getId())
+                    ->setAccess(0)
+                    ->save();
+            }
+        }
+    }
+
+    private function resourceTitle(string $code, string $locale): string
+    {
+        $labels = [
+            CmsResources::PAGE => ['en_US' => 'CMS: pages', 'fr_FR' => 'CMS : pages'],
+            CmsResources::MENU => ['en_US' => 'CMS: menus', 'fr_FR' => 'CMS : menus'],
+            CmsResources::FORM => ['en_US' => 'CMS: forms', 'fr_FR' => 'CMS : formulaires'],
+            CmsResources::MEDIA => ['en_US' => 'CMS: media', 'fr_FR' => 'CMS : médias'],
+            CmsResources::SETTINGS => ['en_US' => 'CMS: settings', 'fr_FR' => 'CMS : réglages'],
+            CmsResources::CUSTOM_CODE => ['en_US' => 'CMS: custom code', 'fr_FR' => 'CMS : code libre'],
+        ];
+
+        return $labels[$code][$locale] ?? $labels[$code]['en_US'] ?? $code;
     }
 
     /**
@@ -74,6 +130,11 @@ class TheliaCMS extends BaseModule
             ->delete($con);
 
         return true;
+    }
+
+    public static function getCompilers(): array
+    {
+        return [new CmsAdminResourcesCompiler()];
     }
 
     public static function configureServices(ServicesConfigurator $servicesConfigurator): void

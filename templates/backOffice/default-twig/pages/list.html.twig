@@ -1,0 +1,89 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Pages'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-pages-list{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Pages'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.trash', { edit_locale: edit_locale }) }}">
+                <i class="bi bi-trash3 me-1" aria-hidden="true"></i>
+                {{ 'Bin'|trans({}, 'theliacms') }}
+                {% if trash_count > 0 %}<span class="badge bg-secondary ms-1">{{ trash_count }}</span>{% endif %}
+            </a>
+            <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.pages.create', { edit_locale: edit_locale }) }}">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                {{ 'New page'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    {% if locales|length > 1 %}
+        <ul class="nav nav-tabs mb-3">
+            {% for locale, label in locales %}
+                <li class="nav-item">
+                    <a class="nav-link {{ locale == edit_locale ? 'active' : '' }}" href="{{ path('admin.cms.pages.list', { edit_locale: locale }) }}">{{ label }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if rows is empty %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">{{ 'No page yet. Pages are the content of your site: your home page, your services, your contact page.'|trans({}, 'theliacms') }}</p>
+                <a class="btn btn-primary" href="{{ path('admin.cms.pages.create', { edit_locale: edit_locale }) }}">{{ 'Create the first page'|trans({}, 'theliacms') }}</a>
+            </div>
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'Title'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'Status'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'URL'|trans({}, 'theliacms') }}</th>
+                            <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                            {% set page = row.page %}
+                            <tr data-testid="cms-page-row-{{ page.id }}">
+                                <td>
+                                    <span style="padding-left: {{ row.depth * 1.5 }}rem"></span>
+                                    <a href="{{ path('admin.cms.pages.edit', { id: page.id, edit_locale: edit_locale }) }}">{{ page.title|default('#' ~ page.id) }}</a>
+                                    {% if page.id == home_page_id %}
+                                        <span class="badge bg-primary ms-2">{{ 'Home'|trans({}, 'theliacms') }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge {{ row.status.badgeClass }}">{{ row.status.label|trans({}, 'theliacms') }}</span></td>
+                                <td class="text-muted small">/{{ page.getRewrittenUrl(edit_locale) }}</td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <form method="post" action="{{ path('admin.cms.pages.move', { id: page.id, direction: 'up', edit_locale: edit_locale }) }}">
+                                            <button class="btn btn-sm btn-outline-secondary" type="submit" aria-label="{{ 'Move up'|trans({}, 'theliacms') }}"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+                                        </form>
+                                        <form method="post" action="{{ path('admin.cms.pages.move', { id: page.id, direction: 'down', edit_locale: edit_locale }) }}">
+                                            <button class="btn btn-sm btn-outline-secondary" type="submit" aria-label="{{ 'Move down'|trans({}, 'theliacms') }}"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+                                        </form>
+                                        <form method="post" action="{{ path('admin.cms.pages.visibility', { id: page.id, edit_locale: edit_locale }) }}">
+                                            <button class="btn btn-sm btn-outline-secondary" type="submit">
+                                                {{ page.visible == 1 ? 'Online'|trans({}, 'theliacms') : 'Offline'|trans({}, 'theliacms') }}
+                                            </button>
+                                        </form>
+                                        <form method="post" action="{{ path('admin.cms.pages.delete', { id: page.id, edit_locale: edit_locale }) }}"
+                                              onsubmit="return confirm('{{ 'Move this page to the bin?'|trans({}, 'theliacms')|e('js') }}')">
+                                            <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,304 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Page\Admin;
+
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+use Thelia\Core\Security\AccessManager;
+use Thelia\Core\Security\SecurityContext;
+use Thelia\Model\LangQuery;
+use TheliaCMS\Model\CmsPage;
+use TheliaCMS\Model\CmsPageContentQuery;
+use TheliaCMS\Security\CmsResources;
+use TheliaCMS\TheliaCMS;
+use Twig\Environment;
+
+/**
+ * Page tree back office. The controller only resolves input, delegates the
+ * write to CmsPageWriter and redirects; nothing is persisted here.
+ */
+#[Route('/admin/cms/pages', name: 'admin.cms.pages.')]
+final readonly class CmsPageAdminController
+{
+    private const string LIST_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/pages/list.html.twig';
+    private const string EDIT_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/pages/edit.html.twig';
+    private const string TRASH_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/pages/trash.html.twig';
+
+    public function __construct(
+        private Environment $twig,
+        private FormFactoryInterface $forms,
+        private UrlGeneratorInterface $urls,
+        private SecurityContext $securityContext,
+        private TranslatorInterface $translator,
+        private CmsPageAdminRepository $pages,
+        private CmsPageWriter $writer,
+    ) {
+    }
+
+    #[Route('', name: 'list', methods: ['GET'])]
+    public function list(Request $request): Response
+    {
+        $locale = $this->editLocale($request);
+
+        return new Response($this->twig->render(self::LIST_TEMPLATE, [
+            'rows' => $this->pages->tree($locale),
+            'edit_locale' => $locale,
+            'locales' => $this->locales(),
+            'home_page_id' => (int) TheliaCMS::getConfigValue('home_page_id', 0),
+            'trash_count' => \count($this->pages->trash($locale)),
+        ]));
+    }
+
+    #[Route('/new', name: 'create', methods: ['GET', 'POST'])]
+    public function create(Request $request): Response
+    {
+        $this->denyUnless(AccessManager::CREATE);
+
+        return $this->handleForm($request, new CmsPage());
+    }
+
+    #[Route('/{id}', name: 'edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    public function edit(Request $request, int $id): Response
+    {
+        return $this->handleForm($request, $this->livePageOrFail($id));
+    }
+
+    #[Route('/{id}/publish', name: 'publish', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function publish(Request $request, int $id): Response
+    {
+        $this->denyUnless(AccessManager::UPDATE);
+        $locale = $this->editLocale($request);
+
+        $this->writer->publish($this->livePageOrFail($id), $locale);
+
+        return $this->backToEdit($id, $locale);
+    }
+
+    #[Route('/{id}/unpublish', name: 'unpublish', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function unpublish(Request $request, int $id): Response
+    {
+        $this->denyUnless(AccessManager::UPDATE);
+        $locale = $this->editLocale($request);
+
+        $this->writer->unpublish($this->livePageOrFail($id), $locale);
+
+        return $this->backToEdit($id, $locale);
+    }
+
+    #[Route('/{id}/visibility', name: 'visibility', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function toggleVisibility(Request $request, int $id): Response
+    {
+        $this->denyUnless(AccessManager::UPDATE);
+
+        $this->writer->toggleVisibility($this->livePageOrFail($id));
+
+        return $this->backToList($request);
+    }
+
+    #[Route('/{id}/move/{direction}', name: 'move', requirements: ['id' => '\d+', 'direction' => 'up|down'], methods: ['POST'])]
+    public function move(Request $request, int $id, string $direction): Response
+    {
+        $this->denyUnless(AccessManager::UPDATE);
+
+        $this->writer->move($this->livePageOrFail($id), 'up' === $direction ? -1 : 1);
+
+        return $this->backToList($request);
+    }
+
+    #[Route('/{id}/delete', name: 'delete', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function delete(Request $request, int $id): Response
+    {
+        $this->denyUnless(AccessManager::DELETE);
+
+        $this->writer->moveToTrash($this->livePageOrFail($id));
+
+        return $this->backToList($request);
+    }
+
+    #[Route('/trash', name: 'trash', methods: ['GET'], priority: 1)]
+    public function trash(Request $request): Response
+    {
+        $locale = $this->editLocale($request);
+
+        return new Response($this->twig->render(self::TRASH_TEMPLATE, [
+            'pages' => $this->pages->trash($locale),
+            'edit_locale' => $locale,
+        ]));
+    }
+
+    #[Route('/{id}/restore', name: 'restore', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function restore(Request $request, int $id): Response
+    {
+        $this->denyUnless(AccessManager::UPDATE);
+        $locale = $this->editLocale($request);
+
+        $page = $this->pages->findDeleted($id);
+
+        if (!$page instanceof CmsPage) {
+            throw new NotFoundHttpException();
+        }
+
+        $this->writer->restore($page, $locale);
+
+        return $this->backToList($request);
+    }
+
+    private function handleForm(Request $request, CmsPage $page): Response
+    {
+        $locale = $this->editLocale($request);
+        $form = $this->buildForm($page, $locale);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->denyUnless($page->isNew() ? AccessManager::CREATE : AccessManager::UPDATE);
+            $this->applyTo($page, $locale, $form);
+
+            return $this->backToEdit((int) $page->getId(), $locale);
+        }
+
+        return new Response($this->twig->render(self::EDIT_TEMPLATE, [
+            'form' => $form->createView(),
+            'page' => $page,
+            'status' => $page->isNew() ? PageStatus::Draft : $this->pages->statusOf($page, $locale),
+            'edit_locale' => $locale,
+            'locales' => $this->locales(),
+            'is_home' => !$page->isNew() && (int) $page->getId() === (int) TheliaCMS::getConfigValue('home_page_id', 0),
+        ]));
+    }
+
+    private function buildForm(CmsPage $page, string $locale): FormInterface
+    {
+        $content = $page->isNew() ? null : CmsPageContentQuery::create()
+            ->filterByPageId($page->getId())
+            ->filterByLocale($locale)
+            ->findOne();
+
+        if (!$page->isNew()) {
+            $page->setLocale($locale);
+        }
+
+        return $this->forms->create(CmsPageType::class, [
+            'title' => $page->isNew() ? '' : (string) $page->getTitle(),
+            'slug' => $page->isNew() ? null : $page->getRewrittenUrl($locale),
+            'parent' => $page->getParent(),
+            'layout' => $page->getLayout() ?? 'default',
+            'visible' => $page->isNew() ? 1 : $page->getVisible(),
+            'publishAt' => $page->getPublishAt(),
+            'unpublishAt' => $page->getUnpublishAt(),
+            'html' => $content?->getDraftHtml(),
+            'metaTitle' => $page->isNew() ? null : $page->getMetaTitle(),
+            'metaDescription' => $page->isNew() ? null : $page->getMetaDescription(),
+            'ogTitle' => $page->isNew() ? null : $page->getOgTitle(),
+            'ogDescription' => $page->isNew() ? null : $page->getOgDescription(),
+            'twitterCard' => $page->isNew() ? null : $page->getTwitterCard(),
+            'canonical' => $page->isNew() ? null : $page->getCanonical(),
+            'noindex' => $page->isNew() ? 0 : $page->getNoindex(),
+            'nofollow' => $page->isNew() ? 0 : $page->getNofollow(),
+        ], [
+            'parent_choices' => $this->pages->parentChoices($locale, $page->isNew() ? null : (int) $page->getId()),
+        ]);
+    }
+
+    private function applyTo(CmsPage $page, string $locale, FormInterface $form): void
+    {
+        $data = $form->getData();
+
+        $page->setParent($data['parent'] ?: null)
+            ->setLayout($data['layout'])
+            ->setVisible((int) $data['visible'])
+            ->setPublishAt($data['publishAt'])
+            ->setUnpublishAt($data['unpublishAt']);
+
+        // The i18n columns are written on the localized object before the
+        // writer saves it, so a single save() covers page + translation.
+        $page->setLocale($locale)
+            ->setMetaTitle($data['metaTitle'])
+            ->setMetaDescription($data['metaDescription'])
+            ->setOgTitle($data['ogTitle'])
+            ->setOgDescription($data['ogDescription'])
+            ->setTwitterCard($data['twitterCard'])
+            ->setCanonical($data['canonical'])
+            ->setNoindex((int) $data['noindex'])
+            ->setNofollow((int) $data['nofollow']);
+
+        $this->writer->saveDraft($page, $locale, new PageDraft(
+            title: $data['title'],
+            slug: $data['slug'],
+            html: $data['html'],
+        ));
+    }
+
+    private function livePageOrFail(int $id): CmsPage
+    {
+        $page = $this->pages->findLive($id);
+
+        if (!$page instanceof CmsPage) {
+            throw new NotFoundHttpException();
+        }
+
+        return $page;
+    }
+
+    private function denyUnless(string $access): void
+    {
+        if (!$this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [$access])) {
+            throw new AccessDeniedHttpException($this->translator->trans('You are not allowed to change CMS pages.', [], TheliaCMS::DOMAIN_NAME));
+        }
+    }
+
+    /**
+     * Which translation of the page is being edited. Independent from the
+     * language the back office itself is displayed in.
+     */
+    private function editLocale(Request $request): string
+    {
+        $requested = (string) $request->query->get('edit_locale', '');
+        $locales = $this->locales();
+
+        return \array_key_exists($requested, $locales) ? $requested : array_key_first($locales);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function locales(): array
+    {
+        $locales = [];
+
+        foreach (LangQuery::create()->orderByByDefault(\Propel\Runtime\ActiveQuery\Criteria::DESC)->orderByPosition()->find() as $lang) {
+            $locales[$lang->getLocale()] = $lang->getTitle();
+        }
+
+        return $locales;
+    }
+
+    private function backToList(Request $request): RedirectResponse
+    {
+        return new RedirectResponse($this->urls->generate('admin.cms.pages.list', ['edit_locale' => $this->editLocale($request)]));
+    }
+
+    private function backToEdit(int $id, string $locale): RedirectResponse
+    {
+        return new RedirectResponse($this->urls->generate('admin.cms.pages.edit', ['id' => $id, 'edit_locale' => $locale]));
+    }
+}

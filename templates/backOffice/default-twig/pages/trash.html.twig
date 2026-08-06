@@ -1,0 +1,47 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Bin'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-pages-trash{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Bin'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_locale: edit_locale }) }}">{{ 'Back to pages'|trans({}, 'theliacms') }}</a>
+        {% endblock %}
+    {% endembed %}
+
+    {% if pages is empty %}
+        <div class="card">
+            <div class="card-body text-center py-5 text-muted">
+                {{ 'The bin is empty.'|trans({}, 'theliacms') }}
+            </div>
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'Title'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'Deleted on'|trans({}, 'theliacms') }}</th>
+                            <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for page in pages %}
+                            <tr>
+                                <td>{{ page.setLocale(edit_locale).title|default('#' ~ page.id) }}</td>
+                                <td class="text-muted small">{{ page.deletedAt ? page.deletedAt|date('d/m/Y H:i') : '' }}</td>
+                                <td class="text-end">
+                                    <form method="post" action="{{ path('admin.cms.pages.restore', { id: page.id, edit_locale: edit_locale }) }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">{{ 'Restore'|trans({}, 'theliacms') }}</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
