@@ -59,6 +59,47 @@ final readonly class PublishedPageRepository
     }
 
     /**
+     * The draft of a page, shaped exactly like a published one so the same
+     * template renders it.
+     *
+     * Only reachable through a signed preview link, and always marked
+     * `noindex`: a draft that a search engine picks up is a page published by
+     * accident.
+     */
+    public function draft(int $pageId, string $locale): ?PublishedPage
+    {
+        $page = CmsPageQuery::create()->findPk($pageId);
+
+        if (!$page instanceof CmsPage || null !== $page->getDeletedAt()) {
+            return null;
+        }
+
+        $content = CmsPageContentQuery::create()
+            ->filterByPageId($pageId)
+            ->filterByLocale($locale)
+            ->findOne();
+
+        if (null === $content || null === $content->getDraftHtml()) {
+            return null;
+        }
+
+        $page->setLocale($locale);
+
+        return new PublishedPage(
+            id: $pageId,
+            locale: $locale,
+            title: (string) $page->getTitle(),
+            layout: PageLayout::fromStorage($page->getLayout()),
+            html: (string) $content->getDraftHtml(),
+            css: (string) $content->getDraftCss(),
+            metaTitle: $this->nullIfBlank($page->getMetaTitle()),
+            metaDescription: $this->nullIfBlank($page->getMetaDescription()),
+            noindex: true,
+            nofollow: true,
+        );
+    }
+
+    /**
      * Locales the page is actually published in — feeds hreflang and the
      * language switcher.
      *

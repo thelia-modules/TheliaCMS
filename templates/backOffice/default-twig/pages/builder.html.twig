@@ -28,6 +28,11 @@
                 {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
 
                 <div class="cms-builder__actions">
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ draft_preview_url }}" target="_blank" rel="noopener"
+                       title="{{ 'Open the draft in a new tab. The link works for 72 hours and can be shared.'|trans({}, 'theliacms') }}"
+                       data-testid="cms-page-draft-preview-btn">
+                        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ 'Preview the draft'|trans({}, 'theliacms') }}
+                    </a>
                     {% if preview_url %}
                         <a class="btn btn-sm btn-outline-secondary" href="{{ preview_url }}" target="_blank" rel="noopener"
                            title="{{ 'Preview the page'|trans({}, 'theliacms') }}" data-testid="cms-page-preview-btn">
@@ -42,6 +47,18 @@
                     </button>
                 </div>
             </header>
+
+            {# This screen replaces the whole body block, so the flash messages
+               of the layout are rendered here instead — the publication
+               warnings are the reason they matter most on this screen. #}
+            {% for type, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ type }} alert-dismissible fade show m-2 mb-0" role="alert" data-testid="cms-builder-flash-{{ type }}">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ 'Close'|trans({}, 'theliacms') }}"></button>
+                    </div>
+                {% endfor %}
+            {% endfor %}
 
             {# The editor writes into these three fields; they have to be in the
                DOM before its controller connects. #}

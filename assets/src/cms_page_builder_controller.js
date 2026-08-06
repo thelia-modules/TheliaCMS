@@ -13,6 +13,7 @@ export default class extends PageBuilderController {
         ...PageBuilderController.values,
         allowCustomCode: { type: Boolean, default: false },
         locale: { type: String, default: "" },
+        autosaveInterval: { type: Number, default: 30000 },
     };
 
     connect() {
@@ -26,13 +27,70 @@ export default class extends PageBuilderController {
         if (this.form) {
             this.storeBeforeSubmit = this.storeBeforeSubmit.bind(this);
             this.form.addEventListener("submit", this.storeBeforeSubmit);
+            this.startAutosave();
         }
+
+        this.warnBeforeLeaving = this.warnBeforeLeaving.bind(this);
+        window.addEventListener("beforeunload", this.warnBeforeLeaving);
     }
 
     disconnect() {
         this.form?.removeEventListener("submit", this.storeBeforeSubmit);
+        window.removeEventListener("beforeunload", this.warnBeforeLeaving);
+        clearInterval(this.autosaveTimer);
 
         super.disconnect();
+    }
+
+    /**
+     * Saves the draft in the background so a closed tab, a lost connection or
+     * a session that expires do not take an afternoon of work with them.
+     */
+    startAutosave() {
+        if (this.autosaveIntervalValue <= 0) {
+            return;
+        }
+
+        this.autosaveTimer = setInterval(() => this.autosave(), this.autosaveIntervalValue);
+    }
+
+    async autosave() {
+        if (this.submitting || !this.editor || !this.editor.getDirtyCount()) {
+            return;
+        }
+
+        this.writeFieldsFromEditor();
+
+        const payload = new FormData(this.form);
+        payload.set("save", "autosave");
+
+        try {
+            // The whole form is posted, token included, so the request is
+            // checked exactly like a normal submission.
+            const response = await fetch(this.form.action || window.location.href, {
+                method: "POST",
+                body: payload,
+                credentials: "same-origin",
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+            });
+
+            if (response.ok) {
+                this.editor.clearDirtyCount();
+                this.dispatch("autosaved");
+            }
+        } catch {
+            // Offline or server down: the next tick tries again, and the
+            // unsaved-changes guard still stands.
+        }
+    }
+
+    warnBeforeLeaving(event) {
+        if (this.submitting || !this.editor?.getDirtyCount()) {
+            return;
+        }
+
+        event.preventDefault();
+        event.returnValue = "";
     }
 
     /**
@@ -103,6 +161,13 @@ export default class extends PageBuilderController {
      * synchronously, so it is called directly.
      */
     storeBeforeSubmit() {
+        this.writeFieldsFromEditor();
+
+        // The page is on its way out; the unsaved-changes guard must not fire.
+        this.submitting = true;
+    }
+
+    writeFieldsFromEditor() {
         const storage = this.editor?.Storage?.get("form");
 
         storage?.store(this.editor.getProjectData(), {});

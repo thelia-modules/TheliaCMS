@@ -16,6 +16,7 @@ namespace TheliaCMS\Builder\Admin;
 
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,6 +29,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Builder\CmsBuilderConfig;
+use TheliaCMS\Builder\HeadingChecker;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -35,7 +37,9 @@ use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\CmsPageAdminRepository;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\EditLanguage;
+use TheliaCMS\Preview\PreviewLink;
 use TheliaCMS\Security\CmsResources;
+use TheliaCMS\TheliaCMS;
 use Twig\Environment;
 
 /**
@@ -59,6 +63,8 @@ final readonly class CmsPageBuilderController
         private CmsPageWriter $writer,
         private CmsBuilderConfig $builderConfig,
         private EditLanguage $languages,
+        private HeadingChecker $headings,
+        private PreviewLink $previewLinks,
     ) {
     }
 
@@ -94,6 +100,9 @@ final readonly class CmsPageBuilderController
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
             'preview_url' => $page->getUrl($locale),
+            // Shareable, expiring link on the draft: the client reviewing a
+            // page has no back-office account.
+            'draft_preview_url' => $this->previewLinks->urlFor($id, $locale),
             'builder_options' => $this->builderConfig->editorOptions(),
             // The editor speaks the language the back office is displayed in,
             // which is not the language of the page being translated.
@@ -104,11 +113,12 @@ final readonly class CmsPageBuilderController
         ]));
     }
 
-    private function save(Request $request, CmsPage $page, Lang $lang, FormInterface $form): RedirectResponse
+    private function save(Request $request, CmsPage $page, Lang $lang, FormInterface $form): Response
     {
         $this->denyUnlessUpdate();
 
         $data = $form->getData();
+        $intent = $request->request->getString('save');
 
         $this->writer->saveContent($page, $lang->getLocale(), new BuilderContent(
             projectData: $data['projectData'],
@@ -116,16 +126,58 @@ final readonly class CmsPageBuilderController
             css: $data['css'],
         ));
 
+        // The autosave posts the same form in the background; answering with a
+        // redirect would send the editor's fetch chasing a full page.
+        if ('autosave' === $intent) {
+            return new JsonResponse(['saved' => true]);
+        }
+
         // Publishing always follows a save, never replaces it: the button would
         // otherwise put the previously stored draft online.
-        if ('publish' === $request->request->getString('save')) {
-            $this->writer->publish($page, $lang->getLocale());
+        if ('publish' === $intent) {
+            $this->publish($request, $page, $lang);
         }
 
         return new RedirectResponse($this->urls->generate('admin.cms.pages.builder', [
             'id' => $page->getId(),
             EditLanguage::PARAMETER => $lang->getId(),
         ]));
+    }
+
+    /**
+     * Publishing runs the accessibility check first. In `warn` mode the page
+     * still goes online and the editor is told what to fix; in `block` mode it
+     * does not — a heading structure is not something a visitor using a screen
+     * reader can work around.
+     */
+    private function publish(Request $request, CmsPage $page, Lang $lang): void
+    {
+        $problems = $this->headings->check($this->draftHtmlOf($page, $lang->getLocale()));
+        $blocking = [] !== $problems && 'block' === TheliaCMS::getConfigValue('heading_check_mode', 'warn');
+
+        foreach ($problems as $problem) {
+            $this->flash($request, $blocking ? 'danger' : 'warning', $problem);
+        }
+
+        if ($blocking) {
+            $this->flash($request, 'danger', $this->translator->trans('The page was not published: fix the heading structure first.', [], TheliaCMS::DOMAIN_NAME));
+
+            return;
+        }
+
+        $this->writer->publish($page, $lang->getLocale());
+    }
+
+    private function draftHtmlOf(CmsPage $page, string $locale): ?string
+    {
+        return $this->contentOf($page, $locale)?->getDraftHtml();
+    }
+
+    private function flash(Request $request, string $type, string $message): void
+    {
+        if ($request->hasSession()) {
+            $request->getSession()->getFlashBag()->add($type, $message);
+        }
     }
 
     private function contentOf(CmsPage $page, string $locale): ?CmsPageContent
