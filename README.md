@@ -139,8 +139,9 @@ modules. Each receives the page as `page`.
 | Function | Returns |
 |---|---|
 | `cms_menu(code, locale)` | the tree of a menu — each entry has `label`, `url` (null for a heading), `blank`, `children`, `active`, `in_trail`. The locale defaults to the one being served. |
+| `cms_page_alternates()` | the page being served, in each language it exists in — `locale`, `code`, `title`, `url`, `current` |
 
-It returns data rather than markup, because navigation markup belongs to the
+They return data rather than markup, because navigation markup belongs to the
 theme. A menu of any depth takes a dozen lines:
 
 ```twig
@@ -165,6 +166,16 @@ theme. A menu of any depth takes a dozen lines:
 Menus are cached per code, language and host, and the cache is dropped whenever a
 menu is saved, or a page it points at is renamed, published, unpublished or
 binned.
+
+`cms_page_alternates()` is what a language switcher should be built on: it
+answers with the current page in each language — absolute, and on the right
+domain when the shop runs one domain per language — and leaves out the languages
+the page is not published in. It works beyond CMS pages: on a product or a
+category it follows the rewritten URL of that object in the other language, and
+elsewhere it carries the current path over. A switcher built on a `?lang=`
+parameter alone sends the visitor back to the home page, losing the page they
+were reading; the same addresses feed the `hreflang` tags, so the two cannot
+drift apart.
 
 When [SEOne][seone] is installed, CMS pages describe themselves to it: title,
 description, `WebPage` microdata, and a breadcrumb built from the page tree.

@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Twig;
 
+use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
@@ -28,6 +29,7 @@ final class CmsExtension extends AbstractExtension
 {
     public function __construct(
         private readonly CmsMenuProvider $menus,
+        private readonly AlternateUrls $alternates,
     ) {
     }
 
@@ -35,6 +37,7 @@ final class CmsExtension extends AbstractExtension
     {
         return [
             new TwigFunction('cms_menu', $this->menus->menu(...)),
+            new TwigFunction('cms_page_alternates', $this->alternates->all(...)),
         ];
     }
 }
