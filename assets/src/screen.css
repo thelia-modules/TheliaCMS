@@ -57,3 +57,47 @@ body:has(.cms-builder) {
 .cms-builder__stage .pb-editor {
     min-height: 0;
 }
+
+/* Anchor for the note laid over the canvas. */
+.cms-builder__stage .pb-editor__canvas {
+    position: relative;
+}
+
+.cms-builder__empty {
+    position: absolute;
+    /* Below the editor toolbars, which sit at the top of the canvas area. */
+    inset: 5rem 1rem auto 1rem;
+    /* Over the canvas frame, which is opaque and would otherwise hide it. */
+    z-index: 2;
+    /* Never in the way of a block being dropped on the canvas underneath. */
+    pointer-events: none;
+    text-align: center;
+}
+
+.cms-builder__empty-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+    color: #212529;
+}
+
+.cms-builder__empty-hint {
+    font-size: 0.875rem;
+    margin: 0;
+    max-width: 28rem;
+    margin-inline: auto;
+    /* Solid, not a dimmed body colour: this is the only guidance on the screen
+       and it has to clear 4.5:1 on the white canvas. */
+    color: #495057;
+}
+
+.cms-builder__panel-hint {
+    margin: 0;
+    padding: 1rem 0.875rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    text-align: start;
+    /* The panel foreground on the panel background clears 4.5:1; dimming it
+       with an opacity does not, and this is the only text in there. */
+    color: inherit;
+}

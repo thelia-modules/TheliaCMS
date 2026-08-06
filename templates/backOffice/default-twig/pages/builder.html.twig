@@ -76,6 +76,9 @@
                     options: builder_options,
                     'data-cms-page-builder-locale-value': builder_locale,
                     'data-cms-page-builder-allow-custom-code-value': allow_custom_code ? 'true' : 'false',
+                    'data-cms-page-builder-empty-title-value': 'This page has no content yet'|trans({}, 'theliacms'),
+                    'data-cms-page-builder-empty-hint-value': 'Drag a block from the left onto the page to start. Click anything you have placed to change it.'|trans({}, 'theliacms'),
+                    'data-cms-page-builder-panel-hint-value': 'Select a block in the page to change its text, its spacing and its colours here.'|trans({}, 'theliacms'),
                 } %}
                     {# Seeded or imported pages have HTML but no editor project:
                        the canvas starts from that markup instead of blank. It

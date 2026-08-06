@@ -14,6 +14,11 @@ export default class extends PageBuilderController {
         allowCustomCode: { type: Boolean, default: false },
         locale: { type: String, default: "" },
         autosaveInterval: { type: Number, default: 30000 },
+        // Wording of the two empty states, translated server-side: the editor
+        // shows a blank canvas and a blank settings panel and explains neither.
+        emptyTitle: { type: String, default: "" },
+        emptyHint: { type: String, default: "" },
+        panelHint: { type: String, default: "" },
     };
 
     connect() {
@@ -148,6 +153,75 @@ export default class extends PageBuilderController {
         if (this.localeValue) {
             this.editor.I18n.setLocale(this.localeValue);
         }
+
+        this.explainTheEmptyCanvas();
+        this.explainTheEmptySettingsPanel();
+    }
+
+    /**
+     * A page with no content opens on a blank white area that says nothing
+     * about blocks being dragged onto it.
+     *
+     * The note sits above the canvas rather than in it — inside, it would
+     * become part of the page — and lets clicks and drops through.
+     */
+    explainTheEmptyCanvas() {
+        if (!this.emptyTitleValue) {
+            return;
+        }
+
+        const note = document.createElement("div");
+        note.className = "cms-builder__empty";
+        note.setAttribute("aria-hidden", "true");
+        note.innerHTML = '<p class="cms-builder__empty-title"></p><p class="cms-builder__empty-hint"></p>';
+        note.querySelector(".cms-builder__empty-title").textContent = this.emptyTitleValue;
+        note.querySelector(".cms-builder__empty-hint").textContent = this.emptyHintValue;
+
+        this.editorTarget.append(note);
+
+        const refresh = () => {
+            note.hidden = (this.editor.getWrapper()?.components().length ?? 0) > 0;
+        };
+
+        this.editor.on("load component:add component:remove", refresh);
+        refresh();
+    }
+
+    /**
+     * The settings panel keeps its full width whether or not there is anything
+     * to settle, so an empty one reads as broken rather than as waiting for a
+     * selection.
+     */
+    explainTheEmptySettingsPanel() {
+        if (!this.panelHintValue) {
+            return;
+        }
+
+        // The editor panels are not in the DOM yet when init returns.
+        this.editor.on("load", () => {
+            const panel = this.element.querySelector(".gjs-pn-views-container");
+
+            if (!panel) {
+                return;
+            }
+
+            const note = document.createElement("p");
+            note.className = "cms-builder__panel-hint";
+            note.textContent = this.panelHintValue;
+            panel.append(note);
+
+            const refresh = () => {
+                // The layer tree is the one view that says something on its own
+                // with nothing selected.
+                const showsLayers = panel.querySelector(".gjs-layers")?.offsetParent != null;
+
+                note.hidden = showsLayers || Boolean(this.editor.getSelected());
+            };
+
+            this.editor.on("component:selected component:deselected", refresh);
+            this.element.querySelector(".gjs-pn-views")?.addEventListener("click", () => setTimeout(refresh));
+            refresh();
+        });
     }
 
     /**
