@@ -220,6 +220,7 @@ final readonly class CmsPageAdminController
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
             'is_home' => !$page->isNew() && (int) $page->getId() === (int) TheliaCMS::getConfigValue('home_page_id', 0),
+            'preview_url' => $page->isNew() ? null : $page->getUrl($locale),
         ]));
     }
 

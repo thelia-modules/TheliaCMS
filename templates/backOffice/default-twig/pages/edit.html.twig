@@ -9,98 +9,108 @@
     {% form_theme form with bo_form_themes only %}
 
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: block('title') } %}
+        {% block title %}
+            {{ parent() }}
+            <span class="badge {{ status.badgeClass }}">{{ status.label|trans({}, 'theliacms') }}</span>
+            {% if is_home %}<span class="badge bg-primary">{{ 'Home page'|trans({}, 'theliacms') }}</span>{% endif %}
+        {% endblock %}
+
         {% block actions %}
-            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_language_id: edit_language_id }) }}">{{ 'Back to pages'|trans({}, 'theliacms') }}</a>
+            {% if not is_new %}
+                <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.pages.builder', { id: page.id, edit_language_id: edit_language_id }) }}">
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i> {{ 'Edit content'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
+            {% if preview_url %}
+                <a class="btn btn-sm btn-outline-secondary" href="{{ preview_url }}" target="_blank" rel="noopener"
+                   title="{{ 'Preview the page'|trans({}, 'theliacms') }}" data-testid="cms-page-preview-btn">
+                    <i class="bi bi-eye" aria-hidden="true"></i> {{ 'Preview'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_language_id: edit_language_id }) }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to pages'|trans({}, 'theliacms') }}
+            </a>
         {% endblock %}
     {% endembed %}
 
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <span class="badge {{ status.badgeClass }}">{{ status.label|trans({}, 'theliacms') }}</span>
-        {% if is_home %}<span class="badge bg-primary">{{ 'Home page'|trans({}, 'theliacms') }}</span>{% endif %}
+    <div class="bo-tab-bar">
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-general" type="button" data-testid="cms-page-tab-general">
+                    {{ 'General'|trans({}, 'theliacms') }}
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-seo" type="button" data-testid="cms-page-tab-seo">
+                    {{ 'Search engines and sharing'|trans({}, 'theliacms') }}
+                </button>
+            </li>
+        </ul>
+        {% if not is_new %}
+            <div class="bo-tab-bar__aside">
+                {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
+            </div>
+        {% endif %}
     </div>
 
-    {% if not is_new %}
-        <div class="mb-3">
-            {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
-        </div>
-    {% endif %}
-
     {{ form_start(form) }}
-        <div class="row g-3">
-            <div class="col-lg-8">
-                <div class="card mb-3">
-                    <div class="card-body">
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="tab-general" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-lg-8">
                         {{ form_row(form.title) }}
                         {{ form_row(form.slug) }}
                     </div>
-                </div>
 
-                {% if not is_new %}
-                    <div class="card mb-3">
-                        <div class="card-header">{{ 'Content'|trans({}, 'theliacms') }}</div>
-                        <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
-                            <p class="mb-0 text-body-secondary">{{ 'The page content is edited in the visual editor.'|trans({}, 'theliacms') }}</p>
-                            <a class="btn btn-primary" href="{{ path('admin.cms.pages.builder', { id: page.id, edit_language_id: edit_language_id }) }}">
-                                {{ 'Edit content'|trans({}, 'theliacms') }}
-                            </a>
-                        </div>
+                    <div class="col-lg-4">
+                        {{ form_row(form.visible) }}
+                        {{ form_row(form.parent) }}
+                        {{ form_row(form.layout) }}
+                        {{ form_row(form.publishAt) }}
+                        {{ form_row(form.unpublishAt) }}
                     </div>
-                {% endif %}
+                </div>
+            </div>
 
-                <div class="card">
-                    <div class="card-header">{{ 'Search engines and sharing'|trans({}, 'theliacms') }}</div>
-                    <div class="card-body">
+            <div class="tab-pane fade" id="tab-seo" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-lg-8">
                         {{ form_row(form.metaTitle) }}
                         {{ form_row(form.metaDescription) }}
                         {{ form_row(form.ogTitle) }}
                         {{ form_row(form.ogDescription) }}
-                        {{ form_row(form.twitterCard) }}
                         {{ form_row(form.canonical) }}
+                    </div>
+
+                    <div class="col-lg-4">
+                        {{ form_row(form.twitterCard) }}
                         {{ form_row(form.noindex) }}
                         {{ form_row(form.nofollow) }}
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="col-lg-4">
-                <div class="card mb-3">
-                    <div class="card-header">{{ 'Publication'|trans({}, 'theliacms') }}</div>
-                    <div class="card-body">
-                        {{ form_row(form.visible) }}
-                        {{ form_row(form.publishAt) }}
-                        {{ form_row(form.unpublishAt) }}
-                    </div>
-                </div>
-
-                <div class="card mb-3">
-                    <div class="card-header">{{ 'Placement'|trans({}, 'theliacms') }}</div>
-                    <div class="card-body">
-                        {{ form_row(form.parent) }}
-                        {{ form_row(form.layout) }}
-                    </div>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary">{{ 'Save draft'|trans({}, 'theliacms') }}</button>
-                </div>
-            </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">{{ 'Save draft'|trans({}, 'theliacms') }}</button>
         </div>
     {{ form_end(form) }}
 
     {% if not is_new %}
-        <div class="d-flex flex-wrap gap-2 mt-3">
+        {# Kept out of the settings form: each one is a POST of its own. #}
+        <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
             <form method="post" action="{{ path('admin.cms.pages.publish', { id: page.id, edit_language_id: edit_language_id }) }}">
-                <button type="submit" class="btn btn-success">{{ 'Publish this version'|trans({}, 'theliacms') }}</button>
+                <button type="submit" class="btn btn-sm btn-success">{{ 'Publish this version'|trans({}, 'theliacms') }}</button>
             </form>
             <form method="post" action="{{ path('admin.cms.pages.unpublish', { id: page.id, edit_language_id: edit_language_id }) }}">
-                <button type="submit" class="btn btn-outline-secondary">{{ 'Unpublish'|trans({}, 'theliacms') }}</button>
+                <button type="submit" class="btn btn-sm btn-outline-secondary">{{ 'Unpublish'|trans({}, 'theliacms') }}</button>
             </form>
             <form method="post" action="{{ path('admin.cms.pages.duplicate', { id: page.id, edit_language_id: edit_language_id }) }}">
-                <button type="submit" class="btn btn-outline-secondary">{{ 'Duplicate'|trans({}, 'theliacms') }}</button>
+                <button type="submit" class="btn btn-sm btn-outline-secondary">{{ 'Duplicate'|trans({}, 'theliacms') }}</button>
             </form>
             {% if not is_home %}
                 <form method="post" action="{{ path('admin.cms.pages.set_as_home', { id: page.id, edit_language_id: edit_language_id }) }}">
-                    <button type="submit" class="btn btn-outline-secondary">{{ 'Set as home page'|trans({}, 'theliacms') }}</button>
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">{{ 'Set as home page'|trans({}, 'theliacms') }}</button>
                 </form>
             {% endif %}
         </div>
