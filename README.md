@@ -17,24 +17,16 @@ published as plain HTML and CSS. A published page ships no builder JavaScript.
 
 ## Installation
 
-The module is not on Packagist yet. Until it is, add this repository to the
-project's `composer.json`:
-
-```json
-{
-    "repositories": [
-        { "type": "vcs", "url": "https://github.com/thelia-modules/TheliaCMS" }
-    ]
-}
-```
-
-Then:
+No version is tagged yet, so install the development branch:
 
 ```bash
-composer require thelia/cms-module
+composer require thelia/cms-module:dev-main
 php Thelia module:activate TheliaCMS
 php Thelia cache:clear
 ```
+
+Composer pulls in the page builder bundle and TheliaLibrary, and registers the
+bundle through Symfony Flex.
 
 Activation creates the tables, seeds the ACL resources and generates the page
 URLs. It also seeds four unpublished legal pages (legal notice, privacy policy,
