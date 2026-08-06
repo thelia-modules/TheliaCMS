@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS;
 
+use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use SEOne\Service\SeoDefaultModels\SeoElementInterface;
@@ -27,6 +28,9 @@ use Thelia\Model\Resource;
 use Thelia\Model\ResourceQuery;
 use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
+use TheliaCMS\Model\CmsPageContentQuery;
+use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Security\CmsAdminResourcesCompiler;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Seo\CmsPageSeoElement;
@@ -63,6 +67,33 @@ class TheliaCMS extends BaseModule
 
         $this->createSearchIndex();
         $this->seedAdminResources();
+        $this->regenerateRewrittenUrls();
+    }
+
+    /**
+     * Rebuilds the page URLs dropped by preDeactivation, so deactivating and
+     * reactivating the module leaves the site exactly as it was rather than
+     * silently 404ing every page.
+     */
+    private function regenerateRewrittenUrls(): void
+    {
+        $urls = new CmsUrlService();
+
+        $pages = CmsPageQuery::create()
+            ->filterByDeletedAt(null, Criteria::ISNULL)
+            ->find();
+
+        foreach ($pages as $page) {
+            $locales = CmsPageContentQuery::create()
+                ->filterByPageId($page->getId())
+                ->select(['Locale'])
+                ->find()
+                ->toArray();
+
+            foreach (array_unique($locales) as $locale) {
+                $urls->refresh($page, (string) $locale);
+            }
+        }
     }
 
     /**
