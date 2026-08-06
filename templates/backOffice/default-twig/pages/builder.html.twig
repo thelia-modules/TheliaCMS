@@ -3,13 +3,15 @@
 {% block title %}{{ 'Edit content'|trans({}, 'theliacms') }}{% endblock %}
 {% block body_testid %}cms-page-builder{% endblock %}
 
-{# A megabyte of editor: loaded on this screen and nowhere else. #}
+{# A megabyte of editor: loaded on this screen and nowhere else. The version
+   makes the URL change with the build, so an updated module is not shadowed by
+   whatever the browser already holds. #}
 {% block head_extra %}
-    <link rel="stylesheet" href="{{ module_asset('TheliaCMS', 'assets/page-builder/editor.css') }}">
+    <link rel="stylesheet" href="{{ module_asset('TheliaCMS', 'assets/page-builder/editor.css') }}?v={{ editor_version }}">
 {% endblock %}
 
 {% block scripts_extra %}
-    <script src="{{ module_asset('TheliaCMS', 'assets/page-builder/editor.js') }}" defer></script>
+    <script src="{{ module_asset('TheliaCMS', 'assets/page-builder/editor.js') }}?v={{ editor_version }}" defer></script>
 {% endblock %}
 
 {% block body %}

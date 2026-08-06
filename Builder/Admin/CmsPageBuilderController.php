@@ -110,7 +110,23 @@ final readonly class CmsPageBuilderController
             // Free HTML is an authorisation, not a preference: the plugin stays
             // out of the editor for anyone without the resource.
             'allow_custom_code' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::CUSTOM_CODE], [], [AccessManager::UPDATE]),
+            'editor_version' => $this->editorVersion(),
         ]));
+    }
+
+    /**
+     * Changes whenever the bundled editor does.
+     *
+     * `module_asset()` returns a stable URL with nothing in it to tell one build
+     * from the next, so a browser holding the previous megabyte of JavaScript
+     * keeps running it after the module is updated — and the bug that update
+     * fixed stays in front of the administrator until they clear their cache.
+     */
+    private function editorVersion(): string
+    {
+        $built = __DIR__.'/../../templates/backOffice/default-twig/assets/page-builder/editor.js';
+
+        return substr(hash('xxh3', (string) @filemtime($built)), 0, 12);
     }
 
     private function save(Request $request, CmsPage $page, Lang $lang, FormInterface $form): Response
