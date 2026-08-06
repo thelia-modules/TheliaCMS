@@ -5,6 +5,7 @@ return [
     'Back to pages' => 'Back to pages',
     'Bin' => 'Bin',
     'Canonical URL' => 'Canonical URL',
+    'Comes back with its parent page' => 'Comes back with its parent page',
     'Content' => 'Content',
     'Create the first page' => 'Create the first page',
     'Default' => 'Default',

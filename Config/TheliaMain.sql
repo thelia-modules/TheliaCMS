@@ -12,7 +12,7 @@ DROP TABLE IF EXISTS `cms_page`;
 CREATE TABLE `cms_page`
 (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `parent` INTEGER,
+    `parent` INTEGER DEFAULT 0 NOT NULL,
     `position` INTEGER DEFAULT 0 NOT NULL,
     `visible` TINYINT(4) DEFAULT 1 NOT NULL,
     `layout` VARCHAR(20) DEFAULT 'default' NOT NULL,
@@ -24,12 +24,9 @@ CREATE TABLE `cms_page`
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
+    INDEX `idx_cms_page_parent` (`parent`),
     INDEX `idx_cms_page_parent_position` (`parent`, `position`),
-    INDEX `idx_cms_page_deleted_at` (`deleted_at`),
-    CONSTRAINT `fk_cms_page_parent`
-        FOREIGN KEY (`parent`)
-        REFERENCES `cms_page` (`id`)
-        ON DELETE CASCADE
+    INDEX `idx_cms_page_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
@@ -57,6 +54,7 @@ CREATE TABLE `cms_page_content`
     CONSTRAINT `fk_cms_page_content_page`
         FOREIGN KEY (`page_id`)
         REFERENCES `cms_page` (`id`)
+        ON UPDATE RESTRICT
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -83,6 +81,7 @@ CREATE TABLE `cms_page_revision`
     CONSTRAINT `fk_cms_page_revision_page`
         FOREIGN KEY (`page_id`)
         REFERENCES `cms_page` (`id`)
+        ON UPDATE RESTRICT
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -103,6 +102,7 @@ CREATE TABLE `cms_page_search`
     CONSTRAINT `fk_cms_page_search_page`
         FOREIGN KEY (`page_id`)
         REFERENCES `cms_page` (`id`)
+        ON UPDATE RESTRICT
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

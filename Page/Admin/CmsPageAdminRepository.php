@@ -44,17 +44,34 @@ final readonly class CmsPageAdminRepository
     }
 
     /**
-     * @return list<CmsPage>
+     * Binned pages, each flagged with whether it can come back on its own: a
+     * page whose parent is also in the bin is restored with that parent, not
+     * before it.
+     *
+     * @return list<array{page: CmsPage, restorable: bool}>
      */
     public function trash(string $locale): array
     {
-        return iterator_to_array(
+        $pages = iterator_to_array(
             CmsPageQuery::create()
                 ->filterByDeletedAt(null, Criteria::ISNOTNULL)
                 ->joinWithI18n($locale, Criteria::LEFT_JOIN)
                 ->orderByDeletedAt(Criteria::DESC)
                 ->find(),
             false
+        );
+
+        $binned = [];
+        foreach ($pages as $page) {
+            $binned[(int) $page->getId()] = true;
+        }
+
+        return array_map(
+            static fn (CmsPage $page): array => [
+                'page' => $page,
+                'restorable' => !isset($binned[(int) $page->getParent()]),
+            ],
+            $pages
         );
     }
 

@@ -42,9 +42,7 @@ final class CmsPageType extends AbstractType
             ])
             ->add('parent', ChoiceType::class, [
                 'label' => 'Parent page',
-                'required' => false,
-                'placeholder' => 'None (top level)',
-                'choices' => $options['parent_choices'],
+                'choices' => ['None (top level)' => 0] + $options['parent_choices'],
             ])
             ->add('layout', ChoiceType::class, [
                 'label' => 'Layout',

@@ -10,13 +10,25 @@
     -->
     <table name="cms_page" namespace="TheliaCMS\Model">
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
-        <column name="parent" type="INTEGER"/>
-        <column name="position" required="true" type="INTEGER" default="0"/>
-        <column name="visible" required="true" type="TINYINT" size="4" default="1"/>
-        <column name="layout" required="true" size="20" type="VARCHAR" default="default"/>
+        <!--
+            Plain integer with 0 as the root, no self-referencing foreign key:
+            same shape as `category` and `folder`. A database-level cascade on
+            the parent would also defeat the bin, hard-deleting a whole subtree
+            behind the soft delete.
+        -->
+        <column defaultValue="0" name="parent" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="position" required="true" type="INTEGER"/>
+        <column defaultValue="1" name="visible" required="true" type="TINYINT" size="4"/>
+        <column defaultValue="default" name="layout" required="true" size="20" type="VARCHAR"/>
         <column name="publish_at" type="TIMESTAMP"/>
         <column name="unpublish_at" type="TIMESTAMP"/>
         <column name="deleted_at" type="TIMESTAMP"/>
+        <!--
+            Bookkeeping only, deliberately not foreign keys to `admin`: an
+            administrator account is routinely deleted while the pages they
+            wrote stay, and the core keeps the same shape for its own
+            `log_created_by` columns.
+        -->
         <column name="created_by" type="INTEGER"/>
         <column name="updated_by" type="INTEGER"/>
 
@@ -25,16 +37,21 @@
         <column name="meta_description" type="LONGVARCHAR"/>
         <column name="og_title" size="255" type="VARCHAR"/>
         <column name="og_description" type="LONGVARCHAR"/>
+        <!--
+            Points at a TheliaLibrary image. No foreign key on purpose: the
+            library is a soft dependency whose table may not exist, and a
+            cross-module constraint would make this schema unloadable without
+            it. A stale id renders as "no image".
+        -->
         <column name="og_image_id" type="INTEGER"/>
         <column name="twitter_card" size="20" type="VARCHAR"/>
         <column name="canonical" size="2048" type="VARCHAR"/>
-        <column name="noindex" required="true" type="TINYINT" size="4" default="0"/>
-        <column name="nofollow" required="true" type="TINYINT" size="4" default="0"/>
+        <column defaultValue="0" name="noindex" required="true" type="TINYINT" size="4"/>
+        <column defaultValue="0" name="nofollow" required="true" type="TINYINT" size="4"/>
 
-        <foreign-key foreignTable="cms_page" name="fk_cms_page_parent" onDelete="CASCADE">
-            <reference foreign="id" local="parent"/>
-        </foreign-key>
-
+        <index name="idx_cms_page_parent">
+            <index-column name="parent"/>
+        </index>
         <index name="idx_cms_page_parent_position">
             <index-column name="parent"/>
             <index-column name="position"/>
@@ -67,7 +84,7 @@
         <column name="published_at" type="TIMESTAMP"/>
         <column name="draft_updated_by" type="INTEGER"/>
 
-        <foreign-key foreignTable="cms_page" name="fk_cms_page_content_page" onDelete="CASCADE">
+        <foreign-key foreignTable="cms_page" name="fk_cms_page_content_page" onDelete="CASCADE" onUpdate="RESTRICT">
             <reference foreign="id" local="page_id"/>
         </foreign-key>
 
@@ -89,7 +106,7 @@
         <column name="label" size="60" type="VARCHAR"/>
         <column name="created_by" type="INTEGER"/>
 
-        <foreign-key foreignTable="cms_page" name="fk_cms_page_revision_page" onDelete="CASCADE">
+        <foreign-key foreignTable="cms_page" name="fk_cms_page_revision_page" onDelete="CASCADE" onUpdate="RESTRICT">
             <reference foreign="id" local="page_id"/>
         </foreign-key>
 
@@ -112,7 +129,7 @@
         <column name="locale" required="true" size="5" type="VARCHAR"/>
         <column name="content" type="CLOB"/>
 
-        <foreign-key foreignTable="cms_page" name="fk_cms_page_search_page" onDelete="CASCADE">
+        <foreign-key foreignTable="cms_page" name="fk_cms_page_search_page" onDelete="CASCADE" onUpdate="RESTRICT">
             <reference foreign="id" local="page_id"/>
         </foreign-key>
 

@@ -33,6 +33,7 @@ use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Security\CmsAdminResourcesCompiler;
 use TheliaCMS\Security\CmsResources;
+use TheliaCMS\Seo\CmsPageHreflangListener;
 use TheliaCMS\Seo\CmsPageSeoElement;
 
 class TheliaCMS extends BaseModule
@@ -190,6 +191,10 @@ class TheliaCMS extends BaseModule
         // site running without SEOne, which is a fatal error, not a skip.
         if (interface_exists(SeoElementInterface::class)) {
             $servicesConfigurator->set(CmsPageSeoElement::class)
+                ->autowire(true)
+                ->autoconfigure(true);
+
+            $servicesConfigurator->set(CmsPageHreflangListener::class)
                 ->autowire(true)
                 ->autoconfigure(true);
         }

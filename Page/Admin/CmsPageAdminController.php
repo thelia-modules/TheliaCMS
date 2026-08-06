@@ -20,12 +20,13 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use Thelia\Core\Security\AccessManager;
 use Thelia\Core\HttpFoundation\Session\Session as TheliaSession;
+use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
@@ -165,7 +166,11 @@ final readonly class CmsPageAdminController
             throw new NotFoundHttpException();
         }
 
-        $this->writer->restore($page, $lang->getLocale());
+        try {
+            $this->writer->restore($page, $lang->getLocale());
+        } catch (\DomainException $exception) {
+            throw new BadRequestHttpException($exception->getMessage(), $exception);
+        }
 
         return $this->backToList($request);
     }
@@ -208,7 +213,7 @@ final readonly class CmsPageAdminController
         return $this->forms->create(CmsPageType::class, [
             'title' => $page->isNew() ? '' : (string) $page->getTitle(),
             'slug' => $page->isNew() ? null : $page->getRewrittenUrl($locale),
-            'parent' => $page->getParent(),
+            'parent' => (int) $page->getParent(),
             'layout' => $page->getLayout() ?? 'default',
             'visible' => $page->isNew() ? 1 : $page->getVisible(),
             'publishAt' => $page->getPublishAt(),
@@ -231,7 +236,7 @@ final readonly class CmsPageAdminController
     {
         $data = $form->getData();
 
-        $page->setParent($data['parent'] ?: null)
+        $page->setParent((int) $data['parent'])
             ->setLayout($data['layout'])
             ->setVisible((int) $data['visible'])
             ->setPublishAt($data['publishAt'])

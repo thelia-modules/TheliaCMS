@@ -28,14 +28,19 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for page in pages %}
+                        {% for row in pages %}
+                            {% set page = row.page %}
                             <tr>
                                 <td>{{ page.setLocale(edit_locale).title|default('#' ~ page.id) }}</td>
                                 <td class="text-muted small">{{ page.deletedAt ? page.deletedAt|date('d/m/Y H:i') : '' }}</td>
                                 <td class="text-end">
-                                    <form method="post" action="{{ path('admin.cms.pages.restore', { id: page.id, edit_language_id: edit_language_id }) }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-primary">{{ 'Restore'|trans({}, 'theliacms') }}</button>
-                                    </form>
+                                    {% if row.restorable %}
+                                        <form method="post" action="{{ path('admin.cms.pages.restore', { id: page.id, edit_language_id: edit_language_id }) }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">{{ 'Restore'|trans({}, 'theliacms') }}</button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-muted small">{{ 'Comes back with its parent page'|trans({}, 'theliacms') }}</span>
+                                    {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}

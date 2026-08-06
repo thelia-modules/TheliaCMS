@@ -14,8 +14,10 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Page\Admin;
 
+use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Propel;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -108,24 +110,139 @@ final readonly class CmsPageWriter
     }
 
     /**
-     * Soft delete: the row stays so the bin can restore it, but the rewritten
-     * URLs go immediately — leaving them would keep routing visitors to a page
+     * Soft delete, cascading down the subtree.
+     *
+     * The cascade is done here rather than by a database constraint: a real
+     * `ON DELETE CASCADE` on the parent would hard-delete the children behind
+     * the bin. Leaving descendants alone is not an option either — they would
+     * vanish from the tree (their parent is gone from it) while still being
+     * served on the front.
+     *
+     * Rewritten URLs go immediately: kept, they would route visitors to a page
      * that no longer resolves, which is a 500 and not a 404.
+     *
+     * @return list<int> the pages actually binned, deepest first
      */
-    public function moveToTrash(CmsPage $page): void
+    public function moveToTrash(CmsPage $page): array
     {
-        $page->setDeletedAt(new \DateTimeImmutable())->save();
+        $connection = Propel::getConnection('TheliaMain');
+        $connection->beginTransaction();
 
-        \Thelia\Model\RewritingUrlQuery::create()
-            ->filterByView($page->getRewrittenUrlViewName())
-            ->filterByViewId((string) $page->getId())
-            ->delete();
+        try {
+            $deletedAt = new \DateTimeImmutable();
+            $branch = $this->branchOf($page);
+
+            foreach ($branch as $node) {
+                $node->setDeletedAt($deletedAt)->save($connection);
+
+                RewritingUrlQuery::create()
+                    ->filterByView($node->getRewrittenUrlViewName())
+                    ->filterByViewId((string) $node->getId())
+                    ->delete($connection);
+            }
+
+            $connection->commit();
+
+            return array_map(static fn (CmsPage $node): int => (int) $node->getId(), $branch);
+        } catch (\Throwable $throwable) {
+            $connection->rollBack();
+
+            throw $throwable;
+        }
     }
 
+    /**
+     * Restores a page and everything binned underneath it. A descendant whose
+     * own parent is still in the bin stays there: restoring it would put it
+     * back in the tree under a page nobody can see.
+     */
     public function restore(CmsPage $page, string $locale): void
     {
-        $page->setDeletedAt(null)->save();
-        $this->urls->refresh($page, $locale);
+        if (!$this->isRestorable($page)) {
+            throw new \DomainException('Restore the parent page first: this page would come back under a page that is still in the bin.');
+        }
+
+        $connection = Propel::getConnection('TheliaMain');
+        $connection->beginTransaction();
+
+        try {
+            foreach ($this->branchOf($page, includeDeleted: true) as $node) {
+                $node->setDeletedAt(null)->save($connection);
+
+                foreach ($this->publishedLocalesOf($node) as $contentLocale) {
+                    $this->urls->refresh($node, $contentLocale);
+                }
+
+                $this->urls->refresh($node, $locale);
+            }
+
+            $connection->commit();
+        } catch (\Throwable $throwable) {
+            $connection->rollBack();
+
+            throw $throwable;
+        }
+    }
+
+    /**
+     * A binned page can come back only if its parent is still in the tree —
+     * otherwise it would reappear nowhere the editor can reach it.
+     */
+    public function isRestorable(CmsPage $page): bool
+    {
+        $parentId = (int) $page->getParent();
+
+        if (0 === $parentId) {
+            return true;
+        }
+
+        $parent = CmsPageQuery::create()->findPk($parentId);
+
+        return null === $parent || null === $parent->getDeletedAt();
+    }
+
+    /**
+     * The page and all of its descendants, parents before children.
+     *
+     * @return list<CmsPage>
+     */
+    private function branchOf(CmsPage $page, bool $includeDeleted = false): array
+    {
+        $branch = [$page];
+        $frontier = [(int) $page->getId()];
+        $guard = 0;
+
+        while ([] !== $frontier && ++$guard < 20) {
+            $query = CmsPageQuery::create()->filterByParent($frontier);
+
+            if (!$includeDeleted) {
+                $query->filterByDeletedAt(null, Criteria::ISNULL);
+            }
+
+            $children = iterator_to_array($query->find(), false);
+            $frontier = [];
+
+            foreach ($children as $child) {
+                $branch[] = $child;
+                $frontier[] = (int) $child->getId();
+            }
+        }
+
+        return $branch;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function publishedLocalesOf(CmsPage $page): array
+    {
+        $locales = CmsPageContentQuery::create()
+            ->filterByPageId($page->getId())
+            ->select(['Locale'])
+            ->find()
+            ->toArray();
+
+        return array_values(array_unique(array_map(strval(...), $locales)));
     }
 
     public function toggleVisibility(CmsPage $page): void
@@ -140,7 +257,7 @@ final readonly class CmsPageWriter
     {
         $siblings = CmsPageQuery::create()
             ->filterByParent($page->getParent())
-            ->filterByDeletedAt(null, \Propel\Runtime\ActiveQuery\Criteria::ISNULL)
+            ->filterByDeletedAt(null, Criteria::ISNULL)
             ->orderByPosition()
             ->find();
 
@@ -191,7 +308,7 @@ final readonly class CmsPageWriter
         $obsolete = CmsPageRevisionQuery::create()
             ->filterByPageId($page->getId())
             ->filterByLocale($locale)
-            ->orderByCreatedAt(\Propel\Runtime\ActiveQuery\Criteria::DESC)
+            ->orderByCreatedAt(Criteria::DESC)
             ->offset(self::REVISION_RETENTION)
             ->limit(1000)
             ->find();

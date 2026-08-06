@@ -5,6 +5,7 @@ return [
     'Back to pages' => 'Retour aux pages',
     'Bin' => 'Corbeille',
     'Canonical URL' => 'URL canonique',
+    'Comes back with its parent page' => 'Revient avec sa page parente',
     'Content' => 'Contenu',
     'Create the first page' => 'Créer la première page',
     'Default' => 'Standard',

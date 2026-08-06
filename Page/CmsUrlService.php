@@ -87,10 +87,11 @@ final class CmsUrlService
     private function prefixWithAncestors(CmsPage $page, string $locale, string $segment): string
     {
         $segments = [$segment];
-        $parentId = $page->getParent();
+        $parentId = (int) $page->getParent();
         $guard = 0;
 
-        while (null !== $parentId && $parentId > 0 && ++$guard < 20) {
+        // 0 is the root, mirroring `category.parent` / `folder.parent`.
+        while ($parentId > 0 && ++$guard < 20) {
             $parent = CmsPageQuery::create()->findPk($parentId);
 
             if (!$parent instanceof CmsPage) {
@@ -99,7 +100,7 @@ final class CmsUrlService
 
             $parent->setLocale($locale);
             array_unshift($segments, $this->slugSource->slugify((string) $parent->getTitle()));
-            $parentId = $parent->getParent();
+            $parentId = (int) $parent->getParent();
         }
 
         return $this->truncateToByteLimit(implode('/', array_filter($segments)));
