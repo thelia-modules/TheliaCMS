@@ -17,10 +17,8 @@ namespace TheliaCMS\Media;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Model\Lang;
-use Thelia\Model\LangQuery;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaLibrary\Model\LibraryImage;
-use TheliaLibrary\Model\LibraryImageI18nQuery;
 use TheliaLibrary\Model\LibraryImageQuery;
 use TheliaLibrary\Model\LibraryImageTagQuery;
 use TheliaLibrary\Model\LibraryTag;
@@ -72,32 +70,25 @@ final readonly class CmsMediaLibrary
     }
 
     /**
-     * Public URL of an image, optionally resized or converted.
+     * Public URL of an image at its stored size.
      *
-     * TheliaLibrary has `getImagePublicUrl()` for this, but it resolves the
-     * file name through the *front-office* session language while the builder
-     * stores the file under the admin edition language: the two disagree and
-     * the URL comes out without an extension. The file name is therefore read
-     * here, from the locale that actually holds one.
-     *
-     * @param int|null $width  in pixels, null for the original size
-     * @param int|null $height in pixels, null to keep the ratio
+     * Resized variants are not built here: the image route reads its size as
+     * `width,height` and squares the image unless the ratio-preserving `!` form
+     * is used, so the widths of a srcset are composed by the ImageRewriter.
      */
-    public function publicUrl(LibraryImage $image, ?int $width = null, ?int $height = null, ?string $format = null): ?string
+    public function publicUrl(LibraryImage $image): ?string
     {
-        $fileName = $this->fileNameOf($image);
+        $fileName = $image->getFileName();
 
         if (null === $fileName) {
             return null;
         }
 
-        $size = null === $width && null === $height ? 'max' : $width.','.$height;
-
         return $this->imageService->getUrlForImage(
             $image->getId(),
-            $format ?? pathinfo($fileName, \PATHINFO_EXTENSION),
+            pathinfo($fileName, \PATHINFO_EXTENSION),
             'full',
-            $size,
+            'max',
         );
     }
 
@@ -117,81 +108,51 @@ final readonly class CmsMediaLibrary
             return null;
         }
 
-        $fileName = $this->fileNameOf($image);
+        $fileName = $image->getFileName();
 
         if (null === $fileName) {
             return null;
         }
 
-        $dimensions = @getimagesize(TheliaLibrary::getImageDirectory().$fileName);
+        $this->measure($image);
 
         return new MediaFile(
             id: (int) $image->getId(),
             format: pathinfo($fileName, \PATHINFO_EXTENSION),
-            width: false !== $dimensions ? $dimensions[0] : null,
-            height: false !== $dimensions ? $dimensions[1] : null,
+            width: $image->getWidth(),
+            height: $image->getHeight(),
         );
     }
 
     /**
-     * Copies the stored file name onto every active language.
+     * Reads the size of an image the library has not measured, and records it.
      *
-     * A file is not a translation, but TheliaLibrary keeps `file_name` in the
-     * i18n table and its own image route reads it through whichever locale the
-     * visitor session carries. An image uploaded while editing in French would
-     * then 500 for everyone else. Writing the same name everywhere makes the
-     * lookup deterministic until the column moves upstream.
+     * Uploads have carried their dimensions since TheliaLibrary 1.4.0; images
+     * stored before that have none, and a `<picture>` without width and height
+     * makes the page shift as it loads. Measuring once on the way past saves a
+     * migration command for what is a handful of files.
      */
-    public function shareFileNameAcrossLocales(LibraryImage $image): void
+    public function measure(LibraryImage $image): void
     {
-        $fileName = $this->fileNameOf($image);
+        $fileName = $image->getFileName();
 
-        if (null === $fileName) {
+        if (null === $fileName || (null !== $image->getWidth() && null !== $image->getHeight())) {
             return;
         }
 
-        $title = $image->getTitle();
+        $path = TheliaLibrary::getImageDirectory().$fileName;
+        $dimensions = @getimagesize($path);
 
-        foreach (LangQuery::create()->filterByActive(1)->find() as $lang) {
-            $image->setLocale($lang->getLocale());
-
-            if (null !== $image->getFileName() && '' !== $image->getFileName()) {
-                continue;
-            }
-
-            $image->setFileName($fileName);
-
-            if (null === $image->getTitle() || '' === $image->getTitle()) {
-                $image->setTitle($title);
-            }
+        if (false === $dimensions) {
+            return;
         }
 
-        $image->save();
-    }
-
-    /**
-     * The stored file name, whichever translation ended up carrying it.
-     *
-     * `library_image.file_name` is an i18n column although a file is not a
-     * translation: an image uploaded while editing in French has no file name
-     * in English. Reported upstream; worked around by falling back.
-     */
-    public function fileNameOf(LibraryImage $image): ?string
-    {
-        foreach ([$this->locale(), Lang::getDefaultLanguage()->getLocale()] as $locale) {
-            $fileName = $image->setLocale($locale)->getFileName();
-
-            if (null !== $fileName && '' !== $fileName) {
-                return $fileName;
-            }
-        }
-
-        $translation = LibraryImageI18nQuery::create()
-            ->filterById($image->getId())
-            ->filterByFileName(null, Criteria::ISNOTNULL)
-            ->findOne();
-
-        return $translation?->getFileName();
+        $image
+            ->setWidth($dimensions[0])
+            ->setHeight($dimensions[1])
+            ->setFileSize(filesize($path) ?: null)
+            ->setMimeType($dimensions['mime'] ?? null)
+            ->save();
     }
 
     /**

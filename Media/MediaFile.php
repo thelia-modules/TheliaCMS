@@ -17,9 +17,6 @@ namespace TheliaCMS\Media;
 /**
  * A library image as the publish pipeline needs it: its identifier, its stored
  * format and the size it really has on disk.
- *
- * The dimensions are read from the file because TheliaLibrary does not store
- * them — a gap the upstream schema change is meant to close.
  */
 final readonly class MediaFile
 {

@@ -48,10 +48,14 @@ final readonly class LibraryImageCatalog implements ImageLibraryPortInterface
                 continue;
             }
 
+            $this->library->measure($image);
+
             $records[] = new ImageRecord(
                 id: (string) $image->getId(),
                 url: $url,
                 name: $image->setLocale($locale)->getTitle(),
+                width: $image->getWidth(),
+                height: $image->getHeight(),
             );
         }
 

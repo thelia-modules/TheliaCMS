@@ -35,11 +35,6 @@ final readonly class LibraryImageUploader implements ImageUploadPortInterface
     {
         $originalName = $file->getClientOriginalName();
 
-        // Read before storing: createImage() moves the file away, and the
-        // dimensions are what keeps the published page from shifting as images
-        // load.
-        $dimensions = @getimagesize($file->getPathname());
-
         try {
             $image = $this->images->createImage($file, $originalName, $this->library->locale());
         } catch (\Throwable $throwable) {
@@ -47,7 +42,6 @@ final readonly class LibraryImageUploader implements ImageUploadPortInterface
         }
 
         $this->library->tag($image);
-        $this->library->shareFileNameAcrossLocales($image);
 
         $url = $this->library->publicUrl($image);
 
@@ -55,12 +49,14 @@ final readonly class LibraryImageUploader implements ImageUploadPortInterface
             throw new ImageUploadException(\sprintf('The image "%s" was stored but has no public URL.', $originalName));
         }
 
+        // Dimensions are recorded by the library on upload; they are what keeps
+        // the published page from shifting as its images load.
         return new ImageUploadResponse(
             id: (string) $image->getId(),
             url: $url,
             originalFileName: $originalName,
-            width: false !== $dimensions ? $dimensions[0] : null,
-            height: false !== $dimensions ? $dimensions[1] : null,
+            width: $image->getWidth(),
+            height: $image->getHeight(),
         );
     }
 
