@@ -1,6 +1,8 @@
 {# Sidebar entry rendered into the `main.in-top-menu-items` hook. Markup and
    class names mirror the theme's own sections so it does not read as bolted on. #}
-<li class="nav-item" data-testid="bo-nav-cms">
+{# `order` rather than a theme override: the sidebar is a flex column, and on a
+   showcase site this section belongs at the top of it. #}
+<li class="nav-item" data-testid="bo-nav-cms"{% if is_first %} style="order: -1"{% endif %}>
     <a href="#bo-nav-cms-collapse" data-bs-toggle="collapse" aria-expanded="{{ is_active ? 'true' : 'false' }}" class="nav-link bo-side-nav__toggle {{ is_active ? 'active' : '' }}">
         <i class="bi bi-layout-text-window me-2" aria-hidden="true"></i>
         {{ section_label }}
@@ -18,6 +20,11 @@
         {% if media_url %}
             <li class="nav-item">
                 <a class="nav-link" href="{{ media_url }}">{{ media_label }}</a>
+            </li>
+        {% endif %}
+        {% if settings_url %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ settings_url }}">{{ settings_label }}</a>
             </li>
         {% endif %}
     </ul>

@@ -22,6 +22,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Core\Template\Parser\ParserResolver;
 use TheliaCMS\Security\CmsResources;
+use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\TheliaCMS;
 use Twig\Environment;
 
@@ -37,6 +38,7 @@ class CmsSideNavHook extends BaseHook
         private readonly SecurityContext $securityContext,
         private readonly UrlGeneratorInterface $urls,
         private readonly Environment $twig,
+        private readonly CmsSettings $settings,
         ?EventDispatcherInterface $dispatcher = null,
         ?ParserResolver $parserResolver = null,
     ) {
@@ -62,6 +64,7 @@ class CmsSideNavHook extends BaseHook
         // leading straight to a 403 is worse than no link.
         $maySeeMenus = $this->securityContext->isGranted(['ADMIN'], [CmsResources::MENU], [], [AccessManager::VIEW]);
         $maySeeMedia = $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::VIEW]);
+        $maySeeSettings = $this->securityContext->isGranted(['ADMIN'], [CmsResources::SETTINGS], [], [AccessManager::VIEW]);
 
         // Rendered through the Twig environment rather than BaseHook::render():
         // the parser only knows the module template directories registered for
@@ -70,11 +73,17 @@ class CmsSideNavHook extends BaseHook
             'pages_url' => $this->urls->generate('admin.cms.pages.list'),
             'menus_url' => $maySeeMenus ? $this->urls->generate('admin.cms.menus.list') : null,
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
+            'settings_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.edit') : null,
             'is_active' => str_starts_with((string) $this->getRequest()?->getPathInfo(), '/admin/cms'),
+            // On a showcase site the content *is* the site, so its section comes
+            // before the shop ones. The sidebar is a flex column, so ordering it
+            // is a matter of one property rather than of a theme override.
+            'is_first' => $this->settings->isShowcase(),
             'section_label' => $this->trans('Site', [], TheliaCMS::DOMAIN_NAME),
             'pages_label' => $this->trans('Pages', [], TheliaCMS::DOMAIN_NAME),
             'menus_label' => $this->trans('Menus', [], TheliaCMS::DOMAIN_NAME),
             'media_label' => $this->trans('Media', [], TheliaCMS::DOMAIN_NAME),
+            'settings_label' => $this->trans('Settings', [], TheliaCMS::DOMAIN_NAME),
         ]));
     }
 }

@@ -1,0 +1,87 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Site settings'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-settings{% endblock %}
+
+{% block content %}
+    {% form_theme form with bo_form_themes only %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Site settings'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_language_id: edit_language_id }) }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to pages'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    {{ form_start(form) }}
+        {{ form_errors(form) }}
+
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">{{ 'This site'|trans({}, 'theliacms') }}</div>
+                    <div class="card-body">
+                        {{ form_row(form.siteMode) }}
+
+                        <ul class="text-muted small ps-3 mb-2">
+                            <li>{{ 'A showcase site answers 404 on the cart and the checkout.'|trans({}, 'theliacms') }}</li>
+                            <li>{{ 'Site comes first in this menu, before the shop.'|trans({}, 'theliacms') }}</li>
+                            <li>{{ 'Nothing else changes, and switching back undoes it.'|trans({}, 'theliacms') }}</li>
+                        </ul>
+
+                        {% if is_showcase and not editor_profile_exists %}
+                            <p class="text-muted small mb-0">
+                                {{ 'Saving in showcase mode creates the "Editor" profile: pages, menus, media and news, and nothing of the shop.'|trans({}, 'theliacms') }}
+                            </p>
+                        {% elseif editor_profile_exists %}
+                            <p class="text-muted small mb-0">
+                                <i class="bi bi-check2 me-1" aria-hidden="true"></i>
+                                {{ 'The "Editor" profile exists. Its permissions are yours to change under Configuration > Administrators.'|trans({}, 'theliacms') }}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">{{ 'Address not found'|trans({}, 'theliacms') }}</div>
+                    <div class="card-body">
+                        {{ form_row(form.notFoundPageId) }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">{{ 'Maintenance'|trans({}, 'theliacms') }}</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                {{ form_row(form.maintenanceActive) }}
+                                {{ form_row(form.maintenancePageId) }}
+                            </div>
+                            <div class="col-lg-6">
+                                {{ form_row(form.maintenanceAllowlist) }}
+                                {% if client_ip %}
+                                    <p class="text-muted small">
+                                        {{ 'You are connecting from %ip%.'|trans({'%ip%': client_ip}, 'theliacms') }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <p class="text-muted small mb-0">
+                            {{ 'While the site is closed, visitors get a 503 answer asking them to come back in %minutes% minutes, and the back office stays reachable.'|trans({'%minutes%': (retry_after / 60)|round}, 'theliacms') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary" data-testid="cms-settings-submit">{{ 'Save'|trans({}, 'theliacms') }}</button>
+        </div>
+    {{ form_end(form) }}
+{% endblock %}
