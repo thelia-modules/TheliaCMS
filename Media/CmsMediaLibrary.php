@@ -34,7 +34,7 @@ use TheliaLibrary\TheliaLibrary;
  * other, and marked with a tag: the library is shared with the rest of the
  * shop, but the editor only offers what was uploaded for content pages.
  */
-final readonly class CmsMediaLibrary
+final readonly class CmsMediaLibrary implements MediaResolver
 {
     /** Title of the tag every image uploaded from the builder carries. */
     public const string TAG = 'cms';

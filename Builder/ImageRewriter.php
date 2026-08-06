@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Builder;
 
-use TheliaCMS\Media\CmsMediaLibrary;
+use TheliaCMS\Media\MediaResolver;
 
 /**
  * Rewrites the images of a page when it is published.
@@ -38,7 +38,7 @@ final readonly class ImageRewriter
     private const string SIZES = '(max-width: 1440px) 100vw, 1440px';
 
     public function __construct(
-        private CmsMediaLibrary $library,
+        private MediaResolver $library,
     ) {
     }
 

@@ -23,6 +23,12 @@ namespace TheliaCMS\Page;
  */
 final readonly class PageSlugSource
 {
+    /**
+     * `rewriting_url.url` is a VARBINARY(255), so the limit counts bytes and an
+     * accented slug spends more than one per character.
+     */
+    public const int MAX_URL_BYTES = 255;
+
     public function slugify(string $raw): string
     {
         $value = trim($raw);
@@ -40,5 +46,18 @@ final readonly class PageSlugSource
         $value = (string) preg_replace('/[^a-z0-9]+/u', '-', $value);
 
         return trim($value, '-');
+    }
+
+    /**
+     * Cuts a path down to what the column can hold, without leaving it ending
+     * on a separator or splitting a multi-byte character in half.
+     */
+    public function truncate(string $url): string
+    {
+        if (\strlen($url) <= self::MAX_URL_BYTES) {
+            return $url;
+        }
+
+        return rtrim(mb_strcut($url, 0, self::MAX_URL_BYTES, 'UTF-8'), '-/');
     }
 }

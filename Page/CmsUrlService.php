@@ -40,9 +40,6 @@ final class CmsUrlService
         '_profiler', '_wdt', '_fragment', '_error',
     ];
 
-    /** `rewriting_url.url` is a VARBINARY(255): the limit is bytes, not characters. */
-    private const MAX_URL_BYTES = 255;
-
     public function __construct(
         private readonly PageSlugSource $slugSource = new PageSlugSource(),
     ) {
@@ -103,21 +100,7 @@ final class CmsUrlService
             $parentId = (int) $parent->getParent();
         }
 
-        return $this->truncateToByteLimit(implode('/', array_filter($segments)));
-    }
-
-    /**
-     * Keeps the trailing segment readable when the ancestor chain makes the URL
-     * overflow the column: cutting mid-way through a multibyte character would
-     * corrupt it.
-     */
-    private function truncateToByteLimit(string $url): string
-    {
-        if (\strlen($url) <= self::MAX_URL_BYTES) {
-            return $url;
-        }
-
-        return rtrim(mb_strcut($url, 0, self::MAX_URL_BYTES, 'UTF-8'), '-/');
+        return $this->slugSource->truncate(implode('/', array_filter($segments)));
     }
 
     private function makeUnique(string $url, int $pageId, string $locale): string
@@ -127,7 +110,7 @@ final class CmsUrlService
 
         while ($this->isTakenByAnotherPage($candidate, $pageId, $locale)) {
             ++$suffix;
-            $candidate = $this->truncateToByteLimit($url).'-'.$suffix;
+            $candidate = $this->slugSource->truncate($url).'-'.$suffix;
         }
 
         return $candidate;
