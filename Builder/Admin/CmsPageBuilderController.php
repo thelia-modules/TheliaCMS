@@ -29,6 +29,7 @@ use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Model\CmsPage;
+use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\CmsPageAdminRepository;
@@ -80,12 +81,19 @@ final readonly class CmsPageBuilderController
 
         $page->setLocale($locale);
 
+        $content = $this->contentOf($page, $locale);
+
         return new Response($this->twig->render(self::TEMPLATE, [
             'form' => $form->createView(),
+            // A page written before the builder existed — a seeded legal page,
+            // an import — has HTML but no GrapesJS project. Handing that HTML
+            // to the canvas is what keeps opening the editor from wiping it.
+            'initial_html' => null === $content?->getDraftProjectData() ? $content?->getDraftHtml() : null,
             'page' => $page,
             'status' => $this->pages->statusOf($page, $locale),
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
+            'preview_url' => $page->getUrl($locale),
             'builder_options' => $this->builderConfig->editorOptions(),
             // The editor speaks the language the back office is displayed in,
             // which is not the language of the page being translated.
@@ -120,12 +128,17 @@ final readonly class CmsPageBuilderController
         ]));
     }
 
-    private function buildForm(CmsPage $page, string $locale): FormInterface
+    private function contentOf(CmsPage $page, string $locale): ?CmsPageContent
     {
-        $content = CmsPageContentQuery::create()
+        return CmsPageContentQuery::create()
             ->filterByPageId($page->getId())
             ->filterByLocale($locale)
             ->findOne();
+    }
+
+    private function buildForm(CmsPage $page, string $locale): FormInterface
+    {
+        $content = $this->contentOf($page, $locale);
 
         return $this->forms->create(CmsPageContentType::class, [
             'projectData' => $content?->getDraftProjectData(),

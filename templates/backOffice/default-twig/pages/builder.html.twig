@@ -21,12 +21,19 @@
                     {{ 'Back to settings'|trans({}, 'theliacms') }}
                 </a>
 
-                <p class="cms-builder__title">{{ page.title }}</p>
+                {# A page can be untranslated in the language being edited. #}
+                <p class="cms-builder__title">{{ page.title|default('')|trim ?: 'Untitled page'|trans({}, 'theliacms') }}</p>
                 <span class="badge {{ status.badgeClass }}">{{ status.label|trans({}, 'theliacms') }}</span>
 
                 {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
 
                 <div class="cms-builder__actions">
+                    {% if preview_url %}
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ preview_url }}" target="_blank" rel="noopener"
+                           title="{{ 'Preview the page'|trans({}, 'theliacms') }}" data-testid="cms-page-preview-btn">
+                            <i class="bi bi-eye" aria-hidden="true"></i> {{ 'Preview'|trans({}, 'theliacms') }}
+                        </a>
+                    {% endif %}
                     <button type="submit" name="save" value="draft" class="btn btn-sm btn-primary">
                         {{ 'Save draft'|trans({}, 'theliacms') }}
                     </button>
@@ -43,14 +50,19 @@
             {{ form_widget(form.css) }}
 
             <div class="cms-builder__stage">
-                {{ component('PageBuilder', {
+                {% component PageBuilder with {
                     form: form,
                     controller: 'cms-page-builder',
                     context: 'cms-page-' ~ page.id,
                     options: builder_options,
                     'data-cms-page-builder-locale-value': builder_locale,
                     'data-cms-page-builder-allow-custom-code-value': allow_custom_code ? 'true' : 'false',
-                }) }}
+                } %}
+                    {# Seeded or imported pages have HTML but no editor project:
+                       the canvas starts from that markup instead of blank. It
+                       went through the sanitizer before being stored. #}
+                    {% block content %}{{ initial_html|raw }}{% endblock %}
+                {% endcomponent %}
             </div>
         {{ form_end(form) }}
     </div>
