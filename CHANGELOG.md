@@ -22,6 +22,25 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - Publication pipeline: server-side HTML and CSS sanitizer, responsive
   `<picture>` rewriting, plain-text extraction into a FULLTEXT index, and a
   heading-structure check (`heading_check_mode`, `warn` or `block`).
+- Menus, called by code from a theme (`main` and `footer` seeded): entries
+  pointing at a CMS page, a content, a folder, a web address or a label alone,
+  nested up to three levels, reordered with buttons or by dragging. An entry
+  whose target is missing, offline or unpublished in the language being read is
+  left out of the menu and reported in the back office.
+- `cms_menu(code)` and `cms_page_alternates()` for themes, returning data rather
+  than markup. Menus are cached per code, language and host, and the cache is
+  dropped when a menu or a page it points at changes.
+- Language switching that keeps the visitor on the page they were reading, and
+  `hreflang` alternates limited to the languages a page is published in.
+- Settings screen: what the site is, the page shown when an address does not
+  exist, and maintenance.
+- Showcase mode: 404 on the cart and the checkout, Site first in the back-office
+  menu, and an "Editor" profile seeded with the content permissions and none of
+  the shop.
+- Maintenance mode: 503 with `Retry-After`, an IP allow list, a bypass for the
+  signed-in administrator, and a maintenance page editable as a CMS page.
+- The page shown when an address does not exist can be a CMS page, served with
+  its 404 status.
 - Media library: grid, multiple upload, search by name or tag, per-language
   alternative text (mandatory unless the image is decorative) and caption,
   dimensions, weight and format, file replacement, and the pages using an image.

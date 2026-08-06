@@ -75,14 +75,15 @@ Menus live under **Site > Menus** and a theme calls them by code. `main` and
 `footer` exist from the first activation.
 
 An entry points at a CMS page, a content, a folder, a web address, or at nothing
-at all — a label alone, which is how a group heading is made. Its own label is
-optional: left empty, the title of the target is shown, in the language being
-read.
+at all. An entry with no target is a label on its own, which is how a group
+heading is made. Its own label is optional: left empty, the title of the target
+is shown, in the language being read.
 
 The tree goes three levels deep. Entries are reordered with the move buttons or
 by dragging a row, and nested either by picking a parent in the form or by
-dropping a row onto the right-hand third of another one. Dragging is the
-shortcut, never the only way: it cannot be done with a keyboard.
+dropping a row onto the right-hand third of another one. Dragging is a shortcut.
+It cannot be done with a keyboard, so it is never the only way to reorder a
+menu.
 
 An entry whose target has been deleted, taken offline, or left unpublished in
 the language being read is **left out of the menu** in that language, and listed
@@ -94,12 +95,44 @@ stays as a heading, rather than let its children move up a level.
 Settings live in `module_config` and are read through
 `TheliaCMS::getConfigValue()`.
 
+Most of them are edited under **Site > Settings**.
+
 | Value | Default | Description |
 |---|---|---|
 | `home_page_id` | none | Page served on `/`. Set from the page list; its own slug then 301s to `/`. |
+| `site_mode` | `commerce` | `vitrine` closes the shop paths and puts Site first in the back-office menu. |
+| `404_page_id` | none | CMS page served when an address does not exist, with a 404 status. |
+| `maintenance_active` | `0` | `1` closes the site with a 503. |
+| `maintenance_allowlist` | empty | IP addresses and CIDR ranges that keep seeing the site while it is closed. |
+| `maintenance_page_id` | none | CMS page shown while the site is closed. |
+| `cache_ttl` | `3600` | Seconds a resolved menu is cached for. It is also dropped on every change that affects it. |
 | `heading_check_mode` | `warn` | `warn` reports heading problems and publishes anyway; `block` refuses to publish. |
 | `builder_stylesheet` | none | Public path of the stylesheet the editor canvas loads. Defaults to the asset mapper's `styles/app.css`. |
 | `builder_palette` | none | JSON array of hex colours offered in the editor, e.g. `["#111827","#ffffff"]`. Defaults to a contrast-checked set. |
+
+## Showcase mode, maintenance and the 404
+
+A **showcase site** answers 404 on `/cart`, `/order` and `/checkout`, and moves
+Site to the top of the back-office menu. Nothing else changes, and switching back
+undoes it: the shop is one save away.
+
+Saving showcase mode also creates the **Editor** profile: pages, menus, media,
+forms and news, and none of the shop, none of these settings and no free HTML.
+Assign it under **Configuration > Administrators**; its permissions are yours to
+change afterwards, and it is never touched again.
+
+**Maintenance** answers 503 with `Retry-After`, which asks search engines to come
+back rather than to drop the page. A 200 saying "back soon" is what gets indexed
+in place of a site, and a 404 is what gets it removed. Addresses that do not
+resolve answer 503 as well, since the check runs before routing. Three ways
+through: the back office, the IP addresses on the allow list, and an
+administrator already signed in. The page shown can be a CMS page; if it is not
+published in the visitor's language, a plain page from the module is served
+instead, because the theme is part of what may be under repair.
+
+The **page shown when an address does not exist** is a CMS page like any other,
+served with the 404 status. Answering 200 would have search engines index it
+under every wrong address ever linked to the site.
 
 ## Permissions
 
@@ -112,7 +145,8 @@ profile under **Configuration > Administrators**.
 | `admin.cms.menu` | the menus and their entries |
 | `admin.cms.media` | the media library |
 | `admin.cms.custom-code` | free HTML in the editor, and `<iframe>` in published content |
-| `admin.cms.form`, `admin.cms.settings` | reserved for the screens still to come |
+| `admin.cms.settings` | the settings screen: showcase mode, maintenance, the 404 page |
+| `admin.cms.form` | reserved for the screens still to come |
 
 Every route under `/admin/cms` is guarded by the resource of its section, so a
 route added later cannot ship unprotected by omission.
@@ -138,8 +172,8 @@ modules. Each receives the page as `page`.
 
 | Function | Returns |
 |---|---|
-| `cms_menu(code, locale)` | the tree of a menu — each entry has `label`, `url` (null for a heading), `blank`, `children`, `active`, `in_trail`. The locale defaults to the one being served. |
-| `cms_page_alternates()` | the page being served, in each language it exists in — `locale`, `code`, `title`, `url`, `current` |
+| `cms_menu(code, locale)` | the tree of a menu. Each entry has `label`, `url` (null for a heading), `blank`, `children`, `active`, `in_trail`. The locale defaults to the one being served. |
+| `cms_page_alternates()` | the page being served, in each language it exists in: `locale`, `code`, `title`, `url`, `current` |
 
 They return data rather than markup, because navigation markup belongs to the
 theme. A menu of any depth takes a dozen lines:
@@ -168,9 +202,9 @@ menu is saved, or a page it points at is renamed, published, unpublished or
 binned.
 
 `cms_page_alternates()` is what a language switcher should be built on: it
-answers with the current page in each language — absolute, and on the right
-domain when the shop runs one domain per language — and leaves out the languages
-the page is not published in. It works beyond CMS pages: on a product or a
+answers with the current page in each language, absolute and on the right domain
+when the shop runs one domain per language, and it leaves out the languages the
+page is not published in. It works beyond CMS pages: on a product or a
 category it follows the rewritten URL of that object in the other language, and
 elsewhere it carries the current path over. A switcher built on a `?lang=`
 parameter alone sends the visitor back to the home page, losing the page they
@@ -187,8 +221,8 @@ Without SEOne the module runs unchanged.
 Working today: the page tree with its bin and duplication, the visual builder
 with drafts, revisions, autosave and shared previews, the publication pipeline
 (sanitizer, responsive images, search indexing, heading check), the media
-library, menus, hierarchical URLs with 301s on rename, the ACL, and the activity
-log.
+library, menus, hierarchical URLs with 301s on rename, showcase mode, maintenance,
+the editable 404, the ACL, and the activity log.
 
 Not yet: forms, the front-office search screen, reusable blocks and dynamic
 partials.
