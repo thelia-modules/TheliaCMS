@@ -52,8 +52,8 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
             'appStylesheet' => $this->themeStylesheet(),
             'icons' => [],
             'palette' => $this->palette(),
-            // Server-rendered partials land in P4; until then the editor has
-            // no composite block to ask the server to render.
+            // No block asks the server to render a fragment for it yet, so the
+            // editor is given no endpoint to call.
             'renderTemplateEndpoint' => null,
         ];
     }
