@@ -67,7 +67,9 @@ final readonly class CmsMediaController
         ));
     }
 
-    #[Route('/admin/cms/media', name: 'openstudio_page_builder_image_list', methods: ['GET'])]
+    // `/admin/cms/media` itself is the media library screen; only the route
+    // *name* matters to the bundle, which resolves these endpoints by name.
+    #[Route('/admin/cms/media/images', name: 'openstudio_page_builder_image_list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
         $context = $request->query->getString('context');

@@ -1,0 +1,119 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ item.title }}{% endblock %}
+{% block body_testid %}cms-media-edit{% endblock %}
+
+{% block content %}
+    {% form_theme form with bo_form_themes only %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: block('title') } %}
+        {% block title %}
+            {{ parent() }}
+            {% if not item.isDescribed %}
+                <span class="badge text-bg-warning">{{ 'No alternative text'|trans({}, 'theliacms') }}</span>
+            {% elseif item.decorative %}
+                <span class="badge text-bg-light">{{ 'Decorative'|trans({}, 'theliacms') }}</span>
+            {% endif %}
+        {% endblock %}
+
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ item.url }}" target="_blank" rel="noopener">
+                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ 'Open the file'|trans({}, 'theliacms') }}
+            </a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.media.list', { edit_language_id: edit_language_id }) }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to media'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <div class="d-flex justify-content-end mb-3">
+        {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="ratio ratio-4x3 bg-body-secondary rounded-top overflow-hidden">
+                    <img src="{{ item.thumbnailUrl }}" alt="" style="object-fit: scale-down">
+                </div>
+                <ul class="list-group list-group-flush small">
+                    {% if item.dimensions %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="text-muted">{{ 'Dimensions'|trans({}, 'theliacms') }}</span>
+                            <span>{{ item.dimensions }} px</span>
+                        </li>
+                    {% endif %}
+                    {% if item.weight %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="text-muted">{{ 'Weight'|trans({}, 'theliacms') }}</span>
+                            <span>{{ item.weight }}</span>
+                        </li>
+                    {% endif %}
+                    {% if item.format %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="text-muted">{{ 'Format'|trans({}, 'theliacms') }}</span>
+                            <span>{{ item.format|upper }}</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    {% if usages is empty %}
+                        {{ 'Not used yet'|trans({}, 'theliacms') }}
+                    {% else %}
+                        {{ 'Used in %count% page(s)'|trans({ '%count%': usages|length }, 'theliacms') }}
+                    {% endif %}
+                </div>
+                {% if usages is empty %}
+                    <div class="card-body text-muted small">
+                        {{ 'Deleting it now affects nothing.'|trans({}, 'theliacms') }}
+                    </div>
+                {% else %}
+                    <ul class="list-group list-group-flush">
+                        {% for usage in usages %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <a href="{{ path('admin.cms.pages.edit', { id: usage.page.id, edit_language_id: edit_language_id }) }}">
+                                    {{ usage.page.setLocale(edit_locale).title|default('#' ~ usage.page.id) }}
+                                </a>
+                                <span class="text-muted small">{{ usage.locales|join(', ') }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            {# `novalidate`: the alternative text is required *unless* the image
+               is decorative, and the browser cannot know that. #}
+            {{ form_start(form, { attr: { novalidate: 'novalidate' } }) }}
+                {{ form_row(form.alt) }}
+
+                {# The back-office form theme renders help inside the label, and
+                   a checkbox label has none — so this one is written out. #}
+                {{ form_row(form.decorative) }}
+                <p class="form-text mt-n2 mb-3">{{ form.decorative.vars.help|trans({}, 'theliacms') }}</p>
+
+                {{ form_row(form.caption) }}
+                {{ form_row(form.title) }}
+                {{ form_row(form.tags) }}
+                {{ form_row(form.file) }}
+
+                <button type="submit" class="btn btn-primary">{{ 'Save'|trans({}, 'theliacms') }}</button>
+            {{ form_end(form) }}
+
+            <form method="post" class="mt-3 pt-3 border-top"
+                  action="{{ path('admin.cms.media.delete', { id: item.id, edit_language_id: edit_language_id }) }}"
+                  onsubmit="return confirm('{{ 'Delete this image for good?'|trans({}, 'theliacms')|e('js') }}')">
+                <button type="submit" class="btn btn-sm btn-outline-danger" {{ usages is not empty ? 'disabled' : '' }}>
+                    <i class="bi bi-trash3 me-1" aria-hidden="true"></i>{{ 'Delete this image'|trans({}, 'theliacms') }}
+                </button>
+                {% if usages is not empty %}
+                    <span class="form-text d-block">{{ 'Remove it from the pages above before deleting it.'|trans({}, 'theliacms') }}</span>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+{% endblock %}

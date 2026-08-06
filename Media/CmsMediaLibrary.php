@@ -156,22 +156,27 @@ final readonly class CmsMediaLibrary
     }
 
     /**
-     * Images of the library the page builder may offer, most recent first.
+     * Images of the library the CMS owns, most recent first.
      *
-     * TheliaLibrary ships no listing service, so the query lives here.
+     * TheliaLibrary ships no listing service, so the query lives here. A search
+     * term matches a title or one of the image tags.
      *
      * @return list<LibraryImage>
      */
-    public function images(int $limit = 200): array
+    public function images(?string $search = null, int $limit = 200): array
     {
-        $imageIds = LibraryImageTagQuery::create()
-            ->filterByTagId($this->tagId())
-            ->select(['ImageId'])
-            ->find()
-            ->toArray();
+        $imageIds = $this->taggedImageIds($this->tagId());
 
         if ([] === $imageIds) {
             return [];
+        }
+
+        if (null !== $search && '' !== $search) {
+            $imageIds = $this->matching($imageIds, $search);
+
+            if ([] === $imageIds) {
+                return [];
+            }
         }
 
         return array_values(iterator_to_array(
@@ -184,14 +189,152 @@ final readonly class CmsMediaLibrary
         ));
     }
 
+    /**
+     * The image with that identifier, if the CMS owns it.
+     *
+     * Guards the back-office screens against reaching an image uploaded for a
+     * product: the library is shared, the CMS section is not.
+     */
+    public function ownedImage(int $imageId): ?LibraryImage
+    {
+        if (!\in_array($imageId, $this->taggedImageIds($this->tagId()), true)) {
+            return null;
+        }
+
+        return LibraryImageQuery::create()->findPk($imageId);
+    }
+
+    /**
+     * Tags an image carries, other than the one marking it as CMS content.
+     *
+     * @return list<string>
+     */
+    public function tagsOf(LibraryImage $image): array
+    {
+        $tagIds = LibraryImageTagQuery::create()
+            ->filterByImageId($image->getId())
+            ->select(['TagId'])
+            ->find()
+            ->toArray();
+
+        $titles = [];
+        $locale = $this->locale();
+
+        foreach (LibraryTagQuery::create()->filterById($tagIds, Criteria::IN)->find() as $tag) {
+            if ((int) $tag->getId() === $this->tagId()) {
+                continue;
+            }
+
+            $title = $tag->setLocale($locale)->getTitle() ?? $tag->setLocale(Lang::getDefaultLanguage()->getLocale())->getTitle();
+
+            if (null !== $title && '' !== $title) {
+                $titles[] = $title;
+            }
+        }
+
+        sort($titles);
+
+        return $titles;
+    }
+
+    /**
+     * Replaces the tags of an image, keeping the one that marks it as CMS
+     * content. Tags are created on first use.
+     *
+     * @param list<string> $titles
+     */
+    public function retag(LibraryImage $image, array $titles): void
+    {
+        $keep = [$this->tagId()];
+
+        foreach ($titles as $title) {
+            $title = trim($title);
+
+            if ('' === $title) {
+                continue;
+            }
+
+            $keep[] = $this->tagIdFor($title);
+        }
+
+        $keep = array_unique($keep);
+
+        foreach (LibraryImageTagQuery::create()->filterByImageId($image->getId())->find() as $association) {
+            if (\in_array((int) $association->getTagId(), $keep, true)) {
+                $keep = array_diff($keep, [(int) $association->getTagId()]);
+
+                continue;
+            }
+
+            $association->delete();
+        }
+
+        foreach ($keep as $tagId) {
+            $this->imageTags->associateImage((string) $image->getId(), (string) $tagId);
+        }
+    }
+
+    /**
+     * @param list<int> $imageIds
+     *
+     * @return list<int>
+     */
+    private function matching(array $imageIds, string $search): array
+    {
+        $byTitle = LibraryImageQuery::create()
+            ->filterById($imageIds, Criteria::IN)
+            ->useLibraryImageI18nQuery()
+                ->filterByTitle('%'.$search.'%', Criteria::LIKE)
+            ->endUse()
+            ->select(['Id'])
+            ->find()
+            ->toArray();
+
+        $tagIds = LibraryTagQuery::create()
+            ->useLibraryTagI18nQuery()
+                ->filterByTitle('%'.$search.'%', Criteria::LIKE)
+            ->endUse()
+            ->select(['Id'])
+            ->find()
+            ->toArray();
+
+        $byTag = [];
+
+        foreach ($tagIds as $tagId) {
+            $byTag = array_merge($byTag, $this->taggedImageIds((int) $tagId));
+        }
+
+        return array_values(array_intersect(
+            array_map('intval', $imageIds),
+            array_unique(array_merge(array_map('intval', $byTitle), $byTag)),
+        ));
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function taggedImageIds(int $tagId): array
+    {
+        return array_map('intval', LibraryImageTagQuery::create()
+            ->filterByTagId($tagId)
+            ->select(['ImageId'])
+            ->find()
+            ->toArray());
+    }
+
     private function tagId(): int
     {
-        $tag = LibraryTagQuery::create()->useLibraryTagI18nQuery()->filterByTitle(self::TAG)->endUse()->findOne();
+        return $this->tagIdFor(self::TAG);
+    }
+
+    private function tagIdFor(string $title): int
+    {
+        $tag = LibraryTagQuery::create()->useLibraryTagI18nQuery()->filterByTitle($title)->endUse()->findOne();
 
         if (!$tag instanceof LibraryTag) {
             $tag = (new LibraryTag())
                 ->setLocale($this->locale())
-                ->setTitle(self::TAG)
+                ->setTitle($title)
                 ->setColorCode(self::TAG_COLOUR);
             $tag->save();
         }

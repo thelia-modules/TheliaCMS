@@ -1,0 +1,110 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Media'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-media-list{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Media'|trans({}, 'theliacms') } %}{% endembed %}
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        {# The form posts on its own so it keeps working without JavaScript;
+           choosing files just submits it sooner. #}
+        <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-start"
+              action="{{ path('admin.cms.media.add', { edit_language_id: edit_language_id }) }}"
+              data-testid="cms-media-upload-form">
+            <div>
+                <label class="visually-hidden" for="cms-media-files">{{ 'Add images'|trans({}, 'theliacms') }}</label>
+                <input class="form-control" type="file" id="cms-media-files" name="files[]" multiple
+                       accept="{{ accepted_mime_types }}" onchange="this.form.requestSubmit()">
+                <div class="form-text">{{ 'JPEG, PNG or WebP. Several at once.'|trans({}, 'theliacms') }}</div>
+            </div>
+            <button type="submit" class="btn btn-primary text-nowrap">
+                <i class="bi bi-upload me-1" aria-hidden="true"></i>{{ 'Add images'|trans({}, 'theliacms') }}
+            </button>
+        </form>
+
+        {% if has_library %}
+            <form method="get" class="d-flex gap-2 align-items-start" action="{{ path('admin.cms.media.list') }}">
+                <input type="hidden" name="edit_language_id" value="{{ edit_language_id }}">
+                <label class="visually-hidden" for="cms-media-search">{{ 'Search'|trans({}, 'theliacms') }}</label>
+                <input class="form-control" type="search" id="cms-media-search" name="search" value="{{ search }}"
+                       placeholder="{{ 'Name or tag'|trans({}, 'theliacms') }}">
+                <button class="btn btn-outline-secondary text-nowrap" type="submit">{{ 'Search'|trans({}, 'theliacms') }}</button>
+                {% if search %}
+                    <a class="btn btn-link text-nowrap" href="{{ path('admin.cms.media.list', { edit_language_id: edit_language_id }) }}">{{ 'Clear'|trans({}, 'theliacms') }}</a>
+                {% endif %}
+            </form>
+        {% endif %}
+    </div>
+
+    {% if items is not empty %}
+        {% set undescribed = items|filter(item => not item.isDescribed)|length %}
+        <p class="text-body-secondary small">
+            {{ '%count% image(s)'|trans({ '%count%': items|length }, 'theliacms') }}
+            {%- if undescribed > 0 %}
+                · <span class="text-warning-emphasis">{{ '%count% still to describe'|trans({ '%count%': undescribed }, 'theliacms') }}</span>
+            {%- endif -%}
+        </p>
+    {% endif %}
+
+    {% if items is empty %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                {% if search %}
+                    <p class="text-muted mb-3">{{ 'No image matches “%search%”.'|trans({ '%search%': search }, 'theliacms') }}</p>
+                    <a class="btn btn-outline-secondary" href="{{ path('admin.cms.media.list', { edit_language_id: edit_language_id }) }}">{{ 'Show every image'|trans({}, 'theliacms') }}</a>
+                {% else %}
+                    <p class="text-muted mb-0">{{ 'No image yet. Images added here can be placed in any page, and are described once for every page that uses them.'|trans({}, 'theliacms') }}</p>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3">
+            {% for item in items %}
+                <div class="col">
+                    <div class="card h-100" data-testid="cms-media-card-{{ item.id }}">
+                        {# `scale-down`, not `cover`: a media library has to show
+                           the real shape of a file, and never blow a small image
+                           up to fill the card. #}
+                        <a href="{{ path('admin.cms.media.edit', { id: item.id, edit_language_id: edit_language_id }) }}"
+                           class="ratio ratio-4x3 bg-body-secondary rounded-top overflow-hidden">
+                            <img src="{{ item.thumbnailUrl }}" alt="" loading="lazy" decoding="async"
+                                 style="object-fit: scale-down">
+                        </a>
+                        <div class="card-body py-2">
+                            <a class="d-block text-truncate fw-medium text-decoration-none"
+                               href="{{ path('admin.cms.media.edit', { id: item.id, edit_language_id: edit_language_id }) }}"
+                               title="{{ item.title }}">{{ item.title }}</a>
+
+                            <p class="text-muted small mb-2">
+                                {%- if item.dimensions %}{{ item.dimensions }}{% endif -%}
+                                {%- if item.weight %} · {{ item.weight }}{% endif -%}
+                                {%- if item.format %} · {{ item.format|upper }}{% endif -%}
+                            </p>
+
+                            {% if not item.isDescribed %}
+                                <span class="badge text-bg-warning">
+                                    <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                                    {{ 'No alternative text'|trans({}, 'theliacms') }}
+                                </span>
+                            {% elseif item.decorative %}
+                                <span class="badge text-bg-light">{{ 'Decorative'|trans({}, 'theliacms') }}</span>
+                            {% endif %}
+
+                            {% for tag in item.tags %}
+                                <span class="badge text-bg-light">{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                        <div class="card-footer bg-transparent py-2 text-muted small">
+                            {% if item.usageCount > 0 %}
+                                {{ 'Used in %count% page(s)'|trans({ '%count%': item.usageCount }, 'theliacms') }}
+                            {% else %}
+                                {{ 'Not used yet'|trans({}, 'theliacms') }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

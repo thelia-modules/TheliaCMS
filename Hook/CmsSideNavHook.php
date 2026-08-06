@@ -58,14 +58,20 @@ class CmsSideNavHook extends BaseHook
             return;
         }
 
+        // Each entry is offered only to a profile allowed to open it: a link
+        // leading straight to a 403 is worse than no link.
+        $maySeeMedia = $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::VIEW]);
+
         // Rendered through the Twig environment rather than BaseHook::render():
         // the parser only knows the module template directories registered for
         // the *active* template, so a namespaced name is the reliable form.
         $event->add($this->twig->render('@TheliaCMSModule/backOffice/default-twig/side-nav.html.twig', [
             'pages_url' => $this->urls->generate('admin.cms.pages.list'),
+            'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
             'is_active' => str_starts_with((string) $this->getRequest()?->getPathInfo(), '/admin/cms'),
             'section_label' => $this->trans('Site', [], TheliaCMS::DOMAIN_NAME),
             'pages_label' => $this->trans('Pages', [], TheliaCMS::DOMAIN_NAME),
+            'media_label' => $this->trans('Media', [], TheliaCMS::DOMAIN_NAME),
         ]));
     }
 }
