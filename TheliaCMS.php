@@ -77,7 +77,15 @@ class TheliaCMS extends BaseModule
     public static function configureServices(ServicesConfigurator $servicesConfigurator): void
     {
         $servicesConfigurator->load(self::getModuleCode().'\\', __DIR__)
-            ->exclude([__DIR__.'/I18n/*', __DIR__.'/Config/*', __DIR__.'/Model/*', __DIR__.'/templates/*'])
+            ->exclude([
+                __DIR__.'/I18n/*',
+                __DIR__.'/Config/*',
+                __DIR__.'/Model/*',
+                __DIR__.'/templates/*',
+                // Value objects: instantiated by the services that build them,
+                // never wired by the container.
+                __DIR__.'/Page/PublishedPage.php',
+            ])
             ->autowire(true)
             ->autoconfigure(true);
     }

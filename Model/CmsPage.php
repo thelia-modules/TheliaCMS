@@ -1,19 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace TheliaCMS\Model;
 
+use Thelia\Model\Tools\UrlRewritingTrait;
 use TheliaCMS\Model\Base\CmsPage as BaseCmsPage;
+use TheliaCMS\TheliaCMS;
 
-/**
- * Skeleton subclass for representing a row from the 'cms_page' table.
- *
- *
- *
- * You should add additional methods to this class to meet the
- * application requirements.  This class will only be generated as
- * long as it does not already exist in the output directory.
- */
 class CmsPage extends BaseCmsPage
 {
+    // Brings setRewrittenUrl(), which also flags the previous URL as redirected
+    // so renaming a page keeps a 301 behind it.
+    use UrlRewritingTrait;
 
+    public function getRewrittenUrlViewName(): string
+    {
+        return TheliaCMS::PAGE_VIEW;
+    }
 }

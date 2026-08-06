@@ -1,0 +1,39 @@
+{#
+    Fallback layout for a CMS page.
+
+    A theme takes over by shipping its own `cmspage.html.twig` at its root; until
+    it does, this file keeps the module usable on any Twig theme exposing a
+    `base.html.twig`. Both versions must emit the `cmspage.*` theme hooks, which
+    are the documented extension points for third-party modules.
+#}
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ cms_page.metaTitle|default(cms_page.title) }}{% endblock %}
+{% block meta_desc %}{{ cms_page.metaDescription|default('') }}{% endblock %}
+
+{% block robots %}
+    {% if cms_page.noindex or cms_page.nofollow %}
+        <meta name="robots" content="{{ cms_page.noindex ? 'noindex' : 'index' }}, {{ cms_page.nofollow ? 'nofollow' : 'follow' }}">
+    {% endif %}
+{% endblock %}
+
+{% block body_class %}cms-page cms-page--{{ cms_page.layout.value }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {% if cms_page.css is not empty %}
+        <style>{{ cms_page.css|raw }}</style>
+    {% endif %}
+{% endblock %}
+
+{% block body %}
+    {{ theme_hook('cmspage.top', {page: cms_page}) }}
+
+    <article class="cms-page__content">
+        {{ theme_hook('cmspage.content.before', {page: cms_page}) }}
+        {{ cms_page.html|raw }}
+        {{ theme_hook('cmspage.content.after', {page: cms_page}) }}
+    </article>
+
+    {{ theme_hook('cmspage.bottom', {page: cms_page}) }}
+{% endblock %}
