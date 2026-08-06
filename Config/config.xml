@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<config xmlns="http://thelia.net/schema/dic/config"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://thelia.net/schema/dic/config http://thelia.net/schema/dic/config/thelia-1.0.xsd">
+    <!--
+        Services, hooks, forms, loops and routes are all auto-discovered in
+        Thelia 3 (configureServices() + PHP attributes). This file only exists
+        because the module validator still requires it.
+    -->
+</config>

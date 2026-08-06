@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database defaultIdMethod="native" name="TheliaMain"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:noNamespaceSchemaLocation="../../../../vendor/thelia/propel/resources/xsd/database.xsd">
+
+    <!--
+        Discriminant columns are VARCHAR + a backed PHP enum, never Propel ENUM:
+        Propel maps ENUM to a positional TINYINT, which makes the stored value
+        meaningless outside the ORM.
+    -->
+    <table name="cms_page" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="parent" type="INTEGER"/>
+        <column name="position" required="true" type="INTEGER" default="0"/>
+        <column name="visible" required="true" type="TINYINT" size="4" default="1"/>
+        <column name="layout" required="true" size="20" type="VARCHAR" default="default"/>
+        <column name="publish_at" type="TIMESTAMP"/>
+        <column name="unpublish_at" type="TIMESTAMP"/>
+        <column name="deleted_at" type="TIMESTAMP"/>
+        <column name="created_by" type="INTEGER"/>
+        <column name="updated_by" type="INTEGER"/>
+
+        <column name="title" size="255" type="VARCHAR"/>
+        <column name="meta_title" size="255" type="VARCHAR"/>
+        <column name="meta_description" type="LONGVARCHAR"/>
+        <column name="og_title" size="255" type="VARCHAR"/>
+        <column name="og_description" type="LONGVARCHAR"/>
+        <column name="og_image_id" type="INTEGER"/>
+        <column name="twitter_card" size="20" type="VARCHAR"/>
+        <column name="canonical" size="2048" type="VARCHAR"/>
+        <column name="noindex" required="true" type="TINYINT" size="4" default="0"/>
+        <column name="nofollow" required="true" type="TINYINT" size="4" default="0"/>
+
+        <foreign-key foreignTable="cms_page" name="fk_cms_page_parent" onDelete="CASCADE">
+            <reference foreign="id" local="parent"/>
+        </foreign-key>
+
+        <index name="idx_cms_page_parent_position">
+            <index-column name="parent"/>
+            <index-column name="position"/>
+        </index>
+        <index name="idx_cms_page_deleted_at">
+            <index-column name="deleted_at"/>
+        </index>
+
+        <behavior name="i18n">
+            <parameter name="i18n_columns"
+                       value="title, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow"/>
+        </behavior>
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        One GrapesJS project per page and per locale (decision D3): the layout
+        itself is translated, not only the strings, so a locale owns its own
+        canvas. Draft columns are never read on the front-office path.
+    -->
+    <table name="cms_page_content" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="page_id" required="true" type="INTEGER"/>
+        <column name="locale" required="true" size="5" type="VARCHAR"/>
+        <column name="draft_project_data" type="CLOB"/>
+        <column name="draft_html" type="CLOB"/>
+        <column name="draft_css" type="CLOB"/>
+        <column name="published_html" type="CLOB"/>
+        <column name="published_css" type="CLOB"/>
+        <column name="published_at" type="TIMESTAMP"/>
+        <column name="draft_updated_by" type="INTEGER"/>
+
+        <foreign-key foreignTable="cms_page" name="fk_cms_page_content_page" onDelete="CASCADE">
+            <reference foreign="id" local="page_id"/>
+        </foreign-key>
+
+        <unique name="unq_cms_page_content_page_locale">
+            <unique-column name="page_id"/>
+            <unique-column name="locale"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <table name="cms_page_revision" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="page_id" required="true" type="INTEGER"/>
+        <column name="locale" required="true" size="5" type="VARCHAR"/>
+        <column name="project_data" type="CLOB"/>
+        <column name="html" type="CLOB"/>
+        <column name="css" type="CLOB"/>
+        <column name="label" size="60" type="VARCHAR"/>
+        <column name="created_by" type="INTEGER"/>
+
+        <foreign-key foreignTable="cms_page" name="fk_cms_page_revision_page" onDelete="CASCADE">
+            <reference foreign="id" local="page_id"/>
+        </foreign-key>
+
+        <index name="idx_cms_page_revision_page_locale">
+            <index-column name="page_id"/>
+            <index-column name="locale"/>
+        </index>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        Search payload extracted at publish time. The FULLTEXT index is added by
+        TheliaCMS::install(): TheliaMain.sql is not replayed on activation and
+        Propel has no portable FULLTEXT declaration.
+    -->
+    <table name="cms_page_search" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="page_id" required="true" type="INTEGER"/>
+        <column name="locale" required="true" size="5" type="VARCHAR"/>
+        <column name="content" type="CLOB"/>
+
+        <foreign-key foreignTable="cms_page" name="fk_cms_page_search_page" onDelete="CASCADE">
+            <reference foreign="id" local="page_id"/>
+        </foreign-key>
+
+        <unique name="unq_cms_page_search_page_locale">
+            <unique-column name="page_id"/>
+            <unique-column name="locale"/>
+        </unique>
+    </table>
+
+    <external-schema filename="local/config/schema.xml" referenceOnly="true"/>
+</database>

@@ -1,0 +1,20 @@
+{
+    "name": "thelia/cms-module",
+    "license": "LGPL-3.0-or-later",
+    "type": "thelia-module",
+    "description": "All-in-one CMS for Thelia 3: page tree, visual page builder, menus, forms and media.",
+    "require": {
+        "php": ">=8.3",
+        "thelia/installer": "~1.1",
+        "openstudio/page-builder-bundle": "^0.2.1",
+        "thelia/thelia-library-module": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "TheliaCMS\\": ""
+        }
+    },
+    "extra": {
+        "installer-name": "TheliaCMS"
+    }
+}
