@@ -7,6 +7,7 @@
         "php": ">=8.3",
         "thelia/installer": "~1.1",
         "openstudio/page-builder-bundle": "^0.2.1",
+        "symfony/html-sanitizer": "^7.4",
         "thelia/thelia-library-module": "*"
     },
     "autoload": {

@@ -15,17 +15,25 @@ declare(strict_types=1);
 namespace TheliaCMS\Page\Admin;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
+use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\LangQuery;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Builder\PageContentNormalizer;
+use TheliaCMS\Builder\PublishedContentSanitizer;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsPageRevision;
 use TheliaCMS\Model\CmsPageRevisionQuery;
+use TheliaCMS\Model\CmsPageSearch;
+use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Search\SearchTextExtractor;
+use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
 
 /**
@@ -42,6 +50,9 @@ final readonly class CmsPageWriter
         private CmsUrlService $urls,
         private SecurityContext $securityContext,
         private CmsActivityLog $activityLog,
+        private PageContentNormalizer $normalizer,
+        private PublishedContentSanitizer $sanitizer,
+        private SearchTextExtractor $searchText,
     ) {
     }
 
@@ -91,10 +102,15 @@ final readonly class CmsPageWriter
     {
         $adminId = $this->securityContext->getAdminUser()?->getId();
 
+        // Drafts are filtered too, not only what goes online: the draft is
+        // loaded back into the editor of whoever opens the page next, so a
+        // script left in it would run in their back office.
+        $html = $this->sanitizer->html($this->normalizer->html($content->html), $this->mayPublishCustomCode());
+
         $this->contentFor($page, $locale)
             ->setDraftProjectData($content->projectData)
-            ->setDraftHtml($content->html)
-            ->setDraftCss($content->css)
+            ->setDraftHtml($html)
+            ->setDraftCss($this->sanitizer->css($this->normalizer->css($content->css)))
             ->setDraftUpdatedBy($adminId)
             ->save();
 
@@ -111,17 +127,29 @@ final readonly class CmsPageWriter
         $connection->beginTransaction();
 
         try {
+            $withCustomCode = $this->mayPublishCustomCode();
+
             $content = $this->contentFor($page, $locale);
-            $content->setPublishedHtml($content->getDraftHtml())
-                ->setPublishedCss($content->getDraftCss())
+            $html = $this->sanitizer->html($this->normalizer->html($content->getDraftHtml()), $withCustomCode);
+            $css = $this->sanitizer->css($this->normalizer->css($content->getDraftCss()));
+
+            $content->setPublishedHtml($html)
+                ->setPublishedCss($css)
                 ->setPublishedAt(new \DateTimeImmutable())
                 ->save($connection);
 
+            $this->indexForSearch($page, $locale, $html, $connection);
             $this->snapshot($page, $locale, $content, $connection);
 
             $connection->commit();
 
-            $this->activityLog->record('PUBLISH', (int) $page->getId(), \sprintf('CMS page #%d published in %s', $page->getId(), $locale));
+            $this->activityLog->record('PUBLISH', (int) $page->getId(), \sprintf(
+                'CMS page #%d published in %s%s',
+                $page->getId(),
+                $locale,
+                // Traced: this page went online through the wider allow list.
+                $withCustomCode ? ' (custom code allowed)' : '',
+            ));
         } catch (\Throwable $throwable) {
             $connection->rollBack();
 
@@ -415,6 +443,34 @@ final readonly class CmsPageWriter
             ->findOne();
 
         return $content ?? (new CmsPageContent())->setPageId($page->getId())->setLocale($locale);
+    }
+
+    /**
+     * Whether the author may go beyond the standard allow list — embedding an
+     * iframe, essentially. Anything else the editor produces is filtered the
+     * same way for everyone.
+     */
+    private function mayPublishCustomCode(): bool
+    {
+        return $this->securityContext->isGranted(['ADMIN'], [CmsResources::CUSTOM_CODE], [], [AccessManager::UPDATE]);
+    }
+
+    /**
+     * Refreshes the full-text payload of the page, so the front-office search
+     * queries plain text and never the HTML columns.
+     */
+    private function indexForSearch(CmsPage $page, string $locale, ?string $html, ConnectionInterface $connection): void
+    {
+        $index = CmsPageSearchQuery::create()
+            ->filterByPageId($page->getId())
+            ->filterByLocale($locale)
+            ->findOne()
+            ?? (new CmsPageSearch())->setPageId($page->getId())->setLocale($locale);
+
+        $page->setLocale($locale);
+
+        $index->setContent(trim($page->getTitle().' '.$this->searchText->extract($html)))
+            ->save($connection);
     }
 
     private function snapshot(CmsPage $page, string $locale, CmsPageContent $content, $connection): void

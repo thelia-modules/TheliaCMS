@@ -72,6 +72,10 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
     public function editorOptions(): array
     {
         return [
+            // GrapesJS otherwise prepends a reset of its own (`*` and `body`)
+            // to the page stylesheet, which would restyle the whole site the
+            // page is published into. Resets belong to the theme.
+            'protectedCss' => '',
             'deviceManager' => [
                 'devices' => [
                     ['id' => 'desktop', 'name' => 'Desktop', 'width' => ''],
