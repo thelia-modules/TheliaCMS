@@ -94,15 +94,20 @@ readonly class CmsPageSeoElement implements SeoElementInterface
     {
         $page = $this->findLocalizedPage($id);
 
-        $microdata = null === $page ? null : [
+        // Nothing to describe, and nothing handed on: SEOne builds its event
+        // with whatever it is given and its constructor refuses null, so an
+        // unknown page id would turn the 404 page into a 500.
+        if (!$page instanceof CmsPage) {
+            return '';
+        }
+
+        return $this->getScriptsTag([
             '@context' => 'https://schema.org/',
             '@type' => 'WebPage',
             'url' => $this->pageUrl($page),
             'name' => $page->getTitle(),
             'description' => $page->getMetaDescription(),
-        ];
-
-        return $this->getScriptsTag($microdata, $type, $id);
+        ], $type, $id);
     }
 
     /**
