@@ -18,6 +18,7 @@ use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use SEOne\Service\SeoDefaultModels\SeoElementInterface;
+use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Thelia\Core\Install\Database;
 use Thelia\Model\ConfigQuery;
@@ -169,6 +170,28 @@ class TheliaCMS extends BaseModule
     public static function getCompilers(): array
     {
         return [new CmsAdminResourcesCompiler()];
+    }
+
+    /**
+     * The page builder bundle registers its GrapesJS sources with the asset
+     * mapper. On Thelia the asset mapper belongs to the front-office theme, and
+     * the bundle's bare imports (`grapesjs`, `grapesjs/dist/css/grapes.min.css`)
+     * are absent from that importmap: in `strict` mode every front asset then
+     * fails, the theme stylesheet included.
+     *
+     * Excluding those sources is not a loss — a published page must ship no
+     * builder JavaScript at all, and the editor is bundled by this module's own
+     * npm build and served with `module_asset()` on the admin route only.
+     */
+    public static function configureContainer(ContainerConfigurator $containerConfigurator): void
+    {
+        $containerConfigurator->extension('framework', [
+            'asset_mapper' => [
+                'excluded_patterns' => [
+                    '*/openstudio/page-builder-bundle/assets/*',
+                ],
+            ],
+        ]);
     }
 
     public static function configureServices(ServicesConfigurator $servicesConfigurator): void
