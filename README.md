@@ -3,7 +3,7 @@
 A CMS for Thelia 3: a tree of pages, edited in a visual page builder and
 published as plain HTML and CSS. A published page ships no builder JavaScript.
 
-> **Alpha.** Pages, the builder and the media library work; menus, forms and the
+> **Alpha.** Pages, the builder, the media library and menus work; forms and the
 > front-office search are not there yet. See [Scope](#scope).
 
 ## Compatibility
@@ -69,6 +69,26 @@ At publication every image becomes a `<picture>` with a WebP alternative, a
 `srcset` bounded by the file's real width, explicit `width` and `height`, and
 lazy loading on everything but the first image.
 
+## Menus
+
+Menus live under **Site > Menus** and a theme calls them by code. `main` and
+`footer` exist from the first activation.
+
+An entry points at a CMS page, a content, a folder, a web address, or at nothing
+at all — a label alone, which is how a group heading is made. Its own label is
+optional: left empty, the title of the target is shown, in the language being
+read.
+
+The tree goes three levels deep. Entries are reordered with the move buttons or
+by dragging a row, and nested either by picking a parent in the form or by
+dropping a row onto the right-hand third of another one. Dragging is the
+shortcut, never the only way: it cannot be done with a keyboard.
+
+An entry whose target has been deleted, taken offline, or left unpublished in
+the language being read is **left out of the menu** in that language, and listed
+in the back office with the reason. A heading that still has usable children
+stays as a heading, rather than let its children move up a level.
+
 ## Configuration
 
 Settings live in `module_config` and are read through
@@ -89,9 +109,10 @@ profile under **Configuration > Administrators**.
 | Resource | Covers |
 |---|---|
 | `admin.cms.page` | the page tree, the builder, publication |
+| `admin.cms.menu` | the menus and their entries |
 | `admin.cms.media` | the media library |
 | `admin.cms.custom-code` | free HTML in the editor, and `<iframe>` in published content |
-| `admin.cms.menu`, `admin.cms.form`, `admin.cms.settings` | reserved for the screens still to come |
+| `admin.cms.form`, `admin.cms.settings` | reserved for the screens still to come |
 
 Every route under `/admin/cms` is guarded by the resource of its section, so a
 route added later cannot ship unprotected by omission.
@@ -113,6 +134,38 @@ modules. Each receives the page as `page`.
 | `cmspage.content.after` | front | inside the article, after the content |
 | `cmspage.bottom` | front | after the content |
 
+### Twig functions
+
+| Function | Returns |
+|---|---|
+| `cms_menu(code, locale)` | the tree of a menu — each entry has `label`, `url` (null for a heading), `blank`, `children`, `active`, `in_trail`. The locale defaults to the one being served. |
+
+It returns data rather than markup, because navigation markup belongs to the
+theme. A menu of any depth takes a dozen lines:
+
+```twig
+{% macro menu(entries) %}
+    <ul>
+        {% for entry in entries %}
+            <li>
+                {% if entry.url %}
+                    <a href="{{ entry.url }}"{% if entry.blank %} target="_blank" rel="noopener"{% endif %}>{{ entry.label }}</a>
+                {% else %}
+                    <span>{{ entry.label }}</span>
+                {% endif %}
+                {% if entry.children is not empty %}{{ _self.menu(entry.children) }}{% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endmacro %}
+
+{{ _self.menu(cms_menu('main')) }}
+```
+
+Menus are cached per code, language and host, and the cache is dropped whenever a
+menu is saved, or a page it points at is renamed, published, unpublished or
+binned.
+
 When [SEOne][seone] is installed, CMS pages describe themselves to it: title,
 description, `WebPage` microdata, and a breadcrumb built from the page tree.
 Their `hreflang` alternates come from the languages a page is published in.
@@ -123,10 +176,11 @@ Without SEOne the module runs unchanged.
 Working today: the page tree with its bin and duplication, the visual builder
 with drafts, revisions, autosave and shared previews, the publication pipeline
 (sanitizer, responsive images, search indexing, heading check), the media
-library, hierarchical URLs with 301s on rename, the ACL, and the activity log.
+library, menus, hierarchical URLs with 301s on rename, the ACL, and the activity
+log.
 
-Not yet: menus, forms, the front-office search screen, the showcase mode,
-reusable blocks and dynamic partials.
+Not yet: forms, the front-office search screen, reusable blocks and dynamic
+partials.
 
 ## Tests
 

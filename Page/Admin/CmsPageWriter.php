@@ -24,6 +24,7 @@ use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
 use TheliaCMS\Builder\PublishedContentSanitizer;
+use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -55,6 +56,11 @@ final readonly class CmsPageWriter
         private PublishedContentSanitizer $sanitizer,
         private ImageRewriter $images,
         private SearchTextExtractor $searchText,
+        // Menus hold the address and the title of the pages they point at, and
+        // they are cached: a page that is renamed, published, unpublished or
+        // binned has to drop them, or the navigation of the site keeps pointing
+        // at what the page used to be.
+        private MenuCache $menuCache,
     ) {
     }
 
@@ -88,6 +94,7 @@ final readonly class CmsPageWriter
 
             $connection->commit();
 
+            $this->menuCache->invalidate();
             $this->activityLog->record($wasNew ? 'CREATE' : 'UPDATE', (int) $page->getId(), \sprintf('CMS page "%s" saved in %s', $draft->title, $locale));
         } catch (\Throwable $throwable) {
             $connection->rollBack();
@@ -147,6 +154,7 @@ final readonly class CmsPageWriter
 
             $connection->commit();
 
+            $this->menuCache->invalidate();
             $this->activityLog->record('PUBLISH', (int) $page->getId(), \sprintf(
                 'CMS page #%d published in %s%s',
                 $page->getId(),
@@ -170,6 +178,7 @@ final readonly class CmsPageWriter
 
         $content?->setPublishedAt(null)->save();
 
+        $this->menuCache->invalidate();
         $this->activityLog->record('UNPUBLISH', (int) $page->getId(), \sprintf('CMS page #%d unpublished in %s', $page->getId(), $locale));
     }
 
@@ -206,6 +215,8 @@ final readonly class CmsPageWriter
             }
 
             $connection->commit();
+
+            $this->menuCache->invalidate();
 
             $ids = array_map(static fn (CmsPage $node): int => (int) $node->getId(), $branch);
             $this->activityLog->record('DELETE', (int) $page->getId(), \sprintf('CMS pages moved to the bin: %s', implode(', ', $ids)));
@@ -245,6 +256,7 @@ final readonly class CmsPageWriter
 
             $connection->commit();
 
+            $this->menuCache->invalidate();
             $this->activityLog->record('RESTORE', (int) $page->getId(), \sprintf('CMS page #%d restored from the bin', $page->getId()));
         } catch (\Throwable $throwable) {
             $connection->rollBack();
