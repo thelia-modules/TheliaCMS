@@ -122,7 +122,7 @@ final readonly class ImageRewriter
     {
         $parent = $image->parentNode;
 
-        if (!$parent instanceof \DOMNode || 'picture' === $parent->nodeName) {
+        if (!$parent instanceof \DOMNode || $this->isInsideAPicture($image)) {
             return;
         }
 
@@ -140,6 +140,25 @@ final readonly class ImageRewriter
         $parent->replaceChild($picture, $image);
         $picture->appendChild($source);
         $picture->appendChild($image);
+    }
+
+    /**
+     * Whether the image already sits in a `<picture>`, at any depth.
+     *
+     * Not just the direct parent: `<source>` is a void element in HTML but not
+     * to the parser used here, which happily adopts the `<img>` that follows it
+     * as a child. Looking only one level up would miss an existing `<picture>`
+     * and nest a second one inside it.
+     */
+    private function isInsideAPicture(\DOMElement $image): bool
+    {
+        for ($node = $image->parentNode; $node instanceof \DOMNode; $node = $node->parentNode) {
+            if ('picture' === $node->nodeName) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
