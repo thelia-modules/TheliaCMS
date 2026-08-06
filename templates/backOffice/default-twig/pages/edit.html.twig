@@ -10,7 +10,7 @@
 
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: block('title') } %}
         {% block actions %}
-            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_locale: edit_locale }) }}">{{ 'Back to pages'|trans({}, 'theliacms') }}</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_language_id: edit_language_id }) }}">{{ 'Back to pages'|trans({}, 'theliacms') }}</a>
         {% endblock %}
     {% endembed %}
 
@@ -19,14 +19,10 @@
         {% if is_home %}<span class="badge bg-primary">{{ 'Home page'|trans({}, 'theliacms') }}</span>{% endif %}
     </div>
 
-    {% if not is_new and locales|length > 1 %}
-        <ul class="nav nav-tabs mb-3">
-            {% for locale, label in locales %}
-                <li class="nav-item">
-                    <a class="nav-link {{ locale == edit_locale ? 'active' : '' }}" href="{{ path('admin.cms.pages.edit', { id: page.id, edit_locale: locale }) }}">{{ label }}</a>
-                </li>
-            {% endfor %}
-        </ul>
+    {% if not is_new %}
+        <div class="mb-3">
+            {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
+        </div>
     {% endif %}
 
     {{ form_start(form) }}
@@ -82,10 +78,10 @@
 
     {% if not is_new %}
         <div class="d-flex flex-wrap gap-2 mt-3">
-            <form method="post" action="{{ path('admin.cms.pages.publish', { id: page.id, edit_locale: edit_locale }) }}">
+            <form method="post" action="{{ path('admin.cms.pages.publish', { id: page.id, edit_language_id: edit_language_id }) }}">
                 <button type="submit" class="btn btn-success">{{ 'Publish this version'|trans({}, 'theliacms') }}</button>
             </form>
-            <form method="post" action="{{ path('admin.cms.pages.unpublish', { id: page.id, edit_locale: edit_locale }) }}">
+            <form method="post" action="{{ path('admin.cms.pages.unpublish', { id: page.id, edit_language_id: edit_language_id }) }}">
                 <button type="submit" class="btn btn-outline-secondary">{{ 'Unpublish'|trans({}, 'theliacms') }}</button>
             </form>
         </div>

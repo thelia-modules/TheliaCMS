@@ -6,7 +6,7 @@
 {% block content %}
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Bin'|trans({}, 'theliacms') } %}
         {% block actions %}
-            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_locale: edit_locale }) }}">{{ 'Back to pages'|trans({}, 'theliacms') }}</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_language_id: edit_language_id }) }}">{{ 'Back to pages'|trans({}, 'theliacms') }}</a>
         {% endblock %}
     {% endembed %}
 
@@ -33,7 +33,7 @@
                                 <td>{{ page.setLocale(edit_locale).title|default('#' ~ page.id) }}</td>
                                 <td class="text-muted small">{{ page.deletedAt ? page.deletedAt|date('d/m/Y H:i') : '' }}</td>
                                 <td class="text-end">
-                                    <form method="post" action="{{ path('admin.cms.pages.restore', { id: page.id, edit_locale: edit_locale }) }}">
+                                    <form method="post" action="{{ path('admin.cms.pages.restore', { id: page.id, edit_language_id: edit_language_id }) }}">
                                         <button type="submit" class="btn btn-sm btn-outline-primary">{{ 'Restore'|trans({}, 'theliacms') }}</button>
                                     </form>
                                 </td>

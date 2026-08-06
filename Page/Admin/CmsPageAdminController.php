@@ -25,7 +25,9 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
+use Thelia\Core\HttpFoundation\Session\Session as TheliaSession;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -44,6 +46,9 @@ final readonly class CmsPageAdminController
     private const string EDIT_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/pages/edit.html.twig';
     private const string TRASH_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/pages/trash.html.twig';
 
+    /** Same query parameter as the back-office language switcher component. */
+    private const string EDIT_LANGUAGE_PARAMETER = 'edit_language_id';
+
     public function __construct(
         private Environment $twig,
         private FormFactoryInterface $forms,
@@ -58,12 +63,13 @@ final readonly class CmsPageAdminController
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): Response
     {
-        $locale = $this->editLocale($request);
+        $lang = $this->editLang($request);
+        $locale = $lang->getLocale();
 
         return new Response($this->twig->render(self::LIST_TEMPLATE, [
             'rows' => $this->pages->tree($locale),
             'edit_locale' => $locale,
-            'locales' => $this->locales(),
+            'edit_language_id' => $lang->getId(),
             'home_page_id' => (int) TheliaCMS::getConfigValue('home_page_id', 0),
             'trash_count' => \count($this->pages->trash($locale)),
         ]));
@@ -87,22 +93,22 @@ final readonly class CmsPageAdminController
     public function publish(Request $request, int $id): Response
     {
         $this->denyUnless(AccessManager::UPDATE);
-        $locale = $this->editLocale($request);
+        $lang = $this->editLang($request);
 
-        $this->writer->publish($this->livePageOrFail($id), $locale);
+        $this->writer->publish($this->livePageOrFail($id), $lang->getLocale());
 
-        return $this->backToEdit($id, $locale);
+        return $this->backToEdit($id, $lang);
     }
 
     #[Route('/{id}/unpublish', name: 'unpublish', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function unpublish(Request $request, int $id): Response
     {
         $this->denyUnless(AccessManager::UPDATE);
-        $locale = $this->editLocale($request);
+        $lang = $this->editLang($request);
 
-        $this->writer->unpublish($this->livePageOrFail($id), $locale);
+        $this->writer->unpublish($this->livePageOrFail($id), $lang->getLocale());
 
-        return $this->backToEdit($id, $locale);
+        return $this->backToEdit($id, $lang);
     }
 
     #[Route('/{id}/visibility', name: 'visibility', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -138,11 +144,12 @@ final readonly class CmsPageAdminController
     #[Route('/trash', name: 'trash', methods: ['GET'], priority: 1)]
     public function trash(Request $request): Response
     {
-        $locale = $this->editLocale($request);
+        $lang = $this->editLang($request);
 
         return new Response($this->twig->render(self::TRASH_TEMPLATE, [
-            'pages' => $this->pages->trash($locale),
-            'edit_locale' => $locale,
+            'pages' => $this->pages->trash($lang->getLocale()),
+            'edit_locale' => $lang->getLocale(),
+            'edit_language_id' => $lang->getId(),
         ]));
     }
 
@@ -150,7 +157,7 @@ final readonly class CmsPageAdminController
     public function restore(Request $request, int $id): Response
     {
         $this->denyUnless(AccessManager::UPDATE);
-        $locale = $this->editLocale($request);
+        $lang = $this->editLang($request);
 
         $page = $this->pages->findDeleted($id);
 
@@ -158,14 +165,15 @@ final readonly class CmsPageAdminController
             throw new NotFoundHttpException();
         }
 
-        $this->writer->restore($page, $locale);
+        $this->writer->restore($page, $lang->getLocale());
 
         return $this->backToList($request);
     }
 
     private function handleForm(Request $request, CmsPage $page): Response
     {
-        $locale = $this->editLocale($request);
+        $lang = $this->editLang($request);
+        $locale = $lang->getLocale();
         $form = $this->buildForm($page, $locale);
         $form->handleRequest($request);
 
@@ -173,7 +181,7 @@ final readonly class CmsPageAdminController
             $this->denyUnless($page->isNew() ? AccessManager::CREATE : AccessManager::UPDATE);
             $this->applyTo($page, $locale, $form);
 
-            return $this->backToEdit((int) $page->getId(), $locale);
+            return $this->backToEdit((int) $page->getId(), $lang);
         }
 
         return new Response($this->twig->render(self::EDIT_TEMPLATE, [
@@ -181,7 +189,7 @@ final readonly class CmsPageAdminController
             'page' => $page,
             'status' => $page->isNew() ? PageStatus::Draft : $this->pages->statusOf($page, $locale),
             'edit_locale' => $locale,
-            'locales' => $this->locales(),
+            'edit_language_id' => $lang->getId(),
             'is_home' => !$page->isNew() && (int) $page->getId() === (int) TheliaCMS::getConfigValue('home_page_id', 0),
         ]));
     }
@@ -267,38 +275,70 @@ final readonly class CmsPageAdminController
     }
 
     /**
-     * Which translation of the page is being edited. Independent from the
-     * language the back office itself is displayed in.
+     * Language whose translation of the page is being edited — independent from
+     * the language the back office itself is displayed in.
+     *
+     * `edit_language_id` is the parameter the back-office language switcher
+     * already writes, so the CMS screens follow the same convention as the
+     * product and folder screens.
      */
-    private function editLocale(Request $request): string
+    private function editLang(Request $request): Lang
     {
-        $requested = (string) $request->query->get('edit_locale', '');
-        $locales = $this->locales();
+        $active = $this->activeLangs();
+        $session = $request->hasSession() ? $request->getSession() : null;
+        $requested = $request->query->getInt(self::EDIT_LANGUAGE_PARAMETER);
 
-        return \array_key_exists($requested, $locales) ? $requested : array_key_first($locales);
+        foreach ($active as $lang) {
+            if ($lang->getId() === $requested) {
+                // Shared with the rest of the back office, so switching the
+                // edition language here carries over to the product and folder
+                // screens, and vice versa.
+                if ($session instanceof TheliaSession) {
+                    $session->setAdminEditionLang($lang);
+                }
+
+                return $lang;
+            }
+        }
+
+        $current = $session instanceof TheliaSession ? $session->getAdminEditionLang() : Lang::getDefaultLanguage();
+
+        foreach ($active as $lang) {
+            if ($lang->getId() === $current->getId()) {
+                return $lang;
+            }
+        }
+
+        // The stored language has since been switched off.
+        return $active[0] ?? Lang::getDefaultLanguage();
     }
 
     /**
-     * @return array<string, string>
+     * Only languages the shop has switched on: offering a translation tab for a
+     * disabled language invites work that is never published.
+     *
+     * @return list<Lang>
      */
-    private function locales(): array
+    private function activeLangs(): array
     {
-        $locales = [];
-
-        foreach (LangQuery::create()->orderByByDefault(\Propel\Runtime\ActiveQuery\Criteria::DESC)->orderByPosition()->find() as $lang) {
-            $locales[$lang->getLocale()] = $lang->getTitle();
-        }
-
-        return $locales;
+        return array_values(iterator_to_array(
+            LangQuery::create()->filterByActive(1)->orderByPosition()->find(),
+            false
+        ));
     }
 
     private function backToList(Request $request): RedirectResponse
     {
-        return new RedirectResponse($this->urls->generate('admin.cms.pages.list', ['edit_locale' => $this->editLocale($request)]));
+        return new RedirectResponse($this->urls->generate('admin.cms.pages.list', [
+            self::EDIT_LANGUAGE_PARAMETER => $this->editLang($request)->getId(),
+        ]));
     }
 
-    private function backToEdit(int $id, string $locale): RedirectResponse
+    private function backToEdit(int $id, Lang $lang): RedirectResponse
     {
-        return new RedirectResponse($this->urls->generate('admin.cms.pages.edit', ['id' => $id, 'edit_locale' => $locale]));
+        return new RedirectResponse($this->urls->generate('admin.cms.pages.edit', [
+            'id' => $id,
+            self::EDIT_LANGUAGE_PARAMETER => $lang->getId(),
+        ]));
     }
 }
