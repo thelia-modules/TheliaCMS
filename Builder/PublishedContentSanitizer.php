@@ -60,7 +60,10 @@ final readonly class PublishedContentSanitizer
             [
                 '#@import\b[^;]*;?#i',
                 '#expression\s*\(#i',
-                '#url\(\s*([\'"]?)(?!/|data:image/(?:png|jpe?g|gif|webp|avif);)[a-z0-9+.-]*:?//[^)]*\)#i',
+                // Anything addressing another host, whether it names a scheme or
+                // leaves it to the page (`//host/x` is remote too — only a lone
+                // leading slash is a path on this site).
+                '#url\(\s*([\'"]?)(?!/(?!/)|data:image/(?:png|jpe?g|gif|webp|avif);)[a-z0-9+.-]*:?//[^)]*\)#i',
                 '#behavior\s*:[^;]*;?#i',
             ],
             ['', 'unsupported(', 'none', ''],
