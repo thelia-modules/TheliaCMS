@@ -17,6 +17,7 @@ namespace TheliaCMS\Page\Admin;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Propel;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Model\LangQuery;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
@@ -25,6 +26,7 @@ use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsPageRevision;
 use TheliaCMS\Model\CmsPageRevisionQuery;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\TheliaCMS;
 
 /**
  * Every write to a page goes through here, so the side effects that must travel
@@ -39,6 +41,7 @@ final readonly class CmsPageWriter
     public function __construct(
         private CmsUrlService $urls,
         private SecurityContext $securityContext,
+        private CmsActivityLog $activityLog,
     ) {
     }
 
@@ -49,8 +52,9 @@ final readonly class CmsPageWriter
 
         try {
             $adminId = $this->securityContext->getAdminUser()?->getId();
+            $wasNew = $page->isNew();
 
-            if ($page->isNew()) {
+            if ($wasNew) {
                 $page->setCreatedBy($adminId);
             }
 
@@ -66,6 +70,8 @@ final readonly class CmsPageWriter
             $this->urls->refresh($page, $locale, $draft->slug);
 
             $connection->commit();
+
+            $this->activityLog->record($wasNew ? 'CREATE' : 'UPDATE', (int) $page->getId(), \sprintf('CMS page "%s" saved in %s', $draft->title, $locale));
         } catch (\Throwable $throwable) {
             $connection->rollBack();
 
@@ -92,6 +98,8 @@ final readonly class CmsPageWriter
             $this->snapshot($page, $locale, $content, $connection);
 
             $connection->commit();
+
+            $this->activityLog->record('PUBLISH', (int) $page->getId(), \sprintf('CMS page #%d published in %s', $page->getId(), $locale));
         } catch (\Throwable $throwable) {
             $connection->rollBack();
 
@@ -107,6 +115,8 @@ final readonly class CmsPageWriter
             ->findOne();
 
         $content?->setPublishedAt(null)->save();
+
+        $this->activityLog->record('UNPUBLISH', (int) $page->getId(), \sprintf('CMS page #%d unpublished in %s', $page->getId(), $locale));
     }
 
     /**
@@ -143,7 +153,10 @@ final readonly class CmsPageWriter
 
             $connection->commit();
 
-            return array_map(static fn (CmsPage $node): int => (int) $node->getId(), $branch);
+            $ids = array_map(static fn (CmsPage $node): int => (int) $node->getId(), $branch);
+            $this->activityLog->record('DELETE', (int) $page->getId(), \sprintf('CMS pages moved to the bin: %s', implode(', ', $ids)));
+
+            return $ids;
         } catch (\Throwable $throwable) {
             $connection->rollBack();
 
@@ -177,11 +190,93 @@ final readonly class CmsPageWriter
             }
 
             $connection->commit();
+
+            $this->activityLog->record('RESTORE', (int) $page->getId(), \sprintf('CMS page #%d restored from the bin', $page->getId()));
         } catch (\Throwable $throwable) {
             $connection->rollBack();
 
             throw $throwable;
         }
+    }
+
+    /**
+     * Copies a page and its content in every locale, as a draft.
+     *
+     * The copy is deliberately never published and never inherits the
+     * publication window: duplicating a live page must not put a second live
+     * page online behind the editor's back.
+     */
+    public function duplicate(CmsPage $page, string $locale, string $titleSuffix): CmsPage
+    {
+        $connection = Propel::getConnection('TheliaMain');
+        $connection->beginTransaction();
+
+        try {
+            $copy = new CmsPage();
+            $copy->setParent($page->getParent())
+                ->setPosition($page->getPosition() + 1)
+                ->setVisible(0)
+                ->setLayout($page->getLayout())
+                ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
+
+            foreach (LangQuery::create()->filterByActive(1)->find() as $lang) {
+                $source = $page->setLocale($lang->getLocale());
+                $title = trim((string) $source->getTitle());
+
+                if ('' === $title) {
+                    continue;
+                }
+
+                $copy->setLocale($lang->getLocale())
+                    ->setTitle($title.' '.$titleSuffix)
+                    ->setMetaTitle($source->getMetaTitle())
+                    ->setMetaDescription($source->getMetaDescription())
+                    ->setOgTitle($source->getOgTitle())
+                    ->setOgDescription($source->getOgDescription())
+                    ->setOgImageId($source->getOgImageId())
+                    ->setTwitterCard($source->getTwitterCard())
+                    ->setNoindex($source->getNoindex())
+                    ->setNofollow($source->getNofollow());
+                // `canonical` is not copied: it points at this exact page.
+            }
+
+            $copy->save($connection);
+
+            $contents = CmsPageContentQuery::create()->filterByPageId($page->getId())->find();
+
+            foreach ($contents as $content) {
+                (new CmsPageContent())
+                    ->setPageId($copy->getId())
+                    ->setLocale($content->getLocale())
+                    ->setDraftProjectData($content->getDraftProjectData())
+                    ->setDraftHtml($content->getDraftHtml() ?? $content->getPublishedHtml())
+                    ->setDraftCss($content->getDraftCss() ?? $content->getPublishedCss())
+                    ->setDraftUpdatedBy($this->securityContext->getAdminUser()?->getId())
+                    ->save($connection);
+
+                $this->urls->refresh($copy, (string) $content->getLocale());
+            }
+
+            $connection->commit();
+
+            $this->activityLog->record('CREATE', (int) $copy->getId(), \sprintf('CMS page #%d duplicated from #%d', $copy->getId(), $page->getId()));
+
+            return $copy;
+        } catch (\Throwable $throwable) {
+            $connection->rollBack();
+
+            throw $throwable;
+        }
+    }
+
+    /**
+     * Makes this page the site home page.
+     */
+    public function setAsHome(CmsPage $page): void
+    {
+        TheliaCMS::setConfigValue('home_page_id', (string) $page->getId());
+
+        $this->activityLog->record('UPDATE', (int) $page->getId(), \sprintf('CMS page #%d set as the home page', $page->getId()));
     }
 
     /**
@@ -248,6 +343,12 @@ final readonly class CmsPageWriter
     public function toggleVisibility(CmsPage $page): void
     {
         $page->setVisible(1 === $page->getVisible() ? 0 : 1)->save();
+
+        $this->activityLog->record(
+            'UPDATE',
+            (int) $page->getId(),
+            \sprintf('CMS page #%d is now %s', $page->getId(), 1 === $page->getVisible() ? 'online' : 'offline')
+        );
     }
 
     /**

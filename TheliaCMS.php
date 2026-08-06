@@ -28,6 +28,7 @@ use Thelia\Model\Resource;
 use Thelia\Model\ResourceQuery;
 use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
+use TheliaCMS\Install\LegalPagesSeeder;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\CmsUrlService;
@@ -63,6 +64,7 @@ class TheliaCMS extends BaseModule
     {
         if (!self::getConfigValue('is_initialized')) {
             (new Database($con))->insertSql(null, [__DIR__.'/Config/TheliaMain.sql']);
+            (new LegalPagesSeeder())->seed();
             self::setConfigValue('is_initialized', 1);
         }
 

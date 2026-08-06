@@ -84,6 +84,14 @@
             <form method="post" action="{{ path('admin.cms.pages.unpublish', { id: page.id, edit_language_id: edit_language_id }) }}">
                 <button type="submit" class="btn btn-outline-secondary">{{ 'Unpublish'|trans({}, 'theliacms') }}</button>
             </form>
+            <form method="post" action="{{ path('admin.cms.pages.duplicate', { id: page.id, edit_language_id: edit_language_id }) }}">
+                <button type="submit" class="btn btn-outline-secondary">{{ 'Duplicate'|trans({}, 'theliacms') }}</button>
+            </form>
+            {% if not is_home %}
+                <form method="post" action="{{ path('admin.cms.pages.set_as_home', { id: page.id, edit_language_id: edit_language_id }) }}">
+                    <button type="submit" class="btn btn-outline-secondary">{{ 'Set as home page'|trans({}, 'theliacms') }}</button>
+                </form>
+            {% endif %}
         </div>
     {% endif %}
 {% endblock %}

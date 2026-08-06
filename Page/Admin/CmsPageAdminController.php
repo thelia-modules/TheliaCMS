@@ -132,6 +132,31 @@ final readonly class CmsPageAdminController
         return $this->backToList($request);
     }
 
+    #[Route('/{id}/duplicate', name: 'duplicate', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function duplicate(Request $request, int $id): Response
+    {
+        $this->denyUnless(AccessManager::CREATE);
+        $lang = $this->editLang($request);
+
+        $copy = $this->writer->duplicate(
+            $this->livePageOrFail($id),
+            $lang->getLocale(),
+            $this->translator->trans('(copy)', [], TheliaCMS::DOMAIN_NAME),
+        );
+
+        return $this->backToEdit((int) $copy->getId(), $lang);
+    }
+
+    #[Route('/{id}/set-as-home', name: 'set_as_home', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function setAsHome(Request $request, int $id): Response
+    {
+        $this->denyUnless(AccessManager::UPDATE);
+
+        $this->writer->setAsHome($this->livePageOrFail($id));
+
+        return $this->backToList($request);
+    }
+
     #[Route('/{id}/delete', name: 'delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function delete(Request $request, int $id): Response
     {
