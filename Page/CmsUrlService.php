@@ -31,13 +31,17 @@ final class CmsUrlService
     /**
      * A rewritten URL is matched before the Symfony routes (the rewriting
      * router runs at priority 1024), so a page slugged `admin/x` would shadow
-     * the back office. First segments are checked against this list.
+     * the back office. First segments are checked against this list, both as
+     * they were typed and as they come out of the slugifier — `robots.txt`
+     * survives neither on its own, and a list nothing can ever match is worse
+     * than no list.
      *
      * @var list<string>
      */
     private const RESERVED_PREFIXES = [
-        'admin', 'api', 'assets', 'cache', 'media', 'sitemap', 'robots.txt',
-        '_profiler', '_wdt', '_fragment', '_error',
+        'admin', 'api', 'assets', 'cache', 'media', 'sitemap',
+        'robots.txt', 'robots-txt',
+        '_profiler', 'profiler', '_wdt', 'wdt', '_fragment', 'fragment', '_error', 'error',
     ];
 
     public function __construct(
@@ -74,8 +78,10 @@ final class CmsUrlService
     {
         $segment = $this->slugSource->slugify($raw);
 
-        if (\in_array($segment, self::RESERVED_PREFIXES, true)) {
-            throw new \InvalidArgumentException(\sprintf('"%s" is a reserved path and cannot be used as a page slug.', $segment));
+        foreach ([strtolower(trim($raw)), $segment] as $candidate) {
+            if (\in_array($candidate, self::RESERVED_PREFIXES, true)) {
+                throw new \InvalidArgumentException(\sprintf('"%s" is a reserved path and cannot be used as a page slug.', $candidate));
+            }
         }
 
         return $segment;
