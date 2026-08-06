@@ -27,6 +27,7 @@ use TheliaLibrary\Model\LibraryTag;
 use TheliaLibrary\Model\LibraryTagQuery;
 use TheliaLibrary\Service\ImageService;
 use TheliaLibrary\Service\LibraryImageTagService;
+use TheliaLibrary\TheliaLibrary;
 
 /**
  * The slice of the image library that belongs to the CMS.
@@ -97,6 +98,38 @@ final readonly class CmsMediaLibrary
             $format ?? pathinfo($fileName, \PATHINFO_EXTENSION),
             'full',
             $size,
+        );
+    }
+
+    /**
+     * The library image an editor URL points at, with the dimensions of the
+     * stored file. Returns null for anything the library does not own.
+     */
+    public function fromUrl(string $url): ?MediaFile
+    {
+        if (1 !== preg_match('#^/image-library/(\d+)/#', $url, $matches)) {
+            return null;
+        }
+
+        $image = LibraryImageQuery::create()->findPk((int) $matches[1]);
+
+        if (!$image instanceof LibraryImage) {
+            return null;
+        }
+
+        $fileName = $this->fileNameOf($image);
+
+        if (null === $fileName) {
+            return null;
+        }
+
+        $dimensions = @getimagesize(TheliaLibrary::getImageDirectory().$fileName);
+
+        return new MediaFile(
+            id: (int) $image->getId(),
+            format: pathinfo($fileName, \PATHINFO_EXTENSION),
+            width: false !== $dimensions ? $dimensions[0] : null,
+            height: false !== $dimensions ? $dimensions[1] : null,
         );
     }
 

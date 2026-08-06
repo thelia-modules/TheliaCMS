@@ -21,6 +21,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\LangQuery;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
 use TheliaCMS\Builder\PublishedContentSanitizer;
 use TheliaCMS\Model\CmsPage;
@@ -52,6 +53,7 @@ final readonly class CmsPageWriter
         private CmsActivityLog $activityLog,
         private PageContentNormalizer $normalizer,
         private PublishedContentSanitizer $sanitizer,
+        private ImageRewriter $images,
         private SearchTextExtractor $searchText,
     ) {
     }
@@ -130,7 +132,9 @@ final readonly class CmsPageWriter
             $withCustomCode = $this->mayPublishCustomCode();
 
             $content = $this->contentFor($page, $locale);
-            $html = $this->sanitizer->html($this->normalizer->html($content->getDraftHtml()), $withCustomCode);
+            $html = $this->images->rewrite(
+                $this->sanitizer->html($this->normalizer->html($content->getDraftHtml()), $withCustomCode),
+            );
             $css = $this->sanitizer->css($this->normalizer->css($content->getDraftCss()));
 
             $content->setPublishedHtml($html)
