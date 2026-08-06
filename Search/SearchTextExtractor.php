@@ -28,9 +28,14 @@ final readonly class SearchTextExtractor
             return '';
         }
 
+        // Elements whose content is code, not prose. strip_tags() drops the tags
+        // but keeps what is between them, so a stylesheet or a script left in
+        // the content would be indexed as words.
+        $prose = preg_replace('#<(script|style|template|noscript)\b[^>]*>.*?</\1>#is', ' ', $html) ?? $html;
+
         // Block-level markup carries a word boundary the tag stripping would
         // otherwise swallow, gluing "titleparagraph" into one token.
-        $spaced = preg_replace('#<(br|/p|/h[1-6]|/li|/div|/section|/td|/th)\b[^>]*>#i', ' ', $html) ?? $html;
+        $spaced = preg_replace('#<(br|/p|/h[1-6]|/li|/div|/section|/td|/th)\b[^>]*>#i', ' ', $prose) ?? $prose;
 
         $text = html_entity_decode(strip_tags($spaced), \ENT_QUOTES | \ENT_HTML5, 'UTF-8');
 
