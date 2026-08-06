@@ -1,0 +1,23 @@
+{
+    "name": "thelia-cms-editor",
+    "version": "0.1.0",
+    "description": "Page builder bundle for the Thelia CMS back-office editing screen.",
+    "license": "LGPL-3.0-or-later",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "watch": "node build.mjs --watch"
+    },
+    "dependencies": {
+        "@hotwired/stimulus": "^3.2.2",
+        "grapesjs": "0.22.12",
+        "grapesjs-blocks-basic": "1.0.2",
+        "grapesjs-component-countdown": "1.0.2",
+        "grapesjs-custom-code": "1.0.2",
+        "grapesjs-preset-webpage": "1.0.3"
+    },
+    "devDependencies": {
+        "esbuild": "^0.25.0"
+    }
+}

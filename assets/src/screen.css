@@ -1,0 +1,59 @@
+/*
+ * The builder screen fills the window: a page builder squeezed into a card is
+ * unusable, and the canvas has to show the page at its real width.
+ */
+/* The editor manages its own scrolling; the page behind it must not add one. */
+body:has(.cms-builder) {
+    overflow: hidden;
+}
+
+.cms-builder {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--bs-body-bg, #fff);
+}
+
+.cms-builder__form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.cms-builder__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.cms-builder__title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cms-builder__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.cms-builder__stage {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* The bundle floors the editor at 600px, which would overflow the stage. */
+.cms-builder__stage .pb-editor {
+    min-height: 0;
+}
