@@ -16,11 +16,13 @@ namespace TheliaCMS;
 
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
+use SEOne\Service\SeoDefaultModels\SeoElementInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Thelia\Core\Install\Database;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
+use TheliaCMS\Seo\CmsPageSeoElement;
 
 class TheliaCMS extends BaseModule
 {
@@ -85,9 +87,20 @@ class TheliaCMS extends BaseModule
                 // Value objects: instantiated by the services that build them,
                 // never wired by the container.
                 __DIR__.'/Page/PublishedPage.php',
+                // Registered below, guarded: it implements a SEOne interface.
+                __DIR__.'/Seo/*',
             ])
             ->autowire(true)
             ->autoconfigure(true);
+
+        // SEOne is a soft dependency. Autodiscovering CmsPageSeoElement would
+        // reflect a class implementing an interface that does not exist on a
+        // site running without SEOne, which is a fatal error, not a skip.
+        if (interface_exists(SeoElementInterface::class)) {
+            $servicesConfigurator->set(CmsPageSeoElement::class)
+                ->autowire(true)
+                ->autoconfigure(true);
+        }
     }
 
     /**
