@@ -86,10 +86,14 @@ final readonly class MediaUsageFinder
     }
 
     /**
-     * Draft and published HTML of every page not in the bin, one row per locale.
+     * Stored content of every page not in the bin, one row per locale.
      *
-     * The draft counts as a use: an image only referenced by an unpublished
-     * draft is still expected to be there when that draft goes live.
+     * Three columns, not one. The draft counts as a use — an image referenced
+     * by an unpublished draft is still expected to be there when that draft
+     * goes live — and the editor project is read too: it is what the canvas is
+     * rebuilt from, so an image could live there before the exported HTML has
+     * caught up. Missing a use would let an editor delete an image out from
+     * under a page.
      *
      * @return list<array{pageId: int, locale: string, html: string}>
      */
@@ -99,7 +103,7 @@ final readonly class MediaUsageFinder
             ->useCmsPageQuery()
                 ->filterByDeletedAt(null, Criteria::ISNULL)
             ->endUse()
-            ->select(['PageId', 'Locale', 'DraftHtml', 'PublishedHtml'])
+            ->select(['PageId', 'Locale', 'DraftHtml', 'PublishedHtml', 'DraftProjectData'])
             ->find()
             ->toArray();
 
@@ -109,7 +113,7 @@ final readonly class MediaUsageFinder
             $contents[] = [
                 'pageId' => (int) $row['PageId'],
                 'locale' => (string) $row['Locale'],
-                'html' => (string) $row['DraftHtml'].(string) $row['PublishedHtml'],
+                'html' => (string) $row['DraftHtml'].(string) $row['PublishedHtml'].(string) $row['DraftProjectData'],
             ];
         }
 
@@ -118,6 +122,8 @@ final readonly class MediaUsageFinder
 
     private function references(string $html, int $imageId): bool
     {
-        return str_contains($html, '/image-library/'.$imageId.'/');
+        // The editor project is JSON, and a JSON encoder is free to write the
+        // slashes of a URL escaped.
+        return str_contains(str_replace('\\/', '/', $html), '/image-library/'.$imageId.'/');
     }
 }
