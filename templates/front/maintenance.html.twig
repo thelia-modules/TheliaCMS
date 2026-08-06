@@ -1,0 +1,29 @@
+{#
+    Shown while the site is closed and no CMS page has been chosen for it.
+
+    Deliberately standalone: it extends nothing and loads nothing. The theme is
+    part of what may be broken while the site is closed, and this page has to
+    render anyway.
+#}
+<!DOCTYPE html>
+<html lang="{{ app.request.locale|default('en') }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>{{ 'The site is closed for maintenance'|trans({}, 'theliacms') }}</title>
+    <style>
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+               font: 1rem/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2933; background: #f8f9fa; }
+        main { max-width: 32rem; padding: 2rem; text-align: center; }
+        h1 { font-size: 1.5rem; margin: 0 0 .75rem; }
+        p { margin: 0; color: #52606d; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>{{ 'The site is closed for maintenance'|trans({}, 'theliacms') }}</h1>
+        <p>{{ 'Please come back in about %minutes% minutes.'|trans({'%minutes%': retry_after_minutes}, 'theliacms') }}</p>
+    </main>
+</body>
+</html>
