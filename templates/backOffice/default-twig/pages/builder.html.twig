@@ -1,0 +1,57 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Edit content'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-page-builder{% endblock %}
+
+{# A megabyte of editor: loaded on this screen and nowhere else. #}
+{% block head_extra %}
+    <link rel="stylesheet" href="{{ module_asset('TheliaCMS', 'assets/page-builder/editor.css') }}">
+{% endblock %}
+
+{% block scripts_extra %}
+    <script src="{{ module_asset('TheliaCMS', 'assets/page-builder/editor.js') }}" defer></script>
+{% endblock %}
+
+{% block body %}
+    <div class="cms-builder">
+        {{ form_start(form, { attr: { class: 'cms-builder__form' } }) }}
+            <header class="cms-builder__bar">
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="{{ path('admin.cms.pages.edit', { id: page.id, edit_language_id: edit_language_id }) }}">
+                    {{ 'Back to settings'|trans({}, 'theliacms') }}
+                </a>
+
+                <p class="cms-builder__title">{{ page.title }}</p>
+                <span class="badge {{ status.badgeClass }}">{{ status.label|trans({}, 'theliacms') }}</span>
+
+                {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
+
+                <div class="cms-builder__actions">
+                    <button type="submit" name="save" value="draft" class="btn btn-sm btn-primary">
+                        {{ 'Save draft'|trans({}, 'theliacms') }}
+                    </button>
+                    <button type="submit" name="save" value="publish" class="btn btn-sm btn-success">
+                        {{ 'Publish'|trans({}, 'theliacms') }}
+                    </button>
+                </div>
+            </header>
+
+            {# The editor writes into these three fields; they have to be in the
+               DOM before its controller connects. #}
+            {{ form_widget(form.projectData) }}
+            {{ form_widget(form.html) }}
+            {{ form_widget(form.css) }}
+
+            <div class="cms-builder__stage">
+                {{ component('PageBuilder', {
+                    form: form,
+                    controller: 'cms-page-builder',
+                    context: 'cms-page-' ~ page.id,
+                    options: builder_options,
+                    'data-cms-page-builder-locale-value': builder_locale,
+                    'data-cms-page-builder-allow-custom-code-value': allow_custom_code ? 'true' : 'false',
+                }) }}
+            </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

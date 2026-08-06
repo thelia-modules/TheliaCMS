@@ -25,11 +25,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use Thelia\Core\HttpFoundation\Session\Session as TheliaSession;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
-use Thelia\Model\LangQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Security\CmsResources;
@@ -48,7 +46,7 @@ final readonly class CmsPageAdminController
     private const string TRASH_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/pages/trash.html.twig';
 
     /** Same query parameter as the back-office language switcher component. */
-    private const string EDIT_LANGUAGE_PARAMETER = 'edit_language_id';
+    private const string EDIT_LANGUAGE_PARAMETER = EditLanguage::PARAMETER;
 
     public function __construct(
         private Environment $twig,
@@ -58,6 +56,7 @@ final readonly class CmsPageAdminController
         private TranslatorInterface $translator,
         private CmsPageAdminRepository $pages,
         private CmsPageWriter $writer,
+        private EditLanguage $languages,
     ) {
     }
 
@@ -243,7 +242,9 @@ final readonly class CmsPageAdminController
             'visible' => $page->isNew() ? 1 : $page->getVisible(),
             'publishAt' => $page->getPublishAt(),
             'unpublishAt' => $page->getUnpublishAt(),
+            'projectData' => $content?->getDraftProjectData(),
             'html' => $content?->getDraftHtml(),
+            'css' => $content?->getDraftCss(),
             'metaTitle' => $page->isNew() ? null : $page->getMetaTitle(),
             'metaDescription' => $page->isNew() ? null : $page->getMetaDescription(),
             'ogTitle' => $page->isNew() ? null : $page->getOgTitle(),
@@ -282,7 +283,6 @@ final readonly class CmsPageAdminController
         $this->writer->saveDraft($page, $locale, new PageDraft(
             title: $data['title'],
             slug: $data['slug'],
-            html: $data['html'],
         ));
     }
 
@@ -304,57 +304,9 @@ final readonly class CmsPageAdminController
         }
     }
 
-    /**
-     * Language whose translation of the page is being edited — independent from
-     * the language the back office itself is displayed in.
-     *
-     * `edit_language_id` is the parameter the back-office language switcher
-     * already writes, so the CMS screens follow the same convention as the
-     * product and folder screens.
-     */
     private function editLang(Request $request): Lang
     {
-        $active = $this->activeLangs();
-        $session = $request->hasSession() ? $request->getSession() : null;
-        $requested = $request->query->getInt(self::EDIT_LANGUAGE_PARAMETER);
-
-        foreach ($active as $lang) {
-            if ($lang->getId() === $requested) {
-                // Shared with the rest of the back office, so switching the
-                // edition language here carries over to the product and folder
-                // screens, and vice versa.
-                if ($session instanceof TheliaSession) {
-                    $session->setAdminEditionLang($lang);
-                }
-
-                return $lang;
-            }
-        }
-
-        $current = $session instanceof TheliaSession ? $session->getAdminEditionLang() : Lang::getDefaultLanguage();
-
-        foreach ($active as $lang) {
-            if ($lang->getId() === $current->getId()) {
-                return $lang;
-            }
-        }
-
-        // The stored language has since been switched off.
-        return $active[0] ?? Lang::getDefaultLanguage();
-    }
-
-    /**
-     * Only languages the shop has switched on: offering a translation tab for a
-     * disabled language invites work that is never published.
-     *
-     * @return list<Lang>
-     */
-    private function activeLangs(): array
-    {
-        return array_values(iterator_to_array(
-            LangQuery::create()->filterByActive(1)->orderByPosition()->find(),
-            false
-        ));
+        return $this->languages->resolve($request);
     }
 
     private function backToList(Request $request): RedirectResponse

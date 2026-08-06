@@ -68,11 +68,6 @@ final class CmsPageType extends AbstractType
                 'required' => false,
                 'widget' => 'single_text',
             ])
-            ->add('html', TextareaType::class, [
-                'label' => 'Content',
-                'required' => false,
-                'attr' => ['rows' => 14],
-            ])
             ->add('metaTitle', TextType::class, ['label' => 'Meta title', 'required' => false])
             ->add('metaDescription', TextareaType::class, ['label' => 'Meta description', 'required' => false, 'attr' => ['rows' => 3]])
             ->add('ogTitle', TextType::class, ['label' => 'Social title', 'required' => false])

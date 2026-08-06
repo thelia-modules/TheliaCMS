@@ -15,15 +15,15 @@ declare(strict_types=1);
 namespace TheliaCMS\Page\Admin;
 
 /**
- * The locale-specific part of the settings form. The rest of the form writes
- * straight onto the Propel object; the page content belongs to the builder
- * screen and travels as a BuilderContent.
+ * What the editor hands back for one page in one locale: the GrapesJS project
+ * it reloads from, and the HTML and CSS it produced.
  */
-final readonly class PageDraft
+final readonly class BuilderContent
 {
     public function __construct(
-        public string $title,
-        public ?string $slug = null,
+        public ?string $projectData = null,
+        public ?string $html = null,
+        public ?string $css = null,
     ) {
     }
 }

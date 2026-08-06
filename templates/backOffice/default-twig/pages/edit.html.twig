@@ -32,9 +32,20 @@
                     <div class="card-body">
                         {{ form_row(form.title) }}
                         {{ form_row(form.slug) }}
-                        {{ form_row(form.html) }}
                     </div>
                 </div>
+
+                {% if not is_new %}
+                    <div class="card mb-3">
+                        <div class="card-header">{{ 'Content'|trans({}, 'theliacms') }}</div>
+                        <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <p class="mb-0 text-body-secondary">{{ 'The page content is edited in the visual editor.'|trans({}, 'theliacms') }}</p>
+                            <a class="btn btn-primary" href="{{ path('admin.cms.pages.builder', { id: page.id, edit_language_id: edit_language_id }) }}">
+                                {{ 'Edit content'|trans({}, 'theliacms') }}
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
 
                 <div class="card">
                     <div class="card-header">{{ 'Search engines and sharing'|trans({}, 'theliacms') }}</div>

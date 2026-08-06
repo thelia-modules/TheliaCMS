@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS;
 
+use OpenStudio\PageBuilderBundle\Contract\PageBuilderConfigProviderInterface;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
@@ -29,6 +30,7 @@ use Thelia\Model\Resource;
 use Thelia\Model\ResourceQuery;
 use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
+use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Install\LegalPagesSeeder;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
@@ -51,9 +53,7 @@ class TheliaCMS extends BaseModule
         // off, activating the module would publish pages that can never be
         // reached, so refuse loudly instead of failing later on the front.
         if ('1' !== ConfigQuery::read('rewriting_enable', '0')) {
-            throw new \RuntimeException(
-                'Thelia CMS requires URL rewriting. Enable "rewriting_enable" in the store configuration, then activate the module again.'
-            );
+            throw new \RuntimeException('Thelia CMS requires URL rewriting. Enable "rewriting_enable" in the store configuration, then activate the module again.');
         }
 
         $this->assertFullTextSearchIsAvailable();
@@ -210,6 +210,11 @@ class TheliaCMS extends BaseModule
             ])
             ->autowire(true)
             ->autoconfigure(true);
+
+        // The bundle ships a static provider aliased to the interface; the
+        // editor has to follow the site instead — the theme stylesheet, the
+        // project palette, the theme breakpoints.
+        $servicesConfigurator->alias(PageBuilderConfigProviderInterface::class, CmsBuilderConfig::class);
 
         // SEOne is a soft dependency. Autodiscovering CmsPageSeoElement would
         // reflect a class implementing an interface that does not exist on a

@@ -62,10 +62,14 @@ final readonly class CmsPageWriter
             $page->setLocale($locale)->setTitle($draft->title);
             $page->save($connection);
 
+            // The content itself belongs to the builder screen. The row is
+            // still created here: it is what tells the module which locales a
+            // page exists in, when URLs are regenerated.
             $content = $this->contentFor($page, $locale);
-            $content->setDraftHtml($draft->html)
-                ->setDraftUpdatedBy($adminId)
-                ->save($connection);
+
+            if ($content->isNew()) {
+                $content->save($connection);
+            }
 
             $this->urls->refresh($page, $locale, $draft->slug);
 
@@ -77,6 +81,24 @@ final readonly class CmsPageWriter
 
             throw $throwable;
         }
+    }
+
+    /**
+     * Stores what the builder produced, without touching the published
+     * snapshot: saving in the editor never changes what visitors see.
+     */
+    public function saveContent(CmsPage $page, string $locale, BuilderContent $content): void
+    {
+        $adminId = $this->securityContext->getAdminUser()?->getId();
+
+        $this->contentFor($page, $locale)
+            ->setDraftProjectData($content->projectData)
+            ->setDraftHtml($content->html)
+            ->setDraftCss($content->css)
+            ->setDraftUpdatedBy($adminId)
+            ->save();
+
+        $this->activityLog->record('UPDATE', (int) $page->getId(), \sprintf('CMS page #%d content edited in %s', $page->getId(), $locale));
     }
 
     /**
