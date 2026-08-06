@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Unit tests of the module, runnable on their own.
+
+     They touch neither the database nor the Thelia kernel, so they need no
+     installed shop — only the autoloader of the project the module sits in:
+
+         vendor/bin/phpunit -c local/modules/TheliaCMS
+
+     Everything that does need a database (the URL service against real pages,
+     activation and deactivation, the publish transaction) belongs to the
+     integration suite of the shop itself. -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
+         bootstrap="../../../vendor/autoload.php"
+         colors="true"
+         failOnWarning="true"
+         failOnRisky="true"
+         failOnDeprecation="true"
+         cacheDirectory=".phpunit.cache"
+         displayDetailsOnTestsThatTriggerWarnings="true"
+         displayDetailsOnTestsThatTriggerDeprecations="true">
+    <testsuites>
+        <testsuite name="unit">
+            <directory>Tests/Unit</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

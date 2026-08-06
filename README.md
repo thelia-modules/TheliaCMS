@@ -2,6 +2,21 @@
 
 All-in-one CMS for Thelia 3: page tree, visual page builder, menus, forms and media.
 
+## Tests
+
+The unit tests need neither a database nor an installed shop, only the
+autoloader of the project the module sits in:
+
+```bash
+vendor/bin/phpunit -c local/modules/TheliaCMS
+```
+
+They cover what is worth being sure of without a shop around it: the sanitizer
+against a corpus of hostile HTML and CSS, the content normalizer, the responsive
+image rewriting, the heading check, the signing of preview links and the slug
+rules. Anything that needs real pages — publishing, activation, the front-office
+routes — belongs to the integration suite of the shop.
+
 ## Page builder assets
 
 The editor is bundled by the module itself and served with `module_asset()` on

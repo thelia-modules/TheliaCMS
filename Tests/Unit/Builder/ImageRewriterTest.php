@@ -1,0 +1,176 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Tests\Unit\Builder;
+
+use PHPUnit\Framework\TestCase;
+use TheliaCMS\Builder\ImageRewriter;
+use TheliaCMS\Media\MediaFile;
+use TheliaCMS\Media\MediaResolver;
+
+final class ImageRewriterTest extends TestCase
+{
+    public function testWrapsALibraryImageInAPictureOfferingWebp(): void
+    {
+        $html = $this->rewrite('<p><img src="/image-library/7/full/max/0/default.jpg" alt="A photo"></p>');
+
+        self::assertStringContainsString('<picture>', $html);
+        self::assertStringContainsString('<source type="image/webp"', $html);
+        self::assertStringContainsString('/image-library/7/full/480,!/0/default.webp 480w', $html);
+        self::assertStringContainsString('alt="A photo"', $html);
+    }
+
+    public function testStatesTheIntrinsicSizeSoTheLayoutDoesNotJump(): void
+    {
+        $html = $this->rewrite('<img src="/image-library/7/full/max/0/default.jpg" alt="">');
+
+        self::assertStringContainsString('width="1600"', $html);
+        self::assertStringContainsString('height="900"', $html);
+    }
+
+    /**
+     * The visitor is waiting for the first image; the others can arrive when
+     * they scroll into view.
+     */
+    public function testPrioritisesTheFirstImageAndDefersTheRest(): void
+    {
+        $html = $this->rewrite(
+            '<img src="/image-library/7/full/max/0/default.jpg" alt="one">'
+            .'<img src="/image-library/7/full/max/0/default.jpg" alt="two">'
+        );
+
+        [$first, $second] = $this->imageTags($html);
+
+        self::assertStringContainsString('fetchpriority="high"', $first);
+        self::assertStringNotContainsString('loading=', $first);
+        self::assertStringContainsString('loading="lazy"', $second);
+        self::assertStringNotContainsString('fetchpriority', $second);
+        self::assertStringContainsString('decoding="async"', $second);
+    }
+
+    public function testDropsTheLazyHintTheEditorPutOnTheFirstImage(): void
+    {
+        $html = $this->rewrite('<img src="/image-library/7/full/max/0/default.jpg" alt="" loading="lazy">');
+
+        self::assertStringNotContainsString('loading="lazy"', $html);
+        self::assertStringContainsString('fetchpriority="high"', $html);
+    }
+
+    /**
+     * Serving a 480 wide copy of a 300 wide file is a bigger download for a
+     * blurrier result.
+     */
+    public function testOnlyOffersWidthsBelowTheIntrinsicOne(): void
+    {
+        $html = $this->rewrite(
+            '<img src="/image-library/8/full/max/0/default.png" alt="">',
+            new MediaFile(id: 8, format: 'png', width: 300, height: 200),
+        );
+
+        self::assertStringNotContainsString('srcset="/image-library/8/full/480', $html);
+        self::assertStringContainsString('<source type="image/webp" srcset="/image-library/8/full/max/0/default.webp"', $html);
+        self::assertStringNotContainsString('sizes=', $html);
+    }
+
+    public function testLeavesAnImageTheLibraryDoesNotOwnUntouchedApartFromLoadingHints(): void
+    {
+        $html = $this->rewrite(
+            '<img src="https://cdn.test/photo.jpg" alt="Remote">'
+            .'<img src="https://cdn.test/other.jpg" alt="Also remote">',
+            null,
+        );
+
+        self::assertStringNotContainsString('<picture>', $html);
+        self::assertStringNotContainsString('srcset', $html);
+        self::assertStringContainsString('src="https://cdn.test/photo.jpg"', $html);
+        self::assertStringContainsString('loading="lazy"', $html);
+    }
+
+    public function testDoesNotNestAPictureInsideAPicture(): void
+    {
+        $html = $this->rewrite(
+            '<picture><source type="image/webp" srcset="/image-library/7/full/max/0/default.webp">'
+            .'<img src="/image-library/7/full/max/0/default.jpg" alt=""></picture>'
+        );
+
+        self::assertSame(1, substr_count($html, '<picture>'));
+    }
+
+    public function testKeepsTheSurroundingMarkup(): void
+    {
+        $html = $this->rewrite(
+            '<section class="hero"><h2>Title</h2>'
+            .'<img src="/image-library/7/full/max/0/default.jpg" alt=""></section>'
+        );
+
+        self::assertStringStartsWith('<section class="hero">', $html);
+        self::assertStringContainsString('<h2>Title</h2>', $html);
+        self::assertStringEndsWith('</section>', $html);
+    }
+
+    /**
+     * `<source>` has no closing tag in HTML; DOMDocument writes one anyway.
+     */
+    public function testDoesNotEmitAClosingSourceTag(): void
+    {
+        $html = $this->rewrite('<img src="/image-library/7/full/max/0/default.jpg" alt="">');
+
+        self::assertStringNotContainsString('</source>', $html);
+    }
+
+    public function testKeepsAccentedTextIntact(): void
+    {
+        $html = $this->rewrite('<p>Été à Genève</p><img src="/image-library/7/full/max/0/default.jpg" alt="Forêt">');
+
+        self::assertStringContainsString('Été à Genève', $html);
+        self::assertStringContainsString('alt="Forêt"', $html);
+    }
+
+    public function testLeavesEmptyContentAlone(): void
+    {
+        $rewriter = new ImageRewriter($this->resolver(null));
+
+        self::assertNull($rewriter->rewrite(null));
+        self::assertSame('', $rewriter->rewrite(''));
+    }
+
+    private function rewrite(string $html, ?MediaFile $media = new MediaFile(id: 7, format: 'jpg', width: 1600, height: 900)): string
+    {
+        return (string) (new ImageRewriter($this->resolver($media)))->rewrite($html);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function imageTags(string $html): array
+    {
+        preg_match_all('#<img\b[^>]*>#', $html, $matches);
+
+        return $matches[0];
+    }
+
+    private function resolver(?MediaFile $media): MediaResolver
+    {
+        return new class($media) implements MediaResolver {
+            public function __construct(private readonly ?MediaFile $media)
+            {
+            }
+
+            public function fromUrl(string $url): ?MediaFile
+            {
+                return str_starts_with($url, '/image-library/') ? $this->media : null;
+            }
+        };
+    }
+}
