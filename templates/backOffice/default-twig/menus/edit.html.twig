@@ -1,0 +1,188 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% set is_new = menu is null %}
+{% set issues = rows|filter(row => not row.target.isUsable)|length %}
+
+{% block title %}{{ is_new ? 'New menu'|trans({}, 'theliacms') : 'Edit menu'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-menu-edit{% endblock %}
+
+{% block head_extra %}
+    {# Three layout rules, kept with the screen that needs them rather than
+       shipped as a stylesheet of their own. #}
+    <style>
+        .cms-menu-tree__handle { cursor: grab; color: var(--bs-secondary-color); }
+        .cms-menu-tree tr.is-dragging { opacity: .4; }
+        .cms-menu-tree tr.is-drop-target > td { box-shadow: inset 0 2px 0 0 var(--bs-primary); }
+        .cms-menu-tree tr.is-drop-child > td { box-shadow: inset 3px 0 0 0 var(--bs-primary); }
+    </style>
+{% endblock %}
+
+{% block content %}
+    {% form_theme menu_form with bo_form_themes only %}
+    {% if item_form %}{% form_theme item_form with bo_form_themes only %}{% endif %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: block('title') } %}
+        {% block title %}
+            {{ is_new ? 'New menu'|trans({}, 'theliacms') : menu.title|default('#' ~ menu.id) }}
+            {% if not is_new %}<code class="ms-2 fs-6">{{ menu.code }}</code>{% endif %}
+        {% endblock %}
+
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.menus.list', { edit_language_id: edit_language_id }) }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to menus'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    {% if issues > 0 %}
+        <div class="alert alert-warning d-flex gap-2" role="alert" data-testid="cms-menu-issues">
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <div>
+                <strong>{{ 'Some entries are hidden from your site.'|trans({}, 'theliacms') }}</strong>
+                {{ 'They point at something visitors cannot reach, so they are left out of the menu instead of leading nowhere. They are marked below.'|trans({}, 'theliacms') }}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="{{ is_new ? 'col-lg-6' : 'col-lg-7' }}">
+            {% if not is_new %}
+                <div class="card mb-3">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span>{{ 'Entries'|trans({}, 'theliacms') }}</span>
+                        {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
+                    </div>
+
+                    {% if rows is empty %}
+                        <div class="card-body text-center py-5 text-muted">
+                            {{ 'This menu has no entry yet. Add the first one with the form beside.'|trans({}, 'theliacms') }}
+                        </div>
+                    {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 cms-menu-tree">
+                                <tbody data-cms-menu-tree data-place-url="{{ place_url_template }}">
+                                    {% for row in rows %}
+                                        <tr data-row-id="{{ row.id }}" data-parent="{{ row.item.parent }}" data-depth="{{ row.depth }}"
+                                            class="{{ edited_item and edited_item.id == row.id ? 'table-active' : '' }}"
+                                            data-testid="cms-menu-entry-{{ row.id }}">
+                                            <td class="cms-menu-tree__handle" style="width: 2rem"
+                                                {% if may_write %}draggable="true"{% endif %}
+                                                title="{{ 'Drag to move. The buttons do the same thing without a mouse.'|trans({}, 'theliacms') }}">
+                                                <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+                                            </td>
+                                            <td>
+                                                {# Nesting has to be readable at a glance, so depth is both an
+                                                   indent and a mark: an indent alone reads as an accident. #}
+                                                {% if row.depth > 1 %}
+                                                    <span style="display: inline-block; width: {{ (row.depth - 1) * 1.75 }}rem"></span>
+                                                    <span class="text-secondary me-1" aria-hidden="true">↳</span>
+                                                {% endif %}
+                                                <span class="fw-medium">{{ row.target.label|default('') ?: '—' }}</span>
+                                                {% if row.item.openNewTab == 1 %}
+                                                    <i class="bi bi-box-arrow-up-right ms-1 text-secondary" aria-hidden="true"
+                                                       title="{{ 'Opens in a new tab'|trans({}, 'theliacms') }}"></i>
+                                                {% endif %}
+                                                <span class="badge bg-light text-dark border ms-2">{{ row.type.label|trans({}, 'theliacms') }}</span>
+
+                                                <div class="small text-muted">
+                                                    {% if row.target.isUsable %}
+                                                        {{ row.target.url ?: 'No link — this entry is a heading'|trans({}, 'theliacms') }}
+                                                    {% else %}
+                                                        <span class="text-warning-emphasis">
+                                                            <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                                                            {{ row.target.issue.message|trans({}, 'theliacms') }}
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td class="text-end" style="width: 12rem">
+                                                <div class="d-inline-flex gap-1">
+                                                    <form method="post" action="{{ path('admin.cms.menus.entry_move', { id: menu.id, itemId: row.id, direction: 'up', edit_language_id: edit_language_id }) }}">
+                                                        <button class="btn btn-sm btn-outline-secondary" type="submit"
+                                                                aria-label="{{ 'Move up'|trans({}, 'theliacms') }}" {{ row.canMoveUp ? '' : 'disabled' }}>
+                                                            <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form method="post" action="{{ path('admin.cms.menus.entry_move', { id: menu.id, itemId: row.id, direction: 'down', edit_language_id: edit_language_id }) }}">
+                                                        <button class="btn btn-sm btn-outline-secondary" type="submit"
+                                                                aria-label="{{ 'Move down'|trans({}, 'theliacms') }}" {{ row.canMoveDown ? '' : 'disabled' }}>
+                                                            <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                    <a class="btn btn-sm btn-outline-secondary"
+                                                       href="{{ path('admin.cms.menus.entry_save', { id: menu.id, itemId: row.id, edit_language_id: edit_language_id }) }}">
+                                                        {{ 'Edit'|trans({}, 'theliacms') }}
+                                                    </a>
+                                                    <form method="post" action="{{ path('admin.cms.menus.entry_delete', { id: menu.id, itemId: row.id, edit_language_id: edit_language_id }) }}"
+                                                          onsubmit="return confirm('{{ 'Remove this entry and everything nested under it?'|trans({}, 'theliacms')|e('js') }}')">
+                                                        <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}">
+                                                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header">{{ 'Menu settings'|trans({}, 'theliacms') }}</div>
+                <div class="card-body">
+                    {{ form_start(menu_form) }}
+                        {{ form_errors(menu_form) }}
+                        {{ form_row(menu_form.title) }}
+                        {{ form_row(menu_form.code) }}
+                        <button type="submit" class="btn btn-primary">
+                            {{ is_new ? 'Create this menu'|trans({}, 'theliacms') : 'Save'|trans({}, 'theliacms') }}
+                        </button>
+                    {{ form_end(menu_form) }}
+                </div>
+            </div>
+        </div>
+
+        {% if not is_new and item_form %}
+            <div class="col-lg-5">
+                <div class="card position-sticky" style="top: 1rem" data-cms-menu-form>
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span>{{ edited_item ? 'Edit entry'|trans({}, 'theliacms') : 'Add an entry'|trans({}, 'theliacms') }}</span>
+                        {% if edited_item %}
+                            <a class="btn btn-sm btn-link p-0" href="{{ path('admin.cms.menus.edit', { id: menu.id, edit_language_id: edit_language_id }) }}">
+                                {{ 'Cancel'|trans({}, 'theliacms') }}
+                            </a>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {{ form_start(item_form) }}
+                            {# Errors that belong to the entry as a whole rather than to one of
+                               its fields — being told nothing happened is worse than the refusal. #}
+                            {{ form_errors(item_form) }}
+                            {{ form_row(item_form.targetType) }}
+                            {{ form_row(item_form.pageId) }}
+                            {{ form_row(item_form.contentId) }}
+                            {{ form_row(item_form.folderId) }}
+                            {{ form_row(item_form.url) }}
+                            {{ form_row(item_form.label) }}
+                            {{ form_row(item_form.parent) }}
+                            {{ form_row(item_form.openNewTab) }}
+
+                            <button type="submit" class="btn btn-primary" data-testid="cms-menu-entry-submit">
+                                {{ edited_item ? 'Save the entry'|trans({}, 'theliacms') : 'Add to the menu'|trans({}, 'theliacms') }}
+                            </button>
+                        {{ form_end(item_form) }}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block scripts_extra %}
+    {% if not is_new %}
+        <script src="{{ module_asset('TheliaCMS', 'assets/menu-editor.js') }}?v={{ assets_version }}" defer></script>
+    {% endif %}
+{% endblock %}

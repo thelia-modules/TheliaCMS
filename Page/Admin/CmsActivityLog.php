@@ -34,7 +34,7 @@ final readonly class CmsActivityLog
     ) {
     }
 
-    public function record(string $action, int $pageId, string $message): void
+    public function record(string $action, int $objectId, string $message, string $resource = CmsResources::PAGE): void
     {
         $request = $this->requestStack->getCurrentRequest();
 
@@ -43,13 +43,15 @@ final readonly class CmsActivityLog
         }
 
         AdminLog::append(
-            resource: CmsResources::PAGE,
+            // The resource the entry is filed under, so the system log can be
+            // read one section at a time: pages, menus, media.
+            resource: $resource,
             action: $action,
             message: $message,
             request: $request,
             adminUser: $this->securityContext->getAdminUser(),
             withRequestContent: false,
-            resourceId: $pageId,
+            resourceId: $objectId,
         );
     }
 }

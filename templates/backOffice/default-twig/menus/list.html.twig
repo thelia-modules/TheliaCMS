@@ -1,0 +1,79 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Menus'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-menus-list{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Menus'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.menus.create', { edit_language_id: edit_language_id }) }}">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                {{ 'New menu'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    {% if menus is empty %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">{{ 'No menu yet. A menu is the navigation of your site: the links in the header, the links in the footer.'|trans({}, 'theliacms') }}</p>
+                <a class="btn btn-primary" href="{{ path('admin.cms.menus.create', { edit_language_id: edit_language_id }) }}">{{ 'Create the first menu'|trans({}, 'theliacms') }}</a>
+            </div>
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'Name'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'Code'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'Entries'|trans({}, 'theliacms') }}</th>
+                            <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in menus %}
+                            {% set menu = row.menu %}
+                            <tr data-testid="cms-menu-row-{{ menu.id }}">
+                                <td>
+                                    <a href="{{ path('admin.cms.menus.edit', { id: menu.id, edit_language_id: edit_language_id }) }}">
+                                        {{ menu.title|default('#' ~ menu.id) }}
+                                    </a>
+                                </td>
+                                <td><code>{{ menu.code }}</code></td>
+                                <td>
+                                    {{ row.entries }}
+                                    {% if row.issues > 0 %}
+                                        <span class="badge bg-warning-subtle text-warning-emphasis ms-2"
+                                              title="{{ 'These entries are hidden from your site until they are fixed.'|trans({}, 'theliacms') }}">
+                                            <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                                            {{ 'to fix: %count%'|trans({'%count%': row.issues}, 'theliacms') }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.menus.edit', { id: menu.id, edit_language_id: edit_language_id }) }}">
+                                            {{ 'Edit'|trans({}, 'theliacms') }}
+                                        </a>
+                                        <form method="post" action="{{ path('admin.cms.menus.delete', { id: menu.id, edit_language_id: edit_language_id }) }}"
+                                              onsubmit="return confirm('{{ 'Delete this menu and all of its entries?'|trans({}, 'theliacms')|e('js') }}')">
+                                            <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}">
+                                                <i class="bi bi-trash3" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="text-muted small mt-3 mb-0">
+            {{ 'A theme calls a menu by its code, so renaming a menu is safe but changing its code is not.'|trans({}, 'theliacms') }}
+        </p>
+    {% endif %}
+{% endblock %}
