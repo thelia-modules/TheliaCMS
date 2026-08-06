@@ -34,6 +34,7 @@ use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
 use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Install\LegalPagesSeeder;
+use TheliaCMS\Install\MenuSeeder;
 use TheliaCMS\Media\LibraryImageCatalog;
 use TheliaCMS\Media\LibraryImageUploader;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -75,7 +76,38 @@ class TheliaCMS extends BaseModule
 
         $this->createSearchIndex();
         $this->seedAdminResources();
+        (new MenuSeeder())->seed();
         $this->regenerateRewrittenUrls();
+    }
+
+    /**
+     * Applies the schema changes of every version between the one installed and
+     * the one shipped.
+     *
+     * The core replays `Config/update/*.sql` on a fresh install and through
+     * `module:schema:apply`, but a site that merely updates the module goes
+     * through here — without it, new tables would only ever appear on new sites.
+     * The files are written to tolerate being applied twice.
+     *
+     * Only SQL here, no model: the Propel runtime map of this process was built
+     * before the statements below ran, so the tables they create have no table
+     * map yet and any query against them fails. That is why the seed rows of a
+     * new table are part of its update file rather than of a PHP seeder.
+     */
+    public function update($currentVersion, $newVersion, ?ConnectionInterface $con = null): void
+    {
+        $files = glob(__DIR__.'/Config/update/*.sql') ?: [];
+        usort($files, static fn (string $a, string $b): int => version_compare(basename($a, '.sql'), basename($b, '.sql')));
+
+        foreach ($files as $file) {
+            $version = basename($file, '.sql');
+
+            if (version_compare($version, (string) $currentVersion, '<=') || version_compare($version, (string) $newVersion, '>')) {
+                continue;
+            }
+
+            (new Database($con))->insertSql(null, [$file]);
+        }
     }
 
     /**

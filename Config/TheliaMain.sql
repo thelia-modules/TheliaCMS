@@ -107,6 +107,50 @@ CREATE TABLE `cms_page_search`
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
+-- cms_menu
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_menu`;
+
+CREATE TABLE `cms_menu`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(50) NOT NULL,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_menu_code` (`code`)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- cms_menu_item
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_menu_item`;
+
+CREATE TABLE `cms_menu_item`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `menu_id` INTEGER NOT NULL,
+    `parent` INTEGER DEFAULT 0 NOT NULL,
+    `position` INTEGER DEFAULT 0 NOT NULL,
+    `target_type` VARCHAR(20) DEFAULT 'page' NOT NULL,
+    `target_id` INTEGER,
+    `url` VARCHAR(2048),
+    `open_new_tab` TINYINT(4) DEFAULT 0 NOT NULL,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_cms_menu_item_menu_parent_position` (`menu_id`, `parent`, `position`),
+    INDEX `idx_cms_menu_item_target` (`target_type`, `target_id`),
+    CONSTRAINT `fk_cms_menu_item_menu`
+        FOREIGN KEY (`menu_id`)
+        REFERENCES `cms_menu` (`id`)
+        ON UPDATE RESTRICT
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
 -- cms_page_i18n
 -- ---------------------------------------------------------------------
 
@@ -130,6 +174,42 @@ CREATE TABLE `cms_page_i18n`
     CONSTRAINT `cms_page_i18n_fk_058391`
         FOREIGN KEY (`id`)
         REFERENCES `cms_page` (`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- cms_menu_i18n
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_menu_i18n`;
+
+CREATE TABLE `cms_menu_i18n`
+(
+    `id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
+    `title` VARCHAR(255),
+    PRIMARY KEY (`id`,`locale`),
+    CONSTRAINT `cms_menu_i18n_fk_05b691`
+        FOREIGN KEY (`id`)
+        REFERENCES `cms_menu` (`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- cms_menu_item_i18n
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_menu_item_i18n`;
+
+CREATE TABLE `cms_menu_item_i18n`
+(
+    `id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
+    `label` VARCHAR(255),
+    PRIMARY KEY (`id`,`locale`),
+    CONSTRAINT `cms_menu_item_i18n_fk_ea832f`
+        FOREIGN KEY (`id`)
+        REFERENCES `cms_menu_item` (`id`)
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
