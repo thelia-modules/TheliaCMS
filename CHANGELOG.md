@@ -34,7 +34,7 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   `hreflang` alternates limited to the languages a page is published in.
 - Settings screen: what the site is, the page shown when an address does not
   exist, and maintenance.
-- Showcase mode: 404 on the cart and the checkout, Site first in the back-office
+- Showcase mode: 404 on the cart and the checkout, CMS first in the back-office
   menu, and an "Editor" profile seeded with the content permissions and none of
   the shop.
 - Maintenance mode: 503 with `Retry-After`, an IP allow list, a bypass for the
@@ -89,6 +89,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   way out.
 - Answers age out on their own after the number of days their form states,
   either from `thelia_cms:forms:purge` or along with `maintenance:purge`.
+- A bin that empties itself: pages deleted more than `trash_retention_days` ago
+  (30 by default) go for good with their content, their revisions, their search
+  entries and their addresses, either from `thelia_cms:pages:purge-trash` or
+  along with `maintenance:purge`. The bin screen shows when each page is due to
+  go.
 - A sent form is reported to the data layer as `generate_lead`, carrying the
   code of the form and nothing else, and only when the person agreed to be
   contacted.

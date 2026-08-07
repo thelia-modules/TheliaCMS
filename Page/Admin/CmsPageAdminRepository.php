@@ -18,6 +18,8 @@ use Propel\Runtime\ActiveQuery\Criteria;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Page\TrashRetention;
+use TheliaCMS\Settings\CmsSettings;
 
 /**
  * Reads the page tree for the back office. Kept apart from the front-office
@@ -26,6 +28,11 @@ use TheliaCMS\Model\CmsPageQuery;
  */
 final readonly class CmsPageAdminRepository
 {
+    public function __construct(
+        private CmsSettings $settings,
+    ) {
+    }
+
     /**
      * Depth-first walk of the live tree, each row carrying its depth so the
      * listing can indent without a second pass.
@@ -48,7 +55,7 @@ final readonly class CmsPageAdminRepository
      * page whose parent is also in the bin is restored with that parent, not
      * before it.
      *
-     * @return list<array{page: CmsPage, restorable: bool}>
+     * @return list<array{page: CmsPage, restorable: bool, days_left: int|null}>
      */
     public function trash(string $locale): array
     {
@@ -66,10 +73,17 @@ final readonly class CmsPageAdminRepository
             $binned[(int) $page->getId()] = true;
         }
 
+        // Deleting on a schedule without saying when is how an editor discovers
+        // the rule by losing a page, so the screen shows the deadline.
+        $retentionDays = $this->settings->trashRetentionDays();
+
         return array_map(
             static fn (CmsPage $page): array => [
                 'page' => $page,
                 'restorable' => !isset($binned[(int) $page->getParent()]),
+                'days_left' => null === $page->getDeletedAt()
+                    ? null
+                    : TrashRetention::daysLeft($page->getDeletedAt(), $retentionDays),
             ],
             $pages
         );

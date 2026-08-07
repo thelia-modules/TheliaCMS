@@ -24,6 +24,7 @@
                         <tr>
                             <th scope="col">{{ 'Title'|trans({}, 'theliacms') }}</th>
                             <th scope="col">{{ 'Deleted on'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'Deleted for good'|trans({}, 'theliacms') }}</th>
                             <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
                         </tr>
                     </thead>
@@ -33,6 +34,17 @@
                             <tr>
                                 <td>{{ page.setLocale(edit_locale).title|default('#' ~ page.id) }}</td>
                                 <td class="text-muted small">{{ page.deletedAt ? page.deletedAt|date('d/m/Y H:i') : '' }}</td>
+                                <td class="small">
+                                    {% if row.days_left is null %}
+                                        <span class="text-muted">{{ 'Kept until you delete it'|trans({}, 'theliacms') }}</span>
+                                    {% elseif row.days_left == 0 %}
+                                        <span class="text-danger-emphasis">{{ 'At the next clean-up'|trans({}, 'theliacms') }}</span>
+                                    {% else %}
+                                        <span class="{{ row.days_left <= 7 ? 'text-warning-emphasis' : 'text-muted' }}">
+                                            {{ 'in %count% day(s)'|trans({ '%count%': row.days_left }, 'theliacms') }}
+                                        </span>
+                                    {% endif %}
+                                </td>
                                 <td class="text-end">
                                     {% if row.restorable %}
                                         <form method="post" action="{{ path('admin.cms.pages.restore', { id: page.id, edit_language_id: edit_language_id }) }}">

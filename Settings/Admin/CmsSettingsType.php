@@ -17,12 +17,14 @@ namespace TheliaCMS\Settings\Admin;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use TheliaCMS\Page\TrashRetention;
 use TheliaCMS\Settings\IpAllowlist;
 use TheliaCMS\Settings\SiteMode;
 
@@ -52,6 +54,12 @@ final class CmsSettingsType extends AbstractType
                 'placeholder' => 'The 404 page of the theme',
                 'choices' => $options['page_choices'],
                 'help' => 'The page has to be published in the language of the visitor; otherwise the theme takes over.',
+            ])
+            ->add('trashRetentionDays', IntegerType::class, [
+                'label' => 'Days a deleted page waits in the bin',
+                'required' => false,
+                'attr' => ['min' => 0, 'max' => TrashRetention::MAX_DAYS],
+                'help' => 'After that, the page and everything in it are deleted for good. Set 0 to empty the bin by hand only.',
             ])
             ->add('maintenanceActive', CheckboxType::class, [
                 'label' => 'Close the site for maintenance',

@@ -38,7 +38,7 @@ Deactivating the module removes the rewritten URLs it owns, so the site answers
 
 ## Editing a page
 
-**Site > Pages** lists the tree. A page carries a title, a slug, a parent, a
+**CMS > Pages** lists the tree. A page carries a title, a slug, a parent, a
 layout, a publication window and its SEO metadata, all per language. Content is
 edited on its own full-screen route, `/admin/cms/pages/{id}/builder`:
 
@@ -52,6 +52,19 @@ edited on its own full-screen route, `/admin/cms/pages/{id}/builder`:
 Each language holds its own layout and its own text: the French and English
 versions of a page are two independent canvases.
 
+A deleted page goes to the bin instead of being removed. **CMS > Pages > Bin**
+lists what was deleted, with the date and the time each page has left, and puts
+any of them back. A page comes back with whatever was nested under it; a page
+whose own parent is still in the bin waits for that parent.
+
+The bin empties itself after 30 days, which `trash_retention_days` changes. A
+page that goes takes everything with it: its content in every language, its
+revisions, its search entry and its addresses. Set the value to 0 and nothing is
+deleted until somebody asks for it. The clean-up runs from `maintenance:purge`,
+the command a Thelia site already schedules, and from
+`thelia_cms:pages:purge-trash` for a run on demand. That second command takes
+`--dry-run`, which lists what would go and deletes nothing.
+
 ## Blocks
 
 The editor panel holds three families.
@@ -62,7 +75,7 @@ and a section to group other blocks. They drop semantic markup carrying `cms-*`
 class names and no styling of their own, so a theme decides what they look like
 and a page written today still looks right after the theme is reworked.
 
-**Reusable blocks** (**Site > Blocks**) are written once and placed on as many
+**Reusable blocks** (**CMS > Blocks**) are written once and placed on as many
 pages as you like: the banner that appears on twenty pages is edited in one
 place. Pages hold a reference rather than a copy, so publishing the block
 updates every page showing it. A block still used by a page cannot be deleted,
@@ -91,7 +104,7 @@ Adding a block of your own, static or dynamic, takes one PHP class:
 
 ## Media
 
-**Site > Media** stores images in [TheliaLibrary][library]. Alternative text is
+**CMS > Media** stores images in [TheliaLibrary][library]. Alternative text is
 mandatory in every language unless the image is marked decorative, which
 publishes it with an empty `alt`. An empty attribute on its own cannot say
 whether an image was described or simply forgotten, so the choice is recorded.
@@ -108,7 +121,7 @@ lazy loading on everything but the first image.
 
 ## Menus
 
-Menus live under **Site > Menus** and a theme calls them by code. `main` and
+Menus live under **CMS > Menus** and a theme calls them by code. `main` and
 `footer` exist from the first activation.
 
 An entry points at a CMS page, a content, a folder, a web address, or at nothing
@@ -129,7 +142,7 @@ stays as a heading, rather than let its children move up a level.
 
 ## Forms
 
-Forms live under **Site > Forms**. A form has a code, the way a menu does, and
+Forms live under **CMS > Forms**. A form has a code, the way a menu does, and
 a page places it with the **Form** block from the editor. The page stores that
 reference and nothing more: the fields, the wording and the recipients are read
 when the page is served, so adding a field never means republishing the pages
@@ -171,7 +184,7 @@ sees it catches less than the three checks above.
 
 ### Answers
 
-**Site > Forms > Answers** lists what a form received, searchable by email
+**CMS > Forms > Answers** lists what a form received, searchable by email
 address. From there an answer is exported as CSV or as JSON, or deleted. That is
 what answering a request to see or to erase personal data comes down to, and it
 takes a couple of minutes rather than an afternoon of SQL. The CSV keeps a
@@ -195,16 +208,17 @@ the form and nothing else, and only when the person agreed to be contacted.
 Settings live in `module_config` and are read through
 `TheliaCMS::getConfigValue()`.
 
-Most of them are edited under **Site > Settings**.
+Most of them are edited under **CMS > Settings**.
 
 | Value | Default | Description |
 |---|---|---|
 | `home_page_id` | none | Page served on `/`. Set from the page list; its own slug then 301s to `/`. |
-| `site_mode` | `commerce` | `vitrine` closes the shop paths and puts Site first in the back-office menu. |
+| `site_mode` | `commerce` | `vitrine` closes the shop paths and puts CMS first in the back-office menu. |
 | `404_page_id` | none | CMS page served when an address does not exist, with a 404 status. |
 | `maintenance_active` | `0` | `1` closes the site with a 503. |
 | `maintenance_allowlist` | empty | IP addresses and CIDR ranges that keep seeing the site while it is closed. |
 | `maintenance_page_id` | none | CMS page shown while the site is closed. |
+| `trash_retention_days` | `30` | Days a deleted page stays in the bin before it is deleted for good. `0` keeps it until somebody deletes it by hand. |
 | `cache_ttl` | `3600` | Seconds a resolved menu is cached for. It is also dropped on every change that affects it. |
 | `heading_check_mode` | `warn` | `warn` reports heading problems and publishes anyway; `block` refuses to publish. |
 | `builder_stylesheet` | none | Public path of the stylesheet the editor canvas loads. Defaults to the asset mapper's `styles/app.css`. |
@@ -213,7 +227,7 @@ Most of them are edited under **Site > Settings**.
 ## Showcase mode, maintenance and the 404
 
 A **showcase site** answers 404 on `/cart`, `/order` and `/checkout`, and moves
-Site to the top of the back-office menu. Nothing else changes, and switching back
+CMS to the top of the back-office menu. Nothing else changes, and switching back
 undoes it: the shop is one save away.
 
 Saving showcase mode also creates the **Editor** profile: pages, menus, media,

@@ -44,11 +44,24 @@
                 </div>
             </div>
 
-            <div class="col-lg-6">
-                <div class="card h-100">
+            {# Two short cards stacked beside the tall one, rather than one of
+               them alone on a row of its own with a hole next to it. #}
+            <div class="col-lg-6 d-flex flex-column gap-3">
+                <div class="card">
                     <div class="card-header">{{ 'Address not found'|trans({}, 'theliacms') }}</div>
                     <div class="card-body">
                         {{ form_row(form.notFoundPageId) }}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">{{ 'Bin'|trans({}, 'theliacms') }}</div>
+                    <div class="card-body">
+                        {{ form_row(form.trashRetentionDays) }}
+
+                        <p class="text-muted small mb-0">
+                            {{ 'The clean-up runs with the scheduled maintenance of the site, and the bin says when each page is due.'|trans({}, 'theliacms') }}
+                        </p>
                     </div>
                 </div>
             </div>

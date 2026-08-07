@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Settings;
 
+use TheliaCMS\Page\TrashRetention;
 use TheliaCMS\TheliaCMS;
 
 /**
@@ -31,6 +32,7 @@ final readonly class CmsSettings
     public const string MAINTENANCE_ACTIVE = 'maintenance_active';
     public const string MAINTENANCE_ALLOWLIST = 'maintenance_allowlist';
     public const string MAINTENANCE_PAGE = 'maintenance_page_id';
+    public const string TRASH_RETENTION_DAYS = 'trash_retention_days';
 
     /**
      * How long a client is asked to wait before coming back. Long enough for a
@@ -57,6 +59,23 @@ final readonly class CmsSettings
     public function maintenancePageId(): ?int
     {
         return $this->pageId(self::MAINTENANCE_PAGE);
+    }
+
+    /**
+     * How many days a deleted page waits in the bin before it goes for good.
+     * Zero means it waits until somebody deletes it by hand.
+     */
+    public function trashRetentionDays(): int
+    {
+        $raw = TheliaCMS::getConfigValue(self::TRASH_RETENTION_DAYS);
+
+        // Never configured is not the same as configured to zero: an unset
+        // setting takes the default, a zero says "keep them".
+        if (null === $raw || '' === trim((string) $raw)) {
+            return TrashRetention::DEFAULT_DAYS;
+        }
+
+        return TrashRetention::normalize((int) $raw);
     }
 
     public function isMaintenanceActive(): bool
@@ -87,12 +106,14 @@ final readonly class CmsSettings
         bool $maintenanceActive,
         string $maintenanceAllowlist,
         ?int $maintenancePageId,
+        ?int $trashRetentionDays,
     ): void {
         TheliaCMS::setConfigValue(self::SITE_MODE, $mode->value);
         TheliaCMS::setConfigValue(self::NOT_FOUND_PAGE, (string) ($notFoundPageId ?? ''));
         TheliaCMS::setConfigValue(self::MAINTENANCE_ACTIVE, $maintenanceActive ? '1' : '0');
         TheliaCMS::setConfigValue(self::MAINTENANCE_ALLOWLIST, trim($maintenanceAllowlist));
         TheliaCMS::setConfigValue(self::MAINTENANCE_PAGE, (string) ($maintenancePageId ?? ''));
+        TheliaCMS::setConfigValue(self::TRASH_RETENTION_DAYS, (string) TrashRetention::normalize($trashRetentionDays));
     }
 
     private function pageId(string $key): ?int

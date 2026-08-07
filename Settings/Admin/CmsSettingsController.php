@@ -68,6 +68,7 @@ final readonly class CmsSettingsController
             'maintenanceActive' => $this->settings->isMaintenanceActive(),
             'maintenancePageId' => $this->settings->maintenancePageId(),
             'maintenanceAllowlist' => implode("\n", $this->settings->maintenanceAllowlist()),
+            'trashRetentionDays' => $this->settings->trashRetentionDays(),
         ], [
             'page_choices' => $this->choices->pages($lang->getLocale()),
         ]);
@@ -104,6 +105,8 @@ final readonly class CmsSettingsController
             maintenanceActive: (bool) $data['maintenanceActive'],
             maintenanceAllowlist: (string) $data['maintenanceAllowlist'],
             maintenancePageId: null === $data['maintenancePageId'] ? null : (int) $data['maintenancePageId'],
+            // Left empty means "the default"; a typed 0 means "keep them".
+            trashRetentionDays: null === $data['trashRetentionDays'] ? null : (int) $data['trashRetentionDays'],
         );
 
         // A showcase site is handed to someone who is not an administrator of
