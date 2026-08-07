@@ -102,18 +102,30 @@ class TheliaCMS extends BaseModule
      */
     public function update($currentVersion, $newVersion, ?ConnectionInterface $con = null): void
     {
+        foreach (self::migrationsBetween((string) $currentVersion, (string) $newVersion) as $file) {
+            (new Database($con))->insertSql(null, [$file]);
+        }
+    }
+
+    /**
+     * The migration files to apply to move a site from one version to another,
+     * oldest first.
+     *
+     * Ordered by version rather than by name: a plain sort puts 0.10.0 before
+     * 0.9.0, and a table would then be altered before it is created.
+     *
+     * @return list<string> absolute paths
+     */
+    public static function migrationsBetween(string $currentVersion, string $newVersion): array
+    {
         $files = glob(__DIR__.'/Config/update/*.sql') ?: [];
         usort($files, static fn (string $a, string $b): int => version_compare(basename($a, '.sql'), basename($b, '.sql')));
 
-        foreach ($files as $file) {
+        return array_values(array_filter($files, static function (string $file) use ($currentVersion, $newVersion): bool {
             $version = basename($file, '.sql');
 
-            if (version_compare($version, (string) $currentVersion, '<=') || version_compare($version, (string) $newVersion, '>')) {
-                continue;
-            }
-
-            (new Database($con))->insertSql(null, [$file]);
-        }
+            return version_compare($version, $currentVersion, '>') && version_compare($version, $newVersion, '<=');
+        }));
     }
 
     /**
