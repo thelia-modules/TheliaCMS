@@ -575,6 +575,13 @@ While developing, Thelia only republishes an asset to `public/assets` when the
 `process_assets` configuration value is on; with it off, the previous build
 keeps being served.
 
+## Guide for whoever runs the site
+
+`docs/guide/thelia-cms-guide-webmaster.pdf` is a printable guide in French,
+written for a webmaster rather than a developer: what each screen does, what the
+settings change, and what is worth checking once before a site goes live. Its
+source and the instructions to rebuild it are in the same directory.
+
 ## Licence
 
 LGPL-3.0-or-later. See [LICENSE](LICENSE).

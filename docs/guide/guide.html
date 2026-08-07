@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Thelia CMS, guide du webmaster</title>
+<style>
+  @font-face {
+    font-family: 'Poppins';
+    font-weight: 400;
+    src: url('fonts/poppins-400-normal-latin.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Poppins';
+    font-weight: 600;
+    src: url('fonts/poppins-600-normal-latin.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Poppins';
+    font-weight: 700;
+    src: url('fonts/poppins-700-normal-latin.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Roboto';
+    font-weight: 400;
+    src: url('fonts/roboto-400-normal-latin.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Roboto';
+    font-weight: 500;
+    src: url('fonts/roboto-500-normal-latin.woff2') format('woff2');
+  }
+
+  :root {
+    --orange: #f26041;
+    --ink: #26282b;
+    --grey: #5d6165;
+    --light: #f4f5f6;
+    --rule: #dcdee0;
+  }
+
+  @page {
+    size: A4;
+    margin: 20mm 18mm 18mm;
+
+    @bottom-left {
+      content: "Thelia CMS · Guide du webmaster";
+      font-family: 'Roboto', sans-serif;
+      font-size: 7.5pt;
+      color: #8b9096;
+    }
+
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-family: 'Roboto', sans-serif;
+      font-size: 7.5pt;
+      color: #8b9096;
+    }
+  }
+
+  @page :first {
+    margin: 0;
+
+    @bottom-left { content: none }
+    @bottom-right { content: none }
+  }
+
+  html {
+    font-family: 'Roboto', sans-serif;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Poppins', sans-serif;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-size: 17pt;
+    font-weight: 600;
+    margin: 0 0 2mm;
+    padding-bottom: 2mm;
+    border-bottom: 2pt solid var(--orange);
+    string-set: chapter content();
+  }
+
+  h3 {
+    font-size: 12pt;
+    font-weight: 600;
+    margin: 7mm 0 1.5mm;
+  }
+
+  h4 {
+    font-size: 10.5pt;
+    font-weight: 600;
+    margin: 5mm 0 1mm;
+  }
+
+  p { margin: 0 0 3mm }
+  ul, ol { margin: 0 0 3mm; padding-left: 5mm }
+  li { margin-bottom: 1mm }
+
+  a { color: var(--ink); text-decoration: none }
+  code {
+    font-family: 'DejaVu Sans Mono', monospace;
+    font-size: 8.5pt;
+    background: var(--light);
+    padding: 0.3mm 1mm;
+    border-radius: 1mm;
+  }
+
+  pre {
+    font-family: 'DejaVu Sans Mono', monospace;
+    font-size: 8pt;
+    line-height: 1.4;
+    background: var(--light);
+    border-left: 2pt solid var(--orange);
+    padding: 2.5mm 3mm;
+    margin: 0 0 4mm;
+    white-space: pre-wrap;
+  }
+
+  /* Cover ---------------------------------------------------------------- */
+
+  .cover {
+    height: 297mm;
+    padding: 45mm 22mm 0;
+    box-sizing: border-box;
+    page-break-after: always;
+  }
+
+  .cover-logo {
+    width: 38mm;
+    margin-bottom: 14mm;
+  }
+
+  .cover-rule {
+    width: 28mm;
+    height: 3pt;
+    background: var(--orange);
+    margin-bottom: 9mm;
+  }
+
+  .cover h1 {
+    font-size: 34pt;
+    font-weight: 700;
+    margin: 0 0 3mm;
+  }
+
+  .cover .subtitle {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14pt;
+    color: var(--grey);
+    margin: 0 0 20mm;
+  }
+
+  .cover .lede {
+    font-size: 11pt;
+    max-width: 125mm;
+    color: var(--grey);
+  }
+
+  .cover .meta {
+    position: absolute;
+    bottom: 22mm;
+    font-size: 9pt;
+    color: var(--grey);
+  }
+
+  /* Content -------------------------------------------------------------- */
+
+  section {
+    page-break-before: always;
+  }
+
+  section.continues {
+    page-break-before: auto;
+  }
+
+  figure {
+    margin: 4mm 0 5mm;
+    page-break-inside: avoid;
+  }
+
+  figure img {
+    width: 100%;
+    border: 0.5pt solid var(--rule);
+  }
+
+  figcaption {
+    font-size: 8pt;
+    color: var(--grey);
+    margin-top: 1.5mm;
+  }
+
+  .note {
+    background: var(--light);
+    border-left: 2pt solid var(--orange);
+    padding: 3mm 3.5mm;
+    margin: 0 0 4mm;
+    font-size: 9.5pt;
+  }
+
+  .note strong { font-family: 'Poppins', sans-serif; font-weight: 600 }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin: 0 0 4mm;
+  }
+
+  th {
+    text-align: left;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--grey);
+    border-bottom: 1pt solid var(--rule);
+    padding: 1.5mm 2mm 1.5mm 0;
+  }
+
+  td {
+    vertical-align: top;
+    border-bottom: 0.5pt solid var(--rule);
+    padding: 1.8mm 2mm 1.8mm 0;
+  }
+
+  td:first-child { white-space: nowrap; font-weight: 500 }
+
+  .toc ol { list-style: none; padding: 0; margin: 0 }
+  .toc li { margin-bottom: 2mm; font-size: 10.5pt }
+  .toc .num { color: var(--orange); font-weight: 600; display: inline-block; width: 8mm }
+  .toc .sub { font-size: 9pt; color: var(--grey); display: block; margin-left: 8mm }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <img class="cover-logo" src="img/logo-thelia.svg" alt="Thelia">
+  <div class="cover-rule"></div>
+  <h1>Thelia CMS</h1>
+  <p class="subtitle">Guide du webmaster</p>
+  <p class="lede">
+    Ce guide couvre l'ensemble du module : les pages et leur arborescence,
+    l'éditeur visuel, les menus, les médias, les formulaires, la recherche, les
+    balises de mesure et le consentement, les réglages du site, et le transport
+    du contenu d'un site à l'autre.
+  </p>
+  <p class="meta">Version 0.6.0 · août 2026 · thelia.net</p>
+</div>
+
+<section>
+  <h2>Sommaire</h2>
+  <div class="toc">
+    <ol>
+      <li><span class="num">1</span> Ce que le module ajoute<span class="sub">Où le trouver dans l'administration, et ce qu'il ne change pas</span></li>
+      <li><span class="num">2</span> Pages<span class="sub">Arborescence, statuts, adresses, référencement, corbeille</span></li>
+      <li><span class="num">3</span> L'éditeur visuel<span class="sub">Blocs, brouillon, publication, révisions, aperçu client</span></li>
+      <li><span class="num">4</span> Blocs réutilisables et contenus vivants<span class="sub">Écrire une fois, afficher partout ; vidéos et cartes sans traceur</span></li>
+      <li><span class="num">5</span> Modèles<span class="sub">Démarrer une page depuis une autre</span></li>
+      <li><span class="num">6</span> Médias<span class="sub">Images, texte alternatif, formats, usages</span></li>
+      <li><span class="num">7</span> Menus<span class="sub">Navigation par code, cibles, langues</span></li>
+      <li><span class="num">8</span> Formulaires<span class="sub">Champs, envois, réponses, anti-spam, consentement</span></li>
+      <li><span class="num">9</span> Recherche<span class="sub">Ce qui est indexé, ce qui en est exclu</span></li>
+      <li><span class="num">10</span> Scripts, mesure et consentement<span class="sub">Balises tierces, Consent Mode, ce qui se charge quand</span></li>
+      <li><span class="num">11</span> Réglages du site<span class="sub">Mode vitrine, page 404, maintenance, cache partagé</span></li>
+      <li><span class="num">12</span> Sauvegarder et transporter le contenu<span class="sub">Export, import, kits de démarrage</span></li>
+      <li><span class="num">13</span> Droits d'accès<span class="sub">Six permissions, deux profils types</span></li>
+      <li><span class="num">14</span> Avant la mise en ligne<span class="sub">Ce qui se vérifie une fois, et qui évite les mauvaises surprises</span></li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <h2>1. Ce que le module ajoute</h2>
+
+  <p>
+    Thelia CMS ajoute à l'administration une section <strong>CMS</strong> qui
+    regroupe tout ce qui relève du contenu éditorial : les pages et leur
+    arborescence, les blocs réutilisables, les modèles, les menus, les
+    formulaires, la médiathèque, les balises de mesure et les réglages du site.
+  </p>
+
+  <p>
+    Une page se compose dans un éditeur visuel et se publie en HTML et CSS.
+    Aucun script d'éditeur n'est envoyé aux visiteurs : la page mise en ligne ne
+    contient que son contenu.
+  </p>
+
+  <p>
+    Le module ne touche à rien d'autre. Un site qui vend continue de vendre, les
+    modules déjà installés continuent de fonctionner, et la désactivation du
+    module retire ses adresses réécrites sans laisser d'erreur.
+  </p>
+
+  <table>
+    <tr><th>Écran</th><th>Adresse</th></tr>
+    <tr><td>Pages</td><td><code>/admin/cms/pages</code></td></tr>
+    <tr><td>Éditeur</td><td><code>/admin/cms/pages/{id}/builder</code></td></tr>
+    <tr><td>Blocs</td><td><code>/admin/cms/blocks</code></td></tr>
+    <tr><td>Modèles</td><td><code>/admin/cms/templates</code></td></tr>
+    <tr><td>Menus</td><td><code>/admin/cms/menus</code></td></tr>
+    <tr><td>Formulaires</td><td><code>/admin/cms/forms</code></td></tr>
+    <tr><td>Médias</td><td><code>/admin/cms/media</code></td></tr>
+    <tr><td>Scripts et mesure</td><td><code>/admin/cms/scripts</code></td></tr>
+    <tr><td>Réglages</td><td><code>/admin/cms/settings</code></td></tr>
+  </table>
+
+  <p>
+    Sur un site sans boutique, la section CMS passe en tête du menu et le tableau
+    de bord reçoit un encart qui compte ce qu'un site vitrine a à compter :
+    messages reçus, pages en ligne, complétude des langues, dernières
+    modifications.
+  </p>
+
+  <figure>
+    <img src="img/10-tableau-de-bord.jpg" alt="Encart du tableau de bord montrant les messages reçus, les pages en ligne et la complétude par langue">
+    <figcaption>L'encart du tableau de bord, ajouté sur un site en mode vitrine.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>2. Pages</h2>
+
+  <p>
+    <strong>CMS &gt; Pages</strong> affiche l'arborescence. Chaque ligne indique
+    le statut de la page dans la langue en cours d'édition et son adresse
+    publique. Les flèches déplacent une page parmi ses voisines, le bouton
+    En ligne / Hors ligne la retire du site sans la supprimer, et l'icône de
+    corbeille l'envoie à la corbeille.
+  </p>
+
+  <figure>
+    <img src="img/01-pages.jpg" alt="Liste des pages avec leur statut et leur adresse">
+    <figcaption>La liste des pages. Le statut est celui de la langue en cours d'édition.</figcaption>
+  </figure>
+
+  <h3>Les statuts</h3>
+
+  <table>
+    <tr><th>Statut</th><th>Ce qu'il signifie</th></tr>
+    <tr><td>Brouillon</td><td>La page existe, rien n'est en ligne.</td></tr>
+    <tr><td>Publiée</td><td>Ce que voient les visiteurs est ce que vous avez publié.</td></tr>
+    <tr><td>Modifiée depuis la publication</td><td>Le brouillon a été repris après la mise en ligne. Le site montre toujours la version précédente.</td></tr>
+    <tr><td>Planifiée</td><td>Une date de publication est fixée et n'est pas atteinte.</td></tr>
+    <tr><td>Dépubliée</td><td>La page a été retirée, ou sa date de dépublication est passée.</td></tr>
+  </table>
+
+  <h3>Réglages d'une page</h3>
+
+  <p>
+    L'onglet <strong>Général</strong> porte le titre, l'adresse, la page parente,
+    la mise en page et la fenêtre de publication. Chaque langue a ses propres
+    valeurs : le sélecteur de langue en haut à droite indique celle que vous
+    modifiez.
+  </p>
+
+  <figure>
+    <img src="img/02-page-reglages.jpg" alt="Réglages généraux d'une page : titre, adresse, page parente, mise en page, dates">
+    <figcaption>Les réglages d'une page. Le bouton Modifier le contenu ouvre l'éditeur.</figcaption>
+  </figure>
+
+  <p>
+    L'adresse est facultative : laissée vide, elle est déduite du titre. Les
+    pages parentes préfixent automatiquement, si bien qu'une page
+    <em>Tarifs</em> rangée sous <em>Services</em> répond sur
+    <code>/services/tarifs</code>. Renommer une page crée la nouvelle adresse et
+    redirige l'ancienne de façon permanente, ce qui préserve le référencement
+    acquis et les liens déjà partagés.
+  </p>
+
+  <p>
+    Trois mises en page sont proposées. <strong>Standard</strong> affiche le fil
+    d'Ariane au-dessus du contenu. <strong>Pleine largeur</strong> le retire,
+    pour une page qui ouvre sur une image. <strong>Page d'atterrissage</strong>
+    retire aussi l'en-tête et le pied de page, pour une page dont l'objet est une
+    seule action.
+  </p>
+
+  <h3>Référencement et partage</h3>
+
+  <p>
+    L'onglet <strong>Moteurs de recherche et partage</strong> réunit le titre et
+    la description qui apparaissent dans les résultats de recherche, le titre,
+    la description et l'image utilisés lors d'un partage sur les réseaux, l'URL
+    canonique, et deux cases pour demander aux moteurs de ne pas indexer la page
+    ou de ne pas suivre ses liens. Ces valeurs sont par langue.
+  </p>
+
+  <div class="note">
+    <strong>La page d'accueil.</strong> Le bouton <em>Définir comme page
+    d'accueil</em> fait répondre la page sur la racine du site. Elle reste
+    accessible par son adresse, qui redirige alors vers la racine : une même
+    page à deux adresses est pénalisée par les moteurs.
+  </div>
+
+  <h3>Corbeille</h3>
+
+  <p>
+    Une page supprimée part à la corbeille avec les pages rangées sous elle.
+    L'écran <strong>Corbeille</strong> les liste avec leur date de suppression et
+    le temps qui leur reste, et les restaure. Une page dont la parente est encore
+    à la corbeille revient avec elle.
+  </p>
+
+  <p>
+    Passé le délai fixé dans les réglages, trente jours par défaut, la page est
+    supprimée définitivement avec ses contenus, ses révisions et ses adresses. Le
+    nettoyage a lieu pendant la maintenance planifiée du site. La valeur 0
+    conserve indéfiniment.
+  </p>
+</section>
+
+<section>
+  <h2>3. L'éditeur visuel</h2>
+
+  <p>
+    <em>Modifier le contenu</em> ouvre l'éditeur en plein écran. La colonne de
+    gauche liste les blocs disponibles, le centre montre la page telle qu'elle
+    sera, la colonne de droite affiche les réglages du bloc sélectionné.
+  </p>
+
+  <figure>
+    <img src="img/03-builder.jpg" alt="Éditeur visuel : panneau de blocs à gauche, page au centre, réglages à droite">
+    <figcaption>L'éditeur. La barre du haut porte les langues, l'aperçu, l'enregistrement et la publication.</figcaption>
+  </figure>
+
+  <h3>Brouillon et publication</h3>
+
+  <p>
+    Ce que vous composez est un brouillon. Il est enregistré automatiquement
+    toutes les trente secondes, et quitter la page avec un travail non enregistré
+    demande confirmation. Les visiteurs ne voient rien avant un appui sur
+    <strong>Publier</strong>.
+  </p>
+
+  <p>À la publication, quatre choses se produisent :</p>
+
+  <ul>
+    <li>le contenu est filtré côté serveur, ce qui retire tout script ou attribut
+      d'événement qu'un copier-coller aurait amené ;</li>
+    <li>les images deviennent des <code>&lt;picture&gt;</code> avec une variante
+      WebP, plusieurs largeurs, leurs dimensions réelles et le chargement
+      différé partout sauf sur la première ;</li>
+    <li>le texte est extrait pour la recherche du site ;</li>
+    <li>une révision est enregistrée.</li>
+  </ul>
+
+  <p>
+    Vingt révisions sont conservées par page et par langue. Restaurer une
+    révision remplace le brouillon : rien ne change en ligne avant la
+    publication suivante.
+  </p>
+
+  <h3>Faire relire par un client</h3>
+
+  <p>
+    <em>Aperçu du brouillon</em> produit un lien signé, valable soixante-douze
+    heures, qui montre le brouillon à quelqu'un sans compte d'administration. La
+    page est marquée non indexable et n'est jamais mise en cache.
+  </p>
+
+  <h3>Plusieurs langues</h3>
+
+  <p>
+    Chaque langue possède sa propre mise en page et ses propres textes. Le
+    bouton <em>Copier depuis</em> reprend une langue déjà faite comme point de
+    départ. Une langue sans titre n'obtient pas d'adresse et n'est pas servie :
+    c'est ce qui évite de publier une page française sous une adresse anglaise.
+  </p>
+
+  <div class="note">
+    <strong>Structure des titres.</strong> À la publication, la hiérarchie des
+    titres est vérifiée : un seul titre de premier niveau, pas de niveau sauté.
+    Un avertissement s'affiche, et le réglage <code>heading_check_mode</code>
+    permet d'en faire un blocage.
+  </div>
+</section>
+
+<section>
+  <h2>4. Blocs réutilisables et contenus vivants</h2>
+
+  <p>Le panneau de l'éditeur contient trois familles de blocs.</p>
+
+  <h3>Les dix blocs de page</h3>
+
+  <p>
+    Bandeau d'accroche, texte et image, appel à l'action, citation, témoignages,
+    chiffres clés, logos, galerie, questions et réponses, et une section pour
+    regrouper les autres. Ils produisent un balisage sémantique sans apparence
+    propre : c'est le thème qui décide de leur allure, si bien qu'une page écrite
+    aujourd'hui suit la refonte graphique de demain.
+  </p>
+
+  <h3>Les blocs réutilisables</h3>
+
+  <p>
+    <strong>CMS &gt; Blocs</strong> contient des contenus écrits une fois et
+    posés sur autant de pages que nécessaire : le bandeau présent sur vingt
+    pages se modifie en un seul endroit. Les pages gardent une référence et non
+    une copie, donc publier le bloc met à jour toutes les pages qui l'affichent.
+    Un bloc encore utilisé ne peut pas être supprimé, et son écran de réglages
+    indique où il apparaît.
+  </p>
+
+  <h3>Les contenus vivants</h3>
+
+  <p>
+    Ils sont calculés à chaque visite plutôt qu'enregistrés dans la page :
+    dernières actualités, menu, formulaire, bloc réutilisable, et les trois
+    intégrations ci-dessous. Une liste d'actualités écrite il y a six mois
+    affiche les actualités du jour.
+  </p>
+
+  <h4>Vidéos, cartes et réseaux sociaux</h4>
+
+  <p>
+    Une vidéo YouTube posée directement dans une page appelle Google à chaque
+    visite, avant que le visiteur ait donné son accord. Les blocs vidéo, carte et
+    réseau social affichent une vignette, un bouton et une phrase nommant
+    l'entreprise qui va recevoir la requête. Le lecteur, la carte ou la
+    publication n'est chargé qu'après l'appui sur le bouton. Sans JavaScript, le
+    bouton reste un lien vers la plateforme.
+  </p>
+
+  <p>
+    Les vidéos viennent de YouTube, Vimeo ou Dailymotion et sont désignées par
+    leur identifiant. Les cartes viennent d'OpenStreetMap. La vignette d'une
+    vidéo est servie par votre médiathèque.
+  </p>
+</section>
+
+<section>
+  <h2>5. Modèles</h2>
+
+  <p>
+    Un modèle est une page mise de côté pour en démarrer d'autres.
+    <strong>CMS &gt; Modèles</strong> en garde autant que vous voulez : choisissez
+    la page, nommez le modèle, et il apparaît dans la liste.
+  </p>
+
+  <figure>
+    <img src="img/06-modeles.jpg" alt="Écran Modèles : liste des modèles et formulaire de création de page">
+    <figcaption>Démarrer une page depuis un modèle demande un titre et l'endroit où la ranger.</figcaption>
+  </figure>
+
+  <p>
+    Partir d'un modèle donne un brouillon masqué et ouvre l'éditeur : un modèle
+    s'essaie sans que rien n'apparaisse sur le site. Les langues du modèle sont
+    reprises ; le titre que vous saisissez remplace celui de la langue en cours
+    d'édition.
+  </p>
+
+  <p>
+    Un modèle contient le même document que l'export du chapitre 12, ce qui rend
+    un modèle transportable d'un site à l'autre comme un fichier.
+  </p>
+</section>
+
+<section>
+  <h2>6. Médias</h2>
+
+  <p>
+    <strong>CMS &gt; Médias</strong> stocke les images du site. L'upload accepte
+    plusieurs fichiers à la fois, en JPEG, PNG ou WebP. Le SVG est refusé : c'est
+    un document qui peut contenir du script.
+  </p>
+
+  <figure>
+    <img src="img/08-medias.jpg" alt="Médiathèque : trois images avec leur taille, leur format et leurs étiquettes">
+    <figcaption>La médiathèque signale les images sans texte alternatif et celles qui ne sont pas utilisées.</figcaption>
+  </figure>
+
+  <p>
+    Le <strong>texte alternatif</strong> est obligatoire dans chaque langue, sauf
+    si l'image est marquée décorative, ce qui la publie avec un attribut vide.
+    Une image sans description est signalée dans la liste. Un attribut vide seul
+    ne permet pas de savoir si l'image a été décrite ou simplement oubliée : le
+    choix est donc enregistré.
+  </p>
+
+  <p>
+    Chaque fiche affiche les dimensions, le poids, le format et les pages qui
+    utilisent l'image. Une image encore utilisée ne peut pas être supprimée. Le
+    remplacement d'un fichier met à jour toutes les pages qui l'affichent.
+  </p>
+
+  <p>
+    Les étiquettes servent à retrouver une image. Le champ de recherche cherche
+    dans les titres et dans les étiquettes.
+  </p>
+</section>
+
+<section>
+  <h2>7. Menus</h2>
+
+  <p>
+    Un menu est désigné par un code que le thème appelle. <code>main</code> et
+    <code>footer</code> existent dès l'installation. Créer un menu avec un
+    nouveau code n'a d'effet que si le thème l'affiche.
+  </p>
+
+  <figure>
+    <img src="img/04-menus.jpg" alt="Éditeur de menu : entrées à gauche, formulaire d'ajout à droite">
+    <figcaption>L'éditeur de menu. Une entrée se déplace avec les flèches ou en glissant sa poignée.</figcaption>
+  </figure>
+
+  <p>
+    Une entrée pointe vers une page du site, un contenu, un dossier, une adresse
+    web, ou vers rien du tout. Une entrée sans cible est un intitulé seul, ce qui
+    sert à former un groupe. Son intitulé est facultatif : laissé vide, c'est le
+    titre de la cible qui s'affiche, dans la langue lue.
+  </p>
+
+  <p>
+    L'arborescence descend sur trois niveaux. Le glisser-déposer est un raccourci
+    et jamais le seul moyen : il ne s'utilise pas au clavier.
+  </p>
+
+  <div class="note">
+    <strong>Une cible devenue inaccessible disparaît du menu.</strong> Une entrée
+    dont la page a été supprimée, mise hors ligne, ou laissée non publiée dans la
+    langue lue est retirée du menu dans cette langue, et l'administration
+    l'indique avec la raison. Un intitulé de groupe qui garde des enfants
+    utilisables reste affiché.
+  </div>
+</section>
+
+<section>
+  <h2>8. Formulaires</h2>
+
+  <p>
+    Un formulaire porte un code, comme un menu, et une page l'affiche avec le
+    bloc <em>Formulaire</em> de l'éditeur. La page ne garde que la référence :
+    ajouter un champ ne demande pas de republier les pages concernées.
+  </p>
+
+  <figure>
+    <img src="img/05-formulaire.jpg" alt="Édition d'un formulaire : liste des champs et formulaire d'ajout">
+    <figcaption>Les champs du formulaire de contact installé par défaut.</figcaption>
+  </figure>
+
+  <h3>Les champs</h3>
+
+  <p>
+    Neuf types sont disponibles : une ligne de texte, une adresse e-mail,
+    plusieurs lignes, une liste déroulante, une case à cocher, un choix parmi
+    plusieurs, un numéro de téléphone, une date, et un accord pour être
+    recontacté. Les intitulés, les textes d'aide et les réponses proposées par
+    une liste s'écrivent par langue. Un champ sans intitulé dans une langue est
+    retiré du formulaire dans cette langue, et l'administration le signale.
+  </p>
+
+  <p>
+    Le champ d'accord n'est jamais coché d'avance. La réponse conserve la phrase
+    exacte lue par le visiteur et le moment où il a accepté. C'est ce qui est
+    produit si l'accord est contesté, et c'est aussi ce qui rend un numéro de
+    téléphone utilisable pour un appel commercial depuis le 11 août 2026.
+  </p>
+
+  <h3>Réglages</h3>
+
+  <table>
+    <tr><th>Réglage</th><th>Effet</th></tr>
+    <tr><td>Destinataires</td><td>Les adresses qui reçoivent les envois. Une seule par ligne.</td></tr>
+    <tr><td>Conserver les réponses</td><td>Enregistre les envois dans l'administration en plus de l'e-mail.</td></tr>
+    <tr><td>Durée de conservation</td><td>Nombre de jours au bout desquels une réponse est supprimée. 365 par défaut, 0 pour conserver.</td></tr>
+    <tr><td>Accusé de réception</td><td>Envoie une confirmation à la personne qui a écrit.</td></tr>
+    <tr><td>Page de confidentialité</td><td>La page vers laquelle pointe la mention légale sous le formulaire.</td></tr>
+    <tr><td>Signaler une conversion</td><td>Transmet l'envoi à la couche de mesure, sans aucune donnée personnelle, et seulement si le visiteur a accepté la mesure.</td></tr>
+  </table>
+
+  <h3>Les réponses</h3>
+
+  <p>
+    L'écran <strong>Réponses</strong> liste ce que le formulaire a reçu, avec une
+    recherche par adresse e-mail, l'export en CSV ou en JSON, et la suppression
+    d'une réponse. Retrouver et effacer tout ce qu'une personne a envoyé prend
+    quelques secondes, ce qui est le délai attendu pour répondre à une demande
+    d'accès ou d'effacement.
+  </p>
+
+  <h3>Le spam</h3>
+
+  <p>
+    Trois mesures, sans captcha : un champ invisible qu'un robot remplit, un
+    horodatage signé qui rejette un envoi arrivé en moins de trois secondes, et
+    une limite par visiteur comptée après la validation, pour ne pas bloquer une
+    heure quelqu'un qui se trompe six fois sur un formulaire long.
+  </p>
+</section>
+
+<section>
+  <h2>9. Recherche</h2>
+
+  <p>
+    Le module répond sur <code>/recherche</code> et sur <code>/search</code>. La
+    recherche porte sur le texte extrait à la publication, jamais sur le HTML :
+    un index construit sur du balisage remonte des noms de balises et classe les
+    pages selon leur longueur.
+  </p>
+
+  <p>Sont exclus des résultats :</p>
+
+  <ul>
+    <li>la corbeille et les brouillons ;</li>
+    <li>les pages en attente de leur date de publication, et celles dont la date
+      de dépublication est passée ;</li>
+    <li>les pages hors ligne ;</li>
+    <li>les pages marquées non indexables dans la langue lue.</li>
+  </ul>
+
+  <p>
+    La page de résultats est elle-même non indexable, et les opérateurs de
+    recherche sont retirés de la saisie. Un site équipé du module TntSearch voit
+    ses pages CMS entrer dans son index sans réglage supplémentaire.
+  </p>
+</section>
+
+<section>
+  <h2>10. Scripts, mesure et consentement</h2>
+
+  <p>
+    <strong>CMS &gt; Scripts et mesure</strong> réunit les balises tierces du
+    site : mesure d'audience, messagerie instantanée, pixel publicitaire. Chacune
+    porte un emplacement dans la page, la catégorie de consentement qu'elle
+    attend, une note et un interrupteur.
+  </p>
+
+  <figure>
+    <img src="img/07-scripts.jpg" alt="Écran Scripts et mesure : scripts par emplacement, réglages de la plateforme de consentement">
+    <figcaption>Les scripts, groupés par emplacement, et les réglages de la plateforme de consentement.</figcaption>
+  </figure>
+
+  <table>
+    <tr><th>Emplacement</th><th>Quand il s'exécute</th></tr>
+    <tr><td>Dans l'en-tête</td><td>Avant l'affichage de la page. Ce que demandent la plupart des balises de mesure.</td></tr>
+    <tr><td>Après l'ouverture</td><td>Au démarrage de la page. La place d'un repli sans JavaScript.</td></tr>
+    <tr><td>À la fin de la page</td><td>Une fois la page affichée. La place raisonnable pour un widget.</td></tr>
+  </table>
+
+  <p>
+    Un script qui nomme une catégorie est écrit dans la page à l'état inerte : le
+    navigateur le lit sans rien exécuter ni télécharger. Il n'est activé que
+    lorsque le visiteur a accepté cette catégorie. Une balise chargée d'abord et
+    autorisée ensuite a déjà lu le navigateur.
+  </p>
+
+  <p>
+    Un script sans catégorie se charge pour tout le monde, immédiatement. Ne
+    laissez ce champ vide que pour ce dont le site ne peut pas se passer.
+  </p>
+
+  <h3>Consentement et signaux Google</h3>
+
+  <p>
+    Renseignez l'identifiant de projet Axeptio pour afficher la bannière. Sans
+    lui, aucun script en attente ne se charge jamais.
+  </p>
+
+  <p>
+    Les quatre signaux du mode Consentement de Google sont émis en refus avant
+    l'exécution de la moindre balise, et mis à jour dès que le visiteur répond.
+    Le champ de correspondance associe chaque service de votre bannière aux
+    signaux qu'il a le droit d'activer :
+  </p>
+
+  <pre>{
+    "google_analytics": ["analytics_storage"],
+    "google_ads": ["ad_storage", "ad_user_data", "ad_personalization"]
+}</pre>
+
+  <div class="note">
+    <strong>À vérifier une fois, dans le navigateur.</strong> Ouvrez le site en
+    navigation privée, affichez l'onglet réseau des outils de développement, et
+    regardez les domaines appelés avant de répondre à la bannière. Aucun domaine
+    tiers ne doit apparaître. Répondez oui, et ils apparaissent.
+  </div>
+</section>
+
+<section>
+  <h2>11. Réglages du site</h2>
+
+  <figure>
+    <img src="img/09-reglages.jpg" alt="Réglages du site : type de site, page 404, cache partagé, corbeille">
+    <figcaption>Les réglages du module. Le mode vitrine ne modifie rien d'autre que ce qu'il annonce.</figcaption>
+  </figure>
+
+  <h3>Boutique ou site vitrine</h3>
+
+  <p>
+    En mode vitrine, le panier et le tunnel de commande répondent 404, la section
+    CMS passe en tête du menu d'administration, le tableau de bord reçoit son
+    encart, et le profil <strong>Éditeur</strong> est créé s'il n'existe pas.
+    Revenir en arrière annule tout cela.
+  </p>
+
+  <h3>Adresse introuvable</h3>
+
+  <p>
+    Vous pouvez désigner une page CMS à afficher quand une adresse n'existe pas.
+    Elle est servie avec le code 404, ce qui est nécessaire pour que les moteurs
+    ne l'indexent pas. Elle doit être publiée dans la langue du visiteur, sinon
+    le thème reprend la main avec sa propre page.
+  </p>
+
+  <h3>Maintenance</h3>
+
+  <p>
+    Le mode maintenance répond 503 à tout le monde avec un délai de retour, ce
+    qui empêche un moteur d'indexer la page de maintenance à la place du site.
+    Les adresses IP de la liste blanche continuent de voir le site, ainsi que les
+    administrateurs connectés. La page affichée est une page CMS comme les
+    autres.
+  </p>
+
+  <h3>Cache partagé</h3>
+
+  <p>
+    Le champ donne le nombre de secondes pendant lesquelles un proxy ou un CDN
+    peut conserver une page. Chaque page est étiquetée, si bien que publier une
+    page retire cette page du cache sans vider tout le site.
+  </p>
+
+  <div class="note">
+    <strong>Ce réglage ne suffit pas à lui seul.</strong> Thelia ouvre une
+    session et dépose un cookie sur chaque réponse, y compris pour un visiteur
+    anonyme, et une réponse qui dépose un cookie ne doit jamais être partagée
+    entre visiteurs. Il faut configurer le proxy pour retirer ce cookie sur les
+    adresses publiques. Le fichier <code>docs/shared-cache.md</code> du module
+    contient la configuration Varnish correspondante, l'équivalent pour Fastly et
+    Cloudflare, et un exemple de purge à recopier.
+  </div>
+</section>
+
+<section>
+  <h2>12. Sauvegarder et transporter le contenu</h2>
+
+  <p>
+    Deux commandes écrivent et relisent le contenu du site sous forme d'un
+    fichier JSON :
+  </p>
+
+  <pre>php Thelia thelia_cms:export site.json
+php Thelia thelia_cms:import site.json [--replace] [--with-settings]</pre>
+
+  <p>
+    Le fichier contient l'arborescence des pages, le contenu de chaque langue,
+    les menus, les formulaires et leurs champs, les blocs réutilisables et les
+    réglages. C'est à la fois un kit de démarrage préparé une fois et repris sur
+    le projet suivant, et une copie du contenu conservée ailleurs que dans la
+    base de données.
+  </p>
+
+  <h3>Ce qui reste sur place</h3>
+
+  <table>
+    <tr><th>Non exporté</th><th>Pourquoi</th></tr>
+    <tr><td>Réponses aux formulaires</td><td>Ce sont des données personnelles, et un kit de démarrage finit sur des ordinateurs portables.</td></tr>
+    <tr><td>Scripts tiers</td><td>Ils portent les comptes de mesure d'un site ; les importer ailleurs enverrait le trafic de ce site dedans.</td></tr>
+    <tr><td>Révisions</td><td>C'est l'historique d'un site, pas son contenu.</td></tr>
+    <tr><td>Fichiers images</td><td>Seuls les noms voyagent, voir ci-dessous.</td></tr>
+  </table>
+
+  <h3>Les images</h3>
+
+  <p>
+    Le fichier nomme les images auxquelles le contenu renvoie. Déposez-les dans
+    la médiathèque du site d'arrivée, sous les mêmes noms, avant d'importer :
+    l'import fait alors pointer le contenu sur vos copies. Ce qui manque est
+    nommé dans le compte rendu plutôt que laissé en image cassée silencieuse.
+  </p>
+
+  <h3>Ce que l'import ne fait pas</h3>
+
+  <p>
+    Il ne remplace rien : une page déjà présente à la même adresse, un menu ou un
+    formulaire portant le même code sont laissés tels quels et comptés dans le
+    compte rendu. <code>--replace</code> demande explicitement l'écrasement. Les
+    réglages ne sont appliqués qu'avec <code>--with-settings</code>, ce qui évite
+    qu'un kit de démarrage fasse basculer un site en production en mode vitrine.
+  </p>
+
+  <p>
+    L'import s'exécute d'un bloc : un fichier qui se révèle incomplet à
+    mi-chemin laisse le site dans l'état où il était.
+  </p>
+</section>
+
+<section>
+  <h2>13. Droits d'accès</h2>
+
+  <p>
+    Le module déclare six permissions, attribuables par profil dans
+    <strong>Configuration &gt; Administrateurs</strong>. Un profil créé avant
+    l'installation du module n'en reçoit aucune : elles s'ouvrent délibérément.
+  </p>
+
+  <table>
+    <tr><th>Permission</th><th>Donne accès à</th></tr>
+    <tr><td>CMS : pages</td><td>Les pages, l'éditeur, les blocs réutilisables, les modèles, la corbeille</td></tr>
+    <tr><td>CMS : menus</td><td>Les menus et leurs entrées</td></tr>
+    <tr><td>CMS : formulaires</td><td>Les formulaires, leurs champs et les réponses reçues</td></tr>
+    <tr><td>CMS : médias</td><td>La médiathèque</td></tr>
+    <tr><td>CMS : réglages</td><td>Les réglages du site</td></tr>
+    <tr><td>CMS : code libre</td><td>Les scripts et la plateforme de consentement</td></tr>
+  </table>
+
+  <p>
+    Deux profils types se dégagent. Le <strong>rédacteur</strong> reçoit les
+    pages, les menus, les médias et les formulaires : il écrit le site sans
+    pouvoir poser une balise sur toutes les pages. L'<strong>intégrateur</strong>
+    reçoit en plus les réglages et le code libre.
+  </p>
+
+  <p>
+    Le profil Éditeur créé par le mode vitrine correspond au premier. Ses droits
+    restent modifiables.
+  </p>
+
+  <div class="note">
+    <strong>La permission code libre élargit aussi ce qui peut être publié.</strong>
+    Sans elle, le filtre de publication retire les intégrations arbitraires. Avec
+    elle, une iframe passe, et la publication est enregistrée comme telle dans le
+    journal d'activité.
+  </div>
+</section>
+
+<section>
+  <h2>14. Avant la mise en ligne</h2>
+
+  <p>
+    Ces vérifications se font une fois, et évitent l'essentiel des mauvaises
+    surprises.
+  </p>
+
+  <h4>Contenu</h4>
+  <ul>
+    <li>Les quatre pages légales installées par défaut (mentions légales,
+      confidentialité, cookies, déclaration d'accessibilité) contiennent des
+      textes d'exemple. Elles ne sont pas publiées : remplacez leur contenu avant
+      de le faire.</li>
+    <li>La déclaration d'accessibilité n'annonce une conformité qu'après un audit
+      réel. Les trois états possibles s'excluent.</li>
+    <li>Chaque image porte un texte alternatif, ou est marquée décorative.</li>
+  </ul>
+
+  <h4>Mesure et consentement</h4>
+  <ul>
+    <li>L'identifiant de la plateforme de consentement est renseigné, sinon
+      aucune balise en attente ne se déclenchera.</li>
+    <li>Chaque script a la catégorie qui lui correspond. Un champ vide charge la
+      balise pour tout le monde.</li>
+    <li>Vérifié dans le navigateur : aucun domaine tiers appelé avant la réponse
+      du visiteur.</li>
+  </ul>
+
+  <h4>Exploitation</h4>
+  <ul>
+    <li>La maintenance planifiée du site est en place : c'est elle qui vide la
+      corbeille et applique la durée de conservation des réponses.</li>
+    <li>Un export du contenu est enregistré ailleurs que sur le serveur.</li>
+    <li>Si un proxy ou un CDN est prévu, le cookie de session est retiré sur les
+      adresses publiques, sinon rien ne sera mis en cache.</li>
+  </ul>
+
+  <figure>
+    <img src="img/11-front-page.jpg" alt="Page composée avec les blocs du catalogue, vue sur le site">
+    <figcaption>Une page composée avec les blocs du catalogue, telle qu'un visiteur la voit.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="img/12-front-legal.jpg" alt="Page de mentions légales sur le site, en colonne de lecture">
+    <figcaption>Une page de texte : le thème lui donne une colonne de lecture.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>
