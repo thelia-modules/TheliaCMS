@@ -22,6 +22,9 @@ export default class extends PageBuilderController {
         emptyTitle: { type: String, default: "" },
         emptyHint: { type: String, default: "" },
         panelHint: { type: String, default: "" },
+        // Wording GrapesJS ships in English only, translated server-side like
+        // the rest of the screen.
+        editorLabels: { type: Object, default: {} },
         // Server-rendered blocks: the registry, the language of the page being
         // edited, and the wording shown while a block has nothing to display.
         partials: { type: Array, default: [] },
@@ -191,8 +194,53 @@ export default class extends PageBuilderController {
             this.editor.I18n.setLocale(this.localeValue);
         }
 
+        this.translateWhatGrapesJsLeavesInEnglish();
         this.explainTheEmptyCanvas();
         this.explainTheEmptySettingsPanel();
+    }
+
+    /**
+     * Fills the two holes GrapesJS leaves in every language but English, so the
+     * editor does not read half in one language and half in another.
+     *
+     * The wording comes from the server, like the rest of the screen, rather
+     * than from a table of strings inside the bundle.
+     *
+     * Two holes, two mechanisms:
+     *
+     * - the label of the `target` trait has no key in the shipped locale
+     *   files, so the raw trait name is displayed; addMessages fills it in and
+     *   is a no-op the day the library or the bundle ships it;
+     * - the buttons of the rich-text toolbar carry their title as a plain
+     *   attribute set when the library builds them, outside its own i18n. The
+     *   title is written on the action, for buttons not built yet, and on the
+     *   button itself, for those already there.
+     */
+    translateWhatGrapesJsLeavesInEnglish() {
+        const labels = this.editorLabelsValue;
+
+        if (!labels || 0 === Object.keys(labels).length) {
+            return;
+        }
+
+        if (labels.linkTarget) {
+            this.editor.I18n.addMessages({
+                [this.editor.I18n.getLocale()]: {
+                    traitManager: { traits: { labels: { target: labels.linkTarget } } },
+                },
+            });
+        }
+
+        for (const [name, title] of Object.entries(labels.richText ?? {})) {
+            const action = this.editor.RichTextEditor.get(name);
+
+            if (!action) {
+                continue;
+            }
+
+            action.attributes = { ...(action.attributes ?? {}), title };
+            action.btn?.setAttribute("title", title);
+        }
     }
 
     /**

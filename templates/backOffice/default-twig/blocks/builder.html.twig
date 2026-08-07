@@ -57,6 +57,7 @@
                     'data-cms-page-builder-empty-title-value': 'This block has no content yet'|trans({}, 'theliacms'),
                     'data-cms-page-builder-empty-hint-value': 'Drag a block from the left to start. What you build here appears on every page using this block.'|trans({}, 'theliacms'),
                     'data-cms-page-builder-panel-hint-value': 'Select a block in the page to change its text, its spacing and its colours here.'|trans({}, 'theliacms'),
+                    'data-cms-page-builder-editor-labels-value': builder_labels|json_encode,
                 } %}
                     {% block content %}{{ initial_html|raw }}{% endblock %}
                 {% endcomponent %}

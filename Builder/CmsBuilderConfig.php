@@ -17,6 +17,7 @@ namespace TheliaCMS\Builder;
 use OpenStudio\PageBuilderBundle\Contract\PageBuilderConfigProviderInterface;
 use Symfony\Component\AssetMapper\AssetMapperInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Partial\PartialRegistry;
 use TheliaCMS\TheliaCMS;
 
@@ -47,6 +48,7 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
         private AssetMapperInterface $assetMapper,
         private UrlGeneratorInterface $urls,
         private PartialRegistry $partials,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -113,6 +115,38 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
                 ],
             ],
         ];
+    }
+
+    /**
+     * The wording GrapesJS itself ships in English only.
+     *
+     * Two places read half in one language and half in another without this:
+     * the `target` setting of a link, whose label has no key in the locale
+     * files shipped with the library, and the buttons of the rich-text toolbar,
+     * whose titles are written as plain attributes outside its i18n. Translated
+     * here rather than in a table of strings inside the editor bundle, so a
+     * site running in a fourth language gets them too.
+     *
+     * @return array<string, mixed>
+     */
+    public function editorLabels(): array
+    {
+        return [
+            'linkTarget' => $this->translate('Opens in'),
+            'richText' => [
+                'bold' => $this->translate('Bold'),
+                'italic' => $this->translate('Italic'),
+                'underline' => $this->translate('Underline'),
+                'strikethrough' => $this->translate('Strikethrough'),
+                'link' => $this->translate('Link'),
+                'wrap' => $this->translate('Wrap in a span to style it'),
+            ],
+        ];
+    }
+
+    private function translate(string $message): string
+    {
+        return $this->translator->trans($message, [], TheliaCMS::DOMAIN_NAME);
     }
 
     private function themeStylesheet(): ?string

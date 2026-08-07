@@ -107,6 +107,7 @@ final readonly class CmsPageBuilderController
             // page has no back-office account.
             'draft_preview_url' => $this->previewLinks->urlFor($id, $locale),
             'builder_options' => $this->builderConfig->editorOptions(),
+            'builder_labels' => $this->builderConfig->editorLabels(),
             // Server-rendered blocks the editor may offer, with their settings.
             'builder_partials' => $this->builderConfig->partials(),
             // The starting blocks, with their sample text in the language of
