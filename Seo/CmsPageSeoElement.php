@@ -22,6 +22,7 @@ use Thelia\Model\ConfigQuery;
 use Thelia\Tools\URL;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\TheliaCMS;
 
 /**
@@ -38,6 +39,7 @@ readonly class CmsPageSeoElement implements SeoElementInterface
     public function __construct(
         LangService $langService,
         EventDispatcherInterface $eventDispatcher,
+        private PublishedPageRepository $publishedPages,
     ) {
         $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher);
     }
@@ -112,23 +114,42 @@ readonly class CmsPageSeoElement implements SeoElementInterface
 
     /**
      * Ancestors first, the page itself last — the CMS tree *is* the breadcrumb.
+     *
+     * An ancestor a visitor cannot open is left out. A page under a draft
+     * parent is a normal situation while a section is being written, and
+     * linking to that parent would hand a 404 both to the reader and to the
+     * BreadcrumbList a search engine reads.
      */
     public function getSeoBreadcrumb($id): array
     {
-        $breadcrumb = [];
         $page = $this->findLocalizedPage($id);
+
+        if (!$page instanceof CmsPage) {
+            return [];
+        }
+
+        $breadcrumb = [$this->crumb($page)];
+        $ancestor = $this->findLocalizedPage($page->getParent());
         $guard = 0;
 
-        while ($page instanceof CmsPage && ++$guard < 20) {
-            array_unshift($breadcrumb, [
-                'url' => $this->pageUrl($page),
-                'title' => $page->getTitle(),
-            ]);
+        while ($ancestor instanceof CmsPage && ++$guard < 20) {
+            if ($this->publishedPages->isReachable($ancestor->getId(), $this->langService->getLocale())) {
+                array_unshift($breadcrumb, $this->crumb($ancestor));
+            }
 
-            $page = $this->findLocalizedPage($page->getParent());
+            $ancestor = $this->findLocalizedPage($ancestor->getParent());
         }
 
         return $breadcrumb;
+    }
+
+    /** @return array{url: string, title: string} */
+    private function crumb(CmsPage $page): array
+    {
+        return [
+            'url' => $this->pageUrl($page),
+            'title' => (string) $page->getTitle(),
+        ];
     }
 
     private function findLocalizedPage(int|string|null $id): ?CmsPage

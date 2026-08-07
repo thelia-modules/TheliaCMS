@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Page;
 
+use Propel\Runtime\ActiveQuery\Criteria;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
@@ -100,6 +101,30 @@ final readonly class PublishedPageRepository
     }
 
     /**
+     * Whether a visitor opening this page in this language gets it, rather than
+     * a 404.
+     *
+     * Same conditions as find(), without reading the published HTML: callers
+     * ask this about pages they are not going to render, and that column holds
+     * the whole page.
+     */
+    public function isReachable(int $pageId, string $locale, ?\DateTimeInterface $now = null): bool
+    {
+        $page = CmsPageQuery::create()->findPk($pageId);
+
+        if (!$page instanceof CmsPage || !$this->isLive($page, $now ?? new \DateTimeImmutable())) {
+            return false;
+        }
+
+        return 0 < CmsPageContentQuery::create()
+            ->filterByPageId($pageId)
+            ->filterByLocale($locale)
+            ->filterByPublishedAt(null, Criteria::ISNOTNULL)
+            ->filterByPublishedHtml(null, Criteria::ISNOTNULL)
+            ->count();
+    }
+
+    /**
      * Locales the page is actually published in — feeds hreflang and the
      * language switcher.
      *
@@ -109,7 +134,7 @@ final readonly class PublishedPageRepository
     {
         $contents = CmsPageContentQuery::create()
             ->filterByPageId($pageId)
-            ->filterByPublishedAt(null, \Propel\Runtime\ActiveQuery\Criteria::ISNOTNULL)
+            ->filterByPublishedAt(null, Criteria::ISNOTNULL)
             ->select(['Locale'])
             ->find()
             ->toArray();
