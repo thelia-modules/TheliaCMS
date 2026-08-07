@@ -38,7 +38,31 @@ cookies, accessibility statement) as placeholders in every active language.
 Nothing is served on the front until you publish them.
 
 Deactivating the module removes the rewritten URLs it owns, so the site answers
-404 rather than 500; reactivating regenerates them from the pages.
+404 rather than 500; reactivating puts them back.
+
+## Addresses
+
+A page carries one slug per language, which is the last segment of its address.
+The segments of its ancestors are prefixed automatically, so a page called
+"Conseil et accompagnement" filed under "Nos services" answers on
+`/nos-services/conseil-et-accompagnement`. The field on the edit screen holds
+that last segment. Leave it empty and it is derived from the title.
+
+Each slug is stored on the page itself, next to its title. The addresses also
+live in the core `rewriting_url` table, which the module has to clear when it is
+switched off, so that copy is what puts a site back where it was: a slug
+somebody shortened by hand cannot be derived from a title, and deriving it
+anyway renames the page and leaves no redirection behind. The same copy is read
+when a page comes back from the bin.
+
+Renaming a page keeps its previous address as a 301. Those redirections are not
+restored by a deactivation and reactivation cycle: what a page stores is the
+address it answers on, not the list of the ones it used to answer on.
+
+Reserved first segments (`admin`, `api`, `assets`, `recherche`, `search`,
+`sitemap`, `robots.txt` and a few more) are refused as slugs. The rewriting
+router runs before the Symfony routes, so a page slugged `admin` would shadow
+the back office.
 
 ## Editing a page
 

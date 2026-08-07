@@ -16,6 +16,7 @@ namespace TheliaCMS\Tests\Integration\Page;
 
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Page\Admin\PageDraft;
+use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 
 /**
@@ -59,6 +60,32 @@ final class PageAddressTest extends CmsIntegrationTestCase
 
         self::assertSame('nos-engagements', $parent->getRewrittenUrl($this->locale()));
         self::assertSame('nos-engagements/notre-charte', $child->getRewrittenUrl($this->locale()));
+    }
+
+    /**
+     * The edit screen shows the segment the page owns, not its whole path.
+     *
+     * Whatever it shows comes back on the next save, so if it shows the path,
+     * that path is slugified into a single segment and prefixed by the
+     * ancestors again: opening a child page and pressing save, changing
+     * nothing, moves it to `parent/parent-child` and leaves a 301 behind.
+     */
+    public function testSavingAPageAgainWithTheAddressTheScreenShowsLeavesItWhereItIs(): void
+    {
+        $parent = $this->createPage('Nos services');
+        $child = $this->createPage('Conseil et accompagnement', parent: (int) $parent->getId());
+
+        self::assertSame('nos-services/conseil-et-accompagnement', $child->getRewrittenUrl($this->locale()));
+
+        $shown = $this->getService(CmsUrlService::class)->slugOf($child, $this->locale());
+
+        $this->writer()->saveDraft($child, $this->locale(), new PageDraft(title: 'Conseil et accompagnement', slug: $shown));
+
+        self::assertSame(
+            'nos-services/conseil-et-accompagnement',
+            $child->getRewrittenUrl($this->locale()),
+            'Saving a page again with the address its own screen displays does not move it.',
+        );
     }
 
     private function pageWithSlug(string $title, string $slug, int $parent = 0): CmsPage

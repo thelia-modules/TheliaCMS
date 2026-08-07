@@ -56,8 +56,37 @@ final class MigrationSelectionTest extends TestCase
 
         foreach ($versions as $version) {
             // A file named otherwise is never compared the way it reads, so it
-            // lands anywhere in the order and applies to anyone.
-            self::assertMatchesRegularExpression('#^\d+\.\d+\.\d+$#', $version);
+            // lands anywhere in the order and applies to anyone. Pre-release
+            // suffixes are part of the format: the module ships them, and a
+            // migration written for one has to be named after it or no site
+            // running that version ever receives it.
+            self::assertMatchesRegularExpression('#^\d+\.\d+\.\d+(-[a-z]+\.\d+)?$#', $version);
+        }
+    }
+
+    /**
+     * The names are sorted the way the versions rank, pre-releases included.
+     *
+     * `version_compare` is what orders the files, and it reads `1.0.0-alpha.2`
+     * as coming after `1.0.0-alpha.1` and before `1.0.0`. A plain string sort
+     * does not, which is how a column gets altered before it is added.
+     */
+    public function testTheFilesComeBackInTheOrderTheVersionsRank(): void
+    {
+        $versions = $this->versionsBetween('0.0.0', '99.0.0');
+
+        $previous = null;
+
+        foreach ($versions as $version) {
+            if (null !== $previous) {
+                self::assertSame(
+                    -1,
+                    version_compare($previous, $version),
+                    \sprintf('"%s" is shipped before "%s" but does not rank before it.', $previous, $version),
+                );
+            }
+
+            $previous = $version;
         }
     }
 

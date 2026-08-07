@@ -30,6 +30,7 @@ use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
+use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
 use Twig\Environment;
@@ -57,6 +58,7 @@ final readonly class CmsPageAdminController
         private CmsPageAdminRepository $pages,
         private CmsPageWriter $writer,
         private EditLanguage $languages,
+        private CmsUrlService $addresses,
     ) {
     }
 
@@ -241,7 +243,11 @@ final readonly class CmsPageAdminController
 
         return $this->forms->create(CmsPageType::class, [
             'title' => $page->isNew() ? '' : (string) $page->getTitle(),
-            'slug' => $page->isNew() ? null : $page->getRewrittenUrl($locale),
+            // The segment of the address this page owns, not the whole path:
+            // the ancestors are prefixed again on save, so showing the path
+            // would fold it into the segment on the next save and move the page
+            // to `parent/parent-child`.
+            'slug' => $page->isNew() ? null : $this->addresses->slugOf($page, $locale),
             'parent' => (int) $page->getParent(),
             'layout' => $page->getLayout() ?? 'default',
             'visible' => $page->isNew() ? 1 : $page->getVisible(),

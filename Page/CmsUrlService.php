@@ -73,8 +73,74 @@ final class CmsUrlService
         $url = $this->makeUnique($this->prefixWithAncestors($page, $locale, $segment), $page->getId(), $locale);
 
         $page->setRewrittenUrl($locale, $url);
+        $this->remember($page, $locale, $url);
 
         return $url;
+    }
+
+    /**
+     * Puts the address of the page back without renaming it: the slug it
+     * already answers on is reused, and only the ancestor prefix is computed
+     * again.
+     *
+     * This is what a page needs when something around it moved — a
+     * reactivation of the module, a restore from the bin, a re-parenting —
+     * rather than `refresh()` with no slug, which derives the segment from the
+     * title and therefore undoes every address anybody edited.
+     */
+    public function rebuild(CmsPage $page, string $locale): string
+    {
+        return $this->refresh($page, $locale, $this->slugOf($page, $locale));
+    }
+
+    /**
+     * The segment of its own address the page carries in this locale, which is
+     * what the edit screen shows and what a rebuild reuses.
+     *
+     * Falls back to reading the address for a page written before the segment
+     * was stored, so a site that has not replayed the migration still edits and
+     * rebuilds the addresses it has.
+     */
+    public function slugOf(CmsPage $page, string $locale): ?string
+    {
+        $stored = trim((string) $page->setLocale($locale)->getSlug());
+
+        if ('' !== $stored) {
+            return $stored;
+        }
+
+        return $this->lastSegment((string) $page->getRewrittenUrl($locale));
+    }
+
+    /**
+     * Stores the segment the address ends on, alongside the address itself.
+     *
+     * The two are written together on purpose: `rewriting_url` is a core table
+     * the module clears when it is deactivated, so it cannot be the only place
+     * an edited address exists.
+     */
+    private function remember(CmsPage $page, string $locale, string $url): void
+    {
+        $slug = $this->lastSegment($url);
+
+        if (null === $slug || $slug === $page->setLocale($locale)->getSlug()) {
+            return;
+        }
+
+        $page->setLocale($locale)->setSlug($slug)->save();
+    }
+
+    private function lastSegment(string $url): ?string
+    {
+        $url = trim($url, '/');
+
+        if ('' === $url) {
+            return null;
+        }
+
+        $segments = explode('/', $url);
+
+        return end($segments) ?: null;
     }
 
     /**
@@ -105,8 +171,10 @@ final class CmsUrlService
      *
      * Slugifying its title instead would ignore a slug edited by hand: a parent
      * answering on `/groupe` would give its children `/le-groupe/...`, so a
-     * child would not live under its own parent. Titles are only walked up for
-     * an ancestor that has no address yet in this locale.
+     * child would not live under its own parent. An ancestor with no address
+     * yet in this locale — every one of them, while the addresses of the site
+     * are being rebuilt — contributes its stored slug, and only a page that has
+     * neither is named after its title.
      */
     private function ancestorPath(int $parentId, string $locale): string
     {
@@ -131,7 +199,8 @@ final class CmsUrlService
             }
 
             $parent->setLocale($locale);
-            array_unshift($segments, $this->slugSource->slugify((string) $parent->getTitle()));
+            $ownSegment = trim((string) $parent->getSlug());
+            array_unshift($segments, $this->slugSource->slugify('' !== $ownSegment ? $ownSegment : (string) $parent->getTitle()));
             $parentId = (int) $parent->getParent();
         }
 

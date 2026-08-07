@@ -267,11 +267,14 @@ final readonly class CmsPageWriter
             foreach ($this->branchOf($page, includeDeleted: true) as $node) {
                 $node->setDeletedAt(null)->save($connection);
 
+                // Put back on the address it had, not on one derived from its
+                // title: a page comes out of the bin the way it went in, edited
+                // slug included.
                 foreach ($this->publishedLocalesOf($node) as $contentLocale) {
-                    $this->urls->refresh($node, $contentLocale);
+                    $this->urls->rebuild($node, $contentLocale);
                 }
 
-                $this->urls->refresh($node, $locale);
+                $this->urls->rebuild($node, $locale);
             }
 
             $connection->commit();

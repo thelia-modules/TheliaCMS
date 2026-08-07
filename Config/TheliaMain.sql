@@ -334,6 +334,7 @@ CREATE TABLE `cms_page_i18n`
     `id` INTEGER NOT NULL,
     `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
     `title` VARCHAR(255),
+    `slug` VARCHAR(255),
     `meta_title` VARCHAR(255),
     `meta_description` TEXT,
     `og_title` VARCHAR(255),

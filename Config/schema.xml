@@ -33,6 +33,15 @@
         <column name="updated_by" type="INTEGER"/>
 
         <column name="title" size="255" type="VARCHAR"/>
+        <!--
+            The last segment of the address of the page in this language, as an
+            author typed it. The address itself lives in the core
+            `rewriting_url` table, which the module has to clear when it is
+            deactivated: without this copy, the only surviving source is the
+            title, and every address anybody had edited would be reinvented on
+            the next activation.
+        -->
+        <column name="slug" size="255" type="VARCHAR"/>
         <column name="meta_title" size="255" type="VARCHAR"/>
         <column name="meta_description" type="LONGVARCHAR"/>
         <column name="og_title" size="255" type="VARCHAR"/>
@@ -62,7 +71,7 @@
 
         <behavior name="i18n">
             <parameter name="i18n_columns"
-                       value="title, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow"/>
+                       value="title, slug, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow"/>
         </behavior>
         <behavior name="timestampable"/>
     </table>

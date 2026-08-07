@@ -7,7 +7,26 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added
+
+- The slug of a page is stored per language, next to its title. Until now it only
+  existed inside the address, in a core table the module has to clear when it is
+  switched off. Existing sites keep the addresses they answer on: the migration
+  reads each slug back from the address in use.
+
 ### Fixed
+
+- Switching the module off and on again no longer renames the pages. The
+  addresses were rebuilt from the titles, so every page whose address had been
+  edited by hand moved, with no redirection left behind, and the children moved
+  with their parent. A site of three hundred pages lost every indexed address it
+  had, and an integration test run against the wrong database was enough to do
+  it. The addresses are now put back from the stored slugs.
+- Restoring a page from the bin puts it back on the address it had, instead of
+  one derived from its title.
+- The edit screen shows the segment of the address a page owns rather than its
+  whole path. Opening a child page and saving it unchanged used to fold the path
+  into the segment and move the page to `parent/parent-child`.
 
 - Publishing a page that has nothing on it is refused, and said so on both
   screens that publish. It used to be accepted: the snapshot was stored empty,

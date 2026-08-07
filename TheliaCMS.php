@@ -142,6 +142,12 @@ class TheliaCMS extends BaseModule
      * Rebuilds the page URLs dropped by preDeactivation, so deactivating and
      * reactivating the module leaves the site exactly as it was rather than
      * silently 404ing every page.
+     *
+     * Each page is put back on the slug it answered on, read from the page
+     * itself. Deriving it from the title again would rename every address an
+     * author had edited, and leave no redirection behind: a deactivation
+     * somebody undid a minute later would cost the site every indexed address
+     * it has.
      */
     private function regenerateRewrittenUrls(): void
     {
@@ -159,7 +165,7 @@ class TheliaCMS extends BaseModule
                 ->toArray();
 
             foreach (array_unique($locales) as $locale) {
-                $urls->refresh($page, (string) $locale);
+                $urls->rebuild($page, (string) $locale);
             }
         }
     }
