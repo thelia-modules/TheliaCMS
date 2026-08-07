@@ -22,6 +22,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Thelia\Model\FolderQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
+use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsBlockQuery;
 use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Partial\MissingPartialPropException;
@@ -41,6 +42,7 @@ final readonly class CmsPartialController
 {
     public function __construct(
         private PartialRenderer $partials,
+        private CmsMediaLibrary $library,
     ) {
     }
 
@@ -138,6 +140,29 @@ final readonly class CmsPartialController
                 return ['id' => (int) $block->getId(), 'name' => '' === $title ? (string) $block->getCode() : $title];
             },
             iterator_to_array($blocks, false),
+        ));
+    }
+
+    /**
+     * Images of the media library, for the blocks that point at one — the
+     * poster of a video, for instance, which is served by the site so the
+     * platform is not called before the visitor asks for the video.
+     */
+    #[Route('/admin/cms/partials/sources/images', name: 'admin.cms.partials.sources.images', methods: ['GET'])]
+    public function images(): Response
+    {
+        $locale = $this->library->locale();
+
+        return new JsonResponse(array_map(
+            static function ($image) use ($locale): array {
+                $title = trim((string) $image->setLocale($locale)->getTitle());
+
+                return [
+                    'id' => (int) $image->getId(),
+                    'name' => '' === $title ? (string) $image->getFileName() : $title,
+                ];
+            },
+            iterator_to_array($this->library->images(), false),
         ));
     }
 

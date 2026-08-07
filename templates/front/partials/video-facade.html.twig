@@ -1,0 +1,15 @@
+{#
+    A video that is fetched when a visitor presses play, and not before.
+
+    A theme takes this over by shipping `cms/partials/video-facade.html.twig`.
+#}
+{{ include('@TheliaCMSModule/front/partials/_facade.html.twig', {
+    kind: 'video',
+    embed_url: embed_url,
+    page_url: page_url,
+    poster_url: poster_url,
+    title: title,
+    summary: null,
+    notice: notice,
+    action_label: play_label,
+}) }}

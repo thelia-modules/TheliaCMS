@@ -1,0 +1,62 @@
+{#
+    The shared shape of a click-to-load embed.
+
+    Nothing here reaches the third party. The visitor sees a poster or a plain
+    card, a button, and one sentence saying what pressing it does. The frame is
+    written into the page by the script below, on the click and only then.
+
+    Without JavaScript the button is still a link to the platform, so the
+    content stays reachable — which is the reason it is an `<a>` and not a
+    `<button>`.
+
+    Parameters: embed_url, page_url, notice, action_label, title, poster_url,
+    summary, kind (a class suffix, and the icon that goes with it).
+#}
+{% set facade_icons = {
+    video: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>',
+    map: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7m0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5"/></svg>',
+    social: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2M7 9h10v2H7zm0 4h7v2H7z"/></svg>',
+} %}
+<div class="cms-facade cms-facade--{{ kind }}" data-cms-facade data-cms-facade-src="{{ embed_url }}"
+     data-cms-facade-title="{{ title|default(action_label) }}">
+    <a class="cms-facade__action" href="{{ page_url|default(embed_url) }}" target="_blank" rel="noopener">
+        {% if poster_url %}
+            <img class="cms-facade__poster" src="{{ poster_url }}" alt="" loading="lazy" decoding="async">
+        {% endif %}
+        <span class="cms-facade__label">
+            <span class="cms-facade__icon" aria-hidden="true">{{ facade_icons[kind]|default(facade_icons.video)|raw }}</span>
+            <span class="cms-facade__text">
+                {% if title %}<strong class="cms-facade__title">{{ title }}</strong>{% endif %}
+                {% if summary %}<span class="cms-facade__summary">{{ summary }}</span>{% endif %}
+                <span class="cms-facade__cta">{{ action_label }}</span>
+            </span>
+        </span>
+    </a>
+    <p class="cms-facade__notice">{{ notice }}</p>
+</div>
+
+{# Defined once per page, however many embeds it holds. #}
+<script>
+    window.cmsFacade || (window.cmsFacade = (document.addEventListener('click', function (event) {
+        var action = event.target.closest('.cms-facade__action');
+
+        if (!action) {
+            return;
+        }
+
+        var facade = action.closest('[data-cms-facade]');
+        var frame = document.createElement('iframe');
+
+        frame.src = facade.getAttribute('data-cms-facade-src');
+        frame.title = facade.getAttribute('data-cms-facade-title');
+        frame.loading = 'lazy';
+        frame.allow = 'accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen';
+        frame.allowFullscreen = true;
+        frame.className = 'cms-facade__frame';
+
+        facade.replaceChildren(frame);
+        // The player was asked for: focus follows the click into it.
+        frame.focus();
+        event.preventDefault();
+    }), true));
+</script>

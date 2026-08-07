@@ -1,0 +1,15 @@
+{#
+    A post from a social network, fetched on click. The summary is what the
+    page says about it in the meantime, and what a visitor who never presses
+    the button reads instead.
+#}
+{{ include('@TheliaCMSModule/front/partials/_facade.html.twig', {
+    kind: 'social',
+    embed_url: embed_url,
+    page_url: page_url,
+    poster_url: null,
+    title: network,
+    summary: summary,
+    notice: notice,
+    action_label: show_label,
+}) }}

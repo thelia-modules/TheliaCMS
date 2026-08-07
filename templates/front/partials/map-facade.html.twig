@@ -1,0 +1,18 @@
+{#
+    A map that is fetched when a visitor asks to see it. Until then the page
+    holds the address in plain text, which is what most visitors came for.
+#}
+<div class="cms-map">
+    <p class="cms-map__address">{{ label }}</p>
+    {{ include('@TheliaCMSModule/front/partials/_facade.html.twig', {
+        kind: 'map',
+        embed_url: embed_url,
+        page_url: page_url,
+        poster_url: null,
+        title: label,
+        summary: null,
+        notice: notice,
+        action_label: show_label,
+    }) }}
+    <p class="cms-map__link"><a href="{{ page_url }}" target="_blank" rel="noopener">{{ open_label }}</a></p>
+</div>
