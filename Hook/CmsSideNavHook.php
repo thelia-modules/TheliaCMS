@@ -84,7 +84,7 @@ class CmsSideNavHook extends BaseHook
             // before the shop ones. The sidebar is a flex column, so ordering it
             // is a matter of one property rather than of a theme override.
             'is_first' => $this->settings->isShowcase(),
-            'section_label' => $this->trans('Site', [], TheliaCMS::DOMAIN_NAME),
+            'section_label' => $this->trans('CMS', [], TheliaCMS::DOMAIN_NAME),
             'pages_label' => $this->trans('Pages', [], TheliaCMS::DOMAIN_NAME),
             'blocks_label' => $this->trans('Blocks', [], TheliaCMS::DOMAIN_NAME),
             'menus_label' => $this->trans('Menus', [], TheliaCMS::DOMAIN_NAME),
