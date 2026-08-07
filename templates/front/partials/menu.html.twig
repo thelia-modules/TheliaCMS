@@ -1,0 +1,37 @@
+{#
+    A menu placed inside a page, as the module renders it when the theme ships
+    no `cms/partials/menu.html.twig` of its own.
+
+    `<nav>` with an accessible name: a page can hold several navigations, and
+    unnamed ones are indistinguishable in the landmark list of a screen reader.
+#}
+{% if items is not empty %}
+    {% set heading_id = 'cms-menu-' ~ random(100000) %}
+    <nav class="cms-menu"{% if heading %} aria-labelledby="{{ heading_id }}"{% endif %}>
+        {% if heading %}
+            <h2 class="cms-menu__heading" id="{{ heading_id }}">{{ heading }}</h2>
+        {% endif %}
+
+        {{ _self.branch(items, 0) }}
+    </nav>
+{% endif %}
+
+{% macro branch(items, depth) %}
+    <ul class="cms-menu__list cms-menu__list--{{ depth }}">
+        {% for item in items %}
+            <li class="cms-menu__item{{ item.active ? ' is-current' : '' }}">
+                {% if item.url %}
+                    <a class="cms-menu__link" href="{{ item.url }}"
+                       {%- if item.blank %} target="_blank" rel="noopener"{% endif %}
+                       {%- if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a>
+                {% else %}
+                    <span class="cms-menu__label">{{ item.label }}</span>
+                {% endif %}
+
+                {% if item.children is not empty %}
+                    {{ _self.branch(item.children, depth + 1) }}
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endmacro %}

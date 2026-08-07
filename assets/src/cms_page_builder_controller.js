@@ -1,4 +1,5 @@
 import PageBuilderController from "@page-builder/controllers/page_builder_controller.js";
+import partialBlocks from "./plugins/partialBlocks.js";
 
 /**
  * Thelia flavour of the page builder controller.
@@ -19,6 +20,12 @@ export default class extends PageBuilderController {
         emptyTitle: { type: String, default: "" },
         emptyHint: { type: String, default: "" },
         panelHint: { type: String, default: "" },
+        // Server-rendered blocks: the registry, the language of the page being
+        // edited, and the wording shown while a block has nothing to display.
+        partials: { type: Array, default: [] },
+        contentLocale: { type: String, default: "" },
+        partialCategory: { type: String, default: "Dynamic" },
+        partialLabels: { type: Object, default: {} },
     };
 
     connect() {
@@ -108,6 +115,8 @@ export default class extends PageBuilderController {
      * pick a page, a folder or a form.
      */
     configurePlugins() {
+        this.pluginManager.registerPlugin("cms:partials", partialBlocks);
+
         const plugins = [
             "pb:init-categories",
             "pb:title",
@@ -136,6 +145,21 @@ export default class extends PageBuilderController {
 
         if (this.endpointsValue?.uploadImage) {
             plugins.push({ name: "pb:asset-manager-upload", options: { endpoints: this.endpointsValue, context: this.contextValue } });
+        }
+
+        if (this.partialsValue.length > 0) {
+            plugins.push({
+                name: "cms:partials",
+                options: {
+                    partials: this.partialsValue,
+                    endpoint: this.endpointsValue?.["render-template"] ?? null,
+                    // The language of the page, not the one the back office is
+                    // displayed in: a preview must read like the page will.
+                    locale: this.contentLocaleValue,
+                    category: this.partialCategoryValue,
+                    labels: this.partialLabelsValue,
+                },
+            });
         }
 
         this.pluginManager.initActivePlugins(plugins);

@@ -14,19 +14,15 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Page;
 
-use Thelia\Core\Template\Parser\ParserResolver;
-use Thelia\Core\Template\TemplateHelperInterface;
+use TheliaCMS\Front\ThemeTemplateRenderer;
+use TheliaCMS\Partial\PartialRenderer;
 
 /**
- * Renders a CMS page itself instead of handing the view name back to the core
- * renderer.
+ * Renders a CMS page: the theme layout if there is one, the layout shipped with
+ * the module otherwise.
  *
- * The core resolves a parser from the *active theme root*: with no
- * `cmspage.html.twig` in the theme, `ParserResolver::getParser()` finds no
- * parser at all and the request dies with a 500 instead of rendering. Resolving
- * the parser on a template every theme has, then picking the template
- * ourselves, lets the theme override the page layout while the module still
- * works on a theme that knows nothing about it.
+ * The dynamic blocks of the page are resolved here rather than at publish time —
+ * a news list stored in the page would be the news of the day it was published.
  */
 final readonly class CmsPageRenderer
 {
@@ -34,25 +30,17 @@ final readonly class CmsPageRenderer
     public const string MODULE_TEMPLATE = '@TheliaCMSModule/front/cmspage.html.twig';
 
     public function __construct(
-        private ParserResolver $parserResolver,
-        private TemplateHelperInterface $templateHelper,
+        private ThemeTemplateRenderer $templates,
+        private PartialRenderer $partials,
     ) {
     }
 
     public function render(PublishedPage $page): string
     {
-        $templateDefinition = $this->templateHelper->getActiveFrontTemplate();
-        $templatePath = $templateDefinition->getAbsolutePath();
+        $html = $this->partials->substitute($page->html, $page->locale);
 
-        // 'index' is the one template a theme is guaranteed to ship, so it is a
-        // safe probe for "which parser drives this theme".
-        $parser = $this->parserResolver->getParser($templatePath, 'index');
-        $parser->setTemplateDefinition($templateDefinition, true);
-
-        $template = $parser->supportTemplateRender($templatePath, self::THEME_TEMPLATE)
-            ? self::THEME_TEMPLATE.'.'.$parser->getFileExtension()
-            : self::MODULE_TEMPLATE;
-
-        return $parser->render($template, ['cms_page' => $page]);
+        return $this->templates->render(self::THEME_TEMPLATE, self::MODULE_TEMPLATE, [
+            'cms_page' => $page->withHtml((string) $html),
+        ]);
     }
 }

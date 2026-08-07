@@ -35,4 +35,25 @@ final readonly class PublishedPage
         public ?\DateTimeInterface $publishedAt = null,
     ) {
     }
+
+    /**
+     * The same page with its dynamic blocks resolved. Nothing else may change:
+     * this is the object the theme hooks receive.
+     */
+    public function withHtml(string $html): self
+    {
+        return new self(
+            id: $this->id,
+            locale: $this->locale,
+            title: $this->title,
+            layout: $this->layout,
+            html: $html,
+            css: $this->css,
+            metaTitle: $this->metaTitle,
+            metaDescription: $this->metaDescription,
+            noindex: $this->noindex,
+            nofollow: $this->nofollow,
+            publishedAt: $this->publishedAt,
+        );
+    }
 }

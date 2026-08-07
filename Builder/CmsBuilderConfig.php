@@ -16,6 +16,8 @@ namespace TheliaCMS\Builder;
 
 use OpenStudio\PageBuilderBundle\Contract\PageBuilderConfigProviderInterface;
 use Symfony\Component\AssetMapper\AssetMapperInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use TheliaCMS\Partial\PartialRegistry;
 use TheliaCMS\TheliaCMS;
 
 /**
@@ -43,6 +45,8 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
 
     public function __construct(
         private AssetMapperInterface $assetMapper,
+        private UrlGeneratorInterface $urls,
+        private PartialRegistry $partials,
     ) {
     }
 
@@ -52,10 +56,19 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
             'appStylesheet' => $this->themeStylesheet(),
             'icons' => [],
             'palette' => $this->palette(),
-            // No block asks the server to render a fragment for it yet, so the
-            // editor is given no endpoint to call.
-            'renderTemplateEndpoint' => null,
+            // Where the editor asks the server what a dynamic block looks like.
+            'renderTemplateEndpoint' => $this->urls->generate('admin.cms.partials.render'),
         ];
+    }
+
+    /**
+     * The dynamic blocks the editor offers, with their settings.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function partials(): array
+    {
+        return $this->partials->toEditor();
     }
 
     /**

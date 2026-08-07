@@ -104,6 +104,8 @@ final readonly class CmsPageBuilderController
             // page has no back-office account.
             'draft_preview_url' => $this->previewLinks->urlFor($id, $locale),
             'builder_options' => $this->builderConfig->editorOptions(),
+            // Server-rendered blocks the editor may offer, with their settings.
+            'builder_partials' => $this->builderConfig->partials(),
             // The editor speaks the language the back office is displayed in,
             // which is not the language of the page being translated.
             'builder_locale' => substr($request->getLocale(), 0, 2),

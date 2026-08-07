@@ -40,6 +40,8 @@ use TheliaCMS\Media\LibraryImageUploader;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Partial\PartialFragmentRenderer;
+use TheliaCMS\Partial\PartialFragmentRendererInterface;
 use TheliaCMS\Security\CmsAdminResourcesCompiler;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Seo\CmsPageHreflangListener;
@@ -238,9 +240,14 @@ class TheliaCMS extends BaseModule
                 __DIR__.'/Config/*',
                 __DIR__.'/Model/*',
                 __DIR__.'/templates/*',
+                // Test doubles implement the module's own interfaces, so
+                // autoconfiguration would tag them and the editor would offer
+                // a "Fake" block in production.
+                __DIR__.'/Tests/*',
                 // Value objects: instantiated by the services that build them,
                 // never wired by the container.
                 __DIR__.'/Page/PublishedPage.php',
+                __DIR__.'/Partial/PartialProp.php',
                 // Registered below, guarded: it implements a SEOne interface.
                 __DIR__.'/Seo/*',
             ])
@@ -256,6 +263,10 @@ class TheliaCMS extends BaseModule
         // that accept nothing, waiting for the host to say where images live.
         $servicesConfigurator->alias(ImageUploadPortInterface::class, LibraryImageUploader::class);
         $servicesConfigurator->alias(ImageLibraryPortInterface::class, LibraryImageCatalog::class);
+
+        // Dynamic blocks are rendered through an interface so the substitution
+        // of a page can be unit-tested without a theme behind it.
+        $servicesConfigurator->alias(PartialFragmentRendererInterface::class, PartialFragmentRenderer::class);
 
         // SEOne is a soft dependency. Autodiscovering CmsPageSeoElement would
         // reflect a class implementing an interface that does not exist on a

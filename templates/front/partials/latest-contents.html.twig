@@ -1,0 +1,37 @@
+{#
+    Latest contents, as the module renders them when the theme ships no
+    `cms/partials/latest-contents.html.twig` of its own.
+
+    Plain semantic markup: a theme overriding this file owns the styling, and
+    the classes below are the ones the module documents.
+#}
+{% if contents is not empty %}
+    {# The heading id is what makes the section land in the landmark list of a
+       screen reader under its own name, so it is set once and pointed at. #}
+    {% set heading_id = 'cms-latest-contents-' ~ random(100000) %}
+    <section class="cms-latest-contents"{% if heading %} aria-labelledby="{{ heading_id }}"{% endif %}>
+        {% if heading %}
+            <h2 class="cms-latest-contents__heading" id="{{ heading_id }}">{{ heading }}</h2>
+        {% endif %}
+
+        <ul class="cms-latest-contents__list">
+            {% for content in contents %}
+                <li class="cms-latest-contents__item">
+                    <article>
+                        <h3 class="cms-latest-contents__title">
+                            <a href="{{ content.url }}">{{ content.title }}</a>
+                        </h3>
+                        {% if content.published_at %}
+                            <p class="cms-latest-contents__date">
+                                <time datetime="{{ content.published_at|date('Y-m-d') }}">{{ content.published_at|date('d/m/Y') }}</time>
+                            </p>
+                        {% endif %}
+                        {% if content.summary %}
+                            <p class="cms-latest-contents__summary">{{ content.summary }}</p>
+                        {% endif %}
+                    </article>
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+{% endif %}
