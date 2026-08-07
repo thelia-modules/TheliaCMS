@@ -20,6 +20,7 @@ use TheliaCMS\Form\AntiSpam;
 use TheliaCMS\Form\FormCatalog;
 use TheliaCMS\Form\FormDefinition;
 use TheliaCMS\Form\Front\SubmissionFlash;
+use TheliaCMS\Form\LeadEvent;
 use TheliaCMS\Partial\PartialDefinitionInterface;
 use TheliaCMS\Partial\PartialProp;
 use TheliaCMS\TheliaCMS;
@@ -95,6 +96,8 @@ final readonly class FormPartial implements PartialDefinitionInterface
             'errors' => $outcome['errors'] ?? [],
             'entered' => $outcome['entered'] ?? [],
             'sent' => (bool) ($outcome['sent'] ?? false),
+            'lead' => (bool) ($outcome['lead'] ?? false),
+            'lead_event' => LeadEvent::NAME,
             'refused' => $outcome['refused'] ?? null,
             // Every piece of wording reaches the template already resolved, the
             // way the other partials do it: a theme overriding this template

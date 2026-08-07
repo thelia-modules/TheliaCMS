@@ -16,6 +16,22 @@
             <p class="cms-form__sent" role="status">
                 {{ success_message }}
             </p>
+
+            {% if lead %}
+                {#
+                    The conversion a showcase site measures. It carries the code
+                    of the form and nothing else — no name, no address, no phone
+                    number: whatever tag the site loads reads this queue.
+
+                    Written only when the person agreed to be contacted, and it
+                    pushes onto a queue rather than calling anyone: a tag manager
+                    that has not been allowed to load simply never reads it.
+                #}
+                <script>
+                    window.dataLayer = window.dataLayer || [];
+                    window.dataLayer.push({ event: {{ lead_event|json_encode|raw }}, form_code: {{ form.code|json_encode|raw }} });
+                </script>
+            {% endif %}
         {% elseif fields is empty %}
             {# Nothing to fill in: an empty form is worse than no form. #}
         {% else %}

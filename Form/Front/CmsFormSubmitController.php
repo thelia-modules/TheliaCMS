@@ -113,7 +113,11 @@ final readonly class CmsFormSubmitController
 
         $this->store->keep($record, $definition, $submission, $locale, $request->getClientIp());
 
-        $this->flash->sent($code);
+        // A conversion is reported only when the form is set to report one and
+        // the person agreed to be contacted: measuring a lead the site is not
+        // allowed to act on is measuring nothing, and doing it without the
+        // agreement is processing the visit for a purpose they refused.
+        $this->flash->sent($code, 1 === (int) $record->getLeadEvent() && $submission->consentGranted());
 
         return $back;
     }

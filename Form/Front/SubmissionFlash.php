@@ -45,9 +45,13 @@ final readonly class SubmissionFlash
         ]);
     }
 
-    public function sent(string $formCode): void
+    /**
+     * @param bool $reportLead whether the page may tell the measurement tools a
+     *                         lead came in — see LeadEvent
+     */
+    public function sent(string $formCode, bool $reportLead = false): void
     {
-        $this->write($formCode, ['sent' => true]);
+        $this->write($formCode, ['sent' => true, 'lead' => $reportLead]);
     }
 
     /**
@@ -60,7 +64,7 @@ final readonly class SubmissionFlash
     }
 
     /**
-     * @return array{errors?: array<string, string>, entered?: array<string, mixed>, sent?: bool, refused?: string}
+     * @return array{errors?: array<string, string>, entered?: array<string, mixed>, sent?: bool, lead?: bool, refused?: string}
      */
     public function take(string $formCode): array
     {
