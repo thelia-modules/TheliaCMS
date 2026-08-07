@@ -89,6 +89,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   way out.
 - Answers age out on their own after the number of days their form states,
   either from `thelia_cms:forms:purge` or along with `maintenance:purge`.
+- The published pages are added to the sitemap of the theme through the
+  `sitemap.urls` theme hook, with `lastmod` set to the publication date and an
+  `xhtml:link` per language. Pages in the bin, drafts, pages outside their
+  publication window and pages marked `noindex` are left out.
 - Front-office search on `/recherche` and `/search`, over the text extracted at
   publication. Pages in the bin, drafts, pages awaiting their date and pages
   marked `noindex` stay out of the results, the query is stripped of the MySQL

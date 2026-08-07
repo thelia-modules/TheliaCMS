@@ -203,6 +203,28 @@ of it, which recognises the same sender twice without recording who visited.
 A sent form is pushed to the data layer as `generate_lead`, carrying the code of
 the form and nothing else, and only when the person agreed to be contacted.
 
+## Sitemap
+
+A theme opens its sitemap to modules by calling `theme_hook('sitemap.urls')`
+inside its `<urlset>`, passing the language and the context it was asked for.
+The module answers there with its published pages, so the pages are part of the
+sitemap the site already had rather than of a second one nobody submits.
+
+Each entry carries `lastmod` set to the publication date, never to the update
+date of the row: a row is touched by things a reader never sees, and a sitemap
+claiming every page changed last night is one a crawler learns to distrust.
+Pages that exist in several languages carry an `xhtml:link` to each of them,
+themselves included, since a one-way hreflang is ignored. There is no
+`changefreq` and no `priority`, which no search engine has read for years.
+
+Only pages a visitor can reach are listed. The bin, the drafts, a page waiting
+for its publication date, a page past its unpublication date and a page marked
+`noindex` in a given language are all left out.
+
+Themes deriving from `thelia/flexy-cms` already have the hook. On any other
+theme, adding it is one line, and the `xmlns:xhtml` namespace on the `<urlset>`
+element.
+
 ## Search
 
 The module answers on `/recherche` and on `/search` with a results page. Both
