@@ -24,6 +24,7 @@ use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use TheliaCMS\Http\PageCachePolicy;
 use TheliaCMS\Page\TrashRetention;
 use TheliaCMS\Settings\IpAllowlist;
 use TheliaCMS\Settings\SiteMode;
@@ -60,6 +61,12 @@ final class CmsSettingsType extends AbstractType
                 'required' => false,
                 'attr' => ['min' => 0, 'max' => TrashRetention::MAX_DAYS],
                 'help' => 'After that, the page and everything in it are deleted for good. Set 0 to empty the bin by hand only.',
+            ])
+            ->add('httpCacheTtl', IntegerType::class, [
+                'label' => 'Seconds a shared cache may keep a page',
+                'required' => false,
+                'attr' => ['min' => 0, 'max' => PageCachePolicy::MAX_TTL],
+                'help' => 'Only applies to a visitor with no session, and only if a proxy or a CDN sits in front of the site. Set 0 if there is none.',
             ])
             ->add('maintenanceActive', CheckboxType::class, [
                 'label' => 'Close the site for maintenance',

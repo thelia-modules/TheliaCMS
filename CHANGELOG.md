@@ -89,6 +89,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   way out.
 - Answers age out on their own after the number of days their form states,
   either from `thelia_cms:forms:purge` or along with `maintenance:purge`.
+- `Cache-Tag` and `Surrogate-Key` on every rendered page, and explicit
+  invalidation when a page is published, unpublished, binned or restored, when a
+  menu is saved, when a reusable block used by pages changes, and when the site
+  settings change. A project plugs its CDN in through `CachePurgerInterface`.
+  A page is marked `public` only for a plain GET from a visitor with no session
+  whose answer sets no cookie; `http_cache_ttl` says for how long.
 - The published pages are added to the sitemap of the theme through the
   `sitemap.urls` theme hook, with `lastmod` set to the publication date and an
   `xhtml:link` per language. Pages in the bin, drafts, pages outside their

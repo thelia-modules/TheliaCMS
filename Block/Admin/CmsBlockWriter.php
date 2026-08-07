@@ -20,6 +20,8 @@ use TheliaCMS\Block\BlockUsageFinder;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
 use TheliaCMS\Builder\PublishedContentSanitizer;
+use TheliaCMS\Http\CachePurger;
+use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsBlockContent;
 use TheliaCMS\Model\CmsBlockContentQuery;
@@ -44,6 +46,7 @@ final readonly class CmsBlockWriter
         private PublishedContentSanitizer $sanitizer,
         private ImageRewriter $images,
         private PartialCache $partialCache,
+        private CachePurger $httpCache,
         private BlockUsageFinder $usages,
     ) {
     }
@@ -72,6 +75,7 @@ final readonly class CmsBlockWriter
         }
 
         $this->partialCache->invalidateBlocks();
+        $this->purgePagesUsing($block);
         $this->activityLog->record($wasNew ? 'CREATE' : 'UPDATE', (int) $block->getId(), \sprintf('CMS block "%s" saved in %s', $code, $locale));
     }
 
@@ -110,6 +114,7 @@ final readonly class CmsBlockWriter
             ->save();
 
         $this->partialCache->invalidateBlocks();
+        $this->purgePagesUsing($block);
         $this->activityLog->record('PUBLISH', (int) $block->getId(), \sprintf(
             'CMS block #%d published in %s, used by %d page(s)',
             $block->getId(),
@@ -135,6 +140,7 @@ final readonly class CmsBlockWriter
         $block->setDeletedAt(new \DateTimeImmutable())->save();
 
         $this->partialCache->invalidateBlocks();
+        $this->purgePagesUsing($block);
         $this->activityLog->record('DELETE', (int) $block->getId(), \sprintf('CMS block #%d deleted', $block->getId()));
     }
 
@@ -151,5 +157,27 @@ final readonly class CmsBlockWriter
     private function mayPublishCustomCode(): bool
     {
         return $this->securityContext->isGranted(['ADMIN'], [CmsResources::CUSTOM_CODE], [], [AccessManager::UPDATE]);
+    }
+
+    /**
+     * Drops the cached pages a block appears on.
+     *
+     * Found by looking through the published HTML rather than from a table of
+     * usages: the block is placed in the editor, and a usage table would only
+     * be as right as the last time somebody remembered to write to it.
+     */
+    private function purgePagesUsing(CmsBlock $block): void
+    {
+        if ($block->isNew()) {
+            return;
+        }
+
+        $tags = [];
+
+        foreach ($this->usages->pagesUsing((int) $block->getId()) as $usage) {
+            $tags[] = CacheTags::page((int) $usage['page']->getId());
+        }
+
+        $this->httpCache->purge($tags);
     }
 }

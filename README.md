@@ -203,6 +203,35 @@ of it, which recognises the same sender twice without recording who visited.
 A sent form is pushed to the data layer as `generate_lead`, carrying the code of
 the form and nothing else, and only when the person agreed to be contacted.
 
+## Shared cache
+
+Every rendered page carries a `Cache-Tag` header (and `Surrogate-Key`, which is
+the same list under the name Fastly and Cloudflare read) naming what went into
+it: the page itself, the menus it draws and the site settings. Publishing a page
+drops that page from the cache, saving a menu drops the pages that draw it, and
+editing a reusable block drops the pages it appears on, found by looking through
+the published HTML rather than from a table somebody has to remember to write
+to.
+
+Purging is done by whatever sits in front of the site. The module ships no
+implementation, because what a purge means depends on the proxy and guessing
+wrong is worse than doing nothing. A project implements `CachePurgerInterface`
+and the tag picks it up. A purger that fails is logged and skipped: not reaching
+a CDN must not turn publishing a page into an error the editor sees.
+
+Whether a page may be shared at all is decided once the response is finished,
+not while it is being built, because the answer depends on the cookies on it. A
+page is only ever marked `public` for a plain GET, from a visitor who arrived
+without a session, with a 200 answer that sets no cookie of its own.
+
+That last condition is the one that matters in practice: **Thelia opens a
+session on every front-office request and sets `PHPSESSID` on the way out**, so
+out of the box no page is marked `public` and `http_cache_ttl` changes nothing.
+Making it work is a matter of configuring the proxy to drop the session cookie
+on the addresses it is allowed to cache, which is the same thing every Varnish
+setup in front of Thelia already does. The tags are written either way, so the
+invalidation side works from the start.
+
 ## Sitemap
 
 A theme opens its sitemap to modules by calling `theme_hook('sitemap.urls')`
@@ -308,6 +337,7 @@ Most of them are edited under **CMS > Settings**.
 | `maintenance_allowlist` | empty | IP addresses and CIDR ranges that keep seeing the site while it is closed. |
 | `maintenance_page_id` | none | CMS page shown while the site is closed. |
 | `trash_retention_days` | `30` | Days a deleted page stays in the bin before it is deleted for good. `0` keeps it until somebody deletes it by hand. |
+| `http_cache_ttl` | `0` | Seconds a shared cache may keep a page. `0` disables it, which is the default. |
 | `axeptio_client_id` | none | Axeptio project. Without it no banner shows, and every snippet waiting for consent stays off. |
 | `axeptio_cookies_version` | none | Which Axeptio configuration to load, when a project has several. |
 | `axeptio_consent_map` | the two Google products | JSON: vendor to the Consent Mode signals it grants. |

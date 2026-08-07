@@ -24,6 +24,8 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
+use TheliaCMS\Http\CachePurger;
+use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Menu\Admin\MenuTargetChoices;
 use TheliaCMS\Page\Admin\CmsActivityLog;
 use TheliaCMS\Page\Admin\EditLanguage;
@@ -54,6 +56,7 @@ final readonly class CmsSettingsController
         private EditorProfileSeeder $editorProfile,
         private CmsActivityLog $activityLog,
         private EditLanguage $languages,
+        private CachePurger $httpCache,
     ) {
     }
 
@@ -69,6 +72,7 @@ final readonly class CmsSettingsController
             'maintenancePageId' => $this->settings->maintenancePageId(),
             'maintenanceAllowlist' => implode("\n", $this->settings->maintenanceAllowlist()),
             'trashRetentionDays' => $this->settings->trashRetentionDays(),
+            'httpCacheTtl' => $this->settings->httpCacheTtl(),
         ], [
             'page_choices' => $this->choices->pages($lang->getLocale()),
         ]);
@@ -107,6 +111,7 @@ final readonly class CmsSettingsController
             maintenancePageId: null === $data['maintenancePageId'] ? null : (int) $data['maintenancePageId'],
             // Left empty means "the default"; a typed 0 means "keep them".
             trashRetentionDays: null === $data['trashRetentionDays'] ? null : (int) $data['trashRetentionDays'],
+            httpCacheTtl: null === $data['httpCacheTtl'] ? null : (int) $data['httpCacheTtl'],
         );
 
         // A showcase site is handed to someone who is not an administrator of
@@ -114,6 +119,9 @@ final readonly class CmsSettingsController
         if ($mode->isShowcase() && $this->editorProfile->seed()) {
             $this->flash($request, 'info', 'The "Editor" profile has been created. Assign it to the people who write the site under Configuration > Administrators.');
         }
+
+        // These settings show on every page, so every cached page is stale.
+        $this->httpCache->purge([CacheTags::SITE]);
 
         $this->activityLog->record('UPDATE', 0, \sprintf('CMS settings saved (mode %s, maintenance %s)', $mode->value, $data['maintenanceActive'] ? 'on' : 'off'), CmsResources::SETTINGS);
         $this->flash($request, 'success', 'Settings saved.');

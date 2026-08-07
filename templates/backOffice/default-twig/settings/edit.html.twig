@@ -55,6 +55,17 @@
                 </div>
 
                 <div class="card">
+                    <div class="card-header">{{ 'Shared cache'|trans({}, 'theliacms') }}</div>
+                    <div class="card-body">
+                        {{ form_row(form.httpCacheTtl) }}
+
+                        <p class="text-muted small mb-0">
+                            {{ 'Pages are tagged so that publishing one drops that page from the cache rather than the whole site.'|trans({}, 'theliacms') }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card">
                     <div class="card-header">{{ 'Bin'|trans({}, 'theliacms') }}</div>
                     <div class="card-body">
                         {{ form_row(form.trashRetentionDays) }}

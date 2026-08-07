@@ -16,6 +16,8 @@ namespace TheliaCMS\Menu\Admin;
 
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Propel;
+use TheliaCMS\Http\CachePurger;
+use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Menu\MenuTargetType;
 use TheliaCMS\Menu\MenuTree;
@@ -37,6 +39,9 @@ final readonly class CmsMenuWriter
         private CmsMenuRepository $menus,
         private MenuTree $tree,
         private MenuCache $cache,
+        // Menus are drawn on every page, so a change to one makes every
+        // cached page stale.
+        private CachePurger $httpCache,
         private CmsActivityLog $activityLog,
     ) {
     }
@@ -59,6 +64,7 @@ final readonly class CmsMenuWriter
         $menu->save();
 
         $this->cache->invalidate();
+        $this->httpCache->purge([CacheTags::MENUS]);
         $this->log($wasNew ? 'CREATE' : 'UPDATE', $menu, \sprintf('CMS menu "%s" saved', $code));
     }
 
@@ -72,6 +78,7 @@ final readonly class CmsMenuWriter
         $menu->delete();
 
         $this->cache->invalidate();
+        $this->httpCache->purge([CacheTags::MENUS]);
         $this->activityLog->record('DELETE', $id, \sprintf('CMS menu "%s" deleted', $code), CmsResources::MENU);
     }
 
@@ -112,6 +119,7 @@ final readonly class CmsMenuWriter
         $item->save();
 
         $this->cache->invalidate();
+        $this->httpCache->purge([CacheTags::MENUS]);
         $this->log($isNew ? 'CREATE' : 'UPDATE', $menu, \sprintf('CMS menu "%s": entry #%d saved', $menu->getCode(), $item->getId()));
 
         return $item;
@@ -146,6 +154,7 @@ final readonly class CmsMenuWriter
         }
 
         $this->cache->invalidate();
+        $this->httpCache->purge([CacheTags::MENUS]);
         $this->log('DELETE', $menu, \sprintf('CMS menu "%s": entries removed (%s)', $menu->getCode(), implode(', ', $ids)));
     }
 
@@ -174,6 +183,7 @@ final readonly class CmsMenuWriter
         $this->reorder((int) $menu->getId(), $siblings);
 
         $this->cache->invalidate();
+        $this->httpCache->purge([CacheTags::MENUS]);
         $this->log('UPDATE', $menu, \sprintf('CMS menu "%s": entry #%d moved', $menu->getCode(), $item->getId()));
     }
 
@@ -203,6 +213,7 @@ final readonly class CmsMenuWriter
         $this->reorder((int) $menu->getId(), $siblings);
 
         $this->cache->invalidate();
+        $this->httpCache->purge([CacheTags::MENUS]);
         $this->log('UPDATE', $menu, \sprintf('CMS menu "%s": entry #%d moved', $menu->getCode(), $id));
     }
 

@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Settings;
 
+use TheliaCMS\Http\PageCachePolicy;
 use TheliaCMS\Page\TrashRetention;
 use TheliaCMS\TheliaCMS;
 
@@ -33,6 +34,7 @@ final readonly class CmsSettings
     public const string MAINTENANCE_ALLOWLIST = 'maintenance_allowlist';
     public const string MAINTENANCE_PAGE = 'maintenance_page_id';
     public const string TRASH_RETENTION_DAYS = 'trash_retention_days';
+    public const string HTTP_CACHE_TTL = PageCachePolicy::TTL_SETTING;
 
     /**
      * How long a client is asked to wait before coming back. Long enough for a
@@ -78,6 +80,15 @@ final readonly class CmsSettings
         return TrashRetention::normalize((int) $raw);
     }
 
+    /** Seconds a shared cache may keep a page. Zero means it may not. */
+    public function httpCacheTtl(): int
+    {
+        return max(0, min(
+            (int) TheliaCMS::getConfigValue(self::HTTP_CACHE_TTL, (string) PageCachePolicy::DEFAULT_TTL),
+            PageCachePolicy::MAX_TTL,
+        ));
+    }
+
     public function isMaintenanceActive(): bool
     {
         return '1' === (string) TheliaCMS::getConfigValue(self::MAINTENANCE_ACTIVE, '0');
@@ -107,6 +118,7 @@ final readonly class CmsSettings
         string $maintenanceAllowlist,
         ?int $maintenancePageId,
         ?int $trashRetentionDays,
+        ?int $httpCacheTtl,
     ): void {
         TheliaCMS::setConfigValue(self::SITE_MODE, $mode->value);
         TheliaCMS::setConfigValue(self::NOT_FOUND_PAGE, (string) ($notFoundPageId ?? ''));
@@ -114,6 +126,7 @@ final readonly class CmsSettings
         TheliaCMS::setConfigValue(self::MAINTENANCE_ALLOWLIST, trim($maintenanceAllowlist));
         TheliaCMS::setConfigValue(self::MAINTENANCE_PAGE, (string) ($maintenancePageId ?? ''));
         TheliaCMS::setConfigValue(self::TRASH_RETENTION_DAYS, (string) TrashRetention::normalize($trashRetentionDays));
+        TheliaCMS::setConfigValue(self::HTTP_CACHE_TTL, (string) max(0, min((int) $httpCacheTtl, PageCachePolicy::MAX_TTL)));
     }
 
     private function pageId(string $key): ?int

@@ -24,6 +24,8 @@ use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
 use TheliaCMS\Builder\PublishedContentSanitizer;
+use TheliaCMS\Http\CachePurger;
+use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
@@ -61,6 +63,9 @@ final readonly class CmsPageWriter
         // binned has to drop them, or the navigation of the site keeps pointing
         // at what the page used to be.
         private MenuCache $menuCache,
+        // A shared cache in front of the site holds pages this writer just
+        // changed, and it has no way of knowing on its own.
+        private CachePurger $httpCache,
     ) {
     }
 
@@ -155,6 +160,7 @@ final readonly class CmsPageWriter
             $connection->commit();
 
             $this->menuCache->invalidate();
+            $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
             $this->activityLog->record('PUBLISH', (int) $page->getId(), \sprintf(
                 'CMS page #%d published in %s%s',
                 $page->getId(),
@@ -179,6 +185,7 @@ final readonly class CmsPageWriter
         $content?->setPublishedAt(null)->save();
 
         $this->menuCache->invalidate();
+        $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
         $this->activityLog->record('UNPUBLISH', (int) $page->getId(), \sprintf('CMS page #%d unpublished in %s', $page->getId(), $locale));
     }
 
@@ -219,6 +226,7 @@ final readonly class CmsPageWriter
             $this->menuCache->invalidate();
 
             $ids = array_map(static fn (CmsPage $node): int => (int) $node->getId(), $branch);
+            $this->httpCache->purge(array_map(CacheTags::page(...), $ids));
             $this->activityLog->record('DELETE', (int) $page->getId(), \sprintf('CMS pages moved to the bin: %s', implode(', ', $ids)));
 
             return $ids;
@@ -257,6 +265,7 @@ final readonly class CmsPageWriter
             $connection->commit();
 
             $this->menuCache->invalidate();
+            $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
             $this->activityLog->record('RESTORE', (int) $page->getId(), \sprintf('CMS page #%d restored from the bin', $page->getId()));
         } catch (\Throwable $throwable) {
             $connection->rollBack();

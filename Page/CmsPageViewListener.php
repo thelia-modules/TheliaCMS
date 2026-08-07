@@ -22,6 +22,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\Lang;
+use TheliaCMS\Http\CacheTags;
+use TheliaCMS\Http\PageCacheListener;
 use TheliaCMS\TheliaCMS;
 
 /**
@@ -85,6 +87,11 @@ final readonly class CmsPageViewListener
         if ($page->noindex) {
             $response->headers->set('X-Robots-Tag', 'noindex'.($page->nofollow ? ', nofollow' : ''));
         }
+
+        // The headers are written on kernel.response, once the session
+        // listener has had its say about cookies: whether this answer may be
+        // shared depends on them.
+        $request->attributes->set(PageCacheListener::TAGS_ATTRIBUTE, CacheTags::forPage($pageId));
 
         $event->setResponse($response);
     }
