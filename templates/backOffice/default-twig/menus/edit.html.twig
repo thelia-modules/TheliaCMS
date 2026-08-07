@@ -7,9 +7,14 @@
 {% block body_testid %}cms-menu-edit{% endblock %}
 
 {% block head_extra %}
-    {# Three layout rules, kept with the screen that needs them rather than
+    {# A few layout rules, kept with the screen that needs them rather than
        shipped as a stylesheet of their own. #}
     <style>
+        {# A sticky panel taller than the window pins its top and stops following
+           the scroll, so its submit button sits below the fold with no way to
+           reach it. Capping the height and letting the panel scroll on its own
+           keeps the button reachable on a short window. #}
+        .cms-menu-side-panel { max-height: calc(100vh - 2rem); overflow-y: auto; }
         .cms-menu-tree__handle { cursor: grab; color: var(--bs-secondary-color); }
         .cms-menu-tree tr.is-dragging { opacity: .4; }
         .cms-menu-tree tr.is-drop-target > td { box-shadow: inset 0 2px 0 0 var(--bs-primary); }
@@ -147,7 +152,7 @@
 
         {% if not is_new and item_form %}
             <div class="col-lg-5">
-                <div class="card position-sticky" style="top: 1rem" data-cms-menu-form>
+                <div class="card position-sticky cms-menu-side-panel" style="top: 1rem" data-cms-menu-form>
                     <div class="card-header d-flex align-items-center justify-content-between">
                         <span>{{ edited_item ? 'Edit entry'|trans({}, 'theliacms') : 'Add an entry'|trans({}, 'theliacms') }}</span>
                         {% if edited_item %}
