@@ -1,0 +1,92 @@
+{# The consent layer, written before anything else in the head.
+
+   Three things happen here, in this order and for a reason:
+   1. Google Consent Mode is told that nothing is allowed yet. A tag that
+      starts before this line has already decided it may store data.
+   2. The Axeptio SDK loads and asks the visitor.
+   3. A short reviver waits for the answer, updates the Google signals and
+      brings out the snippets that were held back for each vendor.
+#}
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+
+    gtag('consent', 'default', {
+        {% for signal in signals %}{{ signal }}: 'denied',
+        {% endfor %}
+        {# Half a second for the platform to report a returning visitor's
+           earlier answer, so their tags are not skipped on the first page. #}
+        wait_for_update: 500
+    });
+</script>
+
+<script>
+    window.axeptioSettings = {
+        clientId: {{ client_id|json_encode|raw }}{% if cookies_version %},
+        cookiesVersion: {{ cookies_version|json_encode|raw }}{% endif %}
+    };
+
+    (function (d, s) {
+        var t = d.getElementsByTagName(s)[0], e = d.createElement(s);
+        e.async = true;
+        e.src = '//static.axept.io/sdk.js';
+        t.parentNode.insertBefore(e, t);
+    })(document, 'script');
+</script>
+
+<script>
+    (function () {
+        var signalsByVendor = {{ consent_map|json_encode|raw }};
+        var released = {};
+
+        {# A <template> is inert: nothing inside it loads, not a script, not an
+           image, not an iframe. Cloning is not enough for scripts though, since
+           a script that arrives through a clone never runs. Each one is
+           rebuilt. #}
+        function release(vendor) {
+            if (released[vendor]) { return; }
+            released[vendor] = true;
+
+            document.querySelectorAll('template[data-cms-consent="' + vendor + '"]').forEach(function (template) {
+                var fragment = template.content.cloneNode(true);
+
+                fragment.querySelectorAll('script').forEach(function (script) {
+                    var live = document.createElement('script');
+
+                    for (var i = 0; i < script.attributes.length; i++) {
+                        live.setAttribute(script.attributes[i].name, script.attributes[i].value);
+                    }
+
+                    live.text = script.text;
+                    script.replaceWith(live);
+                });
+
+                template.parentNode.insertBefore(fragment, template);
+            });
+        }
+
+        function apply(choices) {
+            var update = {};
+
+            Object.keys(signalsByVendor).forEach(function (vendor) {
+                if (choices[vendor]) {
+                    signalsByVendor[vendor].forEach(function (signal) { update[signal] = 'granted'; });
+                }
+            });
+
+            if (Object.keys(update).length > 0) {
+                gtag('consent', 'update', update);
+            }
+
+            Object.keys(choices).forEach(function (vendor) {
+                if (choices[vendor]) { release(vendor); }
+            });
+        }
+
+        window._axcb = window._axcb || [];
+        window._axcb.push(function (axeptio) {
+            axeptio.on('cookies:complete', apply);
+            axeptio.on('consent:saved', apply);
+        });
+    })();
+</script>

@@ -27,7 +27,7 @@ use TheliaCMS\TheliaCMS;
 use Twig\Environment;
 
 /**
- * Adds the "Site" section to the back-office sidebar.
+ * Adds the "CMS" section to the back-office sidebar.
  *
  * Dependencies are injected through the constructor: with #[Required] setters
  * the hook renders empty without ever reporting an error.
@@ -66,6 +66,7 @@ class CmsSideNavHook extends BaseHook
         $maySeeForms = $this->securityContext->isGranted(['ADMIN'], [CmsResources::FORM], [], [AccessManager::VIEW]);
         $maySeeMedia = $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::VIEW]);
         $maySeeSettings = $this->securityContext->isGranted(['ADMIN'], [CmsResources::SETTINGS], [], [AccessManager::VIEW]);
+        $maySeeScripts = $this->securityContext->isGranted(['ADMIN'], [CmsResources::CUSTOM_CODE], [], [AccessManager::VIEW]);
 
         // Rendered through the Twig environment rather than BaseHook::render():
         // the parser only knows the module template directories registered for
@@ -79,6 +80,7 @@ class CmsSideNavHook extends BaseHook
             'forms_url' => $maySeeForms ? $this->urls->generate('admin.cms.forms.list') : null,
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
             'settings_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.edit') : null,
+            'scripts_url' => $maySeeScripts ? $this->urls->generate('admin.cms.scripts.list') : null,
             'is_active' => str_starts_with((string) $this->getRequest()?->getPathInfo(), '/admin/cms'),
             // On a showcase site the content *is* the site, so its section comes
             // before the shop ones. The sidebar is a flex column, so ordering it
@@ -91,6 +93,7 @@ class CmsSideNavHook extends BaseHook
             'forms_label' => $this->trans('Forms', [], TheliaCMS::DOMAIN_NAME),
             'media_label' => $this->trans('Media', [], TheliaCMS::DOMAIN_NAME),
             'settings_label' => $this->trans('Settings', [], TheliaCMS::DOMAIN_NAME),
+            'scripts_label' => $this->trans('Scripts and measurement', [], TheliaCMS::DOMAIN_NAME),
         ]));
     }
 }

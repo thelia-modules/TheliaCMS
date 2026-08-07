@@ -49,6 +49,9 @@ final readonly class CmsAdminGuard
         'media' => CmsResources::MEDIA,
         'settings' => CmsResources::SETTINGS,
         'custom-code' => CmsResources::CUSTOM_CODE,
+        // Pasting a script tag onto every page of the site is the custom-code
+        // permission by any other name, so it is guarded as such.
+        'scripts' => CmsResources::CUSTOM_CODE,
     ];
 
     public function __construct(

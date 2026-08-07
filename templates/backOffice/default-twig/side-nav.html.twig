@@ -30,6 +30,11 @@
                 <a class="nav-link" href="{{ media_url }}">{{ media_label }}</a>
             </li>
         {% endif %}
+        {% if scripts_url %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ scripts_url }}">{{ scripts_label }}</a>
+            </li>
+        {% endif %}
         {% if settings_url %}
             <li class="nav-item">
                 <a class="nav-link" href="{{ settings_url }}">{{ settings_label }}</a>

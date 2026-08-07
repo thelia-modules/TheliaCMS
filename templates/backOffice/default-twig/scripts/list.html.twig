@@ -1,0 +1,113 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Scripts and measurement'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-scripts{% endblock %}
+
+{% block content %}
+    {% form_theme consent_form with bo_form_themes only %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Scripts and measurement'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            {% if may_write %}
+                <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.scripts.create') }}" data-testid="cms-script-new">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ 'Add a snippet'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
+        {% endblock %}
+    {% endembed %}
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            {% set total = scripts|reduce((carry, group) => carry + group|length, 0) %}
+
+            {% if total == 0 %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <p class="text-muted mb-1">{{ 'No snippet yet.'|trans({}, 'theliacms') }}</p>
+                        <p class="text-muted small mb-0">
+                            {{ 'This is where the measurement tags, the chat widget and the ad pixels go, instead of into the theme.'|trans({}, 'theliacms') }}
+                        </p>
+                    </div>
+                </div>
+            {% else %}
+                {% for placement, group in scripts %}
+                    <div class="card mb-3">
+                        <div class="card-header d-flex align-items-center justify-content-between">
+                            <span>{{ placement_labels[placement]|trans({}, 'theliacms') }}</span>
+                            <span class="text-muted small">{{ placement_help[placement]|trans({}, 'theliacms') }}</span>
+                        </div>
+
+                        {% if group is empty %}
+                            <div class="card-body text-muted small">{{ 'Nothing here.'|trans({}, 'theliacms') }}</div>
+                        {% else %}
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <tbody>
+                                        {% for script in group %}
+                                            <tr data-testid="cms-script-{{ script.id }}">
+                                                <td>
+                                                    <a class="fw-medium text-decoration-none" href="{{ path('admin.cms.scripts.edit', { id: script.id }) }}">
+                                                        {{ script.title }}
+                                                    </a>
+                                                    {% if script.note %}
+                                                        <div class="small text-muted">{{ script.note }}</div>
+                                                    {% endif %}
+                                                </td>
+                                                <td style="width: 16rem">
+                                                    {% if script.consentCategory %}
+                                                        <span class="badge bg-light text-dark border">
+                                                            <i class="bi bi-shield-check me-1" aria-hidden="true"></i>{{ script.consentCategory }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                                            {{ 'Loads for everyone'|trans({}, 'theliacms') }}
+                                                        </span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-end" style="width: 10rem">
+                                                    {% if script.active == 1 %}
+                                                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">{{ 'Live'|trans({}, 'theliacms') }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ 'Off'|trans({}, 'theliacms') }}</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header">{{ 'Asking the visitor'|trans({}, 'theliacms') }}</div>
+                <div class="card-body">
+                    {% if not consent_configured %}
+                        <div class="alert alert-warning small" role="alert" data-testid="cms-consent-missing">
+                            {{ 'No consent platform is set up, so a snippet that waits for consent will never load. Snippets with no category still load for everyone.'|trans({}, 'theliacms') }}
+                        </div>
+                    {% endif %}
+
+                    {{ form_start(consent_form) }}
+                        {{ form_errors(consent_form) }}
+                        {{ form_row(consent_form.clientId) }}
+                        {{ form_row(consent_form.cookiesVersion) }}
+                        {{ form_row(consent_form.consentMap) }}
+
+                        {% if may_write %}
+                            <button type="submit" class="btn btn-primary" data-testid="cms-consent-submit">{{ 'Save'|trans({}, 'theliacms') }}</button>
+                        {% endif %}
+                    {{ form_end(consent_form) }}
+
+                    <p class="text-muted small mb-0 mt-3">
+                        {{ 'Google is told nothing is allowed until the visitor says otherwise, before any tag runs. What they agree to is passed on straight away.'|trans({}, 'theliacms') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
