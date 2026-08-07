@@ -127,6 +127,21 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - A sent form is reported to the data layer as `generate_lead`, carrying the
   code of the form and nothing else, and only when the person agreed to be
   contacted.
+- `thelia_cms:export` and `thelia_cms:import`: the page tree, the content of
+  every language, the menus, the forms, the reusable blocks and the settings, as
+  one versioned JSON file. Images travel as file names and are matched against
+  the media library of the importing site. Submissions, third-party snippets and
+  revisions are left out. An import leaves alone what is already there unless
+  `--replace` is passed, applies the settings only with `--with-settings`, and
+  runs in a single transaction.
+- Templates screen: keep a page aside as a starting point, and start a page from
+  one. A page made from a template is a hidden draft and opens straight in the
+  editor. A template holds the export document of its page, so it can be handed
+  to another site as a file.
+- A page for putting a shared cache in front of the site (`docs/shared-cache.md`):
+  the VCL that drops the session cookie on public addresses, without which no
+  page is ever cacheable, the equivalent for Fastly and Cloudflare, and a purger
+  to copy into a project.
 - Unit test suite runnable without a database or an installed shop.
 
 [Unreleased]: https://github.com/thelia-modules/TheliaCMS/commits/main
