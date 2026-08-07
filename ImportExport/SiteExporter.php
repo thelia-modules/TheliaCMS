@@ -165,6 +165,11 @@ final readonly class SiteExporter
                 'published_html' => $content->getPublishedHtml(),
                 'published_css' => $content->getPublishedCss(),
                 'published_at' => $this->date($content->getPublishedAt()),
+                // Carried because the back office compares it with the
+                // publication date to tell whether a page holds unpublished
+                // work. Left out, every imported page would claim to have been
+                // edited since it went live.
+                'updated_at' => $this->date($content->getUpdatedAt()),
             ];
         }
 

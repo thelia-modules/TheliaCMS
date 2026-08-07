@@ -330,8 +330,19 @@ final readonly class SiteImporter
                 ->setDraftCss($this->media->remap($content['draft_css'] ?? null, $mediaMap))
                 ->setPublishedHtml($publishedHtml)
                 ->setPublishedCss($this->media->remap($content['published_css'] ?? null, $mediaMap))
-                ->setPublishedAt($this->date($content['published_at'] ?? null))
-                ->save($connection);
+                ->setPublishedAt($this->date($content['published_at'] ?? null));
+
+            // The back office reads "edited since it went live" from this
+            // column against the publication date. Saving without setting it
+            // stamps it with the time of the import, and every page of a
+            // restored site then asks to be published again.
+            $model->setUpdatedAt(
+                $this->date($content['updated_at'] ?? null)
+                ?? $model->getPublishedAt()
+                ?? new \DateTimeImmutable(),
+            );
+
+            $model->save($connection);
 
             // Without this, an imported site answers nothing at all on its own
             // search page: the index is built at publish time, and importing is
