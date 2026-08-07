@@ -84,6 +84,31 @@ final class PublishedContentSanitizerTest extends TestCase
         }
     }
 
+    /**
+     * The catalogue names each section by its own heading and hides decorative
+     * icons; dropping those attributes on the way out would undo, silently, the
+     * one thing the blocks are careful about.
+     */
+    public function testKeepsWhatMakesAPageAccessible(): void
+    {
+        $html = '<section aria-labelledby="cms-hero-title" role="region">'
+            .'<h2 id="cms-hero-title">Hello</h2>'
+            .'<i class="icon" aria-hidden="true"></i>'
+            .'<a href="/" aria-current="page">Home</a>'
+            .'<details open><summary>A question</summary><p>An answer</p></details>'
+            .'<p lang="en" dir="ltr">In English</p>'
+            .'</section>';
+
+        $sanitized = (string) $this->sanitizer->html($html);
+
+        foreach ([
+            'aria-labelledby="cms-hero-title"', 'role="region"', 'aria-hidden="true"',
+            'aria-current="page"', '<details open', 'lang="en"', 'dir="ltr"',
+        ] as $expected) {
+            self::assertStringContainsString($expected, $sanitized);
+        }
+    }
+
     public function testKeepsThePartialMarkersTheRendererSubstitutes(): void
     {
         $html = '<div data-cms-partial="cms-form" data-props=\'{"code":"contact"}\'></div>';

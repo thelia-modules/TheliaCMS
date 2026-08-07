@@ -28,6 +28,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
+use TheliaCMS\Builder\BlockCatalog;
 use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Builder\HeadingChecker;
 use TheliaCMS\Model\CmsPage;
@@ -62,6 +63,7 @@ final readonly class CmsPageBuilderController
         private CmsPageAdminRepository $pages,
         private CmsPageWriter $writer,
         private CmsBuilderConfig $builderConfig,
+        private BlockCatalog $catalog,
         private EditLanguage $languages,
         private HeadingChecker $headings,
         private PreviewLink $previewLinks,
@@ -106,6 +108,9 @@ final readonly class CmsPageBuilderController
             'builder_options' => $this->builderConfig->editorOptions(),
             // Server-rendered blocks the editor may offer, with their settings.
             'builder_partials' => $this->builderConfig->partials(),
+            // The starting blocks, with their sample text in the language of
+            // the page rather than of the back office.
+            'builder_catalog' => $this->catalog->toEditor($locale),
             // The editor speaks the language the back office is displayed in,
             // which is not the language of the page being translated.
             'builder_locale' => substr($request->getLocale(), 0, 2),

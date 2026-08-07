@@ -1,5 +1,6 @@
 import PageBuilderController from "@page-builder/controllers/page_builder_controller.js";
 import partialBlocks from "./plugins/partialBlocks.js";
+import catalogBlocks from "./plugins/catalogBlocks.js";
 
 /**
  * Thelia flavour of the page builder controller.
@@ -23,6 +24,9 @@ export default class extends PageBuilderController {
         // Server-rendered blocks: the registry, the language of the page being
         // edited, and the wording shown while a block has nothing to display.
         partials: { type: Array, default: [] },
+        // The block catalogue, described by the server so its sample text is in
+        // the language of the page rather than of the back office.
+        catalog: { type: Array, default: [] },
         contentLocale: { type: String, default: "" },
         partialCategory: { type: String, default: "Dynamic" },
         partialLabels: { type: Object, default: {} },
@@ -116,6 +120,7 @@ export default class extends PageBuilderController {
      */
     configurePlugins() {
         this.pluginManager.registerPlugin("cms:partials", partialBlocks);
+        this.pluginManager.registerPlugin("cms:catalog", catalogBlocks);
 
         const plugins = [
             "pb:init-categories",
@@ -145,6 +150,10 @@ export default class extends PageBuilderController {
 
         if (this.endpointsValue?.uploadImage) {
             plugins.push({ name: "pb:asset-manager-upload", options: { endpoints: this.endpointsValue, context: this.contextValue } });
+        }
+
+        if (this.catalogValue.length > 0) {
+            plugins.push({ name: "cms:catalog", options: { blocks: this.catalogValue } });
         }
 
         if (this.partialsValue.length > 0) {

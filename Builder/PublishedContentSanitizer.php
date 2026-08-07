@@ -35,6 +35,28 @@ final readonly class PublishedContentSanitizer
      */
     private const array EMBED_ELEMENTS = ['iframe'];
 
+    /**
+     * Accessibility attributes kept on the way out.
+     *
+     * The default allow list of the sanitiser drops every `aria-*` attribute,
+     * which quietly undid the one thing the block catalogue is careful about:
+     * a section named by its own heading, an icon hidden from screen readers,
+     * the current entry of a menu. None of them can carry script or a URL.
+     */
+    private const array ACCESSIBILITY_ATTRIBUTES = [
+        'role',
+        'aria-label',
+        'aria-labelledby',
+        'aria-describedby',
+        'aria-hidden',
+        'aria-current',
+        'aria-expanded',
+        'aria-controls',
+        'aria-live',
+        'lang',
+        'dir',
+    ];
+
     public function html(?string $html, bool $allowCustomCode = false): ?string
     {
         if (null === $html || '' === trim($html)) {
@@ -87,11 +109,18 @@ final readonly class PublishedContentSanitizer
             // against its registry and the props against a schema.
             ->allowAttribute('data-cms-partial', '*')
             ->allowAttribute('data-props', '*')
+            // `open` is what an author toggles on a question that should start
+            // expanded; without it a `<details>` always comes back closed.
+            ->allowAttribute('open', ['details'])
             ->allowLinkSchemes(['https', 'http', 'mailto', 'tel'])
             // No data: URI — an SVG smuggled into one carries script.
             ->allowMediaSchemes(['https', 'http'])
             ->allowRelativeLinks()
             ->allowRelativeMedias();
+
+        foreach (self::ACCESSIBILITY_ATTRIBUTES as $attribute) {
+            $config = $config->allowAttribute($attribute, '*');
+        }
 
         foreach (self::EMBED_ELEMENTS as $element) {
             $config = $allowCustomCode

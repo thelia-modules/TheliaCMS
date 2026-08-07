@@ -52,6 +52,7 @@
                     context: 'cms-block-' ~ block.id,
                     options: builder_options,
                     'data-cms-page-builder-locale-value': builder_locale,
+                    'data-cms-page-builder-catalog-value': builder_catalog|json_encode,
                     'data-cms-page-builder-allow-custom-code-value': allow_custom_code ? 'true' : 'false',
                     'data-cms-page-builder-empty-title-value': 'This block has no content yet'|trans({}, 'theliacms'),
                     'data-cms-page-builder-empty-hint-value': 'Drag a block from the left to start. What you build here appears on every page using this block.'|trans({}, 'theliacms'),

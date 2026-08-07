@@ -29,6 +29,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Builder\Admin\CmsPageContentType;
+use TheliaCMS\Builder\BlockCatalog;
 use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Page\Admin\BuilderContent;
@@ -59,6 +60,7 @@ final readonly class CmsBlockBuilderController
         private CmsBlockRepository $blocks,
         private CmsBlockWriter $writer,
         private CmsBuilderConfig $builderConfig,
+        private BlockCatalog $catalog,
         private EditLanguage $languages,
     ) {
     }
@@ -91,6 +93,7 @@ final readonly class CmsBlockBuilderController
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
             'builder_options' => $this->builderConfig->editorOptions(),
+            'builder_catalog' => $this->catalog->toEditor($locale),
             'builder_locale' => substr($request->getLocale(), 0, 2),
             'allow_custom_code' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::CUSTOM_CODE], [], [AccessManager::UPDATE]),
             'editor_version' => $this->builderConfig->editorVersion(),
