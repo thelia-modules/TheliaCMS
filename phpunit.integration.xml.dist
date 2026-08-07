@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Integration tests of the module: everything the unit suite cannot reach
+     because it needs a database and a booted kernel — the search index, the
+     sitemap, the dashboard, and the export/import round trip.
+
+         vendor/bin/phpunit -c local/modules/TheliaCMS/phpunit.integration.xml.dist
+
+     Prerequisite, once per shop: `php bin/test-prepare`. It creates the `test`
+     database, applies the schema and activates the modules, so the cms_* tables
+     are there. Each test runs inside a transaction rolled back afterwards
+     (Thelia\Test\IntegrationTestCase), so the shop content is left alone.
+
+     Kept separate from phpunit.xml.dist on purpose: the unit suite must stay
+     runnable against nothing but the autoloader. -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
+         bootstrap="../../../tests/bootstrap.php"
+         colors="true"
+         failOnWarning="true"
+         failOnRisky="true"
+         cacheDirectory=".phpunit.cache"
+         displayDetailsOnTestsThatTriggerWarnings="true"
+         displayDetailsOnTestsThatTriggerDeprecations="true">
+    <php>
+        <ini name="error_reporting" value="-1"/>
+        <server name="SHELL_VERBOSITY" value="-1"/>
+        <server name="KERNEL_CLASS" value="App\Kernel"/>
+        <server name="APP_ENV" value="test" force="true"/>
+        <server name="APP_DEBUG" value="0" force="true"/>
+        <server name="SYMFONY_DEPRECATIONS_HELPER" value="weak"/>
+        <env name="APP_SECRET" value="287f2178af9e0c250e8219a9df833504"/>
+        <env name="MAILER_DSN" value="null://null"/>
+        <env name="LOCK_DSN" value="flock"/>
+    </php>
+
+    <testsuites>
+        <testsuite name="integration">
+            <directory>Tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+
+    <extensions>
+        <bootstrap class="Symfony\Bridge\PhpUnit\SymfonyExtension"/>
+    </extensions>
+</phpunit>

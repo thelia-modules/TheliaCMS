@@ -550,8 +550,21 @@ vendor/bin/phpunit -c local/modules/TheliaCMS
 
 They cover the sanitizer against a corpus of hostile HTML and CSS, the content
 normalizer, the responsive image rewriting, the heading check, the signing of
-preview links and the slug rules. Anything needing real pages belongs to the
-integration suite of the shop: publishing, activation, the front-office routes.
+preview links and the slug rules.
+
+The integration tests need a shop, and they run against its test database:
+
+```bash
+php bin/test-prepare        # once: creates the `test` database and activates the modules
+vendor/bin/phpunit -c local/modules/TheliaCMS/phpunit.integration.xml.dist
+```
+
+They cover what only exists once there are rows: the export and import round
+trip, the search index, the sitemap entries, the dashboard figures and the
+breadcrumb. Each test runs inside a transaction that is rolled back afterwards,
+so the content of the shop is left alone. The exception is the search: InnoDB
+only adds a row to a FULLTEXT index when the transaction writing it commits, so
+those tests commit and clean up after themselves.
 
 ## Page builder assets
 
