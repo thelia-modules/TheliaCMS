@@ -1,0 +1,77 @@
+{# Rendered into `home.top`, above the shop charts: on a showcase site those
+   count things that do not exist. The card is ours, since this hook wraps
+   nothing. #}
+<div class="card shadow-sm mb-4" id="cms-dashboard" data-testid="cms-dashboard">
+    <div class="card-header bg-body-tertiary">
+        <h2 class="h5 mb-0">{{ title }}</h2>
+    </div>
+    <div class="card-body">
+<div class="row g-3 mb-3">
+    <div class="col-6">
+        <div class="border rounded p-3 h-100">
+            <div class="fs-3 fw-semibold">{{ stats.submissions_recent }}</div>
+            <div class="small text-muted">
+                {{ 'Messages received in the last %count% days'|trans({'%count%': stats.recent_days}, 'theliacms') }}
+            </div>
+            {% if stats.submissions_total > stats.submissions_recent %}
+                <a class="small" href="{{ forms_url }}">
+                    {{ '%count% in total'|trans({'%count%': stats.submissions_total}, 'theliacms') }}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-6">
+        <div class="border rounded p-3 h-100">
+            <div class="fs-3 fw-semibold">{{ stats.pages_published }}</div>
+            <div class="small text-muted">{{ 'Pages online'|trans({}, 'theliacms') }}</div>
+            {% if stats.pages_draft > 0 %}
+                <a class="small" href="{{ pages_url }}">
+                    {{ '%count% not published yet'|trans({'%count%': stats.pages_draft}, 'theliacms') }}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if stats.completeness|length > 1 %}
+    <h3 class="h6 text-muted">{{ 'Written in each language'|trans({}, 'theliacms') }}</h3>
+    <ul class="list-unstyled mb-3">
+        {% for row in stats.completeness %}
+            {% set percent = row.total > 0 ? (row.published / row.total * 100)|round : 0 %}
+            <li class="d-flex align-items-center gap-2 mb-1">
+                <span class="small" style="width: 7rem">{{ row.title }}</span>
+                <div class="progress flex-grow-1" style="height: .5rem"
+                     role="progressbar" aria-valuenow="{{ percent }}" aria-valuemin="0" aria-valuemax="100"
+                     aria-label="{{ row.title }}">
+                    <div class="progress-bar {{ percent < 100 ? 'bg-warning' : 'bg-success' }}" style="width: {{ percent }}%"></div>
+                </div>
+                <span class="small text-muted" style="width: 4rem">{{ row.published }}/{{ row.total }}</span>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+{% if stats.recent_pages is not empty %}
+    <h3 class="h6 text-muted">{{ 'Changed last'|trans({}, 'theliacms') }}</h3>
+    <ul class="list-unstyled mb-3">
+        {% for page in stats.recent_pages %}
+            <li class="d-flex justify-content-between gap-2 small py-1 border-bottom">
+                <a href="{{ path('admin.cms.pages.builder', { id: page.id }) }}">{{ page.title }}</a>
+                <span class="text-muted">{{ page.updated_at ? page.updated_at|date('d/m/Y') : '' }}</span>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+<p class="small mb-0">
+    {% if stats.measurement > 0 %}
+        <i class="bi bi-graph-up me-1" aria-hidden="true"></i>
+        <a href="{{ scripts_url }}">{{ '%count% measurement script(s) running'|trans({'%count%': stats.measurement}, 'theliacms') }}</a>
+    {% else %}
+        <i class="bi bi-exclamation-circle me-1 text-warning" aria-hidden="true"></i>
+        <a href="{{ scripts_url }}">{{ 'Nothing is measuring this site yet.'|trans({}, 'theliacms') }}</a>
+    {% endif %}
+</p>
+    </div>
+</div>

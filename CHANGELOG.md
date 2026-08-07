@@ -89,6 +89,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   way out.
 - Answers age out on their own after the number of days their form states,
   either from `thelia_cms:forms:purge` or along with `maintenance:purge`.
+- Showcase dashboard block on the back-office home page: messages received over
+  the last thirty days, pages online and pages still drafts, how much of the
+  site is written in each language, the five pages changed last, and whether
+  anything is measuring the site. Added in showcase mode only.
 - `Cache-Tag` and `Surrogate-Key` on every rendered page, and explicit
   invalidation when a page is published, unpublished, binned or restored, when a
   menu is saved, when a reusable block used by pages changes, and when the site

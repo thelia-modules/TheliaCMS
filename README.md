@@ -203,6 +203,21 @@ of it, which recognises the same sender twice without recording who visited.
 A sent form is pushed to the data layer as `generate_lead`, carrying the code of
 the form and nothing else, and only when the person agreed to be contacted.
 
+## Dashboard
+
+On a showcase site, the back-office home page gains a block of its own, above
+the shop charts: those count orders and turnover, which on a site with no shop
+is a screen of zeros somebody has to scroll past.
+
+It shows how many messages the forms received over the last thirty days, how
+many pages are online and how many are still drafts, how much of the site exists
+in each active language, the five pages changed last, and whether anything is
+measuring the site at all. Nothing here re-implements analytics: the last line
+links to the scripts screen and says how many are running.
+
+The block is only added in showcase mode, and only for somebody allowed to see
+the pages.
+
 ## Shared cache
 
 Every rendered page carries a `Cache-Tag` header (and `Surrogate-Key`, which is
