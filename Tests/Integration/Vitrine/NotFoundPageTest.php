@@ -19,9 +19,6 @@ use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
-use Thelia\Core\Template\TemplateDefinition;
-use Thelia\Core\Template\TemplateHelperInterface;
-use Thelia\Model\ConfigQuery;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\TheliaCMS;
 use TheliaCMS\Vitrine\NotFoundPageListener;
@@ -148,33 +145,6 @@ final class NotFoundPageTest extends CmsIntegrationTestCase
         $this->listener()->onKernelException($event);
 
         self::assertNull($event->getResponse());
-    }
-
-    /**
-     * The 404 page is rendered through the front theme, so the shop needs one
-     * it actually has.
-     *
-     * `bin/test-prepare` seeds the theme name of a stock install, which is not
-     * necessarily the theme installed here: left alone, the renderer resolves a
-     * parser on a directory that does not exist and every test below fails on
-     * something that has nothing to do with what it measures. The write is
-     * undone with the transaction of the test.
-     */
-    private function useAnInstalledFrontTheme(): void
-    {
-        $helper = $this->getService(TemplateHelperInterface::class);
-
-        if (is_dir($helper->getActiveFrontTemplate()->getAbsolutePath())) {
-            return;
-        }
-
-        $installed = $helper->getList(TemplateDefinition::FRONT_OFFICE);
-
-        if ([] === $installed) {
-            self::markTestSkipped('The shop has no front theme installed, so no page can be rendered.');
-        }
-
-        ConfigQuery::write('active-front-template', $installed[0]->getName());
     }
 
     private function listener(): NotFoundPageListener

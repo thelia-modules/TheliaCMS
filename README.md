@@ -64,6 +64,36 @@ Reserved first segments (`admin`, `api`, `assets`, `recherche`, `search`,
 router runs before the Symfony routes, so a page slugged `admin` would shadow
 the back office.
 
+### Trailing slashes
+
+An address that differs from a real one only by a trailing slash answers 301
+towards the form without it, so `/mentions-legales/` reaches
+`/mentions-legales`. Symfony does that for its own routes; the rewriting router
+does not, and a site taken over from WordPress, Drupal or Prestashop arrives with
+the slash on every indexed address and every inbound link.
+
+The redirection is permanent, keeps the host the visitor reached, and passes the
+query string on untouched. Several slashes collapse in one hop, and the address
+redirected to never carries one, so there is no chain and no loop. A POST is left
+with the 404 it asked for, because a browser turns a redirected POST into a GET
+and drops the body.
+
+Nothing is redirected unless the address without the slash answers. For a page of
+this module that means published, visible and inside its publication window. For
+an address belonging to another view (a content, a folder, a product) the module
+checks that the active theme renders that view at all, and takes the row in
+`rewriting_url` as the site saying the address exists. Whether one particular
+product is currently online is that module's business, so an address of that kind
+can still redirect to a 404.
+
+The root, the back office and the API are never touched. The first segment of the
+path is what is compared, not a prefix, so a page addressed
+`/administration-des-ventes` is not mistaken for the back office.
+
+The whole thing runs on 404 responses only, and an address without a trailing
+slash leaves on two string tests before any query. A site that has no use for it
+pays nothing.
+
 ## Editing a page
 
 **CMS > Pages** lists the tree. A page carries a title, a slug, a parent, a

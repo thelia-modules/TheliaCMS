@@ -14,7 +14,10 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration;
 
+use Thelia\Core\Template\TemplateDefinition;
+use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Domain\Localization\Service\LangService;
+use Thelia\Model\ConfigQuery;
 use Thelia\Test\IntegrationTestCase;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Page\Admin\BuilderContent;
@@ -53,6 +56,32 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
         $this->createdPages = [];
 
         parent::tearDown();
+    }
+
+    /**
+     * Points the shop at a front theme it actually has.
+     *
+     * `bin/test-prepare` seeds the theme name of a stock install, which is not
+     * necessarily the theme installed here: left alone, anything resolving a
+     * parser works on a directory that does not exist, and the tests fail on
+     * something that has nothing to do with what they measure. The write is
+     * undone with the transaction of the test.
+     */
+    protected function useAnInstalledFrontTheme(): void
+    {
+        $helper = $this->getService(TemplateHelperInterface::class);
+
+        if (is_dir($helper->getActiveFrontTemplate()->getAbsolutePath())) {
+            return;
+        }
+
+        $installed = $helper->getList(TemplateDefinition::FRONT_OFFICE);
+
+        if ([] === $installed) {
+            self::markTestSkipped('The shop has no front theme installed, so no page can be rendered.');
+        }
+
+        ConfigQuery::write('active-front-template', $installed[0]->getName());
     }
 
     protected function writer(): CmsPageWriter

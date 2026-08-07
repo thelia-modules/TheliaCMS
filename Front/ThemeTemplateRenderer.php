@@ -59,6 +59,24 @@ final class ThemeTemplateRenderer
         return $parser->render($template, $context);
     }
 
+    /**
+     * Whether the active theme ships the view of that name.
+     *
+     * A view no theme renders answers 404 for every address pointing at it, so
+     * this is what tells a caller there is nothing on the other side. Returns
+     * false rather than throwing when no parser can be resolved at all: callers
+     * ask this while deciding what to do about a request that already failed,
+     * and a broken theme turning a 404 into a 500 helps nobody.
+     */
+    public function themeRenders(string $view): bool
+    {
+        try {
+            return $this->parser()->supportTemplateRender($this->themePath, $view);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     private function parser(): ParserInterface
     {
         if (null !== $this->parser) {

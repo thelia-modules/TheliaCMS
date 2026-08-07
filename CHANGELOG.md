@@ -9,6 +9,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- An address that differs from a real one only by a trailing slash answers 301
+  towards the form without it. It used to answer 404, which costs a site taken
+  over from WordPress, Drupal or Prestashop nearly every address it had indexed:
+  those serve theirs with the slash. Nothing is redirected unless the address
+  without the slash answers, the query string travels, and the root, the back
+  office and the API are left alone.
 - The slug of a page is stored per language, next to its title. Until now it only
   existed inside the address, in a core table the module has to clear when it is
   switched off. Existing sites keep the addresses they answer on: the migration
