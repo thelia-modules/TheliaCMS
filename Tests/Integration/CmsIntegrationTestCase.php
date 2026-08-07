@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration;
 
+use Symfony\Component\HttpKernel\KernelInterface;
 use Thelia\Core\Template\TemplateDefinition;
 use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Domain\Localization\Service\LangService;
@@ -35,8 +36,18 @@ use TheliaCMS\Page\Admin\PageDraft;
  */
 abstract class CmsIntegrationTestCase extends IntegrationTestCase
 {
+    /** Checked once per run: the answer cannot change between two test cases. */
+    private static ?string $checkedDatabase = null;
+
     /** @var list<int> ids of the pages created by createPage(), newest last */
     private array $createdPages = [];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->refuseToRunOnAnythingButTheTestDatabase();
+    }
 
     /**
      * Undoes by hand what the transaction cannot, for the test cases that run
@@ -56,6 +67,57 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
         $this->createdPages = [];
 
         parent::tearDown();
+    }
+
+    /**
+     * Stops the run when the tests are connected to anything but the database
+     * `.env.test` names.
+     *
+     * Not a hypothetical. A container that exports `DATABASE_NAME` into the
+     * shell wins over `.env.test`, because Dotenv does not overwrite variables
+     * that are already set, and the Propel configuration is generated from
+     * whichever value is in scope. The suite then runs against the *shop*
+     * database, and the cases that deliberately work outside a transaction, the
+     * module lifecycle among them, delete every CMS address of a live site and
+     * rebuild it. That is how a real site lost its 124 addresses.
+     *
+     * `bin/test-prepare` clears those variables before generating the Propel
+     * configuration, which is why the suite is normally fine. This is the guard
+     * for the run where somebody purged `var/propel/test` and went straight to
+     * phpunit.
+     */
+    private function refuseToRunOnAnythingButTheTestDatabase(): void
+    {
+        $connection = $this->getPropelConnection();
+
+        self::$checkedDatabase ??= (string) $connection->query('SELECT DATABASE()')->fetchColumn();
+
+        $declared = $this->databaseNamedInEnvTest();
+
+        if (null === $declared || $declared === self::$checkedDatabase) {
+            return;
+        }
+
+        self::fail(\sprintf(
+            'These tests write outside a transaction and are connected to "%s", while .env.test names "%s". '
+            .'Run `php bin/test-prepare` and check that nothing exports DATABASE_NAME into the shell, '
+            .'the web_environment of a DDEV project for instance.',
+            self::$checkedDatabase,
+            $declared,
+        ));
+    }
+
+    private function databaseNamedInEnvTest(): ?string
+    {
+        $file = $this->getService(KernelInterface::class)->getProjectDir().'/.env.test';
+
+        if (!is_file($file)) {
+            return null;
+        }
+
+        preg_match('/^\s*DATABASE_NAME\s*=\s*[\'"]?([^\'"\s#]+)/m', (string) file_get_contents($file), $matches);
+
+        return $matches[1] ?? null;
     }
 
     /**
