@@ -203,6 +203,38 @@ of it, which recognises the same sender twice without recording who visited.
 A sent form is pushed to the data layer as `generate_lead`, carrying the code of
 the form and nothing else, and only when the person agreed to be contacted.
 
+## Search
+
+The module answers on `/recherche` and on `/search` with a results page. Both
+paths are on the reserved list, so no page can be given a slug that would shadow
+them, and the language of the page is the one the visitor is reading the site
+in rather than one the address imposes.
+
+The query runs against the plain text extracted when a page was published, never
+against the HTML: a full-text index over markup matches tag names and ranks a
+page by how much of it there is. Only pages a visitor may reach are searched.
+The bin, the drafts, a page waiting for its publication date and a page marked
+`noindex` are filtered in SQL rather than dropped from the results afterwards,
+which is what keeps a page of ten results from showing three.
+
+What the visitor typed is stripped of everything MySQL boolean mode reads as an
+operator. Boolean mode has no escape character, so a search for "C++" would
+otherwise be a syntax error rather than a search. Every word is required and the
+last one is completed as a prefix, so "access" already finds the accessibility
+statement.
+
+The results page answers `X-Robots-Tag: noindex, follow`. It exists in as many
+versions as there are queries, which is exactly what search engines ask sites
+not to have indexed.
+
+A theme takes over the layout by shipping `cms-search.html.twig` at its root.
+Until it does, the module renders its own, in `cms-*` class names with no
+styling of its own.
+
+On a site that also runs TntSearch, the module registers a `CmsPageIndex` over
+the same rows. Without TntSearch nothing is registered and the built-in search
+answers alone.
+
 ## Scripts and measurement
 
 **CMS > Scripts and measurement** holds the third-party snippets of the site: the

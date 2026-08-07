@@ -19,6 +19,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\Lang;
@@ -26,6 +27,7 @@ use TheliaCMS\Page\CmsPageRenderer;
 use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\IpAllowlist;
+use TheliaCMS\TheliaCMS;
 use Twig\Environment;
 
 /**
@@ -53,6 +55,7 @@ final readonly class MaintenanceListener
     public function __construct(
         private CmsSettings $settings,
         private IpAllowlist $allowlist,
+        private TranslatorInterface $translator,
         private SecurityContext $securityContext,
         private PublishedPageRepository $pages,
         private CmsPageRenderer $renderer,
@@ -131,8 +134,21 @@ final readonly class MaintenanceListener
             }
         }
 
+        $minutes = (int) round(CmsSettings::RETRY_AFTER / 60);
+
+        // Translated here rather than by a Twig filter in the template: the
+        // filter follows the locale Symfony resolved for the request, and a
+        // front-office page follows the language the visitor is reading the
+        // site in. On this page the two are rarely the same, since the request
+        // never reached the router.
         return $this->twig->render('@TheliaCMSModule/front/maintenance.html.twig', [
-            'retry_after_minutes' => (int) round(CmsSettings::RETRY_AFTER / 60),
+            'locale' => $this->langService->getLang()?->getLocale() ?? Lang::getDefaultLanguage()->getLocale(),
+            'title' => $this->translator->trans('The site is closed for maintenance', [], TheliaCMS::DOMAIN_NAME),
+            'message' => str_replace(
+                '%minutes%',
+                (string) $minutes,
+                $this->translator->trans('Please come back in about %minutes% minutes.', [], TheliaCMS::DOMAIN_NAME),
+            ),
         ]);
     }
 }

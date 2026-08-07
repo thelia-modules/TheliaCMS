@@ -1,0 +1,73 @@
+{#
+    Fallback layout for the search results page.
+
+    A theme takes over by shipping its own `cms-search.html.twig` at its root;
+    until it does, this file keeps the search usable on any Twig theme exposing a
+    `base.html.twig`. The markup carries `cms-*` class names and no styling, so a
+    theme that only adds a stylesheet already gets a page that fits it.
+#}
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ labels.title }}{% endblock %}
+
+{% block robots %}<meta name="robots" content="noindex, follow">{% endblock %}
+
+{% block body_class %}cms-search-page{% endblock %}
+
+{% block body %}
+    <section class="cms-search">
+        <h1 class="cms-search__title">{{ labels.title }}</h1>
+
+        <form class="cms-search__form" method="get" action="" role="search">
+            <label class="cms-search__label" for="cms-search-q">{{ labels.prompt }}</label>
+            <input class="cms-search__input" type="search" id="cms-search-q" name="q" value="{{ query }}"
+                   autocomplete="off" required>
+            <button class="cms-search__submit" type="submit">{{ labels.submit }}</button>
+        </form>
+
+        {% if query is not empty and not searchable %}
+            <p class="cms-search__notice">
+                {{ labels.too_short|replace({'%count%': min_word_length}) }}
+            </p>
+        {% elseif searchable and total == 0 %}
+            <p class="cms-search__notice">
+                {{ labels.no_result|replace({'%query%': query}) }}
+            </p>
+        {% elseif searchable %}
+            <p class="cms-search__count">
+                {{ labels.count|replace({'%count%': total}) }}
+            </p>
+
+            <ol class="cms-search__results">
+                {% for result in results %}
+                    <li class="cms-search__result">
+                        <a class="cms-search__result-link" href="{{ result.url }}">{{ result.title }}</a>
+                        {% if result.excerpt %}
+                            <p class="cms-search__excerpt">{{ result.excerpt }}</p>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ol>
+
+            {% if last_page > 1 %}
+                <nav class="cms-search__pages" aria-label="{{ labels.pages }}">
+                    {% if page > 1 %}
+                        <a class="cms-search__page-link" rel="prev" href="?q={{ query|url_encode }}&amp;page={{ page - 1 }}">
+                            {{ labels.previous }}
+                        </a>
+                    {% endif %}
+
+                    <span class="cms-search__page-count">
+                        {{ labels.page_of|replace({'%page%': page, '%last%': last_page}) }}
+                    </span>
+
+                    {% if page < last_page %}
+                        <a class="cms-search__page-link" rel="next" href="?q={{ query|url_encode }}&amp;page={{ page + 1 }}">
+                            {{ labels.next }}
+                        </a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        {% endif %}
+    </section>
+{% endblock %}

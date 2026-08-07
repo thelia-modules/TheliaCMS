@@ -42,6 +42,7 @@ use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Partial\PartialFragmentRenderer;
 use TheliaCMS\Partial\PartialFragmentRendererInterface;
+use TheliaCMS\Search\Tnt\CmsPageIndex;
 use TheliaCMS\Security\CmsAdminResourcesCompiler;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Seo\CmsPageHreflangListener;
@@ -250,6 +251,9 @@ class TheliaCMS extends BaseModule
                 __DIR__.'/Partial/PartialProp.php',
                 // Registered below, guarded: it implements a SEOne interface.
                 __DIR__.'/Seo/*',
+                // Same, for TntSearch: the class extends one of its own, so
+                // reflecting it on a site without the module is a fatal error.
+                __DIR__.'/Search/Tnt/*',
             ])
             ->autowire(true)
             ->autoconfigure(true);
@@ -279,6 +283,15 @@ class TheliaCMS extends BaseModule
             $servicesConfigurator->set(CmsPageHreflangListener::class)
                 ->autowire(true)
                 ->autoconfigure(true);
+        }
+
+        // TntSearch is the other soft dependency. Its compiler pass collects
+        // the `tntsearch.index` tag, so declaring the service is all it takes;
+        // without the module, the built-in FULLTEXT search answers alone.
+        if (class_exists(BaseIndex::class)) {
+            $servicesConfigurator->set(CmsPageIndex::class)
+                ->autowire(true)
+                ->tag('tntsearch.index');
         }
     }
 

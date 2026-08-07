@@ -89,6 +89,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   way out.
 - Answers age out on their own after the number of days their form states,
   either from `thelia_cms:forms:purge` or along with `maintenance:purge`.
+- Front-office search on `/recherche` and `/search`, over the text extracted at
+  publication. Pages in the bin, drafts, pages awaiting their date and pages
+  marked `noindex` stay out of the results, the query is stripped of the MySQL
+  boolean operators, and the page answers `X-Robots-Tag: noindex, follow`. A
+  theme overrides it with `cms-search.html.twig`; a site running TntSearch gets
+  a `CmsPageIndex` over the same rows.
+- The maintenance page shipped by the module is now written in the language the
+  visitor is reading the site in.
 - Scripts and measurement screen: third-party snippets, each with a place in the
   document, the consent vendor it waits for, a note and an on/off switch. A
   snippet naming a vendor is written into the page inert and started only once
