@@ -386,5 +386,39 @@
         <behavior name="timestampable"/>
     </table>
 
+    <!--
+        Third-party snippets: the measurement tags, the chat widget, the ad
+        pixel. They live here rather than in a page so that they are the same on
+        every page, and so that removing one is a click instead of an edit of
+        the theme.
+
+        `consent_category` is the Axeptio vendor whose approval the snippet
+        waits for. A snippet that carries one is written to the page inert, as
+        `type="text/plain"`, and only started once the visitor has agreed: a tag
+        loaded first and asked afterwards has already read the browser.
+
+        The column is named `placement`, not `position`: everywhere else in
+        Thelia a `position` column is a sort order, and this one is a place in
+        the document.
+    -->
+    <table name="cms_script" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="title" required="true" size="100" type="VARCHAR"/>
+        <column defaultValue="head" name="placement" required="true" size="20" type="VARCHAR"/>
+        <column name="consent_category" size="50" type="VARCHAR"/>
+        <column defaultValue="0" name="active" required="true" type="TINYINT" size="4"/>
+        <column name="content" type="CLOB"/>
+        <column name="note" size="500" type="VARCHAR"/>
+        <column name="created_by" type="INTEGER"/>
+        <column name="updated_by" type="INTEGER"/>
+
+        <index name="idx_cms_script_active_placement">
+            <index-column name="active"/>
+            <index-column name="placement"/>
+        </index>
+
+        <behavior name="timestampable"/>
+    </table>
+
     <external-schema filename="local/config/schema.xml" referenceOnly="true"/>
 </database>

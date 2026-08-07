@@ -280,6 +280,29 @@ CREATE TABLE `cms_form_submission`
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
+-- cms_script
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_script`;
+
+CREATE TABLE `cms_script`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `title` VARCHAR(100) NOT NULL,
+    `placement` VARCHAR(20) DEFAULT 'head' NOT NULL,
+    `consent_category` VARCHAR(50),
+    `active` TINYINT(4) DEFAULT 0 NOT NULL,
+    `content` LONGTEXT,
+    `note` VARCHAR(500),
+    `created_by` INTEGER,
+    `updated_by` INTEGER,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_cms_script_active_placement` (`active`, `placement`)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
 -- cms_page_i18n
 -- ---------------------------------------------------------------------
 
