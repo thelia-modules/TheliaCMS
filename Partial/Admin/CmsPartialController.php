@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Partial\Admin;
 
+use Propel\Runtime\ActiveQuery\Criteria;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,6 +22,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Thelia\Model\FolderQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
+use TheliaCMS\Model\CmsBlockQuery;
 use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Partial\MissingPartialPropException;
 use TheliaCMS\Partial\PartialRenderer;
@@ -112,6 +114,30 @@ final readonly class CmsPartialController
                 return ['id' => (int) $menu->getId(), 'name' => '' === $title ? (string) $menu->getCode() : $title];
             },
             iterator_to_array($menus, false),
+        ));
+    }
+
+    /**
+     * Reusable blocks an editor may drop into a page.
+     */
+    #[Route('/admin/cms/partials/sources/blocks', name: 'admin.cms.partials.sources.blocks', methods: ['GET'])]
+    public function blocks(Request $request): Response
+    {
+        $locale = $request->getLocale();
+        $blocks = CmsBlockQuery::create()
+            ->filterByDeletedAt(null, Criteria::ISNULL)
+            ->orderByCode()
+            ->find();
+
+        return new JsonResponse(array_map(
+            static function ($block) use ($locale): array {
+                $block->setLocale($locale);
+
+                $title = trim((string) $block->getTitle());
+
+                return ['id' => (int) $block->getId(), 'name' => '' === $title ? (string) $block->getCode() : $title];
+            },
+            iterator_to_array($blocks, false),
         ));
     }
 

@@ -1,0 +1,81 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Reusable blocks'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-blocks-list{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Reusable blocks'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            {% if may_write %}
+                <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.blocks.create', { edit_language_id: edit_language_id }) }}">
+                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                    {{ 'New block'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
+        {% endblock %}
+    {% endembed %}
+
+    {% if blocks is empty %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">
+                    {{ 'No reusable block yet. A block is a piece of content you write once and place on as many pages as you like: a call to action, a set of reassurance items, an opening times panel.'|trans({}, 'theliacms') }}
+                </p>
+                {% if may_write %}
+                    <a class="btn btn-primary" href="{{ path('admin.cms.blocks.create', { edit_language_id: edit_language_id }) }}">{{ 'Create the first block'|trans({}, 'theliacms') }}</a>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'Name'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'Code'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'Status'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'Used on'|trans({}, 'theliacms') }}</th>
+                            <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in blocks %}
+                            {% set block = row.block %}
+                            <tr data-testid="cms-block-row-{{ block.id }}">
+                                <td>
+                                    <a href="{{ path('admin.cms.blocks.builder', { id: block.id, edit_language_id: edit_language_id }) }}">
+                                        {{ block.title|default('#' ~ block.id) }}
+                                    </a>
+                                </td>
+                                <td><code>{{ block.code }}</code></td>
+                                <td><span class="badge {{ row.status.badgeClass }}">{{ row.status.label|trans({}, 'theliacms') }}</span></td>
+                                <td>
+                                    {% if row.usages > 0 %}
+                                        {{ '%count% page(s)'|trans({'%count%': row.usages}, 'theliacms') }}
+                                    {% else %}
+                                        <span class="text-muted">{{ 'Not used yet'|trans({}, 'theliacms') }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.blocks.builder', { id: block.id, edit_language_id: edit_language_id }) }}">
+                                            {{ 'Edit content'|trans({}, 'theliacms') }}
+                                        </a>
+                                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.blocks.edit', { id: block.id, edit_language_id: edit_language_id }) }}">
+                                            {{ 'Settings'|trans({}, 'theliacms') }}
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="text-muted small mt-3 mb-0">
+            {{ 'Editing a block changes every page it appears on, as soon as you publish it.'|trans({}, 'theliacms') }}
+        </p>
+    {% endif %}
+{% endblock %}

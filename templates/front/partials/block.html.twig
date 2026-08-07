@@ -1,0 +1,15 @@
+{#
+    A reusable block, as the module renders it when the theme ships no
+    `cms/partials/block.html.twig` of its own.
+
+    The markup was produced by the editor and went through the publish pipeline
+    (normaliser, sanitiser, image rewriter) before it was stored, so it is
+    printed as it stands. Its stylesheet travels with it: the block can be
+    dropped into a page whose own CSS knows nothing about it.
+#}
+{% if html %}
+    <div class="cms-block">
+        {% if css %}<style>{{ css|raw }}</style>{% endif %}
+        {{ html|raw }}
+    </div>
+{% endif %}

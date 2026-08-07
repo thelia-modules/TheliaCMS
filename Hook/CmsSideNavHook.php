@@ -71,6 +71,9 @@ class CmsSideNavHook extends BaseHook
         // the *active* template, so a namespaced name is the reliable form.
         $event->add($this->twig->render('@TheliaCMSModule/backOffice/default-twig/side-nav.html.twig', [
             'pages_url' => $this->urls->generate('admin.cms.pages.list'),
+            // Reusable blocks belong to the page resource: whoever may edit a
+            // page may edit what pages share.
+            'blocks_url' => $this->urls->generate('admin.cms.blocks.list'),
             'menus_url' => $maySeeMenus ? $this->urls->generate('admin.cms.menus.list') : null,
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
             'settings_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.edit') : null,
@@ -81,6 +84,7 @@ class CmsSideNavHook extends BaseHook
             'is_first' => $this->settings->isShowcase(),
             'section_label' => $this->trans('Site', [], TheliaCMS::DOMAIN_NAME),
             'pages_label' => $this->trans('Pages', [], TheliaCMS::DOMAIN_NAME),
+            'blocks_label' => $this->trans('Blocks', [], TheliaCMS::DOMAIN_NAME),
             'menus_label' => $this->trans('Menus', [], TheliaCMS::DOMAIN_NAME),
             'media_label' => $this->trans('Media', [], TheliaCMS::DOMAIN_NAME),
             'settings_label' => $this->trans('Settings', [], TheliaCMS::DOMAIN_NAME),

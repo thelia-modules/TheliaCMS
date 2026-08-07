@@ -151,6 +151,55 @@ CREATE TABLE `cms_menu_item`
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
+-- cms_block
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_block`;
+
+CREATE TABLE `cms_block`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(50) NOT NULL,
+    `deleted_at` TIMESTAMP NULL,
+    `created_by` INTEGER,
+    `updated_by` INTEGER,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_block_code` (`code`),
+    INDEX `idx_cms_block_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- cms_block_content
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_block_content`;
+
+CREATE TABLE `cms_block_content`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `block_id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) NOT NULL,
+    `draft_project_data` LONGTEXT,
+    `draft_html` LONGTEXT,
+    `draft_css` LONGTEXT,
+    `published_html` LONGTEXT,
+    `published_css` LONGTEXT,
+    `published_at` TIMESTAMP NULL,
+    `draft_updated_by` INTEGER,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_block_content_block_locale` (`block_id`, `locale`),
+    CONSTRAINT `fk_cms_block_content_block`
+        FOREIGN KEY (`block_id`)
+        REFERENCES `cms_block` (`id`)
+        ON UPDATE RESTRICT
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
 -- cms_page_i18n
 -- ---------------------------------------------------------------------
 
@@ -210,6 +259,24 @@ CREATE TABLE `cms_menu_item_i18n`
     CONSTRAINT `cms_menu_item_i18n_fk_ea832f`
         FOREIGN KEY (`id`)
         REFERENCES `cms_menu_item` (`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- cms_block_i18n
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_block_i18n`;
+
+CREATE TABLE `cms_block_i18n`
+(
+    `id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
+    `title` VARCHAR(255),
+    PRIMARY KEY (`id`,`locale`),
+    CONSTRAINT `cms_block_i18n_fk_16ce41`
+        FOREIGN KEY (`id`)
+        REFERENCES `cms_block` (`id`)
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

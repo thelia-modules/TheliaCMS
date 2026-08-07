@@ -72,6 +72,22 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
     }
 
     /**
+     * Changes whenever the bundled editor does.
+     *
+     * `module_asset()` returns a stable URL with nothing in it to tell one
+     * build from the next, so a browser holding the previous megabyte of
+     * JavaScript keeps running it after the module is updated — and the bug
+     * that update fixed stays in front of the administrator until they clear
+     * their cache.
+     */
+    public function editorVersion(): string
+    {
+        $built = __DIR__.'/../templates/backOffice/default-twig/assets/page-builder/editor.js';
+
+        return substr(hash('xxh3', (string) @filemtime($built)), 0, 12);
+    }
+
+    /**
      * Canvas widths the editor previews, taken from the theme breakpoints.
      *
      * GrapesJS writes the styles of a device into a `max-width` media query,

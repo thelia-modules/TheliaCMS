@@ -1,0 +1,72 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Edit content'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-block-builder{% endblock %}
+
+{% block head_extra %}
+    <link rel="stylesheet" href="{{ module_asset('TheliaCMS', 'assets/page-builder/editor.css') }}?v={{ editor_version }}">
+{% endblock %}
+
+{% block scripts_extra %}
+    <script src="{{ module_asset('TheliaCMS', 'assets/page-builder/editor.js') }}?v={{ editor_version }}" defer></script>
+{% endblock %}
+
+{% block body %}
+    <div class="cms-builder">
+        {{ form_start(form, { attr: { class: 'cms-builder__form' } }) }}
+            <header class="cms-builder__bar">
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="{{ path('admin.cms.blocks.edit', { id: block.id, edit_language_id: edit_language_id }) }}">
+                    {{ 'Back to settings'|trans({}, 'theliacms') }}
+                </a>
+
+                <p class="cms-builder__title">{{ block.title|default('')|trim ?: block.code }}</p>
+                <span class="badge {{ status.badgeClass }}">{{ status.label|trans({}, 'theliacms') }}</span>
+
+                {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
+
+                <div class="cms-builder__actions">
+                    <button type="submit" name="save" value="draft" class="btn btn-sm btn-primary">
+                        {{ 'Save draft'|trans({}, 'theliacms') }}
+                    </button>
+                    <button type="submit" name="save" value="publish" class="btn btn-sm btn-success"
+                            title="{{ 'Publishing a block updates every page it appears on.'|trans({}, 'theliacms') }}">
+                        {{ 'Publish'|trans({}, 'theliacms') }}
+                    </button>
+                </div>
+            </header>
+
+            {% for type, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ type }} alert-dismissible fade show m-2 mb-0" role="alert" data-testid="cms-builder-flash-{{ type }}">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ 'Close'|trans({}, 'theliacms') }}"></button>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+
+            {{ form_widget(form.projectData) }}
+            {{ form_widget(form.html) }}
+            {{ form_widget(form.css) }}
+
+            <div class="cms-builder__stage">
+                {# No `partials` value here: a reusable block holds no dynamic
+                   block. Resolving one would mean rendering blocks inside
+                   blocks, and a block containing itself would never stop. #}
+                {% component PageBuilder with {
+                    form: form,
+                    controller: 'cms-page-builder',
+                    context: 'cms-block-' ~ block.id,
+                    options: builder_options,
+                    'data-cms-page-builder-locale-value': builder_locale,
+                    'data-cms-page-builder-allow-custom-code-value': allow_custom_code ? 'true' : 'false',
+                    'data-cms-page-builder-empty-title-value': 'This block has no content yet'|trans({}, 'theliacms'),
+                    'data-cms-page-builder-empty-hint-value': 'Drag a block from the left to start. What you build here appears on every page using this block.'|trans({}, 'theliacms'),
+                    'data-cms-page-builder-panel-hint-value': 'Select a block in the page to change its text, its spacing and its colours here.'|trans({}, 'theliacms'),
+                } %}
+                    {% block content %}{{ initial_html|raw }}{% endblock %}
+                {% endcomponent %}
+            </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

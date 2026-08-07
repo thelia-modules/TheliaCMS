@@ -1,0 +1,93 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% set page_title = block is null ? 'New block'|trans({}, 'theliacms') : block.title|default('#' ~ block.id) %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block body_testid %}cms-block-edit{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: page_title } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.blocks.list', { edit_language_id: edit_language_id }) }}">
+                {{ 'Back to blocks'|trans({}, 'theliacms') }}
+            </a>
+            {% if block is not null %}
+                <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.blocks.builder', { id: block.id, edit_language_id: edit_language_id }) }}">
+                    {{ 'Edit content'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
+        {% endblock %}
+    {% endembed %}
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-body">
+                    {{ form_start(block_form) }}
+                        {{ form_row(block_form.title) }}
+                        {{ form_row(block_form.code) }}
+
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <button type="submit" class="btn btn-primary" {{ may_write ? '' : 'disabled' }}>
+                                {{ 'Save'|trans({}, 'theliacms') }}
+                            </button>
+
+                            {% if block is not null and may_write %}
+                                <form method="post"
+                                      action="{{ path('admin.cms.blocks.delete', { id: block.id, edit_language_id: edit_language_id }) }}"
+                                      onsubmit="return confirm('{{ 'Delete this block?'|trans({}, 'theliacms')|e('js') }}')">
+                                    <button class="btn btn-outline-danger" type="submit">
+                                        <i class="bi bi-trash3 me-1" aria-hidden="true"></i>{{ 'Delete'|trans({}, 'theliacms') }}
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    {{ form_end(block_form) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            {% if block is not null %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h2 class="h6">{{ 'Status'|trans({}, 'theliacms') }}</h2>
+                        <p class="mb-0">
+                            <span class="badge {{ status.badgeClass }}">{{ status.label|trans({}, 'theliacms') }}</span>
+                            <span class="text-muted ms-2">{{ 'in %language%'|trans({'%language%': edit_locale}, 'theliacms') }}</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="h6">{{ 'Used on'|trans({}, 'theliacms') }}</h2>
+
+                        {% if usages is empty %}
+                            <p class="text-muted mb-0">{{ 'This block is not on any page yet. Add it to a page from the editor, under Live content.'|trans({}, 'theliacms') }}</p>
+                        {% else %}
+                            <ul class="list-unstyled mb-0">
+                                {% for usage in usages %}
+                                    <li class="mb-1">
+                                        <a href="{{ path('admin.cms.pages.edit', { id: usage.page.id, edit_language_id: edit_language_id }) }}">
+                                            {{ usage.page.setLocale(edit_locale).title|default('#' ~ usage.page.id) }}
+                                        </a>
+                                        <span class="text-muted small">{{ usage.locales|join(', ') }}</span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="card">
+                    <div class="card-body">
+                        <p class="text-muted mb-0">
+                            {{ 'Name the block, then lay out its content. You place it on a page from the editor, under Live content.'|trans({}, 'theliacms') }}
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
