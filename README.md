@@ -566,6 +566,10 @@ so the content of the shop is left alone. The exception is the search: InnoDB
 only adds a row to a FULLTEXT index when the transaction writing it commits, so
 those tests commit and clean up after themselves.
 
+Accessibility is checked separately, with axe-core driving a browser against a
+running shop. `Tests/Accessibility/README.md` says how to run it and what the
+last run found.
+
 ## Page builder assets
 
 The editor is bundled by the module and served with `module_asset()` on the
