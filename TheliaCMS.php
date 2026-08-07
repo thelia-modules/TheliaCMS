@@ -47,6 +47,9 @@ use TheliaCMS\Security\CmsAdminResourcesCompiler;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Seo\CmsPageHreflangListener;
 use TheliaCMS\Seo\CmsPageSeoElement;
+// The class CmsPageIndex extends. Importing it costs nothing when TntSearch is
+// absent, and without the import the guard below would name TheliaCMS\BaseIndex.
+use TntSearch\Index\BaseIndex;
 
 class TheliaCMS extends BaseModule
 {
