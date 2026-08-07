@@ -5,7 +5,11 @@ All notable changes to this module are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0-alpha.1] - 2026-08-07
+
+First tagged version. The database schema has been stable since 0.6.0, and this
+release closes the last known defects found by reading the code and by scanning
+the published pages.
 
 ### Added
 
@@ -148,6 +152,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - A printable guide of the module in French, written for whoever runs the site
   rather than for a developer, with a shot of every screen
   (`docs/guide/thelia-cms-guide-webmaster.pdf`).
-- Unit test suite runnable without a database or an installed shop.
+- Unit test suite runnable without a database or an installed shop, an
+  integration suite over the export and import round trip, the search index, the
+  sitemap, the dashboard and the breadcrumb, and an axe-core scan of the pages a
+  visitor reads.
 
-[Unreleased]: https://github.com/thelia-modules/TheliaCMS/commits/main
+### Fixed
+
+- The TntSearch index was never registered: the guard around it named a class in
+  the module's own namespace, so it was false on every site.
+- The breadcrumb of a page filed under a draft one offered a link to that page,
+  which answers 404, both to the reader and in the `BreadcrumbList`.
+
+[1.0.0-alpha.1]: https://github.com/thelia-modules/TheliaCMS/releases/tag/1.0.0-alpha.1

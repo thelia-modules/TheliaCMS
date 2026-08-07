@@ -3,9 +3,9 @@
 A CMS for Thelia 3: a tree of pages, edited in a visual page builder and
 published as plain HTML and CSS. A published page ships no builder JavaScript.
 
-> **Alpha.** Everything in [Scope](#scope) works and is used on a real site; no
-> version is tagged yet, and the database schema may still change between two
-> commits.
+> **Alpha.** Everything in [Scope](#scope) works and is used on a real site. The
+> database schema has been stable since 0.6.0, and the back-office screens are
+> where changes are still expected before 1.0.
 
 ## Compatibility
 
@@ -18,13 +18,16 @@ published as plain HTML and CSS. A published page ships no builder JavaScript.
 
 ## Installation
 
-No version is tagged yet, so install the development branch:
+The released versions are alpha, which Composer will not pick on its own, so ask
+for them:
 
 ```bash
-composer require thelia/cms-module:dev-main
+composer require thelia/cms-module:^1.0@alpha
 php Thelia module:activate TheliaCMS
 php Thelia cache:clear
 ```
+
+`dev-main` works too, and is what to use to follow the branch.
 
 Composer pulls in the page builder bundle and TheliaLibrary, and registers the
 bundle through Symfony Flex.
