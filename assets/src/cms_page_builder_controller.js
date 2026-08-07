@@ -1,6 +1,7 @@
 import PageBuilderController from "@page-builder/controllers/page_builder_controller.js";
 import partialBlocks from "./plugins/partialBlocks.js";
 import catalogBlocks from "./plugins/catalogBlocks.js";
+import headingLevels from "./plugins/headingLevels.js";
 
 /**
  * Thelia flavour of the page builder controller.
@@ -121,6 +122,7 @@ export default class extends PageBuilderController {
     configurePlugins() {
         this.pluginManager.registerPlugin("cms:partials", partialBlocks);
         this.pluginManager.registerPlugin("cms:catalog", catalogBlocks);
+        this.pluginManager.registerPlugin("cms:heading-levels", headingLevels);
 
         const plugins = [
             "pb:init-categories",
@@ -128,6 +130,8 @@ export default class extends PageBuilderController {
             "pb:section",
             "grapesjs:blocks-basic",
             "grapesjs:preset-webpage",
+            // After the preset: it rewrites blocks the preset has just added.
+            "cms:heading-levels",
             "pb:list",
             "pb:divider",
             { name: "pb:icon", options: { icons: this.iconsValue } },
