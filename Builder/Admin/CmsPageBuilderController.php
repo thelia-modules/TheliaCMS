@@ -38,6 +38,7 @@ use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\CmsPageAdminRepository;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\EditLanguage;
+use TheliaCMS\Page\Admin\EmptyPageContentException;
 use TheliaCMS\Preview\PreviewLink;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -173,7 +174,11 @@ final readonly class CmsPageBuilderController
             return;
         }
 
-        $this->writer->publish($page, $lang->getLocale());
+        try {
+            $this->writer->publish($page, $lang->getLocale());
+        } catch (EmptyPageContentException) {
+            $this->flash($request, 'danger', $this->translator->trans('This page has no content yet: add at least one block in the editor before publishing it.', [], TheliaCMS::DOMAIN_NAME));
+        }
     }
 
     private function draftHtmlOf(CmsPage $page, string $locale): ?string

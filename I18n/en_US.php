@@ -476,6 +476,7 @@ return [
     'This is where the measurement tags, the chat widget and the ad pixels go, instead of into the theme.' => 'This is where the measurement tags, the chat widget and the ad pixels go, instead of into the theme.',
     'This menu has no entry yet. Add the first one with the form beside.' => 'This menu has no entry yet. Add the first one with the form beside.',
     'This page has no content yet' => 'This page has no content yet',
+    'This page has no content yet: add at least one block in the editor before publishing it.' => 'This page has no content yet: add at least one block in the editor before publishing it.',
     'This site' => 'This site',
     'This template holds no page.' => 'This template holds no page.',
     'This web address is not allowed.' => 'This web address is not allowed.',

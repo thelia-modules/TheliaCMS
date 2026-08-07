@@ -95,7 +95,11 @@ final readonly class CmsPageAdminController
         $this->denyUnless(AccessManager::UPDATE);
         $lang = $this->editLang($request);
 
-        $this->writer->publish($this->livePageOrFail($id), $lang->getLocale());
+        try {
+            $this->writer->publish($this->livePageOrFail($id), $lang->getLocale());
+        } catch (EmptyPageContentException) {
+            $this->flash($request, 'danger', $this->translate('This page has no content yet: add at least one block in the editor before publishing it.'));
+        }
 
         return $this->backToEdit($id, $lang);
     }
@@ -308,6 +312,18 @@ final readonly class CmsPageAdminController
     private function editLang(Request $request): Lang
     {
         return $this->languages->resolve($request);
+    }
+
+    private function flash(Request $request, string $type, string $message): void
+    {
+        if ($request->hasSession()) {
+            $request->getSession()->getFlashBag()->add($type, $message);
+        }
+    }
+
+    private function translate(string $message): string
+    {
+        return $this->translator->trans($message, [], TheliaCMS::DOMAIN_NAME);
     }
 
     private function backToList(Request $request): RedirectResponse

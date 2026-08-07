@@ -21,6 +21,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\LangQuery;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Builder\EmptyContentChecker;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
 use TheliaCMS\Builder\PublishedContentSanitizer;
@@ -56,6 +57,7 @@ final readonly class CmsPageWriter
         private CmsActivityLog $activityLog,
         private PageContentNormalizer $normalizer,
         private PublishedContentSanitizer $sanitizer,
+        private EmptyContentChecker $emptiness,
         private ImageRewriter $images,
         private SearchTextExtractor $searchText,
         // Menus hold the address and the title of the pages they point at, and
@@ -134,6 +136,8 @@ final readonly class CmsPageWriter
     /**
      * Promotes the draft to the published snapshot and takes a revision, in one
      * transaction: a half-published page would be served to visitors.
+     *
+     * @throws EmptyPageContentException when the draft would put nothing online
      */
     public function publish(CmsPage $page, string $locale): void
     {
@@ -148,6 +152,14 @@ final readonly class CmsPageWriter
                 $this->sanitizer->html($this->normalizer->html($content->getDraftHtml()), $withCustomCode),
             );
             $css = $this->sanitizer->css($this->normalizer->css($content->getDraftCss()));
+
+            // Refused rather than stored: the column would be null, the front
+            // would answer 404, and the back office would still read
+            // "published". Checked on the filtered HTML, which is what a
+            // visitor would have been served.
+            if ($this->emptiness->isEmpty($html)) {
+                throw EmptyPageContentException::for((int) $page->getId(), $locale);
+            }
 
             $content->setPublishedHtml($html)
                 ->setPublishedCss($css)

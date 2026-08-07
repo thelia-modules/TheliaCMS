@@ -476,6 +476,7 @@ return [
     'This is where the measurement tags, the chat widget and the ad pixels go, instead of into the theme.' => 'C’est ici que se placent les balises de mesure, le module de discussion et les pixels publicitaires, plutôt que dans le thème.',
     'This menu has no entry yet. Add the first one with the form beside.' => 'Ce menu n’a encore aucune entrée. Ajoutez la première avec le formulaire à côté.',
     'This page has no content yet' => 'Cette page n\'a pas encore de contenu',
+    'This page has no content yet: add at least one block in the editor before publishing it.' => 'Cette page n’a pas encore de contenu : ajoutez au moins un bloc dans l’éditeur avant de la publier.',
     'This site' => 'Ce site',
     'This template holds no page.' => 'Ce modèle ne contient aucune page.',
     'This web address is not allowed.' => 'Cette adresse web n’est pas autorisée.',
