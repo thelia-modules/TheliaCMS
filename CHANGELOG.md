@@ -5,6 +5,21 @@ All notable changes to this module are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Publishing a page that has nothing on it is refused, and said so on both
+  screens that publish. It used to be accepted: the snapshot was stored empty,
+  the back office read "published", and the visitor got a 404.
+- The page served on an address that does not exist now names itself. On an
+  address that used to hold a page, the breadcrumb, its `BreadcrumbList` and the
+  title kept describing the page that was asked for instead of the one shown.
+- The "Text section" block of the webpage preset starts on a level 2 heading.
+  Dropped under the title of a page, its level 1 competed with it, and the check
+  run at publication reported a problem the author had not caused. The level is
+  still changeable from the Tag setting of the heading.
+
 ## [1.0.0-alpha.1] - 2026-08-07
 
 First tagged version. The database schema has been stable since 0.6.0, and this
