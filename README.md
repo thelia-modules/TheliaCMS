@@ -203,6 +203,41 @@ of it, which recognises the same sender twice without recording who visited.
 A sent form is pushed to the data layer as `generate_lead`, carrying the code of
 the form and nothing else, and only when the person agreed to be contacted.
 
+## Scripts and measurement
+
+**CMS > Scripts and measurement** holds the third-party snippets of the site: the
+measurement tags, the chat widget, whatever the agency was asked to add. They
+live here rather than in the theme, so they are the same on every page and
+removing one is a click.
+
+Each snippet says where it goes and which vendor of your consent platform it
+waits for. A snippet naming a vendor is written into the page inside a
+`<template>`, which the browser reads but does not run: no script executes, no
+image is fetched, no iframe connects. It comes out once the visitor has agreed
+to that vendor. Marking only the script tags as `text/plain` would leave the
+tracking pixel beside them free to fire, and that is the tag that needed consent
+most.
+
+A snippet with no vendor loads for everyone, straight away. That amounts to
+saying the site cannot run without it, so the screen labels it that way.
+
+The consent layer is Axeptio, set up on the same screen with your project
+identifier. It goes at the very top of the head, before anything else, and
+Google Consent Mode is told first that nothing is allowed: `ad_storage`,
+`ad_user_data`, `ad_personalization` and `analytics_storage` all denied, with a
+short wait so a returning visitor's earlier answer arrives before the tags do.
+Since 15 June 2026 `ad_storage` decides whether a Google Ads conversion is
+counted at all, so a site that never emits these defaults and never updates them
+measures nothing rather than measuring without consent. What each vendor may
+turn on is a JSON map, which defaults to the two Google products.
+
+The screen sits behind the custom-code permission rather than the settings one:
+whoever can paste a script tag onto every page can do anything a visitor's
+browser can do.
+
+With no consent platform set up, a snippet that waits for a vendor never loads.
+The screen says so rather than letting you find out from the traffic.
+
 ## Configuration
 
 Settings live in `module_config` and are read through
@@ -219,6 +254,9 @@ Most of them are edited under **CMS > Settings**.
 | `maintenance_allowlist` | empty | IP addresses and CIDR ranges that keep seeing the site while it is closed. |
 | `maintenance_page_id` | none | CMS page shown while the site is closed. |
 | `trash_retention_days` | `30` | Days a deleted page stays in the bin before it is deleted for good. `0` keeps it until somebody deletes it by hand. |
+| `axeptio_client_id` | none | Axeptio project. Without it no banner shows, and every snippet waiting for consent stays off. |
+| `axeptio_cookies_version` | none | Which Axeptio configuration to load, when a project has several. |
+| `axeptio_consent_map` | the two Google products | JSON: vendor to the Consent Mode signals it grants. |
 | `cache_ttl` | `3600` | Seconds a resolved menu is cached for. It is also dropped on every change that affects it. |
 | `heading_check_mode` | `warn` | `warn` reports heading problems and publishes anyway; `block` refuses to publish. |
 | `builder_stylesheet` | none | Public path of the stylesheet the editor canvas loads. Defaults to the asset mapper's `styles/app.css`. |

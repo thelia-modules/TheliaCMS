@@ -89,6 +89,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   way out.
 - Answers age out on their own after the number of days their form states,
   either from `thelia_cms:forms:purge` or along with `maintenance:purge`.
+- Scripts and measurement screen: third-party snippets, each with a place in the
+  document, the consent vendor it waits for, a note and an on/off switch. A
+  snippet naming a vendor is written into the page inert and started only once
+  the visitor has agreed to that vendor.
+- Axeptio and Google Consent Mode v2: the defaults are emitted denied at the top
+  of the head before any tag runs, the SDK loads next, and what the visitor
+  agrees to both updates the Google signals and releases the snippets of that
+  vendor.
 - A bin that empties itself: pages deleted more than `trash_retention_days` ago
   (30 by default) go for good with their content, their revisions, their search
   entries and their addresses, either from `thelia_cms:pages:purge-trash` or
