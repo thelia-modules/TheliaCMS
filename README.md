@@ -127,6 +127,69 @@ the language being read is **left out of the menu** in that language, and listed
 in the back office with the reason. A heading that still has usable children
 stays as a heading, rather than let its children move up a level.
 
+## Forms
+
+Forms live under **Site > Forms**. A form has a code, the way a menu does, and
+a page places it with the **Form** block from the editor. The page stores that
+reference and nothing more: the fields, the wording and the recipients are read
+when the page is served, so adding a field never means republishing the pages
+the form is on.
+
+A field is one of nine kinds: a single line of text, an email address, several
+lines, a drop-down list, a tick box, one choice among several, a phone number,
+a date, or an agreement to be contacted. Labels, help texts and the answers a
+list offers are written per language. A field with no label in a language is
+left out of the form in that language, and the back office says so: an input
+nobody can name cannot be filled in, and a screen reader announces nothing
+for it.
+
+The agreement field is never ticked in advance, and the answer stores the exact
+sentence the visitor read along with the moment they agreed. If the agreement is
+ever questioned, that is what has to be produced. In France, since 11 August
+2026, it is also what makes a phone number usable for a commercial call.
+
+Recipients are set here and nowhere else. A form that took its recipient from
+the page, or worse from the request, would be a mail relay with a nice
+interface.
+
+### What stops the robots
+
+Three checks, none of which asks anything of the visitor:
+
+- a field only a robot fills in;
+- a signed record of when the form was served, so a message sent in under three
+  seconds, or with a stamp this site never issued, goes nowhere;
+- a cap on how many messages one sender may get through, kept in the core
+  `form_firewall` table under `cms_form_<code>` and honouring the existing
+  `form_firewall_attempts` and `form_firewall_time_to_wait` settings. Only
+  accepted messages are counted: mistyping an address six times on a long form
+  should not lock somebody out for an hour.
+
+There is no captcha. A captcha sends the visitor to a third party and gets in
+the way of anyone using assistive technology, and on the volume a showcase site
+sees it catches less than the three checks above.
+
+### Answers
+
+**Site > Forms > Answers** lists what a form received, searchable by email
+address. From there an answer is exported as CSV or as JSON, or deleted. That is
+what answering a request to see or to erase personal data comes down to, and it
+takes a couple of minutes rather than an afternoon of SQL. The CSV keeps a
+column for a question that has since been removed from the form, and defuses any
+cell a spreadsheet would run as a formula.
+
+Each form states how long its answers are kept, 365 days by default. They are
+deleted on their own by `thelia_cms:forms:purge`, and by `maintenance:purge`
+along with the carts and the admin logs. Hooking onto the command a Thelia site
+already schedules is deliberate: a retention rule needing a cron entry of its
+own is one that half the sites never run.
+
+The address a message came from is never stored: what is kept is a keyed hash
+of it, which recognises the same sender twice without recording who visited.
+
+A sent form is pushed to the data layer as `generate_lead`, carrying the code of
+the form and nothing else, and only when the person agreed to be contacted.
+
 ## Configuration
 
 Settings live in `module_config` and are read through

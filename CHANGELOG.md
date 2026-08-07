@@ -70,6 +70,28 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - Editor messages shown as notices over the canvas: they dismiss themselves,
   can be closed by hand, and an error waits until it is.
 - A guide for writing a block, with two commented examples.
+- Forms built in the back office: nine kinds of field (single line, email,
+  several lines, drop-down list, tick box, one choice among several, phone,
+  date and an agreement to be contacted), each with its label, help text and
+  answers written per language. A field left untranslated is kept out of the
+  form in that language and reported in the back office.
+- Per form: who the answers are emailed to, a legal notice with a link to the
+  privacy policy page, the message shown after sending, an optional copy sent
+  back to the person who wrote, whether answers are stored, and how long.
+- The `cms-form` block places a form on any page, so adding a field never means
+  republishing the pages the form appears on.
+- Three checks before a message is accepted, none of which asks anything of the
+  visitor: a field only a robot fills in, a signed record of when the form was
+  served, and a cap on how many messages one sender may get through.
+- The answers screen: search by email address, export as CSV or JSON, and delete
+  one answer, which is what answering a request to see or to erase personal data
+  comes down to. A cell a spreadsheet would run as a formula is defused on the
+  way out.
+- Answers age out on their own after the number of days their form states,
+  either from `thelia_cms:forms:purge` or along with `maintenance:purge`.
+- A sent form is reported to the data layer as `generate_lead`, carrying the
+  code of the form and nothing else, and only when the person agreed to be
+  contacted.
 - Unit test suite runnable without a database or an installed shop.
 
 [Unreleased]: https://github.com/thelia-modules/TheliaCMS/commits/main
