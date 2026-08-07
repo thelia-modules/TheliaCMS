@@ -3,8 +3,9 @@
 A CMS for Thelia 3: a tree of pages, edited in a visual page builder and
 published as plain HTML and CSS. A published page ships no builder JavaScript.
 
-> **Alpha.** Pages, the builder, the media library and menus work; forms and the
-> front-office search are not there yet. See [Scope](#scope).
+> **Alpha.** Everything in [Scope](#scope) works and is used on a real site; no
+> version is tagged yet, and the database schema may still change between two
+> commits.
 
 ## Compatibility
 
@@ -338,6 +339,19 @@ browser can do.
 
 With no consent platform set up, a snippet that waits for a vendor never loads.
 The screen says so rather than letting you find out from the traffic.
+
+## Site icon
+
+A theme points its `<link rel="icon">` at `cms_site_icon()`, which serves the
+file uploaded in Configuration > Store when there is one, and returns nothing
+when there is not, so the theme falls back on its own. Changing the icon of a
+site becomes an upload in the back office rather than a file to replace in the
+theme.
+
+Thelia keeps that file outside the public directory and reads it through an
+admin-only route, so the module serves it on `/site-icon`, cached for a day. Only
+the extensions a browser accepts as an icon are served: the file name comes from
+a configuration row, and this path answers before any authentication.
 
 ## Configuration
 

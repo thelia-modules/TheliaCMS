@@ -41,6 +41,9 @@ final class CmsUrlService
     private const RESERVED_PREFIXES = [
         'admin', 'api', 'assets', 'cache', 'media', 'sitemap',
         'robots.txt', 'robots-txt',
+        // The icon of the site is served here, and the theme links to it from
+        // every page.
+        'site-icon',
         // The search results page answers on these, and the rewriting router
         // runs first: a page slugged "recherche" would shadow it.
         'recherche', 'search',

@@ -14,8 +14,10 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Twig;
 
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
+use TheliaCMS\Settings\SiteIcon;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 
@@ -30,6 +32,8 @@ final class CmsExtension extends AbstractExtension
     public function __construct(
         private readonly CmsMenuProvider $menus,
         private readonly AlternateUrls $alternates,
+        private readonly SiteIcon $icon,
+        private readonly UrlGeneratorInterface $urls,
     ) {
     }
 
@@ -38,6 +42,16 @@ final class CmsExtension extends AbstractExtension
         return [
             new TwigFunction('cms_menu', $this->menus->menu(...)),
             new TwigFunction('cms_page_alternates', $this->alternates->all(...)),
+            new TwigFunction('cms_site_icon', $this->siteIcon(...)),
         ];
+    }
+
+    /**
+     * The address of the icon uploaded in the store configuration, or null when
+     * there is none and the theme should fall back on its own.
+     */
+    public function siteIcon(): ?string
+    {
+        return $this->icon->exists() ? $this->urls->generate('cms.site_icon') : null;
     }
 }

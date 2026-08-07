@@ -50,6 +50,7 @@ final class CmsUrlServiceTest extends TestCase
         yield 'cache' => ['cache'];
         yield 'media' => ['media'];
         yield 'sitemap' => ['sitemap'];
+        yield 'site icon' => ['site-icon'];
         yield 'robots' => ['robots.txt'];
         yield 'profiler' => ['_profiler'];
         yield 'web debug toolbar' => ['_wdt'];

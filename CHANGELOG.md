@@ -138,6 +138,9 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   one. A page made from a template is a hidden draft and opens straight in the
   editor. A template holds the export document of its page, so it can be handed
   to another site as a file.
+- `cms_site_icon()` and the `/site-icon` route: a theme shows the icon uploaded
+  in Configuration > Store, which Thelia otherwise keeps out of reach of the
+  front office, and falls back on its own file when none is configured.
 - A page for putting a shared cache in front of the site (`docs/shared-cache.md`):
   the VCL that drops the session cookie on public addresses, without which no
   page is ever cacheable, the equivalent for Fastly and Cloudflare, and a purger
