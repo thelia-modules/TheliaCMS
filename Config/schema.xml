@@ -257,5 +257,134 @@
         <behavior name="timestampable"/>
     </table>
 
+    <!--
+        Forms are addressed by code like menus and reusable blocks, so a page
+        keeps pointing at the right form after it has been renamed.
+
+        `recipients` holds the addresses a submission is sent to. It is only
+        ever written from the back office: a form that took its recipient from
+        the page — or worse from the request — is an open mail relay.
+    -->
+    <table name="cms_form" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="code" required="true" size="50" type="VARCHAR"/>
+        <column defaultValue="1" name="active" required="true" type="TINYINT" size="4"/>
+        <column name="recipients" size="1024" type="VARCHAR"/>
+        <column defaultValue="1" name="store_submissions" required="true" type="TINYINT" size="4"/>
+        <!-- Days a submission is kept. 0 keeps them until someone deletes them. -->
+        <column defaultValue="365" name="retention_days" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="send_receipt" required="true" type="TINYINT" size="4"/>
+        <!--
+            The page the legal notice links to. No foreign key: the page may be
+            moved to the bin while the form stays, and a missing page renders as
+            no link rather than as a broken form.
+        -->
+        <column name="privacy_policy_page_id" type="INTEGER"/>
+        <!-- Whether a successful submission is reported to the measurement layer. -->
+        <column defaultValue="1" name="lead_event" required="true" type="TINYINT" size="4"/>
+        <column name="deleted_at" type="TIMESTAMP"/>
+        <column name="created_by" type="INTEGER"/>
+        <column name="updated_by" type="INTEGER"/>
+
+        <column name="title" size="255" type="VARCHAR"/>
+        <column name="description" type="LONGVARCHAR"/>
+        <column name="submit_label" size="80" type="VARCHAR"/>
+        <column name="success_message" type="LONGVARCHAR"/>
+        <column name="legal_notice" type="LONGVARCHAR"/>
+        <column name="receipt_subject" size="255" type="VARCHAR"/>
+        <column name="receipt_body" type="LONGVARCHAR"/>
+
+        <unique name="unq_cms_form_code">
+            <unique-column name="code"/>
+        </unique>
+
+        <index name="idx_cms_form_deleted_at">
+            <index-column name="deleted_at"/>
+        </index>
+
+        <behavior name="i18n">
+            <parameter name="i18n_columns"
+                       value="title, description, submit_label, success_message, legal_notice, receipt_subject, receipt_body"/>
+        </behavior>
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        One row per field of a form.
+
+        `options` carries what a field type needs and no text: the number of
+        rows of a textarea, the bounds of a date. The choices of a select or a
+        radio are i18n instead — they are written by locale like every other
+        piece of content, and a submission archives the label the visitor
+        actually read.
+    -->
+    <table name="cms_form_field" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="form_id" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="position" required="true" type="INTEGER"/>
+        <column defaultValue="text" name="type" required="true" size="20" type="VARCHAR"/>
+        <column name="name" required="true" size="50" type="VARCHAR"/>
+        <column defaultValue="0" name="required" required="true" type="TINYINT" size="4"/>
+        <column name="options" type="CLOB"/>
+
+        <column name="label" size="255" type="VARCHAR"/>
+        <column name="placeholder" size="255" type="VARCHAR"/>
+        <column name="help" type="LONGVARCHAR"/>
+        <column name="choices" type="LONGVARCHAR"/>
+
+        <foreign-key foreignTable="cms_form" name="fk_cms_form_field_form" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="form_id"/>
+        </foreign-key>
+
+        <unique name="unq_cms_form_field_form_name">
+            <unique-column name="form_id"/>
+            <unique-column name="name"/>
+        </unique>
+
+        <index name="idx_cms_form_field_form_position">
+            <index-column name="form_id"/>
+            <index-column name="position"/>
+        </index>
+
+        <behavior name="i18n">
+            <parameter name="i18n_columns" value="label, placeholder, help, choices"/>
+        </behavior>
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        What a visitor sent.
+
+        `email` is a column of its own rather than a key of the JSON payload:
+        answering a request to see or to erase personal data means finding every
+        submission of one person in seconds, and that is an index, not a scan
+        through a text column.
+
+        `ip_hash` is an HMAC, never an address: a bare SHA-256 of an IPv4 is
+        brute-forced in 2^32 tries.
+    -->
+    <table name="cms_form_submission" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="form_id" required="true" type="INTEGER"/>
+        <column name="locale" required="true" size="5" type="VARCHAR"/>
+        <column name="email" size="255" type="VARCHAR"/>
+        <column name="data" type="CLOB"/>
+        <column name="ip_hash" size="64" type="VARCHAR"/>
+
+        <foreign-key foreignTable="cms_form" name="fk_cms_form_submission_form" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="form_id"/>
+        </foreign-key>
+
+        <index name="idx_cms_form_submission_form_created">
+            <index-column name="form_id"/>
+            <index-column name="created_at"/>
+        </index>
+        <index name="idx_cms_form_submission_email">
+            <index-column name="email"/>
+        </index>
+
+        <behavior name="timestampable"/>
+    </table>
+
     <external-schema filename="local/config/schema.xml" referenceOnly="true"/>
 </database>

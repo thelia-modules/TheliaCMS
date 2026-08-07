@@ -200,6 +200,86 @@ CREATE TABLE `cms_block_content`
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
+-- cms_form
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_form`;
+
+CREATE TABLE `cms_form`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(50) NOT NULL,
+    `active` TINYINT(4) DEFAULT 1 NOT NULL,
+    `recipients` VARCHAR(1024),
+    `store_submissions` TINYINT(4) DEFAULT 1 NOT NULL,
+    `retention_days` INTEGER DEFAULT 365 NOT NULL,
+    `send_receipt` TINYINT(4) DEFAULT 0 NOT NULL,
+    `privacy_policy_page_id` INTEGER,
+    `lead_event` TINYINT(4) DEFAULT 1 NOT NULL,
+    `deleted_at` TIMESTAMP NULL,
+    `created_by` INTEGER,
+    `updated_by` INTEGER,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_form_code` (`code`),
+    INDEX `idx_cms_form_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- cms_form_field
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_form_field`;
+
+CREATE TABLE `cms_form_field`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `form_id` INTEGER NOT NULL,
+    `position` INTEGER DEFAULT 0 NOT NULL,
+    `type` VARCHAR(20) DEFAULT 'text' NOT NULL,
+    `name` VARCHAR(50) NOT NULL,
+    `required` TINYINT(4) DEFAULT 0 NOT NULL,
+    `options` LONGTEXT,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_form_field_form_name` (`form_id`, `name`),
+    INDEX `idx_cms_form_field_form_position` (`form_id`, `position`),
+    CONSTRAINT `fk_cms_form_field_form`
+        FOREIGN KEY (`form_id`)
+        REFERENCES `cms_form` (`id`)
+        ON UPDATE RESTRICT
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- cms_form_submission
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_form_submission`;
+
+CREATE TABLE `cms_form_submission`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `form_id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) NOT NULL,
+    `email` VARCHAR(255),
+    `data` LONGTEXT,
+    `ip_hash` VARCHAR(64),
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_cms_form_submission_form_created` (`form_id`, `created_at`),
+    INDEX `idx_cms_form_submission_email` (`email`),
+    CONSTRAINT `fk_cms_form_submission_form`
+        FOREIGN KEY (`form_id`)
+        REFERENCES `cms_form` (`id`)
+        ON UPDATE RESTRICT
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
 -- cms_page_i18n
 -- ---------------------------------------------------------------------
 
@@ -277,6 +357,51 @@ CREATE TABLE `cms_block_i18n`
     CONSTRAINT `cms_block_i18n_fk_16ce41`
         FOREIGN KEY (`id`)
         REFERENCES `cms_block` (`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- cms_form_i18n
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_form_i18n`;
+
+CREATE TABLE `cms_form_i18n`
+(
+    `id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
+    `title` VARCHAR(255),
+    `description` TEXT,
+    `submit_label` VARCHAR(80),
+    `success_message` TEXT,
+    `legal_notice` TEXT,
+    `receipt_subject` VARCHAR(255),
+    `receipt_body` TEXT,
+    PRIMARY KEY (`id`,`locale`),
+    CONSTRAINT `cms_form_i18n_fk_42eeb1`
+        FOREIGN KEY (`id`)
+        REFERENCES `cms_form` (`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- cms_form_field_i18n
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_form_field_i18n`;
+
+CREATE TABLE `cms_form_field_i18n`
+(
+    `id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
+    `label` VARCHAR(255),
+    `placeholder` VARCHAR(255),
+    `help` TEXT,
+    `choices` TEXT,
+    PRIMARY KEY (`id`,`locale`),
+    CONSTRAINT `cms_form_field_i18n_fk_0aecbb`
+        FOREIGN KEY (`id`)
+        REFERENCES `cms_form_field` (`id`)
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
