@@ -32,6 +32,11 @@ use TheliaCMS\Vitrine\NotFoundPageListener;
  * An address that used to hold a page keeps its id: what surrounds the page
  * being served is resolved from the request, so the page shown and everything
  * that describes it have to agree.
+ *
+ * What the listener undoes when a render fails is covered by reading its source
+ * instead (StandInPageListenerSymmetryTest): the renderer falls back to the
+ * template shipped with the module rather than failing, so no test driving the
+ * listener can reach that path.
  */
 final class NotFoundPageTest extends CmsIntegrationTestCase
 {
@@ -88,6 +93,35 @@ final class NotFoundPageTest extends CmsIntegrationTestCase
             (string) $notFoundPage->getId(),
             (string) $request->get(TheliaCMS::PAGE_VIEW.'_id'),
             'The page served is the 404 page, and the breadcrumb names the page that was asked for.',
+        );
+    }
+
+    /**
+     * The canonical URL, the hreflang tags and the language switcher all read
+     * the id from the query string rather than through `Request::get()`, so
+     * naming the page in the attributes alone leaves them describing the address
+     * that was asked for.
+     */
+    public function testWhatDescribesTheResponseReadsThePageServed(): void
+    {
+        $gone = $this->createPage('Page retirée');
+        $notFoundPage = $this->createPage('Page introuvable', html: '<h1>Cette page n’existe pas</h1>');
+        TheliaCMS::setConfigValue('404_page_id', (string) $notFoundPage->getId());
+
+        $request = Request::create('/page-retiree?'.TheliaCMS::PAGE_VIEW.'_id='.$gone->getId());
+        $request->attributes->set('_view', TheliaCMS::PAGE_VIEW);
+
+        $this->listener()->onKernelException($this->notFoundOn($request));
+
+        self::assertSame(
+            (int) $notFoundPage->getId(),
+            $request->query->getInt(TheliaCMS::PAGE_VIEW.'_id'),
+            'The canonical URL is built from the query string, so it would otherwise name the missing address.',
+        );
+        self::assertSame(
+            (int) $notFoundPage->getId(),
+            $request->attributes->getInt(TheliaCMS::STAND_IN_PAGE_ATTRIBUTE),
+            'Nothing tells the canonical listener the response is a stand-in.',
         );
     }
 

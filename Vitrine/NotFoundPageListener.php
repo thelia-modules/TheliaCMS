@@ -121,24 +121,36 @@ final readonly class NotFoundPageListener
      * is the 404 page while everything around it announces the page they asked
      * for. Request attributes win over the query string, which is where the
      * rewriting router leaves the id.
+     *
+     * The id is written to the query string as well, because the services that
+     * answer "which page is this" read that one explicitly rather than through
+     * `Request::get()` — the canonical URL, the hreflang tags and the language
+     * switcher all come from there.
+     *
+     * The marker is what tells them the response is a stand-in: on any other
+     * CMS page the address asked for and the page served are the same, and
+     * nothing should second-guess SEOne.
      */
     private function serveAs(Request $request, int $pageId): void
     {
         $request->attributes->set('_view', TheliaCMS::PAGE_VIEW);
         $request->attributes->set(self::PAGE_ID_PARAMETER, $pageId);
+        $request->attributes->set(TheliaCMS::STAND_IN_PAGE_ATTRIBUTE, $pageId);
+        $request->query->set(self::PAGE_ID_PARAMETER, (string) $pageId);
     }
 
-    /** @return array{view: string|null, id: mixed} */
+    /** @return array{view: string|null, id: mixed, queryId: mixed} */
     private function currentView(Request $request): array
     {
         return [
             'view' => $request->attributes->get('_view'),
             'id' => $request->attributes->get(self::PAGE_ID_PARAMETER),
+            'queryId' => $request->query->get(self::PAGE_ID_PARAMETER),
         ];
     }
 
     /**
-     * @param array{view: string|null, id: mixed} $previous
+     * @param array{view: string|null, id: mixed, queryId: mixed} $previous
      */
     private function restoreView(Request $request, array $previous): void
     {
@@ -147,5 +159,11 @@ final readonly class NotFoundPageListener
         foreach (['_view' => $previous['view'], self::PAGE_ID_PARAMETER => $previous['id']] as $key => $value) {
             null === $value ? $request->attributes->remove($key) : $request->attributes->set($key, $value);
         }
+
+        $request->attributes->remove(TheliaCMS::STAND_IN_PAGE_ATTRIBUTE);
+
+        null === $previous['queryId']
+            ? $request->query->remove(self::PAGE_ID_PARAMETER)
+            : $request->query->set(self::PAGE_ID_PARAMETER, $previous['queryId']);
     }
 }

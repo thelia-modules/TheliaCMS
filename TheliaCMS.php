@@ -47,6 +47,7 @@ use TheliaCMS\Security\CmsAdminResourcesCompiler;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Seo\CmsPageHreflangListener;
 use TheliaCMS\Seo\CmsPageSeoElement;
+use TheliaCMS\Seo\StandInPageCanonicalListener;
 // The class CmsPageIndex extends. Importing it costs nothing when TntSearch is
 // absent, and without the import the guard below would name TheliaCMS\BaseIndex.
 use TntSearch\Index\BaseIndex;
@@ -57,6 +58,15 @@ class TheliaCMS extends BaseModule
 
     /** Value written in `rewriting_url.view` for every CMS page URL. */
     public const string PAGE_VIEW = 'cmspage';
+
+    /**
+     * Request attribute holding the id of a page served in place of what the
+     * address designates — the page shown on an address that does not exist.
+     *
+     * Whatever describes a response reads the request, not the render, so this
+     * is how those readers are told the two do not agree.
+     */
+    public const string STAND_IN_PAGE_ATTRIBUTE = '_cms_stand_in_page_id';
 
     public function preActivation(?ConnectionInterface $con = null): bool
     {
@@ -296,6 +306,10 @@ class TheliaCMS extends BaseModule
                 ->autoconfigure(true);
 
             $servicesConfigurator->set(CmsPageHreflangListener::class)
+                ->autowire(true)
+                ->autoconfigure(true);
+
+            $servicesConfigurator->set(StandInPageCanonicalListener::class)
                 ->autowire(true)
                 ->autoconfigure(true);
         }
