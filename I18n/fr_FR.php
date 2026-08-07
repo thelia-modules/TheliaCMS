@@ -455,6 +455,7 @@ return [
     'This block cannot be previewed right now.' => 'Ce bloc ne peut pas être prévisualisé pour le moment.',
     'This block comes from a module this site does not have.' => 'Ce bloc vient d’un module que ce site n’a pas.',
     'This block has no content yet' => 'Ce bloc n’a pas encore de contenu',
+    'This block has nothing in it yet: add at least one element in the editor before publishing it.' => 'Ce bloc est encore vide : ajoutez au moins un élément dans l’éditeur avant de le publier.',
     'This block is not on any page yet. Add it to a page from the editor, under Live content.' => 'Ce bloc n’est sur aucune page pour l’instant. Ajoutez-le à une page depuis l’éditeur, sous Contenu vivant.',
     'This block is still used by a page. Remove it from those pages first.' => 'Ce bloc est encore utilisé par une page. Retirez-le de ces pages d’abord.',
     'This box has to be ticked.' => 'Cette case doit être cochée.',

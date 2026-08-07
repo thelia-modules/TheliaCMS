@@ -17,6 +17,7 @@ namespace TheliaCMS\Block\Admin;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Block\BlockUsageFinder;
+use TheliaCMS\Builder\EmptyContentChecker;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
 use TheliaCMS\Builder\PublishedContentSanitizer;
@@ -44,6 +45,7 @@ final readonly class CmsBlockWriter
         private CmsActivityLog $activityLog,
         private PageContentNormalizer $normalizer,
         private PublishedContentSanitizer $sanitizer,
+        private EmptyContentChecker $emptiness,
         private ImageRewriter $images,
         private PartialCache $partialCache,
         private CachePurger $httpCache,
@@ -99,6 +101,8 @@ final readonly class CmsBlockWriter
 
     /**
      * Puts the draft online — on every page using the block at once.
+     *
+     * @throws EmptyBlockContentException when the draft would put nothing online
      */
     public function publish(CmsBlock $block, string $locale): void
     {
@@ -107,6 +111,13 @@ final readonly class CmsBlockWriter
         $html = $this->images->rewrite(
             $this->sanitizer->html($this->normalizer->html($content->getDraftHtml()), $this->mayPublishCustomCode()),
         );
+
+        // Refused rather than stored: the pages showing this block would lose
+        // the part it fills while the back office reads "published". Checked on
+        // the filtered HTML, which is what a visitor would have been served.
+        if ($this->emptiness->isEmpty($html)) {
+            throw EmptyBlockContentException::for((int) $block->getId(), $locale);
+        }
 
         $content->setPublishedHtml($html)
             ->setPublishedCss($this->sanitizer->css($this->normalizer->css($content->getDraftCss())))

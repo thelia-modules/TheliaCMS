@@ -118,14 +118,11 @@ final readonly class CmsBlockBuilderController
         }
 
         if ('publish' === $intent) {
-            $this->writer->publish($block, $lang->getLocale());
-
-            if ($request->hasSession()) {
-                $request->getSession()->getFlashBag()->add('success', $this->translator->trans(
-                    'The block is online on every page using it.',
-                    [],
-                    TheliaCMS::DOMAIN_NAME,
-                ));
+            try {
+                $this->writer->publish($block, $lang->getLocale());
+                $this->flash($request, 'success', 'The block is online on every page using it.');
+            } catch (EmptyBlockContentException) {
+                $this->flash($request, 'danger', 'This block has nothing in it yet: add at least one element in the editor before publishing it.');
             }
         }
 
@@ -133,6 +130,13 @@ final readonly class CmsBlockBuilderController
             'id' => $block->getId(),
             EditLanguage::PARAMETER => $lang->getId(),
         ]));
+    }
+
+    private function flash(Request $request, string $type, string $message): void
+    {
+        if ($request->hasSession()) {
+            $request->getSession()->getFlashBag()->add($type, $this->translator->trans($message, [], TheliaCMS::DOMAIN_NAME));
+        }
     }
 
     private function buildForm(CmsBlock $block, string $locale): FormInterface

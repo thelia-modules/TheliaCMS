@@ -455,6 +455,7 @@ return [
     'This block cannot be previewed right now.' => 'This block cannot be previewed right now.',
     'This block comes from a module this site does not have.' => 'This block comes from a module this site does not have.',
     'This block has no content yet' => 'This block has no content yet',
+    'This block has nothing in it yet: add at least one element in the editor before publishing it.' => 'This block has nothing in it yet: add at least one element in the editor before publishing it.',
     'This block is not on any page yet. Add it to a page from the editor, under Live content.' => 'This block is not on any page yet. Add it to a page from the editor, under Live content.',
     'This block is still used by a page. Remove it from those pages first.' => 'This block is still used by a page. Remove it from those pages first.',
     'This box has to be ticked.' => 'This box has to be ticked.',
