@@ -247,6 +247,9 @@ on the addresses it is allowed to cache, which is the same thing every Varnish
 setup in front of Thelia already does. The tags are written either way, so the
 invalidation side works from the start.
 
+`docs/shared-cache.md` has the VCL that does it, the same thing for Fastly and
+Cloudflare, and a complete purger to copy into a project.
+
 ## Sitemap
 
 A theme opens its sitemap to modules by calling `theme_hook('sitemap.urls')`
@@ -467,16 +470,60 @@ description, `WebPage` microdata, and a breadcrumb built from the page tree.
 Their `hreflang` alternates come from the languages a page is published in.
 Without SEOne the module runs unchanged.
 
+## Moving content between sites
+
+Two commands write and read the content of a site as one JSON file:
+
+```bash
+php Thelia thelia_cms:export site.json
+php Thelia thelia_cms:import site.json [--replace] [--with-settings]
+```
+
+The file holds the page tree, the content of every language, the menus, the
+forms and their fields, the reusable blocks and the settings. It is a starter
+kit you build once and start the next project from, and it is a copy of the
+content to keep somewhere other than the database.
+
+Three things stay behind. Form submissions, because they are what visitors
+wrote about themselves and a starter kit ends up on laptops. Third-party
+snippets, because they carry the measurement accounts of one site and importing
+them elsewhere would send that site's traffic into them. Revisions, because they
+are the history of one site rather than its content.
+
+Images travel as file names. Upload them to the media library of the other site
+first, under the same names, and the import points the content at them; whatever
+is missing is named in the report rather than left as a silent hole.
+
+An import leaves alone whatever is already there: a page at the same address, a
+menu or a form carrying the same code. It counts them and says so. `--replace`
+overwrites them instead. Settings are only applied when asked for, so importing
+a starter kit never switches a running site into showcase mode by surprise. The
+whole thing runs in one transaction, so a file that turns out to be broken
+halfway through leaves the site as it was.
+
+### Templates
+
+The Templates screen keeps a page aside as a starting point for others: pick a
+page, name the template, and it appears in the list for anybody who writes
+pages. Starting from one asks for a title and where the page goes, then opens
+the editor on a hidden draft, so a template can be tried without anything
+showing up on the site.
+
+A template stores the export document of the page it was made from, so what the
+export command writes and what a template holds are the same thing, and a
+template built on one site is a file that can be handed to another.
+
 ## Scope
 
 Working today: the page tree with its bin and duplication, the visual builder
 with drafts, revisions, autosave and shared previews, the block catalogue,
 reusable blocks, dynamic blocks including click-to-load embeds, the publication
 pipeline (sanitizer, responsive images, search indexing, heading check), the
-media library, menus, hierarchical URLs with 301s on rename, showcase mode,
-maintenance, the editable 404, the ACL, and the activity log.
-
-Not yet: forms and the front-office search screen.
+media library, menus, hierarchical URLs with 301s on rename, forms and their
+answers, the front-office search, third-party snippets behind consent, the
+sitemap section, cache tags, the showcase dashboard, import and export,
+templates, showcase mode, maintenance, the editable 404, the ACL, and the
+activity log.
 
 ## Tests
 

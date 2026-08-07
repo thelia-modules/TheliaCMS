@@ -1,0 +1,61 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * An implementation of TheliaCMS\Http\CachePurgerInterface for a Varnish
+ * running the xkey module.
+ *
+ * Copy it into a project, under `src/` or into a module of its own, rename it
+ * to `.php`, and the tag on the interface wires it in: the module hands it the
+ * tags of every page it has just made stale.
+ *
+ * The file ships as `.example` on purpose. A `.php` inside a module is loaded
+ * as a service, and an example purger pointing at a Varnish that does not
+ * exist would report a failure on every publication.
+ */
+
+namespace App\Cache;
+
+use Psr\Log\LoggerInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use TheliaCMS\Http\CachePurgerInterface;
+
+final readonly class VarnishCachePurger implements CachePurgerInterface
+{
+    public function __construct(
+        private HttpClientInterface $http,
+        private LoggerInterface $logger,
+        // The address of the cache itself, not the public address of the site:
+        // a purge sent through the front door is a purge the cache answers to
+        // and forgets.
+        private string $varnishBaseUrl = 'http://127.0.0.1:6081',
+    ) {
+    }
+
+    public function purge(array $tags): void
+    {
+        if ([] === $tags) {
+            return;
+        }
+
+        // One request for the whole set: xkey.purge() takes a space-separated
+        // list, and a request per tag turns publishing a page with a menu on it
+        // into a dozen round trips.
+        $response = $this->http->request('PURGE', $this->varnishBaseUrl.'/', [
+            'headers' => ['Surrogate-Key' => implode(' ', $tags)],
+            'timeout' => 2,
+        ]);
+
+        $status = $response->getStatusCode();
+
+        if ($status >= 400) {
+            // Thrown, not swallowed: the module catches it, logs it and carries
+            // on, so a cache that cannot be reached never stops an editor from
+            // publishing.
+            throw new \RuntimeException(\sprintf('Varnish answered %d to the purge.', $status));
+        }
+
+        $this->logger->info('Purged {count} cache tag(s).', ['count' => \count($tags)]);
+    }
+}
