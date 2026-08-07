@@ -145,6 +145,9 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   the VCL that drops the session cookie on public addresses, without which no
   page is ever cacheable, the equivalent for Fastly and Cloudflare, and a purger
   to copy into a project.
+- A printable guide of the module in French, written for whoever runs the site
+  rather than for a developer, with a shot of every screen
+  (`docs/guide/thelia-cms-guide-webmaster.pdf`).
 - Unit test suite runnable without a database or an installed shop.
 
 [Unreleased]: https://github.com/thelia-modules/TheliaCMS/commits/main
