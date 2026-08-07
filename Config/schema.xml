@@ -420,5 +420,30 @@
         <behavior name="timestampable"/>
     </table>
 
+    <!--
+        A page kept aside to start other pages from: the hero of a landing page,
+        the layout of a product sheet, the whole home page of a starter kit.
+
+        The template holds the very document the export command writes for a
+        page — same shape, same reader — rather than a copy of the page columns.
+        A template is therefore moved between two sites by exporting it, and the
+        code that reads one is the code that reads an import file.
+    -->
+    <table name="cms_page_template" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="code" required="true" size="50" type="VARCHAR"/>
+        <column name="title" required="true" size="255" type="VARCHAR"/>
+        <column name="description" size="500" type="VARCHAR"/>
+        <column name="payload" required="true" type="CLOB"/>
+        <column name="created_by" type="INTEGER"/>
+        <column name="updated_by" type="INTEGER"/>
+
+        <unique name="unq_cms_page_template_code">
+            <unique-column name="code"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
     <external-schema filename="local/config/schema.xml" referenceOnly="true"/>
 </database>
