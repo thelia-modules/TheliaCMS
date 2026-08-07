@@ -1,0 +1,91 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * A commented example: one static block, contributed by another module.
+ *
+ * Copy this file into your own module, rename the namespace, and the block
+ * appears in the editor panel. Nothing else to declare — implementing
+ * CatalogBlockProviderInterface is what registers it.
+ *
+ * The extension is `.php.example` on purpose: this file is documentation, and a
+ * `.php` under the module would be loaded as a service and put an example block
+ * in the editor of every site.
+ */
+
+namespace MyModule\Cms;
+
+use Symfony\Contracts\Translation\TranslatorInterface;
+use TheliaCMS\Builder\CatalogBlock;
+use TheliaCMS\Builder\CatalogBlockProviderInterface;
+
+final readonly class OpeningHoursBlocks implements CatalogBlockProviderInterface
+{
+    public function __construct(
+        private TranslatorInterface $translator,
+    ) {
+    }
+
+    /**
+     * @return list<CatalogBlock>
+     */
+    public function blocks(string $locale): array
+    {
+        return [
+            new CatalogBlock(
+                id: 'shop-opening-hours',
+                label: $this->trans('Opening hours', $locale),
+                content: $this->markup($locale),
+                // Blocks of one category are grouped in the editor panel. Use
+                // the name of your module, or the category of the catalogue
+                // ("Page blocks") to sit among the standard ones.
+                category: $this->trans('My shop', $locale),
+            ),
+        ];
+    }
+
+    /**
+     * The markup an editor gets when the block is dropped.
+     *
+     * Points worth noticing, each of them a rule the review applies:
+     *
+     *  - the `<section>` is named by its own heading through `aria-labelledby`,
+     *    which is what makes it announce itself usefully to a screen reader.
+     *    The ids are plain: the editor makes them unique when the block is
+     *    dropped, so two opening-hours blocks on a page do not collide;
+     *  - the heading is an `h2`. Only a hero carries the `h1` of a page;
+     *  - a table of days and hours is a real `<table>` with `<th scope>`, not a
+     *    grid of divs. It is read as a table, and it is understood as one;
+     *  - there is not a single colour, size or font here. The class names are
+     *    the contract with the theme, and the theme stylesheet is where the
+     *    contrast ratios were checked;
+     *  - the sample text is translated with the locale that was handed in, so
+     *    an editor writing the German page starts from German placeholders.
+     */
+    private function markup(string $locale): string
+    {
+        $row = fn (string $day, string $hours): string => \sprintf(
+            '<tr><th scope="row">%s</th><td>%s</td></tr>',
+            $this->trans($day, $locale),
+            $hours,
+        );
+
+        return '<section class="shop-hours" aria-labelledby="shop-hours-title">'
+            .'<h2 class="shop-hours__title" id="shop-hours-title">'.$this->trans('Opening hours', $locale).'</h2>'
+            .'<table class="shop-hours__table">'
+            .'<caption class="shop-hours__caption">'.$this->trans('Our shop is open', $locale).'</caption>'
+            .'<tbody>'
+            .$row('Monday to Friday', '9:00 - 19:00')
+            .$row('Saturday', '10:00 - 18:00')
+            .$row('Sunday', $this->trans('Closed', $locale))
+            .'</tbody>'
+            .'</table>'
+            .'</section>';
+    }
+
+    private function trans(string $message, string $locale): string
+    {
+        return $this->translator->trans($message, [], 'mymodule', $locale);
+    }
+}

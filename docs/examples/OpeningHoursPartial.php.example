@@ -1,0 +1,125 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * A commented example: one dynamic block, contributed by another module.
+ *
+ * Copy this file into your own module, rename the namespace, and the block
+ * appears under "Live content" in the editor. Implementing
+ * PartialDefinitionInterface is what registers it.
+ *
+ * The extension is `.php.example` on purpose: a `.php` under the module would
+ * be loaded as a service and offer an example block on every site.
+ */
+
+namespace MyModule\Cms;
+
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+use TheliaCMS\Partial\PartialDefinitionInterface;
+use TheliaCMS\Partial\PartialProp;
+
+final readonly class OpeningHoursPartial implements PartialDefinitionInterface
+{
+    public function __construct(
+        private OpeningHoursRepository $hours,
+        private TranslatorInterface $translator,
+        private UrlGeneratorInterface $urls,
+    ) {
+    }
+
+    /**
+     * What a page stores. Lower case, dashes, and it never changes again: it is
+     * written into every page using the block.
+     */
+    public function name(): string
+    {
+        return 'opening-hours';
+    }
+
+    /**
+     * Shown in the block panel of the editor.
+     */
+    public function label(): string
+    {
+        return $this->translator->trans('Opening hours', [], 'mymodule');
+    }
+
+    /**
+     * The template the active theme may ship to take the rendering over,
+     * relative to its root and without the extension.
+     */
+    public function themeTemplate(): string
+    {
+        return 'cms/partials/opening-hours';
+    }
+
+    /**
+     * Used when the theme provides none. Always ship one: it is what makes the
+     * block work on a theme that has never heard of your module.
+     */
+    public function fallbackTemplate(): string
+    {
+        return '@MyModule/front/partials/opening-hours.html.twig';
+    }
+
+    /**
+     * The settings the editor shows, and the only values the template will ever
+     * receive. Anything not declared here is dropped before it reaches you, and
+     * what is declared arrives as its type, inside its bounds.
+     *
+     * A `reference` is picked from an endpoint returning `[{id, name}, …]`.
+     * Guard that endpoint: yours lives under your own admin prefix, so it needs
+     * the same authorisation check as the screen it belongs to.
+     */
+    public function props(): array
+    {
+        return [
+            PartialProp::reference(
+                'shop',
+                $this->translator->trans('Shop', [], 'mymodule'),
+                source: $this->urls->generate('mymodule.admin.shops.list'),
+            ),
+            PartialProp::boolean(
+                'today_only',
+                $this->translator->trans('Only show today', [], 'mymodule'),
+                default: false,
+            ),
+        ];
+    }
+
+    /**
+     * The variables the template gets. Data, never markup: what a theme puts
+     * around opening hours is the theme's business.
+     *
+     * `$locale` is the language of the page being served. Pass it down: a
+     * service that reads the current request instead will return French on an
+     * English page, and be right often enough that nobody notices for months.
+     *
+     * @param array<string, string|int|bool|null> $props
+     *
+     * @return array<string, mixed>
+     */
+    public function context(array $props, string $locale): array
+    {
+        return [
+            'hours' => $this->hours->of((int) $props['shop'], $locale, todayOnly: (bool) $props['today_only']),
+        ];
+    }
+
+    /**
+     * How long a rendered fragment may be reused, in seconds.
+     *
+     * Fifteen minutes here: opening hours change rarely, and the block is on
+     * every page of the site. Return `null` for something that must be computed
+     * on every request. If a write in your module changes what this renders,
+     * drop the fragments explicitly with
+     * `PartialCache::invalidate('opening-hours')` rather than waiting the
+     * lifetime out.
+     */
+    public function cacheTtl(): ?int
+    {
+        return 900;
+    }
+}

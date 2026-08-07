@@ -53,6 +53,23 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - Four unpublished legal pages seeded as placeholders in every active language.
 - Activation guards: URL rewriting and FULLTEXT support are required, and
   deactivation removes the rewritten URLs the module owns.
+- Block catalogue: ten blocks to start a page from (hero, text and image, call
+  to action, quote, testimonials, key figures, logos, gallery, questions and
+  answers, section), described on the server so their sample text follows the
+  language of the page. A module or a bundle adds blocks of its own by
+  implementing one interface.
+- Reusable blocks: content written once in the same builder and placed on any
+  number of pages, which all update when it is published. A block still used by
+  a page cannot be deleted.
+- Live content rendered on every visit rather than stored in the page: latest
+  news, a menu, a reusable block. Each one caches its own fragment, so a block
+  that changes often does not force the page out of the cache.
+- Click-to-load embeds for video, maps and social posts: nothing is requested
+  from the platform until the visitor presses the button, and the button is a
+  link to the platform when JavaScript is off.
+- Editor messages shown as notices over the canvas: they dismiss themselves,
+  can be closed by hand, and an error waits until it is.
+- A guide for writing a block, with two commented examples.
 - Unit test suite runnable without a database or an installed shop.
 
 [Unreleased]: https://github.com/thelia-modules/TheliaCMS/commits/main

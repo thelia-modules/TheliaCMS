@@ -52,6 +52,43 @@ edited on its own full-screen route, `/admin/cms/pages/{id}/builder`:
 Each language holds its own layout and its own text: the French and English
 versions of a page are two independent canvases.
 
+## Blocks
+
+The editor panel holds three families.
+
+**Page blocks** are the ten to start a page from: hero, text and image, call to
+action, quote, testimonials, key figures, logos, gallery, questions and answers,
+and a section to group other blocks. They drop semantic markup carrying `cms-*`
+class names and no styling of their own, so a theme decides what they look like
+and a page written today still looks right after the theme is reworked.
+
+**Reusable blocks** (**Site > Blocks**) are written once and placed on as many
+pages as you like: the banner that appears on twenty pages is edited in one
+place. Pages hold a reference rather than a copy, so publishing the block
+updates every page showing it. A block still used by a page cannot be deleted,
+and the settings screen lists where it appears.
+
+**Live content** is rendered by the server on every visit rather than stored in
+the page: the latest news, a menu, a reusable block, and the three
+click-to-load embeds below. A news list written six months ago is still today's
+news.
+
+### Embeds that load nothing until they are asked to
+
+A YouTube iframe dropped in a page calls Google on every visit, from every
+visitor, before anyone has agreed to anything. The video, map and social blocks
+render a poster or a card, a button, and a sentence saying which company is
+about to receive something. The player, the map or the post is fetched when the
+button is pressed, and not one second earlier. Without JavaScript the button is
+still a link to the platform.
+
+Videos come from YouTube, Vimeo or Dailymotion and are addressed by identifier,
+never by a URL typed into an iframe. Maps come from OpenStreetMap. The poster of
+a video is served by your own media library.
+
+Adding a block of your own, static or dynamic, takes one PHP class:
+[docs/creating-a-block.md](docs/creating-a-block.md).
+
 ## Media
 
 **Site > Media** stores images in [TheliaLibrary][library]. Alternative text is
@@ -219,13 +256,13 @@ Without SEOne the module runs unchanged.
 ## Scope
 
 Working today: the page tree with its bin and duplication, the visual builder
-with drafts, revisions, autosave and shared previews, the publication pipeline
-(sanitizer, responsive images, search indexing, heading check), the media
-library, menus, hierarchical URLs with 301s on rename, showcase mode, maintenance,
-the editable 404, the ACL, and the activity log.
+with drafts, revisions, autosave and shared previews, the block catalogue,
+reusable blocks, dynamic blocks including click-to-load embeds, the publication
+pipeline (sanitizer, responsive images, search indexing, heading check), the
+media library, menus, hierarchical URLs with 301s on rename, showcase mode,
+maintenance, the editable 404, the ACL, and the activity log.
 
-Not yet: forms, the front-office search screen, reusable blocks and dynamic
-partials.
+Not yet: forms and the front-office search screen.
 
 ## Tests
 
