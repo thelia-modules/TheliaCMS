@@ -1,5 +1,6 @@
 import { Application } from "@hotwired/stimulus";
 import CmsPageBuilderController from "./cms_page_builder_controller.js";
+import CmsToastController from "./toast_controller.js";
 
 import "./screen.css";
 
@@ -13,5 +14,6 @@ import "./screen.css";
 const application = Application.start();
 
 application.register("cms-page-builder", CmsPageBuilderController);
+application.register("cms-toast", CmsToastController);
 
 export { application };

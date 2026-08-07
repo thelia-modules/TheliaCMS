@@ -101,3 +101,88 @@ body:has(.cms-builder) {
        with an opacity does not, and this is the only text in there. */
     color: inherit;
 }
+
+/*
+ * Messages of the editor: over the canvas, in a corner, rather than pushed
+ * into the layout — a banner at the top would move the page being edited down
+ * every time something is saved.
+ */
+.cms-toasts {
+    position: fixed;
+    inset-block-end: 1rem;
+    inset-inline-end: 1rem;
+    /* Above the GrapesJS panels, which sit high in the stacking order. */
+    z-index: 1080;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: min(26rem, calc(100vw - 2rem));
+    /* The container spans the corner but must not swallow clicks around the
+       messages themselves. */
+    pointer-events: none;
+}
+
+.cms-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: 0.5rem;
+    border-inline-start: 4px solid currentColor;
+    background: #ffffff;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
+    font-size: 0.875rem;
+    line-height: 1.45;
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.cms-toast--visible {
+    opacity: 1;
+    transform: none;
+}
+
+/* Colours on the marker and the icon only: the text stays on white, where
+   every one of these clears 4.5:1. */
+.cms-toast--success { color: #146c43; }
+.cms-toast--danger { color: #b02a37; }
+.cms-toast--warning { color: #997404; }
+.cms-toast--info { color: #087990; }
+
+.cms-toast__icon {
+    flex: none;
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.cms-toast__message {
+    flex: 1 1 auto;
+    margin: 0;
+    color: #212529;
+}
+
+.cms-toast__close {
+    flex: none;
+    border: 0;
+    background: none;
+    padding: 0.125rem 0.25rem;
+    line-height: 1;
+    color: #6c757d;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.cms-toast__close:hover,
+.cms-toast__close:focus-visible {
+    color: #212529;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cms-toast {
+        transition: none;
+        transform: none;
+    }
+}
