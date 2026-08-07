@@ -1,0 +1,237 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% set is_new = cms_form is null %}
+
+{% block title %}{{ is_new ? 'New form'|trans({}, 'theliacms') : 'Edit form'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-form-edit{% endblock %}
+
+{% block head_extra %}
+    {# A sticky panel taller than the window pins its top and pushes its own
+       submit button below the fold, where scrolling cannot reach it — the panel
+       has stopped moving. Capping its height and letting it scroll on its own
+       keeps the button reachable however many answers a drop-down offers. #}
+    <style>
+        .cms-form-side-panel { max-height: calc(100vh - 2rem); overflow-y: auto; }
+    </style>
+{% endblock %}
+
+{% block content %}
+    {% form_theme settings_form with bo_form_themes only %}
+    {% if field_form %}{% form_theme field_form with bo_form_themes only %}{% endif %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: block('title') } %}
+        {% block title %}
+            {{ is_new ? 'New form'|trans({}, 'theliacms') : cms_form.title|default('#' ~ cms_form.id) }}
+            {% if not is_new %}<code class="ms-2 fs-6">{{ cms_form.code }}</code>{% endif %}
+        {% endblock %}
+
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.forms.list', { edit_language_id: edit_language_id }) }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to forms'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    {% if not is_new and rows is empty %}
+        <div class="alert alert-warning d-flex gap-2" role="alert" data-testid="cms-form-no-field">
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <div>{{ 'This form has no field yet, so it is not shown on the site. Add the first one with the form beside.'|trans({}, 'theliacms') }}</div>
+        </div>
+    {% endif %}
+
+    {% set untranslated = rows|filter(row => not row.isTranslated)|length %}
+    {% if untranslated > 0 %}
+        <div class="alert alert-warning d-flex gap-2" role="alert" data-testid="cms-form-untranslated">
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <div>
+                <strong>{{ 'Some fields have no label in this language.'|trans({}, 'theliacms') }}</strong>
+                {{ 'They are left out of the form in this language: a field nobody can name cannot be filled in, and a screen reader announces nothing. They are marked below.'|trans({}, 'theliacms') }}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="{{ is_new ? 'col-lg-8' : 'col-lg-7' }}">
+            {% if not is_new %}
+                <div class="card mb-3">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span>{{ 'Fields'|trans({}, 'theliacms') }}</span>
+                        {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
+                    </div>
+
+                    {% if rows is not empty %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <tbody>
+                                    {% for row in rows %}
+                                        <tr class="{{ edited_field and edited_field.id == row.field.id ? 'table-active' : '' }}"
+                                            data-testid="cms-form-field-{{ row.field.id }}">
+                                            <td>
+                                                <span class="fw-medium">{{ row.field.label|default('') ?: '—' }}</span>
+                                                {% if row.field.required == 1 %}
+                                                    <span class="text-danger ms-1" aria-label="{{ 'Required'|trans({}, 'theliacms') }}">*</span>
+                                                {% endif %}
+                                                <span class="badge bg-light text-dark border ms-2">{{ row.type.label|trans({}, 'theliacms') }}</span>
+                                                <div class="small text-muted"><code>{{ row.field.name }}</code></div>
+                                                {% if not row.isTranslated %}
+                                                    <div class="small text-warning-emphasis">
+                                                        <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                                                        {{ 'No label in this language, so this field is not shown here.'|trans({}, 'theliacms') }}
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end" style="width: 12rem">
+                                                <div class="d-inline-flex gap-1">
+                                                    <form method="post" action="{{ path('admin.cms.forms.field_move', { id: cms_form.id, fieldId: row.field.id, direction: 'up', edit_language_id: edit_language_id }) }}">
+                                                        <button class="btn btn-sm btn-outline-secondary" type="submit"
+                                                                aria-label="{{ 'Move up'|trans({}, 'theliacms') }}" {{ row.canMoveUp ? '' : 'disabled' }}>
+                                                            <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form method="post" action="{{ path('admin.cms.forms.field_move', { id: cms_form.id, fieldId: row.field.id, direction: 'down', edit_language_id: edit_language_id }) }}">
+                                                        <button class="btn btn-sm btn-outline-secondary" type="submit"
+                                                                aria-label="{{ 'Move down'|trans({}, 'theliacms') }}" {{ row.canMoveDown ? '' : 'disabled' }}>
+                                                            <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                    <a class="btn btn-sm btn-outline-secondary"
+                                                       href="{{ path('admin.cms.forms.field_save', { id: cms_form.id, fieldId: row.field.id, edit_language_id: edit_language_id }) }}">
+                                                        {{ 'Edit'|trans({}, 'theliacms') }}
+                                                    </a>
+                                                    <form method="post" action="{{ path('admin.cms.forms.field_delete', { id: cms_form.id, fieldId: row.field.id, edit_language_id: edit_language_id }) }}"
+                                                          onsubmit="return confirm('{{ 'Remove this field? The answers already received keep it.'|trans({}, 'theliacms')|e('js') }}')">
+                                                        <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}">
+                                                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <span>{{ 'Form settings'|trans({}, 'theliacms') }}</span>
+                    {% if is_new %}{{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}{% endif %}
+                </div>
+                <div class="card-body">
+                    {{ form_start(settings_form) }}
+                        {{ form_errors(settings_form) }}
+
+                        {{ form_row(settings_form.title) }}
+                        {{ form_row(settings_form.code) }}
+                        {{ form_row(settings_form.active) }}
+                        {{ form_row(settings_form.description) }}
+                        {{ form_row(settings_form.submitLabel) }}
+                        {{ form_row(settings_form.successMessage) }}
+
+                        <hr>
+                        <h3 class="h6 text-uppercase text-muted">{{ 'What visitors are told'|trans({}, 'theliacms') }}</h3>
+                        {{ form_row(settings_form.legalNotice) }}
+                        {{ form_row(settings_form.privacyPolicyPageId) }}
+
+                        <hr>
+                        <h3 class="h6 text-uppercase text-muted">{{ 'Where the answers go'|trans({}, 'theliacms') }}</h3>
+                        {{ form_row(settings_form.recipients) }}
+                        {{ form_row(settings_form.sendReceipt) }}
+                        {{ form_row(settings_form.receiptSubject) }}
+                        {{ form_row(settings_form.receiptBody) }}
+
+                        <hr>
+                        <h3 class="h6 text-uppercase text-muted">{{ 'How long they are kept'|trans({}, 'theliacms') }}</h3>
+                        {{ form_row(settings_form.storeSubmissions) }}
+                        {{ form_row(settings_form.retentionDays) }}
+                        {{ form_row(settings_form.leadEvent) }}
+
+                        <button type="submit" class="btn btn-primary" data-testid="cms-form-settings-submit">
+                            {{ is_new ? 'Create this form'|trans({}, 'theliacms') : 'Save'|trans({}, 'theliacms') }}
+                        </button>
+
+                        {% if not is_new and may_write %}
+                            <button type="submit" class="btn btn-outline-danger float-end"
+                                    formaction="{{ path('admin.cms.forms.delete', { id: cms_form.id, edit_language_id: edit_language_id }) }}"
+                                    formnovalidate
+                                    onclick="return confirm('{{ 'Delete this form? The pages showing it will show nothing, and its answers stay until you delete them.'|trans({}, 'theliacms')|e('js') }}')">
+                                {{ 'Delete this form'|trans({}, 'theliacms') }}
+                            </button>
+                        {% endif %}
+                    {{ form_end(settings_form) }}
+                </div>
+            </div>
+        </div>
+
+        {% if not is_new and field_form %}
+            <div class="col-lg-5">
+                <div class="card position-sticky cms-form-side-panel" style="top: 1rem">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span>{{ edited_field ? 'Edit field'|trans({}, 'theliacms') : 'Add a field'|trans({}, 'theliacms') }}</span>
+                        {% if edited_field %}
+                            <a class="btn btn-sm btn-link p-0" href="{{ path('admin.cms.forms.edit', { id: cms_form.id, edit_language_id: edit_language_id }) }}">
+                                {{ 'Cancel'|trans({}, 'theliacms') }}
+                            </a>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {{ form_start(field_form) }}
+                            {{ form_errors(field_form) }}
+                            {{ form_row(field_form.type) }}
+                            {{ form_row(field_form.label) }}
+                            {{ form_row(field_form.name) }}
+                            {{ form_row(field_form.required) }}
+                            {{ form_row(field_form.choices) }}
+                            {{ form_row(field_form.placeholder) }}
+                            {{ form_row(field_form.rows) }}
+                            {{ form_row(field_form.help) }}
+
+                            <button type="submit" class="btn btn-primary" data-testid="cms-form-field-submit">
+                                {{ edited_field ? 'Save the field'|trans({}, 'theliacms') : 'Add to the form'|trans({}, 'theliacms') }}
+                            </button>
+                        {{ form_end(field_form) }}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block scripts_extra %}
+    {% if not is_new %}
+        {# Shows only the settings the chosen kind of field actually has. The
+           server ignores the others either way, so this is a matter of not
+           asking for a placeholder on a tick box. #}
+        <script>
+            (function () {
+                var select = document.querySelector('[data-cms-field-type-select]');
+
+                if (!select) {
+                    return;
+                }
+
+                var applies = {
+                    choices: ['select', 'radio'],
+                    rows: ['textarea'],
+                    placeholder: ['text', 'email', 'textarea', 'phone', 'date']
+                };
+
+                function refresh() {
+                    Object.keys(applies).forEach(function (setting) {
+                        var row = document.querySelector('[data-cms-field-setting="' + setting + '"]');
+
+                        if (row) {
+                            row.hidden = applies[setting].indexOf(select.value) === -1;
+                        }
+                    });
+                }
+
+                select.addEventListener('change', refresh);
+                refresh();
+            })();
+        </script>
+    {% endif %}
+{% endblock %}

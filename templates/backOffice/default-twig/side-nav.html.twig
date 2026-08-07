@@ -20,6 +20,11 @@
                 <a class="nav-link" href="{{ menus_url }}">{{ menus_label }}</a>
             </li>
         {% endif %}
+        {% if forms_url %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ forms_url }}">{{ forms_label }}</a>
+            </li>
+        {% endif %}
         {% if media_url %}
             <li class="nav-item">
                 <a class="nav-link" href="{{ media_url }}">{{ media_label }}</a>

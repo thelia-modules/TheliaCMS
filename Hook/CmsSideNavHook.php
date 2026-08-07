@@ -63,6 +63,7 @@ class CmsSideNavHook extends BaseHook
         // Each entry is offered only to a profile allowed to open it: a link
         // leading straight to a 403 is worse than no link.
         $maySeeMenus = $this->securityContext->isGranted(['ADMIN'], [CmsResources::MENU], [], [AccessManager::VIEW]);
+        $maySeeForms = $this->securityContext->isGranted(['ADMIN'], [CmsResources::FORM], [], [AccessManager::VIEW]);
         $maySeeMedia = $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::VIEW]);
         $maySeeSettings = $this->securityContext->isGranted(['ADMIN'], [CmsResources::SETTINGS], [], [AccessManager::VIEW]);
 
@@ -75,6 +76,7 @@ class CmsSideNavHook extends BaseHook
             // page may edit what pages share.
             'blocks_url' => $this->urls->generate('admin.cms.blocks.list'),
             'menus_url' => $maySeeMenus ? $this->urls->generate('admin.cms.menus.list') : null,
+            'forms_url' => $maySeeForms ? $this->urls->generate('admin.cms.forms.list') : null,
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
             'settings_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.edit') : null,
             'is_active' => str_starts_with((string) $this->getRequest()?->getPathInfo(), '/admin/cms'),
@@ -86,6 +88,7 @@ class CmsSideNavHook extends BaseHook
             'pages_label' => $this->trans('Pages', [], TheliaCMS::DOMAIN_NAME),
             'blocks_label' => $this->trans('Blocks', [], TheliaCMS::DOMAIN_NAME),
             'menus_label' => $this->trans('Menus', [], TheliaCMS::DOMAIN_NAME),
+            'forms_label' => $this->trans('Forms', [], TheliaCMS::DOMAIN_NAME),
             'media_label' => $this->trans('Media', [], TheliaCMS::DOMAIN_NAME),
             'settings_label' => $this->trans('Settings', [], TheliaCMS::DOMAIN_NAME),
         ]));
