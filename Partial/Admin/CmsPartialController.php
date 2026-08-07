@@ -24,6 +24,7 @@ use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsBlockQuery;
+use TheliaCMS\Model\CmsFormQuery;
 use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Partial\MissingPartialPropException;
 use TheliaCMS\Partial\PartialRenderer;
@@ -140,6 +141,30 @@ final readonly class CmsPartialController
                 return ['id' => (int) $block->getId(), 'name' => '' === $title ? (string) $block->getCode() : $title];
             },
             iterator_to_array($blocks, false),
+        ));
+    }
+
+    /**
+     * Forms an editor may drop into a page.
+     */
+    #[Route('/admin/cms/partials/sources/forms', name: 'admin.cms.partials.sources.forms', methods: ['GET'])]
+    public function forms(Request $request): Response
+    {
+        $locale = $request->getLocale();
+        $forms = CmsFormQuery::create()
+            ->filterByDeletedAt(null, Criteria::ISNULL)
+            ->orderByCode()
+            ->find();
+
+        return new JsonResponse(array_map(
+            static function ($form) use ($locale): array {
+                $form->setLocale($locale);
+
+                $title = trim((string) $form->getTitle());
+
+                return ['id' => (int) $form->getId(), 'name' => '' === $title ? (string) $form->getCode() : $title];
+            },
+            iterator_to_array($forms, false),
         ));
     }
 

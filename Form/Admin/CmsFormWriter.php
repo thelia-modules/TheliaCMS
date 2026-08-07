@@ -22,6 +22,7 @@ use TheliaCMS\Model\CmsFormField;
 use TheliaCMS\Model\CmsFormFieldQuery;
 use TheliaCMS\Model\CmsFormQuery;
 use TheliaCMS\Page\Admin\CmsActivityLog;
+use TheliaCMS\Partial\Definition\FormPartial;
 use TheliaCMS\Partial\PartialCache;
 use TheliaCMS\Security\CmsResources;
 
@@ -189,7 +190,7 @@ final readonly class CmsFormWriter
      */
     private function afterWrite(string $action, CmsForm $form, string $message): void
     {
-        $this->cache->invalidate('cms-form');
+        $this->cache->invalidate(FormPartial::NAME);
         $this->activityLog->record($action, (int) $form->getId(), $message, CmsResources::FORM);
     }
 }
