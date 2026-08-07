@@ -76,6 +76,7 @@ class CmsSideNavHook extends BaseHook
             // Reusable blocks belong to the page resource: whoever may edit a
             // page may edit what pages share.
             'blocks_url' => $this->urls->generate('admin.cms.blocks.list'),
+            'templates_url' => $this->urls->generate('admin.cms.templates.list'),
             'menus_url' => $maySeeMenus ? $this->urls->generate('admin.cms.menus.list') : null,
             'forms_url' => $maySeeForms ? $this->urls->generate('admin.cms.forms.list') : null,
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
@@ -89,6 +90,7 @@ class CmsSideNavHook extends BaseHook
             'section_label' => $this->trans('CMS', [], TheliaCMS::DOMAIN_NAME),
             'pages_label' => $this->trans('Pages', [], TheliaCMS::DOMAIN_NAME),
             'blocks_label' => $this->trans('Blocks', [], TheliaCMS::DOMAIN_NAME),
+            'templates_label' => $this->trans('Templates', [], TheliaCMS::DOMAIN_NAME),
             'menus_label' => $this->trans('Menus', [], TheliaCMS::DOMAIN_NAME),
             'forms_label' => $this->trans('Forms', [], TheliaCMS::DOMAIN_NAME),
             'media_label' => $this->trans('Media', [], TheliaCMS::DOMAIN_NAME),

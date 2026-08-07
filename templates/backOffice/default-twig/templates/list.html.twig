@@ -1,0 +1,117 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Templates'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-templates-list{% endblock %}
+
+{% block content %}
+    {% form_theme save_form with bo_form_themes only %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Templates'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_language_id: edit_language_id }) }}">
+                {{ 'Back to pages'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">
+        {{ 'A template is a page kept aside to start other pages from. Starting from one gives you a hidden draft: nothing appears on the site until you publish it.'|trans({}, 'theliacms') }}
+    </p>
+
+    {% if templates is empty %}
+        <div class="card mb-4">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-0">
+                    {{ 'No template yet. Build a page the way you want it, then keep it here to start the next ones from.'|trans({}, 'theliacms') }}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <div class="card mb-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'Name'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'Languages'|trans({}, 'theliacms') }}</th>
+                            <th scope="col">{{ 'Saved on'|trans({}, 'theliacms') }}</th>
+                            <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in templates %}
+                            {% set template = row.template %}
+                            <tr data-testid="cms-template-row-{{ template.id }}">
+                                <td>
+                                    <div>{{ template.title }}</div>
+                                    {% if template.description %}
+                                        <div class="text-muted small">{{ template.description }}</div>
+                                    {% endif %}
+                                    <code class="text-muted small">{{ template.code }}</code>
+                                </td>
+                                <td>
+                                    {% for locale in row.locales %}
+                                        <span class="badge bg-light text-dark border">{{ locale }}</span>
+                                    {% else %}
+                                        <span class="text-muted">{{ 'None'|trans({}, 'theliacms') }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td class="text-muted small">{{ template.createdAt ? template.createdAt|date('d/m/Y') : '' }}</td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        {% if may_write %}
+                                            <details class="d-inline-block text-start">
+                                                <summary class="btn btn-sm btn-primary" data-testid="cms-template-use-{{ template.id }}">
+                                                    {{ 'Create a page'|trans({}, 'theliacms') }}
+                                                </summary>
+                                                <div class="border rounded p-3 mt-2 bg-body-tertiary" style="min-width: 22rem">
+                                                    {% form_theme row.form with bo_form_themes only %}
+                                                    {{ form_start(row.form) }}
+                                                        {{ form_row(row.form.title) }}
+                                                        {{ form_row(row.form.parentId) }}
+                                                        <button class="btn btn-sm btn-primary" type="submit">
+                                                            {{ 'Create the page'|trans({}, 'theliacms') }}
+                                                        </button>
+                                                    {{ form_end(row.form) }}
+                                                </div>
+                                            </details>
+                                            <form method="post"
+                                                  action="{{ path('admin.cms.templates.delete', { id: template.id, edit_language_id: edit_language_id }) }}"
+                                                  onsubmit="return confirm('{{ 'Remove this template? The pages already made from it stay as they are.'|trans({}, 'theliacms')|e('js') }}')">
+                                                <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}">
+                                                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if may_write %}
+        <div class="card">
+            <div class="card-header">{{ 'Keep a page as a template'|trans({}, 'theliacms') }}</div>
+            <div class="card-body">
+                {% if has_pages %}
+                    {{ form_start(save_form) }}
+                        <div class="row g-3">
+                            <div class="col-md-4">{{ form_row(save_form.pageId) }}</div>
+                            <div class="col-md-4">{{ form_row(save_form.title) }}</div>
+                            <div class="col-md-4">{{ form_row(save_form.description) }}</div>
+                        </div>
+                        <button class="btn btn-primary" type="submit" data-testid="cms-template-save">
+                            {{ 'Save as template'|trans({}, 'theliacms') }}
+                        </button>
+                    {{ form_end(save_form) }}
+                {% else %}
+                    <p class="text-muted mb-0">{{ 'Write a page first: a template is a copy of one.'|trans({}, 'theliacms') }}</p>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
