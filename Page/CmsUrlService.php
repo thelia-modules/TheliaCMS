@@ -95,8 +95,22 @@ final class CmsUrlService
 
     private function prefixWithAncestors(CmsPage $page, string $locale, string $segment): string
     {
-        $segments = [$segment];
-        $parentId = (int) $page->getParent();
+        $prefix = $this->ancestorPath((int) $page->getParent(), $locale);
+
+        return $this->slugSource->truncate('' === $prefix ? $segment : $prefix.'/'.$segment);
+    }
+
+    /**
+     * The path the closest ancestor already answers on.
+     *
+     * Slugifying its title instead would ignore a slug edited by hand: a parent
+     * answering on `/groupe` would give its children `/le-groupe/...`, so a
+     * child would not live under its own parent. Titles are only walked up for
+     * an ancestor that has no address yet in this locale.
+     */
+    private function ancestorPath(int $parentId, string $locale): string
+    {
+        $segments = [];
         $guard = 0;
 
         // 0 is the root, mirroring `category.parent` / `folder.parent`.
@@ -107,12 +121,21 @@ final class CmsUrlService
                 break;
             }
 
+            $url = trim((string) $parent->getRewrittenUrl($locale), '/');
+
+            if ('' !== $url) {
+                // That address already carries its own ancestors.
+                array_unshift($segments, $url);
+
+                break;
+            }
+
             $parent->setLocale($locale);
             array_unshift($segments, $this->slugSource->slugify((string) $parent->getTitle()));
             $parentId = (int) $parent->getParent();
         }
 
-        return $this->slugSource->truncate(implode('/', array_filter($segments)));
+        return implode('/', array_filter($segments));
     }
 
     private function makeUnique(string $url, int $pageId, string $locale): string
