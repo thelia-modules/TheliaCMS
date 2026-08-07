@@ -16,6 +16,7 @@ namespace TheliaCMS\Vitrine;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -25,6 +26,7 @@ use Thelia\Model\Lang;
 use TheliaCMS\Page\CmsPageRenderer;
 use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\Settings\CmsSettings;
+use TheliaCMS\TheliaCMS;
 
 /**
  * Serves a CMS page when an address does not exist, so the 404 of a site is
@@ -40,6 +42,9 @@ use TheliaCMS\Settings\CmsSettings;
  */
 final readonly class NotFoundPageListener
 {
+    /** Where the rewriting router leaves the id of the page an address points at. */
+    private const string PAGE_ID_PARAMETER = TheliaCMS::PAGE_VIEW.'_id';
+
     public function __construct(
         private CmsSettings $settings,
         private PublishedPageRepository $pages,
@@ -80,9 +85,14 @@ final readonly class NotFoundPageListener
             return;
         }
 
+        $requestedView = $this->currentView($request);
+        $this->serveAs($request, $pageId);
+
         try {
             $body = $this->renderer->render($page);
         } catch (\Throwable $throwable) {
+            $this->restoreView($request, $requestedView);
+
             // A 404 that turns into a 500 loses both the page and the status, so
             // the theme keeps the hand — but silently swallowing the reason is
             // how a broken 404 page stays broken.
@@ -99,5 +109,43 @@ final readonly class NotFoundPageListener
         $response->headers->set('X-Robots-Tag', 'noindex');
 
         $event->setResponse($response);
+    }
+
+    /**
+     * Says which page is being served, so that what describes it agrees with
+     * it.
+     *
+     * The breadcrumb, its BreadcrumbList and the title are resolved from the
+     * request rather than from what was rendered. An address that used to hold
+     * a page still carries its id, so without this the page a visitor is shown
+     * is the 404 page while everything around it announces the page they asked
+     * for. Request attributes win over the query string, which is where the
+     * rewriting router leaves the id.
+     */
+    private function serveAs(Request $request, int $pageId): void
+    {
+        $request->attributes->set('_view', TheliaCMS::PAGE_VIEW);
+        $request->attributes->set(self::PAGE_ID_PARAMETER, $pageId);
+    }
+
+    /** @return array{view: string|null, id: mixed} */
+    private function currentView(Request $request): array
+    {
+        return [
+            'view' => $request->attributes->get('_view'),
+            'id' => $request->attributes->get(self::PAGE_ID_PARAMETER),
+        ];
+    }
+
+    /**
+     * @param array{view: string|null, id: mixed} $previous
+     */
+    private function restoreView(Request $request, array $previous): void
+    {
+        // The theme is about to render its own page: naming one that was never
+        // rendered would only move the lie somewhere else.
+        foreach (['_view' => $previous['view'], self::PAGE_ID_PARAMETER => $previous['id']] as $key => $value) {
+            null === $value ? $request->attributes->remove($key) : $request->attributes->set($key, $value);
+        }
     }
 }
