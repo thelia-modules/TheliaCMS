@@ -69,15 +69,22 @@
                                 </td>
                                 <td>
                                     {% if row.submissionCount > 0 %}
-                                        {{ row.submissionCount }}
+                                        <a href="{{ path('admin.cms.forms.submissions', { id: record.id, edit_language_id: edit_language_id }) }}">
+                                            {{ row.submissionCount }}
+                                        </a>
                                     {% else %}
                                         <span class="text-muted">0</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
-                                    <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.forms.edit', { id: record.id, edit_language_id: edit_language_id }) }}">
-                                        {{ 'Edit'|trans({}, 'theliacms') }}
-                                    </a>
+                                    <div class="d-inline-flex gap-1">
+                                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.forms.edit', { id: record.id, edit_language_id: edit_language_id }) }}">
+                                            {{ 'Edit'|trans({}, 'theliacms') }}
+                                        </a>
+                                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.forms.submissions', { id: record.id, edit_language_id: edit_language_id }) }}">
+                                            {{ 'Answers'|trans({}, 'theliacms') }}
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         {% endfor %}

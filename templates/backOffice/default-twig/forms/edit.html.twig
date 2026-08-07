@@ -26,6 +26,13 @@
         {% endblock %}
 
         {% block actions %}
+            {% if not is_new %}
+                <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.forms.submissions', { id: cms_form.id, edit_language_id: edit_language_id }) }}">
+                    <i class="bi bi-inbox me-1" aria-hidden="true"></i>
+                    {{ 'Answers'|trans({}, 'theliacms') }}
+                    {% if submission_count > 0 %}<span class="badge text-bg-secondary ms-1">{{ submission_count }}</span>{% endif %}
+                </a>
+            {% endif %}
             <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.forms.list', { edit_language_id: edit_language_id }) }}">
                 <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to forms'|trans({}, 'theliacms') }}
             </a>
