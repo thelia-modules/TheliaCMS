@@ -130,9 +130,13 @@ readonly class CmsPageSeoElement implements SeoElementInterface
 
         $breadcrumb = [$this->crumb($page)];
         $ancestor = $this->findLocalizedPage($page->getParent());
-        $guard = 0;
+        // Stops on an ancestor already listed rather than after a fixed number
+        // of them: a page nested deeper would lose the top of its own trail.
+        $climbed = [(int) $page->getId() => true];
 
-        while ($ancestor instanceof CmsPage && ++$guard < 20) {
+        while ($ancestor instanceof CmsPage && !isset($climbed[(int) $ancestor->getId()])) {
+            $climbed[(int) $ancestor->getId()] = true;
+
             if ($this->publishedPages->isReachable($ancestor->getId(), $this->langService->getLocale())) {
                 array_unshift($breadcrumb, $this->crumb($ancestor));
             }

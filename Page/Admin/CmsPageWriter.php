@@ -445,15 +445,22 @@ final readonly class CmsPageWriter
     /**
      * The page and all of its descendants, parents before children.
      *
+     * The walk stops on the pages it has already seen rather than after a fixed
+     * number of levels. A depth limit looks like a safety net and is not one: it
+     * is the pages below it that get left behind, still addressed and still
+     * served, under a parent that has just gone to the bin. What has to be
+     * bounded is a tree holding a cycle, which no depth a site could reach ever
+     * describes.
+     *
      * @return list<CmsPage>
      */
     private function branchOf(CmsPage $page, bool $includeDeleted = false): array
     {
         $branch = [$page];
+        $walked = [(int) $page->getId() => true];
         $frontier = [(int) $page->getId()];
-        $guard = 0;
 
-        while ([] !== $frontier && ++$guard < 20) {
+        while ([] !== $frontier) {
             $query = CmsPageQuery::create()->filterByParent($frontier);
 
             if (!$includeDeleted) {
@@ -464,8 +471,15 @@ final readonly class CmsPageWriter
             $frontier = [];
 
             foreach ($children as $child) {
+                $id = (int) $child->getId();
+
+                if (isset($walked[$id])) {
+                    continue;
+                }
+
+                $walked[$id] = true;
                 $branch[] = $child;
-                $frontier[] = (int) $child->getId();
+                $frontier[] = $id;
             }
         }
 

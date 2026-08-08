@@ -283,14 +283,19 @@ final class CmsUrlService
      * yet in this locale — every one of them, while the addresses of the site
      * are being rebuilt — contributes its stored slug, and only a page that has
      * neither is named after its title.
+     *
+     * The climb stops on an ancestor it has already passed, not after a fixed
+     * number of them: a site nested deeper than the limit would silently lose
+     * the top of its own paths.
      */
     private function ancestorPath(int $parentId, string $locale): string
     {
         $segments = [];
-        $guard = 0;
+        $climbed = [];
 
         // 0 is the root, mirroring `category.parent` / `folder.parent`.
-        while ($parentId > 0 && ++$guard < 20) {
+        while ($parentId > 0 && !isset($climbed[$parentId])) {
+            $climbed[$parentId] = true;
             $parent = CmsPageQuery::create()->findPk($parentId);
 
             if (!$parent instanceof CmsPage) {

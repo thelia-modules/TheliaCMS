@@ -60,6 +60,44 @@ final class CmsPageBreadcrumbTest extends CmsIntegrationTestCase
         self::assertCount(1, $this->breadcrumbOf((int) $child->getId()));
     }
 
+    /**
+     * The trail names every ancestor, however deep the page sits.
+     *
+     * The climb used to stop after a fixed number of ancestors, so a page nested
+     * past it was handed a breadcrumb that started in the middle of the site, and
+     * a BreadcrumbList that told a search engine the same thing.
+     */
+    public function testTheTrailNamesEveryAncestorOfADeeplyNestedPage(): void
+    {
+        $depth = 24;
+        $parent = 0;
+        $deepest = null;
+
+        for ($level = 1; $level <= $depth; ++$level) {
+            $deepest = $this->createPage('Niveau '.$level, parent: $parent);
+            $parent = (int) $deepest->getId();
+        }
+
+        self::assertNotNull($deepest);
+        self::assertCount($depth, $this->breadcrumbOf((int) $deepest->getId()));
+    }
+
+    /**
+     * A tree holding a cycle stops the climb instead of repeating itself.
+     */
+    public function testATreeThatContainsItselfNamesEachPageOnce(): void
+    {
+        $top = $this->createPage('Anneau haut');
+        $bottom = $this->createPage('Anneau bas', parent: (int) $top->getId());
+
+        $top->setParent((int) $bottom->getId())->save();
+
+        self::assertSame(
+            ['Anneau haut', 'Anneau bas'],
+            array_column($this->breadcrumbOf((int) $bottom->getId()), 'title'),
+        );
+    }
+
     public function testAnUnknownPageHasNoBreadcrumb(): void
     {
         self::assertSame([], $this->breadcrumbOf(0));

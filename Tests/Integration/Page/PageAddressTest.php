@@ -199,6 +199,39 @@ final class PageAddressTest extends CmsIntegrationTestCase
     }
 
     /**
+     * A page rebuilt from nothing gets its whole path back, however deep it sits.
+     *
+     * This is the state a reactivation of the module leaves behind: the addresses
+     * it owned are gone, so the path of a page has to be climbed ancestor by
+     * ancestor from the stored slugs. The climb used to stop after a fixed number
+     * of them, which silently cut the top off the address of a page nested
+     * deeper, and put it online somewhere else.
+     */
+    public function testADeeplyNestedPageRebuiltFromNothingKeepsItsWholePath(): void
+    {
+        $depth = 24;
+        $parent = 0;
+        $expected = [];
+        $deepest = null;
+
+        for ($level = 1; $level <= $depth; ++$level) {
+            $deepest = $this->createPage('Niveau '.$level, parent: $parent);
+            $parent = (int) $deepest->getId();
+            $expected[] = 'niveau-'.$level;
+        }
+
+        self::assertNotNull($deepest);
+
+        // What preDeactivation() does: every address the module owned is dropped,
+        // and only the stored slugs are left to rebuild them from.
+        RewritingUrlQuery::create()->filterByView($deepest->getRewrittenUrlViewName())->delete();
+
+        $rebuilt = $this->getService(CmsUrlService::class)->rebuild($deepest, $this->locale());
+
+        self::assertSame(implode('/', $expected), $rebuilt);
+    }
+
+    /**
      * A move applies to every language, not to the one being edited.
      *
      * The parent of a page is a single column shared by its translations, so
