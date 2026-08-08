@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Page;
 
+use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
@@ -91,6 +92,110 @@ final class CmsUrlService
     public function rebuild(CmsPage $page, string $locale): string
     {
         return $this->refresh($page, $locale, $this->slugOf($page, $locale));
+    }
+
+    /**
+     * Puts back the address of a page and of every page under it, in each locale
+     * they already answer in.
+     *
+     * This is what a move in the tree needs. The address of a page is made of
+     * the addresses of its ancestors, so re-addressing the page that moved is
+     * only the first of the addresses that changed: without this, a child keeps
+     * announcing a path its parent no longer has, at every depth, with no
+     * redirection from the old one and none towards the new one.
+     *
+     * The parent of a page is not a per-language column, so a move applies to
+     * every language the page answers in and not only to the one being edited.
+     * Only locales that already have an address take part: giving one to a
+     * language nobody wrote the page in would publish an address for a
+     * translation that does not exist.
+     *
+     * Cost is one pass per page and per locale, parents first, each of them a
+     * handful of queries. Moving a page that sits near the root of a large site
+     * therefore rewrites every address below it, which is the point, and is
+     * worth a transaction around the call.
+     *
+     * @return int the number of addresses rewritten
+     */
+    public function rebuildSubtree(CmsPage $page): int
+    {
+        $rewritten = 0;
+
+        foreach ([$page, ...$this->descendantsOf($page)] as $node) {
+            foreach ($this->addressedLocales($node) as $locale) {
+                $this->rebuild($node, $locale);
+                ++$rewritten;
+            }
+        }
+
+        return $rewritten;
+    }
+
+    /**
+     * The pages below this one, closest first.
+     *
+     * Read level by level rather than page by page: a descendant is addressed
+     * from the address of its parent, so the parent has to have been re-addressed
+     * before its children are.
+     *
+     * A page that has ended up under one of its own descendants is walked once
+     * and not followed again. The back office cannot build such a tree, since the
+     * parent choices of a page leave out its own descendants, but an import or a
+     * hand-written row can, and following parents on trust never comes back.
+     *
+     * @return list<CmsPage>
+     */
+    private function descendantsOf(CmsPage $page): array
+    {
+        $descendants = [];
+        $walked = [(int) $page->getId() => true];
+        $level = [(int) $page->getId()];
+
+        while ([] !== $level) {
+            $children = CmsPageQuery::create()
+                ->filterByParent($level)
+                ->filterByDeletedAt(null, Criteria::ISNULL)
+                ->orderById()
+                ->find();
+
+            $level = [];
+
+            foreach ($children as $child) {
+                $id = (int) $child->getId();
+
+                if (isset($walked[$id])) {
+                    continue;
+                }
+
+                $walked[$id] = true;
+                $descendants[] = $child;
+                $level[] = $id;
+            }
+        }
+
+        return $descendants;
+    }
+
+    /**
+     * The locales this page currently answers in.
+     *
+     * Read from the addresses themselves rather than from the languages it has
+     * content in: a page can hold a draft in a language it has never been given
+     * an address in, and a rebuild must put addresses back, never invent one.
+     *
+     * @return list<string>
+     */
+    private function addressedLocales(CmsPage $page): array
+    {
+        $locales = RewritingUrlQuery::create()
+            ->filterByView($page->getRewrittenUrlViewName())
+            ->filterByViewId((string) $page->getId())
+            ->filterByRedirected(null, Criteria::ISNULL)
+            ->select(['ViewLocale'])
+            ->find()
+            ->toArray();
+
+        return array_values(array_unique(array_map(strval(...), $locales)));
     }
 
     /**

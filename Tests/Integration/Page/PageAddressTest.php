@@ -14,7 +14,11 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Page;
 
+use Thelia\Model\Lang;
+use Thelia\Model\LangQuery;
+use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Model\CmsPage;
+use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
@@ -88,11 +92,227 @@ final class PageAddressTest extends CmsIntegrationTestCase
         );
     }
 
+    /**
+     * Moving a page takes its whole subtree with it.
+     *
+     * The address of a descendant is made of the address of its ancestors, so a
+     * page that changes parent changes the address of everything under it. Left
+     * alone, a grandchild keeps announcing a path that no longer exists in the
+     * tree, at any depth.
+     */
+    public function testMovingAPageMovesTheAddressesOfItsDescendants(): void
+    {
+        $formerParent = $this->createPage('Ancienne rubrique');
+        $newParent = $this->createPage('Nouvelle rubrique');
+        $branch = $this->createPage('Notre offre', parent: (int) $formerParent->getId());
+        $leaf = $this->createPage('Conseil', parent: (int) $branch->getId());
+        $deepest = $this->createPage('Audit', parent: (int) $leaf->getId());
+
+        self::assertSame('ancienne-rubrique/notre-offre/conseil/audit', $deepest->getRewrittenUrl($this->locale()));
+
+        $this->moveUnder($branch, (int) $newParent->getId());
+
+        self::assertSame('nouvelle-rubrique/notre-offre', $branch->getRewrittenUrl($this->locale()));
+        self::assertSame('nouvelle-rubrique/notre-offre/conseil', $leaf->getRewrittenUrl($this->locale()));
+        self::assertSame(
+            'nouvelle-rubrique/notre-offre/conseil/audit',
+            $deepest->getRewrittenUrl($this->locale()),
+            'A page three levels below the one that moved follows it too.',
+        );
+    }
+
+    /**
+     * The former address of every descendant answers a 301 on the new one.
+     *
+     * This is what the core rewriting trait does when an address is replaced: it
+     * points the old row at the new one, and the rewriting router redirects. It
+     * only happens for the pages the module actually re-addresses, which is the
+     * whole point of the test.
+     */
+    public function testTheFormerAddressOfAMovedDescendantRedirects(): void
+    {
+        $formerParent = $this->createPage('Rubrique de départ');
+        $newParent = $this->createPage('Rubrique d’arrivée');
+        $branch = $this->createPage('Notre agence', parent: (int) $formerParent->getId());
+        $leaf = $this->createPage('Notre équipe', parent: (int) $branch->getId());
+
+        $formerLeafAddress = (string) $leaf->getRewrittenUrl($this->locale());
+
+        $this->moveUnder($branch, (int) $newParent->getId());
+
+        $newLeafAddress = (string) $leaf->getRewrittenUrl($this->locale());
+
+        self::assertNotSame($formerLeafAddress, $newLeafAddress);
+
+        $former = RewritingUrlQuery::create()->findOneByUrl($formerLeafAddress);
+        $target = RewritingUrlQuery::create()->findOneByUrl($newLeafAddress);
+
+        self::assertNotNull($former, 'The address a page used to answer on is kept.');
+        self::assertNotNull($target);
+        self::assertSame(
+            (int) $target->getId(),
+            (int) $former->getRedirected(),
+            'The former address of a moved descendant points at its new one, which is what makes the router answer 301.',
+        );
+    }
+
+    /**
+     * A slug somebody typed survives the move of an ancestor.
+     *
+     * Re-addressing a descendant recomputes the path of its ancestors and
+     * nothing else. Deriving the segment from the title again would rename every
+     * address of the subtree, which is the failure the stored slug exists to
+     * prevent.
+     */
+    public function testMovingAPageKeepsTheSlugsItsDescendantsWereGiven(): void
+    {
+        $formerParent = $this->createPage('Section A');
+        $newParent = $this->createPage('Section B');
+        $branch = $this->createPage('Nos métiers', parent: (int) $formerParent->getId());
+        $leaf = $this->pageWithSlug('Développement web sur mesure', 'dev-2025', (int) $branch->getId());
+
+        $this->moveUnder($branch, (int) $newParent->getId());
+
+        self::assertSame('section-b/nos-metiers/dev-2025', $leaf->getRewrittenUrl($this->locale()));
+    }
+
+    /**
+     * A page whose parent is one of its own descendants cannot be walked
+     * forever.
+     *
+     * The back office cannot build such a tree: the parent choices leave out the
+     * descendants of the page being edited. An import, a restore of an old dump
+     * or a hand-written row can, and a walk that follows parents blindly never
+     * comes back.
+     */
+    public function testASubtreeThatContainsItselfStillTerminates(): void
+    {
+        $top = $this->createPage('Boucle haute');
+        $child = $this->createPage('Boucle basse', parent: (int) $top->getId());
+
+        // The tree now holds a cycle: each of the two pages is under the other.
+        $top->setParent((int) $child->getId())->save();
+
+        $rewritten = $this->getService(CmsUrlService::class)->rebuildSubtree($child);
+
+        self::assertSame(2, $rewritten, 'Each page of the cycle is addressed once, and the walk stops there.');
+    }
+
+    /**
+     * A move applies to every language, not to the one being edited.
+     *
+     * The parent of a page is a single column shared by its translations, so
+     * saving the French settings of a page moves its English address too, and the
+     * addresses of its descendants in both.
+     */
+    public function testAMoveFollowsTheAddressesOfEveryLanguageThePagesAnswerIn(): void
+    {
+        $second = $this->secondLocale();
+
+        $formerParent = $this->bilingualPage('Former area', 'Ancien domaine', $second);
+        $newParent = $this->bilingualPage('New area', 'Nouveau domaine', $second);
+        $branch = $this->bilingualPage('Our trades', 'Nos métiers', $second, (int) $formerParent->getId());
+        $leaf = $this->bilingualPage('Advice', 'Conseil', $second, (int) $branch->getId());
+
+        self::assertSame('ancien-domaine/nos-metiers/conseil', $leaf->getRewrittenUrl($second));
+
+        $this->moveUnder($branch, (int) $newParent->getId());
+
+        self::assertSame('new-area/our-trades', $branch->getRewrittenUrl($this->locale()));
+        self::assertSame(
+            'nouveau-domaine/nos-metiers',
+            $branch->getRewrittenUrl($second),
+            'The page that moved is re-addressed in the languages it answers in, not only in the one being edited.',
+        );
+        self::assertSame('new-area/our-trades/advice', $leaf->getRewrittenUrl($this->locale()));
+        self::assertSame('nouveau-domaine/nos-metiers/conseil', $leaf->getRewrittenUrl($second));
+    }
+
+    /**
+     * A rebuild puts addresses back and never invents one.
+     *
+     * A page can hold a draft in a language it was never given an address in: a
+     * translation started and not saved from the settings screen. Addressing it
+     * because an ancestor moved would put a page online under a language nobody
+     * wrote it in.
+     */
+    public function testAMoveDoesNotGiveAnAddressToALanguageThePageHasNone(): void
+    {
+        $second = $this->secondLocale();
+
+        $formerParent = $this->createPage('Quiet area');
+        $newParent = $this->createPage('Louder area');
+        $branch = $this->createPage('Trades', parent: (int) $formerParent->getId());
+        $leaf = $this->createPage('Support', parent: (int) $branch->getId());
+
+        // Content in the second language, and no address in it: what an import,
+        // or a translation written in the builder alone, leaves behind.
+        $this->writer()->saveContent($leaf, $second, new BuilderContent(
+            projectData: '{"pages":[]}',
+            html: '<h1>Assistance</h1>',
+            css: '',
+        ));
+
+        self::assertNull($leaf->getRewrittenUrl($second), 'Saving content in a language does not address the page in it.');
+
+        $this->moveUnder($branch, (int) $newParent->getId());
+
+        self::assertSame('louder-area/trades/support', $leaf->getRewrittenUrl($this->locale()));
+        self::assertNull(
+            $leaf->getRewrittenUrl($second),
+            'A rebuild puts addresses back and never gives one to a language the page did not answer in.',
+        );
+    }
+
+    /**
+     * Another active language of the shop, whichever it is.
+     */
+    private function secondLocale(): string
+    {
+        $locales = array_map(
+            static fn (Lang $lang): string => (string) $lang->getLocale(),
+            iterator_to_array(LangQuery::create()->filterByActive(1)->orderByPosition()->find(), false),
+        );
+
+        $others = array_values(array_diff($locales, [$this->locale()]));
+
+        if ([] === $others) {
+            self::markTestSkipped('The shop has a single active language, so nothing here can be measured.');
+        }
+
+        return $others[0];
+    }
+
+    private function bilingualPage(string $title, string $otherTitle, string $otherLocale, int $parent = 0): CmsPage
+    {
+        $page = $this->createPage($title, parent: $parent);
+        $this->writer()->saveDraft($page, $otherLocale, new PageDraft(title: $otherTitle));
+
+        return $page;
+    }
+
     private function pageWithSlug(string $title, string $slug, int $parent = 0): CmsPage
     {
         $page = $this->createPage($title, parent: $parent);
         $this->writer()->saveDraft($page, $this->locale(), new PageDraft(title: $title, slug: $slug));
 
         return $page;
+    }
+
+    /**
+     * Re-parents a page the way the edit screen does: the parent is set on the
+     * object, then the settings form is saved with the slug the screen shows.
+     */
+    private function moveUnder(CmsPage $page, int $parent): void
+    {
+        $urls = $this->getService(CmsUrlService::class);
+        $locale = $this->locale();
+
+        $page->setParent($parent);
+
+        $this->writer()->saveDraft($page, $locale, new PageDraft(
+            title: (string) $page->setLocale($locale)->getTitle(),
+            slug: $urls->slugOf($page, $locale),
+        ));
     }
 }

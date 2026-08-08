@@ -24,6 +24,7 @@ use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Builder\EmptyContentChecker;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
+use TheliaCMS\Builder\PlaceholderContentChecker;
 use TheliaCMS\Builder\PublishedContentSanitizer;
 use TheliaCMS\Http\CachePurger;
 use TheliaCMS\Http\CacheTags;
@@ -58,6 +59,7 @@ final readonly class CmsPageWriter
         private PageContentNormalizer $normalizer,
         private PublishedContentSanitizer $sanitizer,
         private EmptyContentChecker $emptiness,
+        private PlaceholderContentChecker $placeholders,
         private ImageRewriter $images,
         private SearchTextExtractor $searchText,
         // Menus hold the address and the title of the pages they point at, and
@@ -79,6 +81,10 @@ final readonly class CmsPageWriter
         try {
             $adminId = $this->securityContext->getAdminUser()?->getId();
             $wasNew = $page->isNew();
+            // Read before anything is written: it is what says whether this save
+            // moved the page, and therefore whether the pages under it have to
+            // follow.
+            $formerAddress = $wasNew ? null : $page->getRewrittenUrl($locale);
 
             if ($wasNew) {
                 $page->setCreatedBy($adminId);
@@ -97,7 +103,16 @@ final readonly class CmsPageWriter
                 $content->save($connection);
             }
 
-            $this->urls->refresh($page, $locale, $draft->slug);
+            $address = $this->urls->refresh($page, $locale, $draft->slug);
+
+            // The page changed parent, or was renamed: either way the addresses
+            // of the pages under it were built from the one it no longer has, and
+            // so were its own addresses in the other languages. Done inside the
+            // transaction of the save, because a subtree half re-addressed is a
+            // site where some pages answer and others do not.
+            if (null !== $formerAddress && $formerAddress !== $address) {
+                $this->urls->rebuildSubtree($page);
+            }
 
             $connection->commit();
 
@@ -137,7 +152,8 @@ final readonly class CmsPageWriter
      * Promotes the draft to the published snapshot and takes a revision, in one
      * transaction: a half-published page would be served to visitors.
      *
-     * @throws EmptyPageContentException when the draft would put nothing online
+     * @throws EmptyPageContentException       when the draft would put nothing online
+     * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
      */
     public function publish(CmsPage $page, string $locale): void
     {
@@ -148,18 +164,8 @@ final readonly class CmsPageWriter
             $withCustomCode = $this->mayPublishCustomCode();
 
             $content = $this->contentFor($page, $locale);
-            $html = $this->images->rewrite(
-                $this->sanitizer->html($this->normalizer->html($content->getDraftHtml()), $withCustomCode),
-            );
+            $html = $this->publishableHtml($page, $locale, $content, $withCustomCode);
             $css = $this->sanitizer->css($this->normalizer->css($content->getDraftCss()));
-
-            // Refused rather than stored: the column would be null, the front
-            // would answer 404, and the back office would still read
-            // "published". Checked on the filtered HTML, which is what a
-            // visitor would have been served.
-            if ($this->emptiness->isEmpty($html)) {
-                throw EmptyPageContentException::for((int) $page->getId(), $locale);
-            }
 
             $content->setPublishedHtml($html)
                 ->setPublishedCss($css)
@@ -185,6 +191,56 @@ final readonly class CmsPageWriter
 
             throw $throwable;
         }
+    }
+
+    /**
+     * Says whether this draft could go online, without writing anything.
+     *
+     * Runs the checks through the same pipeline `publish()` uses, so that a
+     * caller able to publish in bulk can report what will be refused instead of
+     * announcing a count it will not reach.
+     *
+     * @throws EmptyPageContentException       when the draft would put nothing online
+     * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
+     */
+    public function assertPublishable(CmsPage $page, string $locale): void
+    {
+        $this->publishableHtml($page, $locale, $this->contentFor($page, $locale), $this->mayPublishCustomCode());
+    }
+
+    /**
+     * What would actually be served, or the reason it must not be.
+     *
+     * Both refusals are decided here, on the filtered HTML, because that is what
+     * a visitor would have been given and not what the editor holds.
+     *
+     * @throws EmptyPageContentException       when the draft would put nothing online
+     * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
+     */
+    private function publishableHtml(CmsPage $page, string $locale, CmsPageContent $content, bool $withCustomCode): string
+    {
+        $html = $this->images->rewrite(
+            $this->sanitizer->html($this->normalizer->html($content->getDraftHtml()), $withCustomCode),
+        );
+
+        // Refused rather than stored: the column would be null, the front would
+        // answer 404, and the back office would still read "published".
+        if ($this->emptiness->isEmpty($html)) {
+            throw EmptyPageContentException::for((int) $page->getId(), $locale);
+        }
+
+        // The legal pages are seeded as drafts holding instructions, on purpose.
+        // Putting that text online tells visitors, and search engines, things
+        // about the site that are not true. Refused in the one place every
+        // publication goes through, so that a command asked to publish
+        // everything cannot undo the precaution.
+        $sentence = $this->placeholders->placeholderSentenceIn($html);
+
+        if (null !== $sentence) {
+            throw PlaceholderPageContentException::for((int) $page->getId(), $locale, $sentence);
+        }
+
+        return $html;
     }
 
     public function unpublish(CmsPage $page, string $locale): void
