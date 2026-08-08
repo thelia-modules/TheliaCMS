@@ -126,11 +126,38 @@ template of the theme is in that state.
 An address without a trailing slash leaves on two string tests before any query,
 so a site that has no use for any of this pays nothing.
 
+## Finding a page
+
+**CMS > Pages** shows the tree one level at a time. The pages at the root of the
+site are listed; the ones holding other pages carry the number they hold and open
+on a chevron. What you opened travels in the address, so a bookmark or a back
+button puts you where you were, and the buttons on a row bring you back to the
+same view. A site of fewer than forty pages opens whole, because folding buys it
+nothing.
+
+Above the table, **Find a page** looks for a word in the title of the language
+being edited. The publication state and the visibility narrow it further. Asking
+for anything turns the tree into a list of results, fifty to a screen, and each
+row names the pages it sits under: indentation with the parents missing draws a
+tree that is not on screen. The arrows that reorder a page only appear on the
+tree, since a position moved from a filtered list is a position among pages you
+cannot see. The bin has the same search box.
+
+The screen works without a mouse. Branches open on links, moves are buttons, and
+re-parenting a page is the **Parent** field of its edit form. It also works with
+JavaScript switched off, apart from the confirmation before a page goes to the
+bin.
+
+Reading it costs the same on a site of six hundred pages as on a site of seven:
+the state, the address and the number of pages underneath are read for the whole
+screen at once, never per row. `PageListingCostTest` measures the same read on two
+trees of different sizes and fails if the two numbers differ.
+
 ## Editing a page
 
-**CMS > Pages** lists the tree. A page carries a title, a slug, a parent, a
-layout, a publication window and its SEO metadata, all per language. Content is
-edited on its own full-screen route, `/admin/cms/pages/{id}/builder`:
+A page carries a title, a slug, a parent, a layout, a publication window and its
+SEO metadata, all per language. Content is edited on its own full-screen route,
+`/admin/cms/pages/{id}/builder`:
 
 - drafts autosave every 30 seconds, and leaving with unsaved work asks first;
 - **Preview the draft** gives a signed link, valid 72 hours, that a client

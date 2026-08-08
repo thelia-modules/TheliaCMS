@@ -41,8 +41,50 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   that needs writing. The lookup asks the database for a single word of each
   sample sentence and then confirms the answer with the same check publishing
   uses, so it never reads the published content of the whole site.
+- The accessibility suite signs in and scans the page listing, the results of a
+  search, the results in each publication state and the bin. It also checks the
+  two things a scan cannot: that a branch of the tree opens with the keyboard
+  alone, and that no control of the screen is smaller than the 24 by 24 pixels
+  WCAG 2.2 asks for. Colour contrast is judged against the palette of the
+  back-office theme, which fails on every screen of it, so what the test refuses
+  is a colour pair this screen adds.
+
+### Changed
+
+- **CMS > Pages** shows the tree branch by branch, with a search box and filters
+  on the publication state and on the visibility. It used to list every page of
+  the site flat, with nothing to search: on the pilot of a takeover that meant 128
+  rows, 100 of them nested, so the structure of the site was unreadable and
+  finding a page meant scrolling. A page holding others now carries the number it
+  holds and opens on a chevron, what is open travels in the address, and a search
+  gives a flat list of fifty results at a time where each row names the pages it
+  sits under. Reordering is offered on the tree only.
+- A site of fewer than forty pages opens whole, so nothing changes for a site that
+  never needed folding.
 
 ### Fixed
+
+- The page listing asked the database for the publication state and the address of
+  every page, one row at a time. On a tree of 637 pages over four levels that was
+  1334 statements, 375 ms and 1.65 MB of HTML for a screen nobody could read; it
+  is now 63 statements, 130 ms and 173 KB, and the count no longer depends on how
+  many pages the site holds. A search costs 69 statements whatever it finds.
+  `PageListingCostTest` compares the cost of the same read on two trees of
+  different sizes, so a per-row query coming back is a red test and not a screen
+  that slowly gets worse.
+- The edit form of a page asked for the publication state of every page on the
+  site to build its **Parent** list, and threw all of them away. It no longer
+  asks.
+- A page with no title in the language being edited was listed as `#28`. It shows
+  its title in another language, marked as still to be translated.
+- A page with no address in the language being edited was listed as `/`, which is
+  the address of the home page.
+- The **Scheduled** badge was white on cyan, 1.95:1 where AA asks 4.5:1 of text.
+- A page hidden from the site was drawn faded, which took its text down to 1.96:1.
+  It carries a mark down its left edge instead. The row also said "hidden" twice,
+  once as a badge and once as its state.
+- The chevron that opens a branch was an 18 by 18 target. WCAG 2.2 asks for 24 by
+  24, and a test now measures every control of the screen.
 
 - An emoji can be typed anywhere in a page. Thelia opens its database connection
   with `SET NAMES 'UTF8'`, which MariaDB and MySQL read as three bytes per
