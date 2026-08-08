@@ -3,15 +3,59 @@
 {% block title %}{{ 'Pages'|trans({}, 'theliacms') }}{% endblock %}
 {% block body_testid %}cms-pages-list{% endblock %}
 
+{% block head_extra %}
+    {# Kept with the screen that needs them rather than shipped as a stylesheet. #}
+    <style>
+        .cms-tree__indent { display: inline-block; }
+        .cms-tree__mark { color: var(--bs-secondary-color); }
+        /* The fold control is a link, so it keeps its own focus ring; only its
+           resting look is toned down. The size is not decoration: a chevron drawn
+           at its natural size is a 18 by 18 target, and WCAG 2.2 asks for 24 by
+           24. */
+        .cms-tree__fold {
+            color: var(--bs-body-color);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.5rem;
+            height: 1.5rem;
+            vertical-align: middle;
+        }
+        .cms-tree__fold:hover { color: var(--bs-primary); }
+        .cms-tree__spacer { display: inline-block; width: 1.5rem; vertical-align: middle; }
+        /* A page that is not shown on the site is marked, not faded: fading a row
+           takes its text from 4.5 to 1 down to 2 to 1, so the rows hardest to read
+           end up being the ones that need attention. */
+        .cms-page-row--hidden > td:first-child { box-shadow: inset 3px 0 0 0 var(--bs-secondary-color); }
+        /* The address of a page four levels down is long enough to push the
+           actions off the side of the table, where nobody scrolls to find them.
+           Cut on screen, whole in the markup, so it is still read out and still
+           copied. */
+        .cms-page-address {
+            max-width: 20rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Pages'|trans({}, 'theliacms') } %}
+        {% block title %}
+            {{ 'Pages'|trans({}, 'theliacms') }}
+            <span class="badge bg-secondary">{{ live_count }}</span>
+        {% endblock %}
+
         {% block actions %}
-            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.trash', { edit_language_id: edit_language_id }) }}">
+            {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ filters.trash_url }}" data-testid="cms-pages-trash-link">
                 <i class="bi bi-trash3 me-1" aria-hidden="true"></i>
                 {{ 'Bin'|trans({}, 'theliacms') }}
                 {% if trash_count > 0 %}<span class="badge bg-secondary ms-1">{{ trash_count }}</span>{% endif %}
             </a>
-            <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.pages.create', { edit_language_id: edit_language_id }) }}">
+            <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.pages.create', { edit_language_id: edit_language_id }) }}" data-testid="cms-pages-new">
                 <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
                 {{ 'New page'|trans({}, 'theliacms') }}
             </a>
@@ -20,7 +64,7 @@
 
     {% include '@TheliaCMSModule/backOffice/default-twig/pages/_sample_text_warning.html.twig' %}
 
-    {% if rows is empty %}
+    {% if live_count == 0 %}
         <div class="card">
             <div class="card-body text-center py-5">
                 <p class="text-muted mb-3">{{ 'No page yet. Pages are the content of your site: your home page, your services, your contact page.'|trans({}, 'theliacms') }}</p>
@@ -28,54 +72,170 @@
             </div>
         </div>
     {% else %}
+        {% include '@TheliaCMSModule/backOffice/default-twig/pages/_filters.html.twig' %}
+
         <div class="card">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th scope="col">{{ 'Title'|trans({}, 'theliacms') }}</th>
-                            <th scope="col">{{ 'Status'|trans({}, 'theliacms') }}</th>
-                            <th scope="col">{{ 'URL'|trans({}, 'theliacms') }}</th>
-                            <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in rows %}
-                            {% set page = row.page %}
-                            <tr data-testid="cms-page-row-{{ page.id }}">
-                                <td>
-                                    <span style="padding-left: {{ row.depth * 1.5 }}rem"></span>
-                                    <a href="{{ path('admin.cms.pages.edit', { id: page.id, edit_language_id: edit_language_id }) }}">{{ page.title|default('#' ~ page.id) }}</a>
-                                    {% if page.id == home_page_id %}
-                                        <span class="badge bg-primary ms-2">{{ 'Home'|trans({}, 'theliacms') }}</span>
-                                    {% endif %}
-                                </td>
-                                <td><span class="badge {{ row.status.badgeClass }}">{{ row.status.label|trans({}, 'theliacms') }}</span></td>
-                                <td class="text-muted small">/{{ page.getRewrittenUrl(edit_locale) }}</td>
-                                <td class="text-end">
-                                    <div class="d-inline-flex gap-1">
-                                        <form method="post" action="{{ path('admin.cms.pages.move', { id: page.id, direction: 'up', edit_language_id: edit_language_id }) }}">
-                                            <button class="btn btn-sm btn-outline-secondary" type="submit" aria-label="{{ 'Move up'|trans({}, 'theliacms') }}"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
-                                        </form>
-                                        <form method="post" action="{{ path('admin.cms.pages.move', { id: page.id, direction: 'down', edit_language_id: edit_language_id }) }}">
-                                            <button class="btn btn-sm btn-outline-secondary" type="submit" aria-label="{{ 'Move down'|trans({}, 'theliacms') }}"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
-                                        </form>
-                                        <form method="post" action="{{ path('admin.cms.pages.visibility', { id: page.id, edit_language_id: edit_language_id }) }}">
-                                            <button class="btn btn-sm btn-outline-secondary" type="submit">
-                                                {{ page.visible == 1 ? 'Online'|trans({}, 'theliacms') : 'Offline'|trans({}, 'theliacms') }}
-                                            </button>
-                                        </form>
-                                        <form method="post" action="{{ path('admin.cms.pages.delete', { id: page.id, edit_language_id: edit_language_id }) }}"
-                                              onsubmit="return confirm('{{ 'Move this page to the bin?'|trans({}, 'theliacms')|e('js') }}')">
-                                            <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}"><i class="bi bi-trash3" aria-hidden="true"></i></button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                {% if is_filtering %}
+                    <span data-testid="cms-pages-result-count">
+                        {% if results.total == 0 %}
+                            {{ 'No page matches'|trans({}, 'theliacms') }}
+                        {% else %}
+                            {{ 'Pages %first% to %last% of %total%'|trans({ '%first%': results.firstOnPage, '%last%': results.lastOnPage, '%total%': results.total }, 'theliacms') }}
+                        {% endif %}
+                    </span>
+                {% else %}
+                    <span>{{ 'Structure of the site'|trans({}, 'theliacms') }}</span>
+                    {% if filters.fold_all_url %}
+                        <a class="btn btn-sm btn-link p-0" href="{{ filters.fold_all_url }}" data-testid="cms-pages-fold-all">
+                            {{ 'Close every branch'|trans({}, 'theliacms') }}
+                        </a>
+                    {% endif %}
+                {% endif %}
             </div>
+
+            {% if rows is empty %}
+                <div class="card-body text-center py-5">
+                    <p class="text-muted mb-2">{{ 'No page matches what you asked for.'|trans({}, 'theliacms') }}</p>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ filters.clear_url }}">{{ 'Show every page again'|trans({}, 'theliacms') }}</a>
+                </div>
+            {% else %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <caption class="visually-hidden">
+                            {{ is_filtering
+                                ? 'Pages matching your search, with the pages they sit under'|trans({}, 'theliacms')
+                                : 'Pages of the site, deepest levels folded until you open them'|trans({}, 'theliacms') }}
+                        </caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ 'Title'|trans({}, 'theliacms') }}</th>
+                                <th scope="col">{{ 'Publication'|trans({}, 'theliacms') }}</th>
+                                <th scope="col">{{ 'Address'|trans({}, 'theliacms') }}</th>
+                                <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                                <tr data-testid="cms-page-row-{{ row.id }}" data-row-id="{{ row.id }}"
+                                    class="{{ row.visible ? '' : 'cms-page-row--hidden' }}">
+                                    <td>
+                                        {% if not is_filtering %}
+                                            {# Depth is drawn and also written out: indentation alone is
+                                               invisible to anybody who is not looking at the screen. #}
+                                            <span class="visually-hidden">{{ 'Level %level%'|trans({ '%level%': row.level }, 'theliacms') }}</span>
+                                            {% if row.depth > 0 %}
+                                                <span class="cms-tree__indent" style="width: {{ row.depth * 1.75 }}rem"></span>
+                                                <span class="cms-tree__mark me-1" aria-hidden="true">↳</span>
+                                            {% endif %}
+
+                                            {% if row.toggle_url %}
+                                                <a class="cms-tree__fold me-1" href="{{ row.toggle_url }}"
+                                                   aria-expanded="{{ row.is_open ? 'true' : 'false' }}"
+                                                   data-testid="cms-page-fold-{{ row.id }}">
+                                                    <i class="bi {{ row.is_open ? 'bi-chevron-down' : 'bi-chevron-right' }}" aria-hidden="true"></i>
+                                                    <span class="visually-hidden">
+                                                        {{ row.is_open
+                                                            ? 'Close %title%'|trans({ '%title%': row.title }, 'theliacms')
+                                                            : 'Open %title%'|trans({ '%title%': row.title }, 'theliacms') }}
+                                                    </span>
+                                                </a>
+                                            {% else %}
+                                                <span class="cms-tree__spacer" aria-hidden="true"></span>
+                                            {% endif %}
+                                        {% endif %}
+
+                                        <a href="{{ row.edit_url }}" class="fw-medium {{ row.is_untranslated ? 'fst-italic' : '' }}">{{ row.title }}</a>
+
+                                        {% if row.is_untranslated %}
+                                            {# The name comes from another language. Saying so is what turns a
+                                               row nobody recognises into a page somebody can go and translate. #}
+                                            <span class="badge text-bg-warning ms-2">{{ 'To be translated'|trans({}, 'theliacms') }}</span>
+                                        {% endif %}
+                                        {% if row.id == home_page_id %}
+                                            <span class="badge bg-primary ms-2">{{ 'Home page'|trans({}, 'theliacms') }}</span>
+                                        {% endif %}
+                                        {% if not row.visible and not row.is_unpublished %}
+                                            {# Said once: a page that is hidden is already reported as
+                                               unpublished, and repeating it costs the row its readability. #}
+                                            <span class="badge text-bg-light border ms-2">{{ 'Hidden from the site'|trans({}, 'theliacms') }}</span>
+                                        {% endif %}
+                                        {% if row.child_count > 0 and not is_filtering %}
+                                            <span class="badge text-bg-light border ms-2">
+                                                {{ row.child_count }}
+                                                <span class="visually-hidden">{{ 'pages inside this one'|trans({}, 'theliacms') }}</span>
+                                            </span>
+                                        {% endif %}
+
+                                        {% if is_filtering and row.ancestor_path %}
+                                            {# On a list of results there is nothing to indent from, so the
+                                               pages above are named. #}
+                                            <div class="small text-muted">
+                                                {{ 'Inside %path%'|trans({ '%path%': row.ancestor_path }, 'theliacms') }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="badge {{ row.status_badge }}">{{ row.status_label|trans({}, 'theliacms') }}</span></td>
+                                    <td class="text-muted small cms-page-address"
+                                        {% if row.address %}title="{{ row.address }}"{% endif %}>
+                                        {{ row.address ?: 'No address in this language yet'|trans({}, 'theliacms') }}
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex gap-1">
+                                            {% if not is_filtering %}
+                                                <form method="post" action="{{ row.move_up_url }}">
+                                                    <button class="btn btn-sm btn-outline-secondary" type="submit"
+                                                            aria-label="{{ 'Move %title% up'|trans({ '%title%': row.title }, 'theliacms') }}"
+                                                            {{ row.can_move_up ? '' : 'disabled' }}>
+                                                        <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                                                    </button>
+                                                </form>
+                                                <form method="post" action="{{ row.move_down_url }}">
+                                                    <button class="btn btn-sm btn-outline-secondary" type="submit"
+                                                            aria-label="{{ 'Move %title% down'|trans({ '%title%': row.title }, 'theliacms') }}"
+                                                            {{ row.can_move_down ? '' : 'disabled' }}>
+                                                        <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                            <a class="btn btn-sm btn-outline-secondary" href="{{ row.builder_url }}"
+                                               aria-label="{{ 'Edit the content of %title%'|trans({ '%title%': row.title }, 'theliacms') }}">
+                                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                            </a>
+                                            <form method="post" action="{{ row.visibility_url }}">
+                                                <button class="btn btn-sm btn-outline-secondary" type="submit">
+                                                    {{ row.visible ? 'Hide'|trans({}, 'theliacms') : 'Show'|trans({}, 'theliacms') }}
+                                                </button>
+                                            </form>
+                                            <form method="post" action="{{ row.delete_url }}"
+                                                  onsubmit="return confirm('{{ 'Move this page and everything under it to the bin?'|trans({}, 'theliacms')|e('js') }}')">
+                                                <button class="btn btn-sm btn-outline-danger" type="submit"
+                                                        aria-label="{{ 'Move %title% to the bin'|trans({ '%title%': row.title }, 'theliacms') }}">
+                                                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if is_filtering and results.lastPage > 1 %}
+                    <div class="card-footer">
+                        {{ component('BoPagination', {
+                            route: 'admin.cms.pages.list',
+                            currentPage: results.page,
+                            lastPage: results.lastPage,
+                            routeParams: filter_query|merge({ edit_language_id: edit_language_id }),
+                            align: 'center',
+                            spacing: '',
+                            testid: 'cms-pages-pagination',
+                        }) }}
+                    </div>
+                {% endif %}
+            {% endif %}
         </div>
     {% endif %}
 {% endblock %}

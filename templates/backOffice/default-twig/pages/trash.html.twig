@@ -5,19 +5,59 @@
 
 {% block content %}
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Bin'|trans({}, 'theliacms') } %}
+        {% block title %}
+            {{ 'Bin'|trans({}, 'theliacms') }}
+            <span class="badge bg-secondary">{{ trash_count }}</span>
+        {% endblock %}
+
         {% block actions %}
-            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_language_id: edit_language_id }) }}">{{ 'Back to pages'|trans({}, 'theliacms') }}</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list', { edit_language_id: edit_language_id }) }}" data-testid="cms-trash-back">
+                <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
+                {{ 'Back to pages'|trans({}, 'theliacms') }}
+                <span class="badge bg-secondary ms-1">{{ live_count }}</span>
+            </a>
         {% endblock %}
     {% endembed %}
+
+    {# The bin is searched with the same box as the site: an editor looking for a
+       page they deleted looks for it by name, and being told to scroll a bin of a
+       hundred rows is the same problem one screen further along. #}
+    <form method="get" action="{{ path('admin.cms.pages.trash') }}" class="card mb-3" data-testid="cms-trash-filters">
+        <input type="hidden" name="edit_language_id" value="{{ edit_language_id }}">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-9">
+                    <label class="form-label" for="cms-trash-search">{{ 'Find a page in the bin'|trans({}, 'theliacms') }}</label>
+                    <input type="search" class="form-control" id="cms-trash-search" name="q" value="{{ search }}"
+                           placeholder="{{ 'Part of the title, for instance contact'|trans({}, 'theliacms') }}"
+                           data-testid="cms-trash-search-input">
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1 flex-shrink-0">
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>{{ 'Search'|trans({}, 'theliacms') }}
+                    </button>
+                    {% if search %}
+                        <a href="{{ path('admin.cms.pages.trash', { edit_language_id: edit_language_id }) }}"
+                           class="btn btn-outline-secondary flex-shrink-0">{{ 'Clear'|trans({}, 'theliacms') }}</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </form>
 
     {% if pages is empty %}
         <div class="card">
             <div class="card-body text-center py-5 text-muted">
-                {{ 'The bin is empty.'|trans({}, 'theliacms') }}
+                {{ search ? 'No page in the bin matches what you asked for.'|trans({}, 'theliacms') : 'The bin is empty.'|trans({}, 'theliacms') }}
             </div>
         </div>
     {% else %}
         <div class="card">
+            {% if search %}
+                <div class="card-header" data-testid="cms-trash-result-count">
+                    {{ '%found% of the %total% page(s) in the bin match'|trans({ '%found%': pages|length, '%total%': trash_count }, 'theliacms') }}
+                </div>
+            {% endif %}
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead>

@@ -31,7 +31,6 @@ use Thelia\Model\Lang;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Page\CmsUrlService;
-use TheliaCMS\Page\SampleTextPageFinder;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
 use Twig\Environment;
@@ -60,27 +59,17 @@ final readonly class CmsPageAdminController
         private CmsPageWriter $writer,
         private EditLanguage $languages,
         private CmsUrlService $addresses,
-        private SampleTextPageFinder $sampleTextPages,
+        private PageListPresenter $listing,
     ) {
     }
 
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): Response
     {
-        $lang = $this->editLang($request);
-        $locale = $lang->getLocale();
-
-        return new Response($this->twig->render(self::LIST_TEMPLATE, [
-            'rows' => $this->pages->tree($locale),
-            'edit_locale' => $locale,
-            'edit_language_id' => $lang->getId(),
-            'home_page_id' => (int) TheliaCMS::getConfigValue('home_page_id', 0),
-            'trash_count' => \count($this->pages->trash($locale)),
-            // Pages online with the installer text still on them. Named here
-            // rather than only counted somewhere else: this is the screen
-            // somebody opens to go and write them.
-            'sample_text_pages' => $this->sampleTextPages->publishedPagesStillHoldingSampleText($locale),
-        ]));
+        return new Response($this->twig->render(
+            self::LIST_TEMPLATE,
+            $this->listing->present(PageFilters::fromRequest($request), $this->editLang($request)),
+        ));
     }
 
     #[Route('/new', name: 'create', methods: ['GET', 'POST'])]
@@ -184,9 +173,15 @@ final readonly class CmsPageAdminController
     public function trash(Request $request): Response
     {
         $lang = $this->editLang($request);
+        $filters = PageFilters::fromRequest($request);
 
         return new Response($this->twig->render(self::TRASH_TEMPLATE, [
-            'pages' => $this->pages->trash($lang->getLocale()),
+            'pages' => $this->pages->trash($lang->getLocale(), $filters),
+            'search' => $filters->search,
+            // The whole bin, not the rows a search left: a badge that counts the
+            // matches says the bin holds one page when it holds a hundred.
+            'trash_count' => $this->pages->countInTrash(),
+            'live_count' => $this->pages->countLive(),
             'edit_locale' => $lang->getLocale(),
             'edit_language_id' => $lang->getId(),
         ]));
@@ -340,10 +335,16 @@ final readonly class CmsPageAdminController
         return $this->translator->trans($message, [], TheliaCMS::DOMAIN_NAME);
     }
 
+    /**
+     * Back to the listing as the editor had it: same search, same folded
+     * branches, same page of results. Moving a page that landed them back on a
+     * folded tree would make reordering a subtree a fight with the screen.
+     */
     private function backToList(Request $request): RedirectResponse
     {
         return new RedirectResponse($this->urls->generate('admin.cms.pages.list', [
             self::EDIT_LANGUAGE_PARAMETER => $this->editLang($request)->getId(),
+            ...PageFilters::fromRequest($request)->toQueryParams(),
         ]));
     }
 

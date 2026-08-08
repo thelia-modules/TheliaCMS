@@ -1,0 +1,257 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Page\Admin;
+
+use Symfony\Component\HttpFoundation\Request;
+
+/**
+ * What the editor asked the page listing to show.
+ *
+ * The listing has two shapes, and this object decides which one: with nothing
+ * asked it is the tree, opened branch by branch; with a word to look for or a
+ * state to keep it is a flat list of results, paginated and ordered by title.
+ *
+ * They are not two screens. A tree hiding the rows that do not match is a tree
+ * whose remaining indentation lies about who the parents are, and the position
+ * buttons on it would move a page among siblings it cannot see. Once something
+ * is filtered, the parent of a row is written out instead of being drawn.
+ */
+final readonly class PageFilters
+{
+    public const string SEARCH = 'q';
+    public const string STATUSES = 'status';
+    public const string VISIBILITY = 'visibility';
+    public const string PAGE = 'page';
+    public const string OPEN = 'open';
+
+    public const string VISIBLE_ONLY = 'online';
+    public const string HIDDEN_ONLY = 'offline';
+
+    /** Rows per page of results. */
+    public const int PER_PAGE = 50;
+
+    /**
+     * A site small enough to be read whole is shown whole, so that adding search
+     * to the listing does not cost a click to every site that never needed it.
+     */
+    public const int OPEN_EVERYTHING_UNDER = 40;
+
+    /**
+     * @param list<PageStatus> $statuses
+     * @param list<int>        $open       branches the editor unfolded
+     * @param bool             $foldChosen whether the editor said anything about
+     *                                     folding at all, which is not the same
+     *                                     as having nothing open: a small site
+     *                                     opens by itself, and closing its only
+     *                                     branch leaves an empty list that would
+     *                                     otherwise read as "never chose" and
+     *                                     open it again
+     */
+    public function __construct(
+        public string $search = '',
+        public array $statuses = [],
+        public ?bool $visible = null,
+        public int $page = 1,
+        public array $open = [],
+        public bool $foldChosen = false,
+    ) {
+    }
+
+    public static function fromRequest(Request $request): self
+    {
+        $query = $request->query;
+
+        $statuses = [];
+
+        foreach ((array) $query->all(self::STATUSES) as $value) {
+            $status = \is_string($value) ? PageStatus::tryFrom($value) : null;
+
+            if (null !== $status && !\in_array($status, $statuses, true)) {
+                $statuses[] = $status;
+            }
+        }
+
+        $visibility = trim((string) $query->get(self::VISIBILITY, ''));
+
+        return new self(
+            search: trim((string) $query->get(self::SEARCH, '')),
+            statuses: $statuses,
+            visible: match ($visibility) {
+                self::VISIBLE_ONLY => true,
+                self::HIDDEN_ONLY => false,
+                default => null,
+            },
+            page: max(1, $query->getInt(self::PAGE, 1)),
+            open: self::readOpen((string) $query->get(self::OPEN, '')),
+            foldChosen: $query->has(self::OPEN),
+        );
+    }
+
+    /**
+     * Whether the editor asked for something in particular, which is what turns
+     * the tree into a list of results.
+     */
+    public function isFiltering(): bool
+    {
+        return '' !== $this->search || [] !== $this->statuses || null !== $this->visible;
+    }
+
+    /**
+     * Whether anything at all has been touched, unfolded branches included.
+     */
+    public function isEmpty(): bool
+    {
+        return !$this->isFiltering() && !$this->foldChosen && [] === $this->open;
+    }
+
+    /**
+     * How many filters beyond the search box are on, for the badge on the toggle.
+     */
+    public function advancedCount(): int
+    {
+        return \count($this->statuses) + (null === $this->visible ? 0 : 1);
+    }
+
+    /**
+     * The parameters that describe this state, defaults left out so that a plain
+     * listing keeps a plain address.
+     *
+     * @return array<string, string|list<string>>
+     */
+    public function toQueryParams(): array
+    {
+        $params = [];
+
+        if ('' !== $this->search) {
+            $params[self::SEARCH] = $this->search;
+        }
+
+        if ([] !== $this->statuses) {
+            $params[self::STATUSES] = array_map(static fn (PageStatus $status): string => $status->value, $this->statuses);
+        }
+
+        if (null !== $this->visible) {
+            $params[self::VISIBILITY] = $this->visible ? self::VISIBLE_ONLY : self::HIDDEN_ONLY;
+        }
+
+        if ($this->page > 1) {
+            $params[self::PAGE] = (string) $this->page;
+        }
+
+        // Present and empty says "closed on purpose"; absent says "nothing chosen".
+        if ($this->foldChosen || [] !== $this->open) {
+            $params[self::OPEN] = implode(',', $this->open);
+        }
+
+        return $params;
+    }
+
+    public function withoutFilter(string $key): self
+    {
+        return match ($key) {
+            self::SEARCH => $this->with(search: ''),
+            self::STATUSES => $this->with(statuses: []),
+            self::VISIBILITY => $this->with(visible: null, unsetVisible: true),
+            default => $this,
+        };
+    }
+
+    public function withoutStatus(PageStatus $status): self
+    {
+        return $this->with(statuses: array_values(array_filter(
+            $this->statuses,
+            static fn (PageStatus $kept): bool => $kept !== $status,
+        )));
+    }
+
+    /**
+     * Folds or unfolds one branch, keeping the rest of the state.
+     */
+    public function toggling(int $pageId): self
+    {
+        $open = \in_array($pageId, $this->open, true)
+            ? array_values(array_filter($this->open, static fn (int $id): bool => $id !== $pageId))
+            : [...$this->open, $pageId];
+
+        return $this->with(open: $open, foldChosen: true);
+    }
+
+    public function withoutAnyBranchOpen(): self
+    {
+        return $this->with(open: [], foldChosen: true);
+    }
+
+    /**
+     * Every branch unfolded, used only where the whole site is small enough that
+     * showing it whole is the friendlier default.
+     *
+     * @param list<int> $ids
+     */
+    public function withEverythingOpen(array $ids): self
+    {
+        // Not a choice the editor made, so it is not written into the address:
+        // the next screen works it out the same way.
+        return $this->with(open: $ids);
+    }
+
+    public function isOpen(int $pageId): bool
+    {
+        return \in_array($pageId, $this->open, true);
+    }
+
+    /**
+     * @param list<PageStatus>|null $statuses
+     * @param list<int>|null        $open
+     */
+    private function with(
+        ?string $search = null,
+        ?array $statuses = null,
+        ?bool $visible = null,
+        ?int $page = null,
+        ?array $open = null,
+        bool $unsetVisible = false,
+        ?bool $foldChosen = null,
+    ): self {
+        return new self(
+            search: $search ?? $this->search,
+            statuses: $statuses ?? $this->statuses,
+            // A nullable value cannot say "leave it alone" with null alone.
+            visible: $unsetVisible ? null : ($visible ?? $this->visible),
+            // Any change to what is shown invalidates the page number: results
+            // page 4 of a narrower search is usually empty.
+            page: $page ?? 1,
+            open: $open ?? $this->open,
+            foldChosen: $foldChosen ?? $this->foldChosen,
+        );
+    }
+
+    /**
+     * @return list<int>
+     */
+    private static function readOpen(string $raw): array
+    {
+        $ids = [];
+
+        foreach (explode(',', $raw) as $part) {
+            $id = (int) trim($part);
+
+            if ($id > 0 && !\in_array($id, $ids, true)) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
+    }
+}

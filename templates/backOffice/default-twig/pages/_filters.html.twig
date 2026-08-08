@@ -1,0 +1,75 @@
+{#
+    Filter bar of the page listing.
+
+    A plain GET form and plain links, no script: the screen works with JavaScript
+    switched off, and every control is reached by the keyboard because it is a real
+    control and not a widget. Nothing is folded away either, so a filter cannot be
+    on and out of sight at the same time.
+#}
+<form method="get" action="{{ path('admin.cms.pages.list') }}" class="card mb-3" data-testid="cms-pages-filters">
+    {% for name, value in filters.hidden_params %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endfor %}
+
+    <div class="card-body pb-2">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label" for="cms-pages-search">{{ 'Find a page'|trans({}, 'theliacms') }}</label>
+                <input type="search" class="form-control" id="cms-pages-search" name="{{ filters.parameters.search }}"
+                       value="{{ filters.search }}"
+                       placeholder="{{ 'Part of the title, for instance contact'|trans({}, 'theliacms') }}"
+                       data-testid="cms-pages-search-input">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label" for="cms-pages-visibility">{{ 'On the site'|trans({}, 'theliacms') }}</label>
+                <select class="form-select" id="cms-pages-visibility" name="{{ filters.parameters.visibility }}"
+                        data-testid="cms-pages-visibility">
+                    <option value="">{{ 'No preference'|trans({}, 'theliacms') }}</option>
+                    <option value="online" {{ filters.visibility == 'online' ? 'selected' : '' }}>{{ 'Shown on the site'|trans({}, 'theliacms') }}</option>
+                    <option value="offline" {{ filters.visibility == 'offline' ? 'selected' : '' }}>{{ 'Hidden from the site'|trans({}, 'theliacms') }}</option>
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1 flex-shrink-0" data-testid="cms-pages-search-submit">
+                    <i class="bi bi-search me-1" aria-hidden="true"></i>{{ 'Search'|trans({}, 'theliacms') }}
+                </button>
+                {% if filters.is_filtering %}
+                    <a href="{{ filters.clear_url }}" class="btn btn-outline-secondary flex-shrink-0" data-testid="cms-pages-reset">
+                        {{ 'Clear'|trans({}, 'theliacms') }}
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <fieldset class="mt-3">
+            <legend class="form-label mb-2">{{ 'Publication'|trans({}, 'theliacms') }}</legend>
+            <div class="d-flex flex-wrap gap-2" data-testid="cms-pages-status-filters">
+                {% for status in filters.status_options %}
+                    <input type="checkbox" class="btn-check" name="{{ filters.parameters.statuses }}[]"
+                           id="cms-pages-status-{{ status.value }}" value="{{ status.value }}"
+                           {{ status.checked ? 'checked' : '' }} autocomplete="off">
+                    <label class="btn btn-sm {{ status.checked ? 'btn-primary' : 'btn-outline-secondary' }}"
+                           for="cms-pages-status-{{ status.value }}">
+                        {{ status.label|trans({}, 'theliacms') }}
+                    </label>
+                {% endfor %}
+            </div>
+        </fieldset>
+    </div>
+
+    {% if filters.chips is not empty %}
+        <div class="card-footer d-flex flex-wrap align-items-center gap-2 py-2" data-testid="cms-pages-active-filters">
+            <span class="text-muted small">{{ 'Showing only'|trans({}, 'theliacms') }}</span>
+            {% for chip in filters.chips %}
+                <a class="badge rounded-pill text-bg-light border text-decoration-none d-inline-flex align-items-center gap-1"
+                   href="{{ chip.remove_url }}">
+                    {{ chip.label }}
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    <span class="visually-hidden">{{ 'Remove this filter'|trans({}, 'theliacms') }}</span>
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+</form>
