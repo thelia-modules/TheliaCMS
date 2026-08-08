@@ -60,6 +60,24 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - The page served on an address that does not exist now names itself. On an
   address that used to hold a page, the breadcrumb, its `BreadcrumbList` and the
   title kept describing the page that was asked for instead of the one shown.
+- Moving a page in the tree now takes the addresses of its descendants with it.
+  Only the page itself was re-addressed, so every page under it kept announcing
+  the path of a parent it no longer had, at any depth and in every language, with
+  no redirection from the old address and none towards the new one. Reorganising a
+  tree is what the page list is for, so the defect was reachable from the first
+  afternoon on a site. Each descendant keeps the slug it was given and each former
+  address stays as a 301, inside the transaction of the save.
+- `thelia_cms:publish --all` no longer publishes the seeded legal pages. They are
+  created as drafts holding instructions on purpose, and a run of the command put
+  seven of them online on a real site, sample text and all, in the sitemap
+  included. Publishing a draft that still holds that text is now refused wherever
+  it comes from, the back-office button included, and `--dry-run` reports the
+  refusals instead of counting the pages it would then turn down.
+- An address whose first segment merely begins with the letters of the back office
+  gets the 404 page of the site. `/administration-des-ventes` was compared as a
+  prefix against `/admin`, so it was taken for the back office and served the bare
+  404 of the theme. The same comparison in the back-office sidebar is read by
+  segment too.
 - The "Text section" block of the webpage preset starts on a level 2 heading.
   Dropped under the title of a page, its level 1 competed with it, and the check
   run at publication reported a problem the author had not caused. The level is

@@ -35,7 +35,9 @@ bundle through Symfony Flex.
 Activation creates the tables, seeds the ACL resources and generates the page
 URLs. It also seeds four unpublished legal pages (legal notice, privacy policy,
 cookies, accessibility statement) as placeholders in every active language.
-Nothing is served on the front until you publish them.
+Nothing is served on the front until you publish them, and publishing is refused
+while a page still holds the sample text, from the back office and from a command
+alike: the instructions the module wrote are not a legal notice.
 
 Deactivating the module removes the rewritten URLs it owns, so the site answers
 404 rather than 500; reactivating puts them back.
@@ -63,6 +65,24 @@ Reserved first segments (`admin`, `api`, `assets`, `recherche`, `search`,
 `sitemap`, `robots.txt` and a few more) are refused as slugs. The rewriting
 router runs before the Symfony routes, so a page slugged `admin` would shadow
 the back office.
+
+### Moving a page
+
+Moving a page in the tree takes the addresses of everything under it. A
+descendant is addressed from the addresses of its ancestors, so a page that
+changes parent changes the address of its children, of their children, and so on
+to the bottom of the branch. Each of them keeps the slug it already had, moves
+under the new path in every language it answers in, and leaves its former address
+behind as a 301 towards the new one. Renaming a page does the same to its
+descendants.
+
+The branch is re-addressed inside the transaction of the save. A subtree half
+moved is a site where some pages answer and others do not, which is worse than
+either outcome. Moving a page that sits near the root of a large site therefore
+rewrites every address below it, at a few queries per page and per language, so
+that save is not instant on a site of several hundred pages. Pages in the bin
+stay out of it, and a tree where a page has ended up under one of its own
+descendants is walked once rather than followed forever.
 
 ### Trailing slashes
 
@@ -134,6 +154,28 @@ deleted until somebody asks for it. The clean-up runs from `maintenance:purge`,
 the command a Thelia site already schedules, and from
 `thelia_cms:pages:purge-trash` for a run on demand. That second command takes
 `--dry-run`, which lists what would go and deletes nothing.
+
+### Publishing from the command line
+
+`thelia_cms:publish` puts drafts online through the same pipeline as the button
+in the back office: sanitizer, responsive images, search index, revision. Writing
+the published column from a script skips all four and says nothing about it.
+
+```bash
+php Thelia thelia_cms:publish --page 12 --page 13
+php Thelia thelia_cms:publish --all --dry-run
+```
+
+`--all` means every draft of every page that is not in the bin, which is more
+than it sounds like: a page somebody is halfway through rewriting goes online in
+the state their last save left it in. `--dry-run` lists the pairs of page and
+language it would publish and runs the same refusals as a real run, so the count
+it announces is the count a real run reaches.
+
+Two drafts are refused wherever the publication comes from, the button included:
+one that would show nothing, and one still holding the sample text of a seeded
+legal page. Write your own text and the refusal goes away. There is no flag to
+remember and no way to publish the sample text by accident.
 
 ## Blocks
 
