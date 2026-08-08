@@ -31,6 +31,7 @@ use Thelia\Model\Lang;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\SampleTextPageFinder;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
 use Twig\Environment;
@@ -59,6 +60,7 @@ final readonly class CmsPageAdminController
         private CmsPageWriter $writer,
         private EditLanguage $languages,
         private CmsUrlService $addresses,
+        private SampleTextPageFinder $sampleTextPages,
     ) {
     }
 
@@ -74,6 +76,10 @@ final readonly class CmsPageAdminController
             'edit_language_id' => $lang->getId(),
             'home_page_id' => (int) TheliaCMS::getConfigValue('home_page_id', 0),
             'trash_count' => \count($this->pages->trash($locale)),
+            // Pages online with the installer text still on them. Named here
+            // rather than only counted somewhere else: this is the screen
+            // somebody opens to go and write them.
+            'sample_text_pages' => $this->sampleTextPages->publishedPagesStillHoldingSampleText($locale),
         ]));
     }
 

@@ -1,0 +1,38 @@
+{# Pages that are online and still say what the installer wrote in them.
+
+   Included by the page list and by the dashboard, from the same service: the
+   dashboard is where somebody notices, the list is where they act, and two
+   copies of the wording would drift.
+
+   Not a live region: it is part of the page from the moment it loads, reachable
+   by its heading, and announcing it out of turn would talk over whatever the
+   reader came to do. The heading level is given by the including screen, so the
+   outline of each stays in order.
+
+   Links carry `alert-link`: the brand colour of the theme reads at 2.9:1 on this
+   background, and a link nobody can read is a warning nobody acts on. #}
+{% set level = sample_text_heading_level|default(2) %}
+{% if sample_text_pages.total > 0 %}
+    <div class="alert alert-warning" data-testid="cms-sample-text-warning">
+        <h{{ level }} class="h6 alert-heading">
+            <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+            {{ 'Some pages are online with our example text still on them'|trans({}, 'theliacms') }}
+        </h{{ level }}>
+        <p class="mb-2">
+            {{ 'Visitors read these pages, and so do search engines. Open each one and write it, or take it offline until it is written.'|trans({}, 'theliacms') }}
+        </p>
+        <ul class="mb-0">
+            {% for page in sample_text_pages.pages %}
+                <li>
+                    <a class="alert-link" href="{{ path('admin.cms.pages.builder', { id: page.id, edit_language_id: page.language_id }) }}">{{- page.title -}}</a>
+                    <span>({{ page.language }})</span>
+                </li>
+            {% endfor %}
+        </ul>
+        {% if sample_text_pages.total > sample_text_pages.pages|length %}
+            <p class="mb-0 mt-2">
+                {{ 'And %count% more.'|trans({'%count%': sample_text_pages.total - sample_text_pages.pages|length}, 'theliacms') }}
+            </p>
+        {% endif %}
+    </div>
+{% endif %}

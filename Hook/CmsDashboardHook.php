@@ -24,6 +24,7 @@ use Thelia\Core\Template\Parser\ParserResolver;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use TheliaCMS\Dashboard\ShowcaseStats;
+use TheliaCMS\Page\SampleTextPageFinder;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\TheliaCMS;
@@ -44,6 +45,7 @@ class CmsDashboardHook extends BaseHook
         private readonly Environment $twig,
         private readonly CmsSettings $settings,
         private readonly ShowcaseStats $stats,
+        private readonly SampleTextPageFinder $sampleTextPages,
         ?EventDispatcherInterface $dispatcher = null,
         ?ParserResolver $parserResolver = null,
     ) {
@@ -81,6 +83,10 @@ class CmsDashboardHook extends BaseHook
         $event->add($this->twig->render('@TheliaCMSModule/backOffice/default-twig/dashboard/block.html.twig', [
             'stats' => $stats,
             'locale' => $locale,
+            // A site can have gone online with the pages the installer seeded
+            // still saying "replace this text". Publishing them is refused now,
+            // but a site set up before that is still showing them.
+            'sample_text_pages' => $this->sampleTextPages->publishedPagesStillHoldingSampleText($locale),
             'title' => $this->trans('The site', [], TheliaCMS::DOMAIN_NAME),
             'pages_url' => $this->urls->generate('admin.cms.pages.list'),
             'forms_url' => $this->urls->generate('admin.cms.forms.list'),
