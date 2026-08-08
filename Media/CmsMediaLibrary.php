@@ -190,6 +190,42 @@ final readonly class CmsMediaLibrary implements MediaResolver
     }
 
     /**
+     * How many images the library holds, and how many carry no description.
+     *
+     * Counted in the database rather than over the rows the grid loaded: the
+     * grid is capped, so counting it announces the size of a page as the size
+     * of the library.
+     *
+     * @return array{total: int, undescribed: int}
+     */
+    public function counts(string $locale, ?string $search = null): array
+    {
+        $imageIds = $this->taggedImageIds($this->tagId());
+
+        if (null !== $search && '' !== $search) {
+            $imageIds = $this->matching($imageIds, $search);
+        }
+
+        if ([] === $imageIds) {
+            return ['total' => 0, 'undescribed' => 0];
+        }
+
+        $described = LibraryImageQuery::create()
+            ->filterById($imageIds, Criteria::IN)
+            ->filterByDecorative(0)
+            ->useLibraryImageI18nQuery(joinType: Criteria::LEFT_JOIN)
+                ->filterByLocale($locale)
+            ->endUse()
+            // A description is a non-empty alternative text. NULL and the empty
+            // string mean the same thing here, and only one of the two is what
+            // a fresh row holds.
+            ->where('library_image_i18n.alt IS NULL OR library_image_i18n.alt = ?', '')
+            ->count();
+
+        return ['total' => \count($imageIds), 'undescribed' => $described];
+    }
+
+    /**
      * The image with that identifier, if the CMS owns it.
      *
      * Guards the back-office screens against reaching an image uploaded for a

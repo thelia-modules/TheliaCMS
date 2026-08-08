@@ -58,6 +58,16 @@ final readonly class MediaCatalog
         return $items;
     }
 
+    /**
+     * The size of the library, and how much of it is still to describe.
+     */
+    public function tally(string $locale, ?string $search = null): MediaTally
+    {
+        $counts = $this->library->counts($locale, $search);
+
+        return new MediaTally(total: $counts['total'], undescribed: $counts['undescribed']);
+    }
+
     public function item(LibraryImage $image, string $locale, ?int $usageCount = null): ?MediaItem
     {
         $this->library->measure($image);

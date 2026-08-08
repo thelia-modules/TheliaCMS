@@ -387,6 +387,7 @@ return [
     'Several lines of text' => 'Plusieurs lignes de texte',
     'Shared cache' => 'Cache partagé',
     'Show every image' => 'Afficher toutes les images',
+    'showing the %count% most recent' => 'affichage des %count% plus récentes',
     'Shown above the form on the site.' => 'Affiché au-dessus du formulaire sur le site.',
     'Shown above the list. Leave empty for no heading.' => 'Affiché au-dessus de la liste. Laissez vide pour ne pas en mettre.',
     'Shown above the menu. Leave empty for no heading.' => 'Affiché au-dessus du menu. Laissez vide pour ne pas en mettre.',

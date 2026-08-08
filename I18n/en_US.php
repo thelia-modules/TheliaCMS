@@ -387,6 +387,7 @@ return [
     'Several lines of text' => 'Several lines of text',
     'Shared cache' => 'Shared cache',
     'Show every image' => 'Show every image',
+    'showing the %count% most recent' => 'showing the %count% most recent',
     'Shown above the form on the site.' => 'Shown above the form on the site.',
     'Shown above the list. Leave empty for no heading.' => 'Shown above the list. Leave empty for no heading.',
     'Shown above the menu. Leave empty for no heading.' => 'Shown above the menu. Leave empty for no heading.',

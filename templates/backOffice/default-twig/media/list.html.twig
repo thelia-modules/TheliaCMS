@@ -37,12 +37,17 @@
         {% endif %}
     </div>
 
+    {# Counts come from the library, not from the rows loaded: the grid is
+       capped, so counting it announces the size of a page as the size of the
+       library. #}
     {% if items is not empty %}
-        {% set undescribed = items|filter(item => not item.isDescribed)|length %}
         <p class="text-body-secondary small">
-            {{ '%count% image(s)'|trans({ '%count%': items|length }, 'theliacms') }}
-            {%- if undescribed > 0 %}
-                · <span class="text-warning-emphasis">{{ '%count% still to describe'|trans({ '%count%': undescribed }, 'theliacms') }}</span>
+            {{ '%count% image(s)'|trans({ '%count%': tally.total }, 'theliacms') }}
+            {%- if tally.undescribed > 0 %}
+                · <span class="text-warning-emphasis">{{ '%count% still to describe'|trans({ '%count%': tally.undescribed }, 'theliacms') }}</span>
+            {%- endif -%}
+            {%- if not tally.isComplete(items|length) %}
+                · {{ 'showing the %count% most recent'|trans({ '%count%': items|length }, 'theliacms') }}
             {%- endif -%}
         </p>
     {% endif %}

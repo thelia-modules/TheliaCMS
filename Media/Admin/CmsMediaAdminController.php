@@ -70,6 +70,7 @@ final readonly class CmsMediaAdminController
 
         return new Response($this->twig->render(self::LIST_TEMPLATE, [
             'items' => $this->catalog->grid($lang->getLocale(), '' !== $search ? $search : null),
+            'tally' => $this->catalog->tally($lang->getLocale(), '' !== $search ? $search : null),
             'search' => $search,
             'has_library' => [] !== $this->library->images(),
             'accepted_mime_types' => implode(',', CmsMediaType::ACCEPTED_MIME_TYPES),
