@@ -90,9 +90,21 @@ The root, the back office and the API are never touched. The first segment of th
 path is what is compared, not a prefix, so a page addressed
 `/administration-des-ventes` is not mistaken for the back office.
 
-The whole thing runs on 404 responses only, and an address without a trailing
-slash leaves on two string tests before any query. A site that has no use for it
-pays nothing.
+An address the rewriting table holds with its slash is left to the router, which
+already answers on it, so an old address a takeover recorded in both forms keeps
+its single hop.
+
+The decision is taken on the request, above the router, and not on the 404 that
+would follow. Waiting for the 404 leaves out every address another route answers
+for: with `allow_slash_ended_uri` on in the store configuration, the Thelia
+request hides the trailing slash from the Symfony routes, so `/contact/` falls
+through the rewriting router into the `/{_view}` catch-all of the Front module and
+renders the contact template of the theme with a 200, while the page answering on
+`/contact` is never reached. Every single segment address whose name matches a
+template of the theme is in that state.
+
+An address without a trailing slash leaves on two string tests before any query,
+so a site that has no use for any of this pays nothing.
 
 ## Editing a page
 

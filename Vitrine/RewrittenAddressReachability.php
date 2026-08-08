@@ -40,24 +40,24 @@ final readonly class RewrittenAddressReachability
     }
 
     /**
+     * Whether the table holds that address exactly as it is written here.
+     *
+     * The trailing slash is part of the question: a takeover that recorded its
+     * old addresses in both forms answers the 301 of the rename on either one,
+     * and anything stepping in before that turns one hop into two.
+     */
+    public function isKnown(string $path): bool
+    {
+        return $this->rowFor($path) instanceof RewritingUrl;
+    }
+
+    /**
      * A row kept behind a rename counts: that address answers, with a 301 of its
      * own. Sending a visitor through two redirections is worth more than a 404.
      */
     public function answers(string $path): bool
     {
-        // The path arrives as it was written on the wire, so an accented address
-        // is still percent encoded, while the column holds the bytes it decodes
-        // to. The core resolver decodes the same way before looking a row up.
-        $url = urldecode(trim($path, '/'));
-
-        if ('' === $url) {
-            return false;
-        }
-
-        $address = RewritingUrlQuery::create()
-            ->filterByUrl($url)
-            ->orderById(Criteria::DESC)
-            ->findOne();
+        $address = $this->rowFor($path);
 
         if (!$address instanceof RewritingUrl) {
             return false;
@@ -79,5 +79,28 @@ final readonly class RewrittenAddressReachability
         // page is binned, offline or waiting for its publication date answers
         // 404 too, and redirecting to a 404 is worse than the 404 asked for.
         return $this->pages->isReachable((int) $address->getViewId(), (string) $address->getViewLocale());
+    }
+
+    /**
+     * Only the leading slash is dropped: the trailing one is what the callers
+     * above are asking about, so trimming both ends would make the two questions
+     * the same one.
+     *
+     * The path arrives as it was written on the wire, so an accented address is
+     * still percent encoded, while the column holds the bytes it decodes to. The
+     * core resolver decodes the same way before looking a row up.
+     */
+    private function rowFor(string $path): ?RewritingUrl
+    {
+        $url = urldecode(ltrim($path, '/'));
+
+        if ('' === $url) {
+            return null;
+        }
+
+        return RewritingUrlQuery::create()
+            ->filterByUrl($url)
+            ->orderById(Criteria::DESC)
+            ->findOne();
     }
 }

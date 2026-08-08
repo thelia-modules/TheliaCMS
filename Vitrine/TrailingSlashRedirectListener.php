@@ -18,8 +18,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Event\ExceptionEvent;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Thelia\Core\HttpFoundation\Request as TheliaRequest;
 
@@ -30,17 +29,20 @@ use Thelia\Core\HttpFoundation\Request as TheliaRequest;
  * Symfony does this for its own routes. The rewriting router does not, so
  * `/mentions-legales/` answers 404 while `/mentions-legales` answers 200. Every
  * site moved over from WordPress, Drupal or Prestashop arrives with the slash on
- * every indexed address and every inbound link: on the site this was written
- * for, 364 of 392 addresses answered 404 for that reason alone.
+ * every indexed address and every inbound link.
  *
- * Runs *above* the listener serving the 404 page of the site (132) and above the
- * core listener rendering the 404 of the theme (128), because
- * `ExceptionEvent::setResponse()` stops propagation: a redirectable address would
- * otherwise be handed the 404 page before anybody looked at its slash.
+ * Runs on the request and not on the resulting 404, above the router (32).
+ * Waiting for the 404 misses the addresses another route answers for: with
+ * `allow_slash_ended_uri` on, the Thelia request hides the trailing slash from
+ * the Symfony routes, so `/contact/` falls through the rewriting router into the
+ * `/{_view}` catch-all of the Front module and renders the contact form of the
+ * theme, with a 200. The page of this module answering on `/contact` was never
+ * reached and nothing said so. Every single segment address whose name matches a
+ * template of the theme is in that state, which on a WordPress takeover means
+ * `/contact/`, `/faq/`, `/login/` and `/sitemap/`.
  *
- * Costs nothing on a site that does not need it. It is only ever called on a
- * 404, and an address without a trailing slash leaves on two string tests,
- * before any query.
+ * Costs nothing on a site that does not need it: an address without a trailing
+ * slash leaves on two string tests, before any query.
  */
 final readonly class TrailingSlashRedirectListener
 {
@@ -58,10 +60,15 @@ final readonly class TrailingSlashRedirectListener
     ) {
     }
 
-    #[AsEventListener(event: KernelEvents::EXCEPTION, priority: 136)]
-    public function onKernelException(ExceptionEvent $event): void
+    /**
+     * Priority 34: above the router (32), which is what makes this happen before
+     * any route claims the address, and below the maintenance page (40) and the
+     * asset server (35), which both answer for themselves.
+     */
+    #[AsEventListener(event: KernelEvents::REQUEST, priority: 34)]
+    public function onKernelRequest(RequestEvent $event): void
     {
-        if (!$event->isMainRequest() || !$event->getThrowable() instanceof NotFoundHttpException) {
+        if (!$event->isMainRequest()) {
             return;
         }
 
@@ -77,6 +84,14 @@ final readonly class TrailingSlashRedirectListener
         $path = $this->pathOf($request);
 
         if ('/' === $path || !str_ends_with($path, '/')) {
+            return;
+        }
+
+        // An address the rewriting table holds as it was received is the site
+        // saying that form is its own: the router serves it, or answers the 301
+        // of a rename on it. Stepping in first would add a hop to every old
+        // address a takeover kept in both forms.
+        if ($this->addresses->isKnown($path)) {
             return;
         }
 

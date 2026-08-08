@@ -14,11 +14,13 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Vitrine;
 
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Event\ExceptionEvent;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Symfony\Component\HttpKernel\EventListener\RouterListener;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Thelia\Core\HttpFoundation\Request;
 use Thelia\Model\RewritingUrl;
@@ -250,6 +252,68 @@ final class TrailingSlashRedirectTest extends CmsIntegrationTestCase
         self::assertNull($this->answerFor('/'.$address));
     }
 
+    /**
+     * The decision is taken before any route claims the address, which is the
+     * whole point: waiting for a 404 leaves out every address another route
+     * answers for.
+     *
+     * With `allow_slash_ended_uri` on, the Thelia request hides the trailing
+     * slash from the Symfony routes, so `/contact/` reaches the `/{_view}`
+     * catch-all of the Front module and renders the contact template of the
+     * theme with a 200, while the page of this module answering on `/contact` is
+     * never reached. No 404 is ever thrown, so nothing downstream of the router
+     * can put that right.
+     */
+    public function testTheDecisionIsTakenBeforeAnyRouteClaimsTheAddress(): void
+    {
+        $dispatcher = $this->getService(EventDispatcherInterface::class);
+        $listener = $this->getService(TrailingSlashRedirectListener::class);
+
+        $priority = $dispatcher->getListenerPriority(KernelEvents::REQUEST, [$listener, 'onKernelRequest']);
+
+        self::assertNotNull($priority, 'The redirection has to be decided on the request, not on the 404 it would produce.');
+
+        self::assertGreaterThan(
+            $this->routerPriority($dispatcher),
+            (int) $priority,
+            'Below the router, the catch-all route of another module answers first and the address is lost.',
+        );
+    }
+
+    /**
+     * A takeover records its old addresses in both forms, and the rewriting
+     * router answers the 301 of the rename on either one. Stepping in on the
+     * form that carries the slash would send the visitor to the other form
+     * first, so one hop becomes two on every address of the old site.
+     */
+    public function testAnAddressTheRewritingTableHoldsWithItsSlashIsLeftToTheRouter(): void
+    {
+        $page = $this->createPage('Cible dune ancienne adresse');
+
+        $this->addressPointingAt('ancien-chemin', $page, 'content');
+        $this->addressPointingAt('ancien-chemin/', $page, 'content');
+
+        self::assertNull(
+            $this->answerFor('/ancien-chemin/'),
+            'The router already answers on that form, so a hop added here is a hop nobody needs.',
+        );
+    }
+
+    /**
+     * The router listener is read off the dispatcher rather than out of the
+     * container, where it is not public.
+     */
+    private function routerPriority(EventDispatcherInterface $dispatcher): int
+    {
+        foreach ($dispatcher->getListeners(KernelEvents::REQUEST) as $listener) {
+            if (\is_array($listener) && $listener[0] instanceof RouterListener) {
+                return (int) $dispatcher->getListenerPriority(KernelEvents::REQUEST, $listener);
+            }
+        }
+
+        self::fail('The router listener is not registered, so there is nothing to be above.');
+    }
+
     private function addressPointingAt(string $url, CmsPage $page, ?string $view = null): void
     {
         (new RewritingUrl())
@@ -271,14 +335,13 @@ final class TrailingSlashRedirectTest extends CmsIntegrationTestCase
 
     private function answerFor(string $uri, string $method = 'GET'): ?Response
     {
-        $event = new ExceptionEvent(
+        $event = new RequestEvent(
             $this->getService(KernelInterface::class),
             Request::create($uri, $method),
             HttpKernelInterface::MAIN_REQUEST,
-            new NotFoundHttpException(),
         );
 
-        $this->getService(TrailingSlashRedirectListener::class)->onKernelException($event);
+        $this->getService(TrailingSlashRedirectListener::class)->onKernelRequest($event);
 
         return $event->getResponse();
     }

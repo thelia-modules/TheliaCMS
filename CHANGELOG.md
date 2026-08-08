@@ -14,7 +14,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   over from WordPress, Drupal or Prestashop nearly every address it had indexed:
   those serve theirs with the slash. Nothing is redirected unless the address
   without the slash answers, the query string travels, and the root, the back
-  office and the API are left alone.
+  office and the API are left alone. Decided on the request, above the router:
+  with `allow_slash_ended_uri` on, `/contact/` otherwise reached the `/{_view}`
+  catch-all of the Front module and rendered the contact template of the theme
+  with a 200, so no 404 was ever thrown and the page answering on `/contact` was
+  never reached.
 - The slug of a page is stored per language, next to its title. Until now it only
   existed inside the address, in a core table the module has to clear when it is
   switched off. Existing sites keep the addresses they answer on: the migration
