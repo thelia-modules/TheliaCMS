@@ -41,10 +41,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   into the segment and move the page to `parent/parent-child`.
 
 - The media screen counts the whole library rather than the images it has loaded.
-  The grid is capped at two hundred, so a library of 1378 images announced "200
-  images, 122 still to describe" and the real backlog, 757, appeared nowhere. The
-  count now comes from the database, and the screen says how many of them it is
-  showing.
+  The grid stops at two hundred images, so any library larger than that announced
+  the size of one page as the size of the library, and the images still to
+  describe beyond it appeared nowhere. The count now comes from the database, and
+  the screen says how many of them it is showing.
 
 - Publishing a page that has nothing on it is refused, and said so on both
   screens that publish. It used to be accepted: the snapshot was stored empty,
