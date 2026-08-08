@@ -108,7 +108,10 @@ final class CmsUrlService
      * every language the page answers in and not only to the one being edited.
      * Only locales that already have an address take part: giving one to a
      * language nobody wrote the page in would publish an address for a
-     * translation that does not exist.
+     * translation that does not exist. Which also means this is not the method
+     * to call after a reactivation of the module: that path has just deleted
+     * every address the module owned, so there is nothing left to read the
+     * languages from, and it walks the content rows instead.
      *
      * Cost is one pass per page and per locale, parents first, each of them a
      * handful of queries. Moving a page that sits near the root of a large site
