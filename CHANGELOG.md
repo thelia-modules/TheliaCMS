@@ -19,6 +19,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   catch-all of the Front module and rendered the contact template of the theme
   with a 200, so no 404 was ever thrown and the page answering on `/contact` was
   never reached.
+- `cms_is_showcase()` in Twig, so a theme can leave out what a showcase site does
+  not answer for. The cart and the checkout answer 404 in that mode, and the
+  header of the companion theme linked to them all the same: a dead link on every
+  page of the site, found on a real takeover.
 - The slug of a page is stored per language, next to its title. Until now it only
   existed inside the address, in a core table the module has to clear when it is
   switched off. Existing sites keep the addresses they answer on: the migration

@@ -17,6 +17,7 @@ namespace TheliaCMS\Twig;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
+use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\SiteIcon;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
@@ -34,6 +35,7 @@ final class CmsExtension extends AbstractExtension
         private readonly AlternateUrls $alternates,
         private readonly SiteIcon $icon,
         private readonly UrlGeneratorInterface $urls,
+        private readonly CmsSettings $settings,
     ) {
     }
 
@@ -43,6 +45,10 @@ final class CmsExtension extends AbstractExtension
             new TwigFunction('cms_menu', $this->menus->menu(...)),
             new TwigFunction('cms_page_alternates', $this->alternates->all(...)),
             new TwigFunction('cms_site_icon', $this->siteIcon(...)),
+            // A theme has to be able to ask. On a showcase site the cart and the
+            // checkout answer 404, and a header linking to them puts a dead link
+            // on every page of the site.
+            new TwigFunction('cms_is_showcase', $this->settings->isShowcase(...)),
         ];
     }
 
