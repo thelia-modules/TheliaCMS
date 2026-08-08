@@ -77,6 +77,30 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
         self::assertSame([], $report->createdCounts(), 'Nothing was new, so nothing should have been created.');
     }
 
+    /**
+     * A page holding an emoji survives being exported and imported back.
+     *
+     * The importer writes the content rows itself, without going through the
+     * editor, which is exactly why the character is spelled out on the Propel
+     * save hook and not in the writers: this is the path that would otherwise
+     * hand the four-byte character straight to a statement that refuses it.
+     */
+    public function testAPageHoldingAnEmojiComesBackFromTheExportUnchanged(): void
+    {
+        $this->createPage('Page expressive', html: "<h1>Page expressive</h1><p>Photo \u{1F4F7} du studio</p>");
+
+        $before = $this->snapshot();
+
+        self::assertStringContainsString('&#128247;', (string) $before['page-expressive']['published_html']);
+
+        $document = SiteDocument::fromArray($this->getService(SiteExporter::class)->export());
+        $this->emptyTheSite();
+        $report = $this->getService(SiteImporter::class)->import($document, new ImportOptions());
+
+        self::assertSame([], $report->warnings());
+        self::assertSame($before, $this->snapshot(), 'The emoji did not come back the way it went in.');
+    }
+
     public function testAnImportedPageIsNotFlaggedAsChangedSinceItsPublication(): void
     {
         $this->createPage('Page publiée', html: '<h1>Page publiée</h1>');

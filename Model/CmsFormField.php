@@ -3,6 +3,7 @@
 namespace TheliaCMS\Model;
 
 use TheliaCMS\Model\Base\CmsFormField as BaseCmsFormField;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 
 /**
  * Skeleton subclass for representing a row from the 'cms_form_field' table.
@@ -15,5 +16,6 @@ use TheliaCMS\Model\Base\CmsFormField as BaseCmsFormField;
  */
 class CmsFormField extends BaseCmsFormField
 {
+    use EncodesSupplementaryCharacters;
 
 }

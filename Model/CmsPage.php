@@ -16,10 +16,14 @@ namespace TheliaCMS\Model;
 
 use Thelia\Model\Tools\UrlRewritingTrait;
 use TheliaCMS\Model\Base\CmsPage as BaseCmsPage;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 use TheliaCMS\TheliaCMS;
 
 class CmsPage extends BaseCmsPage
 {
+    // Spells out the characters the connection of the site cannot carry, an
+    // emoji in a title among them.
+    use EncodesSupplementaryCharacters;
     // Brings setRewrittenUrl(), which also flags the previous URL as redirected
     // so renaming a page keeps a 301 behind it.
     use UrlRewritingTrait;

@@ -3,6 +3,7 @@
 namespace TheliaCMS\Model;
 
 use TheliaCMS\Model\Base\CmsPageContent as BaseCmsPageContent;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 
 /**
  * Skeleton subclass for representing a row from the 'cms_page_content' table.
@@ -15,5 +16,14 @@ use TheliaCMS\Model\Base\CmsPageContent as BaseCmsPageContent;
  */
 class CmsPageContent extends BaseCmsPageContent
 {
+    use EncodesSupplementaryCharacters;
+
+    /**
+     * @return list<string>
+     */
+    protected function stylesheetColumns(): array
+    {
+        return ['DraftCss', 'PublishedCss'];
+    }
 
 }

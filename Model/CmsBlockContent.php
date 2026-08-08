@@ -3,6 +3,7 @@
 namespace TheliaCMS\Model;
 
 use TheliaCMS\Model\Base\CmsBlockContent as BaseCmsBlockContent;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 
 /**
  * Skeleton subclass for representing a row from the 'cms_block_content' table.
@@ -15,5 +16,14 @@ use TheliaCMS\Model\Base\CmsBlockContent as BaseCmsBlockContent;
  */
 class CmsBlockContent extends BaseCmsBlockContent
 {
+    use EncodesSupplementaryCharacters;
+
+    /**
+     * @return list<string>
+     */
+    protected function stylesheetColumns(): array
+    {
+        return ['DraftCss', 'PublishedCss'];
+    }
 
 }

@@ -3,6 +3,7 @@
 namespace TheliaCMS\Model;
 
 use TheliaCMS\Model\Base\CmsScript as BaseCmsScript;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 
 /**
  * Skeleton subclass for representing a row from the 'cms_script' table.
@@ -15,5 +16,6 @@ use TheliaCMS\Model\Base\CmsScript as BaseCmsScript;
  */
 class CmsScript extends BaseCmsScript
 {
+    use EncodesSupplementaryCharacters;
 
 }

@@ -3,6 +3,7 @@
 namespace TheliaCMS\Model;
 
 use TheliaCMS\Model\Base\CmsPageSearch as BaseCmsPageSearch;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 
 /**
  * Skeleton subclass for representing a row from the 'cms_page_search' table.
@@ -15,5 +16,6 @@ use TheliaCMS\Model\Base\CmsPageSearch as BaseCmsPageSearch;
  */
 class CmsPageSearch extends BaseCmsPageSearch
 {
+    use EncodesSupplementaryCharacters;
 
 }

@@ -3,6 +3,7 @@
 namespace TheliaCMS\Model;
 
 use TheliaCMS\Model\Base\CmsFormSubmission as BaseCmsFormSubmission;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 
 /**
  * Skeleton subclass for representing a row from the 'cms_form_submission' table.
@@ -15,5 +16,6 @@ use TheliaCMS\Model\Base\CmsFormSubmission as BaseCmsFormSubmission;
  */
 class CmsFormSubmission extends BaseCmsFormSubmission
 {
+    use EncodesSupplementaryCharacters;
 
 }

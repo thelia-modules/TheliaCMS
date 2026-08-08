@@ -3,6 +3,7 @@
 namespace TheliaCMS\Model;
 
 use TheliaCMS\Model\Base\CmsPageTemplate as BaseCmsPageTemplate;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 
 /**
  * Skeleton subclass for representing a row from the 'cms_page_template' table.
@@ -15,5 +16,6 @@ use TheliaCMS\Model\Base\CmsPageTemplate as BaseCmsPageTemplate;
  */
 class CmsPageTemplate extends BaseCmsPageTemplate
 {
+    use EncodesSupplementaryCharacters;
 
 }

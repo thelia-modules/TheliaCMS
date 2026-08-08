@@ -3,6 +3,7 @@
 namespace TheliaCMS\Model;
 
 use TheliaCMS\Model\Base\CmsPageRevision as BaseCmsPageRevision;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 
 /**
  * Skeleton subclass for representing a row from the 'cms_page_revision' table.
@@ -15,5 +16,14 @@ use TheliaCMS\Model\Base\CmsPageRevision as BaseCmsPageRevision;
  */
 class CmsPageRevision extends BaseCmsPageRevision
 {
+    use EncodesSupplementaryCharacters;
+
+    /**
+     * @return list<string>
+     */
+    protected function stylesheetColumns(): array
+    {
+        return ['Css'];
+    }
 
 }

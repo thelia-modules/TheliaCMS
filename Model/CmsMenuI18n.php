@@ -3,6 +3,7 @@
 namespace TheliaCMS\Model;
 
 use TheliaCMS\Model\Base\CmsMenuI18n as BaseCmsMenuI18n;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 
 /**
  * Skeleton subclass for representing a row from the 'cms_menu_i18n' table.
@@ -15,5 +16,6 @@ use TheliaCMS\Model\Base\CmsMenuI18n as BaseCmsMenuI18n;
  */
 class CmsMenuI18n extends BaseCmsMenuI18n
 {
+    use EncodesSupplementaryCharacters;
 
 }
