@@ -33,8 +33,38 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   had no way to publish other than clicking each page, and writing the published
   column from a script skips all four steps without saying so. Takes `--page`,
   `--all`, `--locale` and `--dry-run`, and reports the pages it refused.
+- The page list and the showcase dashboard name the pages that are online with
+  the example text of the seeded legal pages still on them. Publishing one of
+  those is refused, but a site set up before that refusal existed has them live,
+  in its sitemap and in search results, and nothing said so: seven of them were
+  found that way on a real site. Each one is a link to the page and the language
+  that needs writing. The lookup asks the database for a single word of each
+  sample sentence and then confirms the answer with the same check publishing
+  uses, so it never reads the published content of the whole site.
 
 ### Fixed
+
+- An emoji can be typed anywhere in a page. Thelia opens its database connection
+  with `SET NAMES 'UTF8'`, which MariaDB and MySQL read as three bytes per
+  character, and every emoji needs four: the statement was refused with
+  `Incorrect string value` whatever the column was declared as, because the
+  character set of the connection is settled before the one of the column. The
+  editor made this worse than a plain refusal, since the sanitiser turns
+  `&#128247;` into the character it stands for, which is how WordPress stores an
+  emoji: a draft was accepted and then failed at publication. Characters above
+  that plane are now written out on the way to the database and read back on the
+  way out, on the Propel save and hydrate hooks, so every path stores them, from
+  the draft and the autosave to publication, revisions, duplication, import and a
+  visitor filling in a form. A stylesheet gets the escape a stylesheet
+  understands. The fix belongs to the module; the connection belongs to the
+  framework, and is reported there.
+- Binning a page bins every page under it, however deep. The walk stopped after
+  twenty levels, so anything below that stayed online, on the address it had,
+  under a parent that had just left the tree. Two other walks counted levels the
+  same way: the address of a page rebuilt from nothing lost the top of its path,
+  and the breadcrumb of a page nested that deep started in the middle of the
+  site. All three now stop on the pages they have already seen, which also ends
+  the walk on a tree where a page has become its own ancestor.
 
 - Switching the module off and on again no longer renames the pages. The
   addresses were rebuilt from the titles, so every page whose address had been

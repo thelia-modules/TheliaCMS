@@ -177,6 +177,32 @@ one that would show nothing, and one still holding the sample text of a seeded
 legal page. Write your own text and the refusal goes away. There is no flag to
 remember and no way to publish the sample text by accident.
 
+### Pages online with the example text on them
+
+That refusal came after the first sites did, so a site can already have those
+pages live. The page list and the dashboard block name them, each as a link to
+the page and the language that needs writing. The warning goes away on its own
+once the last of them is written or taken offline; there is nothing to dismiss.
+
+### Emoji and other four-byte characters
+
+An emoji typed in a title or in a page is stored as a numeric character
+reference, `&#128247;`, and read back as the character. Nothing is lost and every
+screen shows what was typed.
+
+The reason is worth knowing if you write a module of your own against the same
+database. Thelia opens its connection with `SET NAMES 'UTF8'`, which MariaDB and
+MySQL read as `utf8mb3`, three bytes per character. An emoji needs four, and the
+character set of the connection is settled before the one of the column, so a
+column declared `utf8mb4` does not help: the statement comes back as
+`Incorrect string value`. This module writes those characters out itself rather
+than changing a connection the whole site shares.
+
+Two consequences to know about. A stylesheet written in the builder keeps the
+escape a stylesheet understands, `\01f4f7`, which is what it needs to render and
+what the CSS panel shows. And the front-office search does not match a query made
+only of emoji, since the search index holds the written-out form.
+
 ## Blocks
 
 The editor panel holds three families.
@@ -326,6 +352,10 @@ many pages are online and how many are still drafts, how much of the site exists
 in each active language, the five pages changed last, and whether anything is
 measuring the site at all. Nothing here re-implements analytics: the last line
 links to the scripts screen and says how many are running.
+
+Above all of that, when there is something to say: the pages that are online with
+the example text of the seeded legal pages still on them. The same warning is on
+the page list, which is the screen somebody opens to go and write them.
 
 The block is only added in showcase mode, and only for somebody allowed to see
 the pages.
