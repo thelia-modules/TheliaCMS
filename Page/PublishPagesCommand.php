@@ -26,6 +26,7 @@ use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\EmptyPageContentException;
+use TheliaCMS\Page\Admin\PlaceholderPageContentException;
 
 /**
  * Puts drafts online from the command line.
@@ -37,6 +38,11 @@ use TheliaCMS\Page\Admin\EmptyPageContentException;
  * `published_html` from a script skips all four, and nothing says so.
  *
  * So this asks the writer, page by page, and reports what it refused.
+ *
+ * `--all` means every draft of every page that is not in the bin, which is more
+ * than it sounds: a page somebody is halfway through rewriting goes online in
+ * the state their last save left it in. `--dry-run` lists the pairs first, and
+ * runs the same refusals as a real run.
  */
 #[AsCommand(
     name: 'thelia_cms:publish',
@@ -54,7 +60,7 @@ final class PublishPagesCommand extends Command
     {
         $this
             ->addOption('page', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'A page to publish, by id. Repeatable.')
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Every page that is not in the bin.')
+            ->addOption('all', null, InputOption::VALUE_NONE, 'Every page that is not in the bin, drafts in progress included.')
             ->addOption('locale', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Restricts to these locales. Defaults to every locale the page has a draft in.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Lists what would be published, and publishes nothing.');
     }
@@ -89,18 +95,19 @@ final class PublishPagesCommand extends Command
 
         foreach ($pages as $page) {
             foreach ($this->localesOf($page, $locales) as $locale) {
-                if ($dryRun) {
-                    ++$published;
-                    $io->writeln(\sprintf('  #%d %s', $page->getId(), $locale));
-
-                    continue;
-                }
-
                 try {
-                    $this->writer->publish($page, $locale);
+                    // A dry run runs the refusals and not the writes, so the
+                    // count it announces is the count a real run reaches.
+                    $dryRun ? $this->writer->assertPublishable($page, $locale) : $this->writer->publish($page, $locale);
                     ++$published;
-                } catch (EmptyPageContentException $exception) {
+
+                    if ($dryRun) {
+                        $io->writeln(\sprintf('  #%d %s', $page->getId(), $locale));
+                    }
+                } catch (EmptyPageContentException) {
                     $refused[] = \sprintf('#%d %s: nothing to show', $page->getId(), $locale);
+                } catch (PlaceholderPageContentException) {
+                    $refused[] = \sprintf('#%d %s: still the sample text it was created with', $page->getId(), $locale);
                 } catch (\Throwable $throwable) {
                     $failed[] = \sprintf('#%d %s: %s', $page->getId(), $locale, $throwable->getMessage());
                 }

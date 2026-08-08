@@ -30,60 +30,6 @@ use TheliaCMS\Page\CmsUrlService;
  */
 final readonly class LegalPagesSeeder
 {
-    /**
-     * @var array<string, array<string, array{title: string, intro: string, sections: list<string>}>>
-     */
-    private const PAGES = [
-        'legal-notice' => [
-            'en_US' => [
-                'title' => 'Legal notice',
-                'intro' => 'Replace this placeholder with your own legal notice before publishing the page.',
-                'sections' => ['Publisher', 'Hosting provider', 'Publication director', 'Contact'],
-            ],
-            'fr_FR' => [
-                'title' => 'Mentions légales',
-                'intro' => 'Remplacez ce texte d’exemple par vos mentions légales avant de publier la page.',
-                'sections' => ['Éditeur du site', 'Hébergeur', 'Directeur de la publication', 'Contact'],
-            ],
-        ],
-        'privacy-policy' => [
-            'en_US' => [
-                'title' => 'Privacy policy',
-                'intro' => 'Replace this placeholder with your own privacy policy before publishing the page.',
-                'sections' => ['Data we collect', 'Why we collect it', 'How long we keep it', 'Your rights', 'Contact our data protection officer'],
-            ],
-            'fr_FR' => [
-                'title' => 'Politique de confidentialité',
-                'intro' => 'Remplacez ce texte d’exemple par votre politique de confidentialité avant de publier la page.',
-                'sections' => ['Données collectées', 'Finalités du traitement', 'Durée de conservation', 'Vos droits', 'Contacter le délégué à la protection des données'],
-            ],
-        ],
-        'cookies' => [
-            'en_US' => [
-                'title' => 'Cookies',
-                'intro' => 'List here every cookie and every storage your site sets, its purpose and its lifetime.',
-                'sections' => ['Strictly necessary', 'Audience measurement', 'Advertising', 'Changing your choices'],
-            ],
-            'fr_FR' => [
-                'title' => 'Cookies',
-                'intro' => 'Recensez ici chaque cookie et chaque stockage posé par votre site, sa finalité et sa durée.',
-                'sections' => ['Strictement nécessaires', 'Mesure d’audience', 'Publicité', 'Modifier vos choix'],
-            ],
-        ],
-        'accessibility' => [
-            'en_US' => [
-                'title' => 'Accessibility statement',
-                'intro' => 'Never claim a conformance level you have not had audited. Until an audit is done, state that the site has not been assessed.',
-                'sections' => ['Conformance status', 'Test results', 'Content not accessible', 'Feedback and contact', 'Enforcement procedure'],
-            ],
-            'fr_FR' => [
-                'title' => 'Déclaration d’accessibilité',
-                'intro' => 'N’annoncez jamais un niveau de conformité qui n’a pas été audité. Tant qu’aucun audit n’a eu lieu, indiquez que le site n’a pas été évalué.',
-                'sections' => ['État de conformité', 'Résultats des tests', 'Contenus non accessibles', 'Retour d’information et contact', 'Voie de recours'],
-            ],
-        ],
-    ];
-
     public function __construct(
         private CmsUrlService $urls = new CmsUrlService(),
     ) {
@@ -108,7 +54,7 @@ final readonly class LegalPagesSeeder
 
         $position = 0;
 
-        foreach (self::PAGES as $translations) {
+        foreach (LegalPageTemplates::PAGES as $translations) {
             // Only the locales this seeder actually has a translation for. A
             // Spanish page carrying the English title would claim a URL
             // (`legal-notice-2`) and advertise a language it is not written in;
@@ -139,7 +85,7 @@ final readonly class LegalPagesSeeder
                 (new CmsPageContent())
                     ->setPageId($page->getId())
                     ->setLocale($locale)
-                    ->setDraftHtml($this->placeholder($translation))
+                    ->setDraftHtml(LegalPageTemplates::html($translation))
                     ->save();
 
                 // No explicit slug: the URL is derived from the localized
@@ -150,20 +96,5 @@ final readonly class LegalPagesSeeder
                 $this->urls->refresh($page, $locale);
             }
         }
-    }
-
-    /**
-     * @param array{title: string, intro: string, sections: list<string>} $translation
-     */
-    private function placeholder(array $translation): string
-    {
-        $html = '<h1>'.htmlspecialchars($translation['title'], \ENT_QUOTES).'</h1>';
-        $html .= '<p>'.htmlspecialchars($translation['intro'], \ENT_QUOTES).'</p>';
-
-        foreach ($translation['sections'] as $section) {
-            $html .= '<h2>'.htmlspecialchars($section, \ENT_QUOTES).'</h2><p></p>';
-        }
-
-        return $html;
     }
 }

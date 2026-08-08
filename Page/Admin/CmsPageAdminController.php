@@ -101,6 +101,8 @@ final readonly class CmsPageAdminController
             $this->writer->publish($this->livePageOrFail($id), $lang->getLocale());
         } catch (EmptyPageContentException) {
             $this->flash($request, 'danger', $this->translate('This page has no content yet: add at least one block in the editor before publishing it.'));
+        } catch (PlaceholderPageContentException) {
+            $this->flash($request, 'danger', $this->translate('This page still holds the sample text it was created with: write your own before publishing it.'));
         }
 
         return $this->backToEdit($id, $lang);

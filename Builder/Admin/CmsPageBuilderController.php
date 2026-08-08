@@ -39,6 +39,7 @@ use TheliaCMS\Page\Admin\CmsPageAdminRepository;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaCMS\Page\Admin\EmptyPageContentException;
+use TheliaCMS\Page\Admin\PlaceholderPageContentException;
 use TheliaCMS\Preview\PreviewLink;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -179,6 +180,8 @@ final readonly class CmsPageBuilderController
             $this->writer->publish($page, $lang->getLocale());
         } catch (EmptyPageContentException) {
             $this->flash($request, 'danger', $this->translator->trans('This page has no content yet: add at least one block in the editor before publishing it.', [], TheliaCMS::DOMAIN_NAME));
+        } catch (PlaceholderPageContentException) {
+            $this->flash($request, 'danger', $this->translator->trans('This page still holds the sample text it was created with: write your own before publishing it.', [], TheliaCMS::DOMAIN_NAME));
         }
     }
 
