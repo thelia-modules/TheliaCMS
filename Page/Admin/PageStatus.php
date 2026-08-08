@@ -76,7 +76,10 @@ enum PageStatus: string
     {
         return match ($this) {
             self::Draft => 'bg-secondary',
-            self::Scheduled => 'bg-info',
+            // `bg-info` puts white on cyan, which measures 1.95 to 1 and is the
+            // worst piece of text on the screen. The paired class picks the
+            // foreground that goes with the background.
+            self::Scheduled => 'text-bg-info',
             self::Published => 'bg-success',
             self::ModifiedSincePublish => 'bg-warning text-dark',
             self::Unpublished => 'bg-dark',
