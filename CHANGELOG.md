@@ -19,6 +19,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   existed inside the address, in a core table the module has to clear when it is
   switched off. Existing sites keep the addresses they answer on: the migration
   reads each slug back from the address in use.
+- `thelia_cms:publish` puts drafts online from the command line, through the same
+  pipeline as the back-office button: sanitiser, responsive images, search index
+  and revision. A site whose content has just been imported or rewritten in bulk
+  had no way to publish other than clicking each page, and writing the published
+  column from a script skips all four steps without saying so. Takes `--page`,
+  `--all`, `--locale` and `--dry-run`, and reports the pages it refused.
 
 ### Fixed
 
@@ -33,6 +39,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - The edit screen shows the segment of the address a page owns rather than its
   whole path. Opening a child page and saving it unchanged used to fold the path
   into the segment and move the page to `parent/parent-child`.
+
+- The media screen counts the whole library rather than the images it has loaded.
+  The grid is capped at two hundred, so a library of 1378 images announced "200
+  images, 122 still to describe" and the real backlog, 757, appeared nowhere. The
+  count now comes from the database, and the screen says how many of them it is
+  showing.
 
 - Publishing a page that has nothing on it is refused, and said so on both
   screens that publish. It used to be accepted: the snapshot was stored empty,
