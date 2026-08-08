@@ -46,15 +46,6 @@ use Thelia\Core\HttpFoundation\Request as TheliaRequest;
  */
 final readonly class TrailingSlashRedirectListener
 {
-    /**
-     * First segments this module never answers for. Compared as segments and not
-     * as prefixes, so a page addressed `/administration-des-ventes` is not
-     * mistaken for the back office.
-     *
-     * @var list<string>
-     */
-    private const array RESERVED_SEGMENTS = ['admin', 'api'];
-
     public function __construct(
         private RewrittenAddressReachability $addresses,
     ) {
@@ -99,7 +90,7 @@ final readonly class TrailingSlashRedirectListener
         // slash.
         $canonical = rtrim($path, '/');
 
-        if ('' === $canonical || $this->isReserved($canonical)) {
+        if ('' === $canonical || ReservedPaths::isReserved($canonical)) {
             return;
         }
 
@@ -146,12 +137,5 @@ final readonly class TrailingSlashRedirectListener
             .$request->getBaseUrl()
             .$canonical
             .('' === $query ? '' : '?'.$query);
-    }
-
-    private function isReserved(string $path): bool
-    {
-        $first = explode('/', trim($path, '/'))[0];
-
-        return \in_array($first, self::RESERVED_SEGMENTS, true);
     }
 }

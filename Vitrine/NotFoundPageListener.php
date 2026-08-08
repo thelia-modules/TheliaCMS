@@ -64,8 +64,9 @@ final readonly class NotFoundPageListener
         $request = $event->getRequest();
 
         // The back office and the API have their own answers, and neither wants
-        // a themed page.
-        if (str_starts_with($request->getPathInfo(), '/admin') || str_starts_with($request->getPathInfo(), '/api')) {
+        // a themed page. Read as a first segment: a page addressed
+        // `/administration-des-ventes` is not the back office.
+        if (ReservedPaths::isReserved($request->getPathInfo())) {
             return;
         }
 

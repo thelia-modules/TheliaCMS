@@ -147,6 +147,46 @@ final class NotFoundPageTest extends CmsIntegrationTestCase
         self::assertNull($event->getResponse());
     }
 
+    /**
+     * A page whose address begins with the letters of the back office is a page.
+     *
+     * `/administration-des-ventes`, `/admin-des-ventes`, `/apiculture`: ordinary
+     * addresses on a real site, and each of them was taken for the back office
+     * and given a bare 404 instead of the 404 page of the site.
+     */
+    public function testAPageNamedAfterTheBackOfficeStillGetsTheSiteAnswer(): void
+    {
+        $notFoundPage = $this->createPage('Page introuvable', html: '<h1>Cette page n’existe pas</h1>');
+        TheliaCMS::setConfigValue('404_page_id', (string) $notFoundPage->getId());
+
+        foreach (['/administration-des-ventes', '/admin-des-ventes', '/apiculture', '/apiary/bees'] as $path) {
+            $event = $this->notFoundOn(Request::create($path));
+
+            $this->listener()->onKernelException($event);
+
+            self::assertNotNull($event->getResponse(), \sprintf('%s is an address of the site, not the back office.', $path));
+            self::assertSame(404, $event->getResponse()->getStatusCode());
+        }
+    }
+
+    /**
+     * The back office and the API keep their own answers, on themselves and on
+     * everything below them.
+     */
+    public function testTheBackOfficeAndTheApiKeepTheirOwnAnswerAtEveryDepth(): void
+    {
+        $notFoundPage = $this->createPage('Page introuvable');
+        TheliaCMS::setConfigValue('404_page_id', (string) $notFoundPage->getId());
+
+        foreach (['/admin', '/admin/', '/admin/cms/pages/nowhere', '/api', '/api/nothing'] as $path) {
+            $event = $this->notFoundOn(Request::create($path));
+
+            $this->listener()->onKernelException($event);
+
+            self::assertNull($event->getResponse(), \sprintf('%s writes its own answer.', $path));
+        }
+    }
+
     private function listener(): NotFoundPageListener
     {
         return $this->getService(NotFoundPageListener::class);

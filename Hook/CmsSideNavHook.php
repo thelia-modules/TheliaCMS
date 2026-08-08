@@ -34,6 +34,9 @@ use Twig\Environment;
  */
 class CmsSideNavHook extends BaseHook
 {
+    /** Where every screen of this module answers. */
+    private const string SECTION_PATH = '/admin/cms';
+
     public function __construct(
         private readonly SecurityContext $securityContext,
         private readonly UrlGeneratorInterface $urls,
@@ -82,7 +85,7 @@ class CmsSideNavHook extends BaseHook
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
             'settings_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.edit') : null,
             'scripts_url' => $maySeeScripts ? $this->urls->generate('admin.cms.scripts.list') : null,
-            'is_active' => str_starts_with((string) $this->getRequest()?->getPathInfo(), '/admin/cms'),
+            'is_active' => $this->isOnACmsScreen(),
             // On a showcase site the content *is* the site, so its section comes
             // before the shop ones. The sidebar is a flex column, so ordering it
             // is a matter of one property rather than of a theme override.
@@ -97,5 +100,19 @@ class CmsSideNavHook extends BaseHook
             'settings_label' => $this->trans('Settings', [], TheliaCMS::DOMAIN_NAME),
             'scripts_label' => $this->trans('Scripts and measurement', [], TheliaCMS::DOMAIN_NAME),
         ]));
+    }
+
+    /**
+     * Whether the screen on display is one of this module.
+     *
+     * The path is read up to the segment boundary: another module answering on
+     * `/admin/cms-import` is not a screen of this one, and would otherwise light
+     * up its section of the sidebar.
+     */
+    private function isOnACmsScreen(): bool
+    {
+        $path = (string) $this->getRequest()?->getPathInfo();
+
+        return self::SECTION_PATH === $path || str_starts_with($path, self::SECTION_PATH.'/');
     }
 }
