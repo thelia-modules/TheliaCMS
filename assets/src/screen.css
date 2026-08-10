@@ -103,6 +103,148 @@ body:has(.cms-builder) {
 }
 
 /*
+ * The settings panel, over the theme of the bundle.
+ *
+ * The bundle paints every part of the panel in the same grey and marks the
+ * active tab in a blue that holds 2.7:1 against it — everything below is about
+ * giving the panel levels again: one value for the panel, one for the section
+ * headers, one for the fields, and an accent light enough to clear 3:1 as a
+ * marker and 4.5:1 as text. The vendor stylesheet cannot be edited; everything
+ * is overridden from here, scoped to the builder screen.
+ */
+.cms-builder {
+    --pb-panel-bg: #353b48;
+    --pb-panel-fg: #d6dce8;
+    /* Light enough to read on the panel (5.1:1); never used under white text. */
+    --pb-accent: #82b1f7;
+}
+
+.cms-builder .gjs-editor {
+    /* The settings column was 15% of the window: on a laptop that is 200px of
+       wrapped labels and unusable fields. Fixed, like the blocks column. */
+    --gjs-left-width: 280px;
+    --gjs-font-color: #e4e9f2;
+    --gjs-font-color-active: #ffffff;
+    --gjs-secondary-light-color: #c2cad9;
+    --gjs-arrow-color: #c2cad9;
+    --gjs-light-border: rgba(255, 255, 255, 0.08);
+}
+
+/* A field has to look like a place to type: the default is a 20% black veil
+   on the panel grey, which reads as decoration rather than as an input. */
+.cms-builder .gjs-field {
+    background-color: #262b35;
+    border: 1px solid #5b6478;
+    border-radius: 4px;
+    color: #f0f3f9;
+}
+
+.cms-builder .gjs-field:focus-within {
+    border-color: var(--pb-accent);
+}
+
+/* The value a block inherits is shown as the placeholder; it is information,
+   not decoration, and has to clear 4.5:1 like the rest. */
+.cms-builder .gjs-field input::placeholder {
+    color: #9aa4b8;
+    opacity: 1;
+}
+
+/* The chosen alignment was a 20% white veil; an editor scanning the panel
+   could not tell it from a hover. */
+.cms-builder .gjs-radio-item input:checked + .gjs-radio-item-label {
+    background-color: color-mix(in srgb, var(--pb-accent) 30%, transparent);
+    box-shadow: inset 0 -2px 0 var(--pb-accent);
+    color: #ffffff;
+}
+
+/* Section headers: the only thing separating "Typographie" from the property
+   under it was an 8px arrow. */
+.cms-builder .gjs-sm-sector-title,
+.cms-builder .gjs-trait-category .gjs-title {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    border-bottom: none;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.cms-builder .gjs-sm-sector.gjs-sm-open .gjs-sm-sector-title {
+    box-shadow: inset 3px 0 0 var(--pb-accent);
+}
+
+.cms-builder .gjs-sm-properties {
+    padding-bottom: 0.75rem;
+}
+
+/* The class strip is a zone of its own, not the first row of the styles. */
+.cms-builder .gjs-clm-tags {
+    background-color: rgba(0, 0, 0, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    padding: 0.5rem 0.5rem 0.65rem;
+}
+
+/* The generated identifier (#i4ug) means something to a stylesheet, not to
+   the person editing the page. */
+.cms-builder .gjs-clm-sel-id {
+    display: none;
+}
+
+/* The three tabs: a text label under each icon — set by the controller — and
+   an active state that does not rest on one tinted icon. */
+.cms-builder .gjs-pn-views {
+    padding: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.cms-builder .gjs-pn-views .gjs-pn-buttons {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+}
+
+.cms-builder .gjs-pn-views .gjs-pn-btn {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    margin: 0;
+    padding: 0.5rem 0 0.45rem;
+    border-radius: 0;
+    color: #c2cad9;
+}
+
+.cms-builder .gjs-pn-views .gjs-pn-btn.gjs-pn-active {
+    background-color: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 -2px 0 var(--pb-accent);
+    color: #ffffff;
+}
+
+.cms-builder__tab-label {
+    font-size: 0.6875rem;
+    line-height: 1;
+}
+
+/* The tab row is taller with its labels; the panel below starts where it ends. */
+.cms-builder .gjs-pn-views-container {
+    padding-top: 3.5rem;
+}
+
+/* One row of the layer tree ends where the next begins. */
+.cms-builder .gjs-layer {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* White on the old accent held 3.3:1; dark on the new one holds 7.9:1. */
+.cms-builder .pb-trait-button {
+    background: var(--pb-accent);
+    border-color: var(--pb-accent);
+    color: #1b2029;
+    font-weight: 600;
+}
+
+/*
  * Messages of the editor: over the canvas, in a corner, rather than pushed
  * into the layout — a banner at the top would move the page being edited down
  * every time something is saved.

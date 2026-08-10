@@ -195,6 +195,7 @@ export default class extends PageBuilderController {
         }
 
         this.translateWhatGrapesJsLeavesInEnglish();
+        this.labelTheViewTabs();
         this.explainTheEmptyCanvas();
         this.explainTheEmptySettingsPanel();
     }
@@ -223,12 +224,27 @@ export default class extends PageBuilderController {
             return;
         }
 
+        const messages = {};
+
         if (labels.linkTarget) {
-            this.editor.I18n.addMessages({
-                [this.editor.I18n.getLocale()]: {
-                    traitManager: { traits: { labels: { target: labels.linkTarget } } },
-                },
-            });
+            messages.traitManager = { traits: { labels: { target: labels.linkTarget } } };
+        }
+
+        // "Component settings", said to an editor who was told everything on
+        // the page is a block.
+        if (labels.settingsTitle) {
+            messages.traitManager = { ...(messages.traitManager ?? {}), label: labels.settingsTitle };
+        }
+
+        // The values of the style options (left, solid, no-repeat...) have no
+        // key in the locale files the library ships: whatever language the
+        // screen is in, they come out as raw CSS keywords.
+        if (labels.styleOptions) {
+            messages.styleManager = { options: labels.styleOptions };
+        }
+
+        if (Object.keys(messages).length > 0) {
+            this.editor.I18n.addMessages({ [this.editor.I18n.getLocale()]: messages });
         }
 
         for (const [name, title] of Object.entries(labels.richText ?? {})) {
@@ -241,6 +257,42 @@ export default class extends PageBuilderController {
             action.attributes = { ...(action.attributes ?? {}), title };
             action.btn?.setAttribute("title", title);
         }
+    }
+
+    /**
+     * The three tabs of the settings panel are icons alone, and the only mark
+     * of the active one is a tint. A word under each icon says what the tab
+     * holds without hovering for the tooltip.
+     *
+     * The word goes into the label of the button model, not into the rendered
+     * element: the view is rebuilt from that label every time the active tab
+     * changes, and anything appended to the element goes with it.
+     */
+    labelTheViewTabs() {
+        const labels = this.editorLabelsValue ?? {};
+        const tabs = labels.viewTabs;
+
+        if (!tabs || 0 === Object.keys(tabs).length) {
+            return;
+        }
+
+        this.editor.on("load", () => {
+            for (const [id, text] of Object.entries(tabs)) {
+                const button = this.editor.Panels.getButton("views", id);
+
+                if (!button) {
+                    continue;
+                }
+
+                // The label is an HTML string holding the icon; the wording
+                // goes through a text node so it stays wording.
+                const label = document.createElement("span");
+                label.className = "cms-builder__tab-label";
+                label.textContent = text;
+
+                button.set("label", String(button.get("label") ?? "") + label.outerHTML);
+            }
+        });
     }
 
     /**
