@@ -127,6 +127,7 @@ return [
     'Default' => 'Standard',
     'Delete' => 'Supprimer',
     'Delete answers after' => 'Supprimer les réponses après',
+    'Delete the block' => 'Supprimer le bloc',
     'Deleted for good' => 'Suppression définitive',
     'Deleted on' => 'Supprimée le',
     'Delete this answer for good? This is what answering a request to be forgotten does.' => 'Supprimer définitivement cette réponse ? C’est ce que fait une demande d’effacement.',

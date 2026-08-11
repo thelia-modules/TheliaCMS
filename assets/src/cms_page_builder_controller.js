@@ -58,6 +58,7 @@ export default class extends PageBuilderController {
         this.form?.removeEventListener("submit", this.storeBeforeSubmit);
         window.removeEventListener("beforeunload", this.warnBeforeLeaving);
         clearInterval(this.autosaveTimer);
+        this.layerDeleteObserver?.disconnect();
 
         super.disconnect();
     }
@@ -196,6 +197,7 @@ export default class extends PageBuilderController {
 
         this.translateWhatGrapesJsLeavesInEnglish();
         this.labelTheViewTabs();
+        this.addDeleteToTheLayerRows();
         this.explainTheEmptyCanvas();
         this.explainTheEmptySettingsPanel();
     }
@@ -292,6 +294,77 @@ export default class extends PageBuilderController {
 
                 button.set("label", String(button.get("label") ?? "") + label.outerHTML);
             }
+        });
+    }
+
+    /**
+     * A delete control on every row of the layer tree.
+     *
+     * Deleting from the tree otherwise takes selecting the row and knowing
+     * that the keyboard, or the toolbar over the canvas, can delete what is
+     * selected — nothing in the panel says so.
+     *
+     * The rows carry no identifier, so each button holds the component of its
+     * row, read from the data GrapesJS leaves on the row element. Rows are
+     * redrawn whenever the tree changes, buttons and all: an observer sweeps
+     * the panel and equips whatever row is missing one. Deleting through the
+     * command keeps it undoable, like the delete of the canvas toolbar.
+     */
+    addDeleteToTheLayerRows() {
+        const labels = this.editorLabelsValue ?? {};
+
+        if (!labels.deleteLayer) {
+            return;
+        }
+
+        this.editor.on("load", () => {
+            const panel = this.element.querySelector(".gjs-pn-views-container");
+
+            if (!panel) {
+                return;
+            }
+
+            const sweep = () => {
+                for (const row of panel.querySelectorAll(".gjs-layer")) {
+                    if (row.querySelector(":scope > .gjs-layer-item > .cms-builder__layer-delete")) {
+                        continue;
+                    }
+
+                    const component = row.__cashData?.model;
+
+                    // The root of the tree is the page itself, and a block may
+                    // be marked as not removable by whoever registered it.
+                    if (!component || component === this.editor.getWrapper() || false === component.get("removable")) {
+                        continue;
+                    }
+
+                    const item = row.querySelector(":scope > .gjs-layer-item");
+
+                    if (!item) {
+                        continue;
+                    }
+
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "cms-builder__layer-delete";
+                    button.title = labels.deleteLayer;
+                    button.setAttribute("aria-label", labels.deleteLayer);
+                    button.innerHTML =
+                        '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>';
+
+                    button.addEventListener("click", (event) => {
+                        // The row underneath selects the component on click.
+                        event.stopPropagation();
+                        this.editor.runCommand("core:component-delete", { component });
+                    });
+
+                    item.append(button);
+                }
+            };
+
+            this.layerDeleteObserver = new MutationObserver(sweep);
+            this.layerDeleteObserver.observe(panel, { childList: true, subtree: true });
+            sweep();
         });
     }
 

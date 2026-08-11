@@ -151,6 +151,8 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
             // "Component settings", renamed for people who were told
             // everything on the page is a block.
             'settingsTitle' => $this->translate('Block settings'),
+            // The delete control put on every row of the layer tree.
+            'deleteLayer' => $this->translate('Delete the block'),
             // The values of the style options are raw CSS keywords in every
             // language: the locale files of the library have no key for them.
             // Only the sets a page editor meets are covered — the flex,

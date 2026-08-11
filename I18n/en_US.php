@@ -127,6 +127,7 @@ return [
     'Default' => 'Default',
     'Delete' => 'Delete',
     'Delete answers after' => 'Delete answers after',
+    'Delete the block' => 'Delete the block',
     'Deleted for good' => 'Deleted for good',
     'Deleted on' => 'Deleted on',
     'Delete this answer for good? This is what answering a request to be forgotten does.' => 'Delete this answer for good? This is what answering a request to be forgotten does.',

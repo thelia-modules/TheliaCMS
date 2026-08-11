@@ -236,6 +236,35 @@ body:has(.cms-builder) {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* Deletes the block of its row. Shown on hover to keep the tree quiet, but a
+   keyboard reaching it brings it back: hidden would mean unreachable. */
+.cms-builder__layer-delete {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* The 24px WCAG asks of anything meant to be aimed at. */
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: #c2cad9;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.cms-builder .gjs-layer-item:hover .cms-builder__layer-delete,
+.cms-builder__layer-delete:focus-visible {
+    opacity: 1;
+}
+
+.cms-builder__layer-delete:hover,
+.cms-builder__layer-delete:focus-visible {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffb3b3;
+}
+
 /* White on the old accent held 3.3:1; dark on the new one holds 7.9:1. */
 .cms-builder .pb-trait-button {
     background: var(--pb-accent);
