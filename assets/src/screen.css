@@ -265,6 +265,69 @@ body:has(.cms-builder) {
     color: #ffb3b3;
 }
 
+/* The writing area of the settings panel: light, like the page it writes
+   into, so the words read as content rather than as one more field. */
+.cms-builder .gjs-trt-trait:has(.cms-rte) {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.cms-rte {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.cms-rte__bar {
+    display: flex;
+    gap: 2px;
+}
+
+.cms-rte__action {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: #c2cad9;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.cms-rte__action:hover,
+.cms-rte__action:focus-visible {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.cms-rte__area {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #5b6478;
+    border-radius: 4px;
+    padding: 0.5rem 0.6rem;
+    min-height: 110px;
+    max-height: 40vh;
+    overflow-y: auto;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    text-align: start;
+}
+
+.cms-rte__area:focus-visible {
+    outline: none;
+    border-color: var(--pb-accent);
+}
+
+.cms-rte__area ul,
+.cms-rte__area ol {
+    padding-inline-start: 1.25rem;
+}
+
 /* White on the old accent held 3.3:1; dark on the new one holds 7.9:1. */
 .cms-builder .pb-trait-button {
     background: var(--pb-accent);

@@ -170,6 +170,18 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
                 'more' => $this->translate('More colours'),
                 'less' => $this->translate('Back to the palette'),
             ],
+            // The writing area in the settings panel of the editorial blocks.
+            // Not part of `richText` above: that list names the actions of the
+            // canvas toolbar, and is checked against what GrapesJS ships.
+            'richTextTrait' => [
+                'label' => $this->translate('Content'),
+                'bold' => $this->translate('Bold'),
+                'italic' => $this->translate('Italic'),
+                'underline' => $this->translate('Underline'),
+                'strikethrough' => $this->translate('Strikethrough'),
+                'bulletList' => $this->translate('Bulleted list'),
+                'numberedList' => $this->translate('Numbered list'),
+            ],
             // The values of the style options are raw CSS keywords in every
             // language: the locale files of the library have no key for them.
             // Only the sets a page editor meets are covered — the flex,

@@ -2,6 +2,7 @@ import PageBuilderController from "@page-builder/controllers/page_builder_contro
 import partialBlocks from "./plugins/partialBlocks.js";
 import catalogBlocks from "./plugins/catalogBlocks.js";
 import headingLevels from "./plugins/headingLevels.js";
+import richTextTrait from "./plugins/richTextTrait.js";
 
 /**
  * Thelia flavour of the page builder controller.
@@ -127,6 +128,9 @@ export default class extends PageBuilderController {
         this.pluginManager.registerPlugin("cms:partials", partialBlocks);
         this.pluginManager.registerPlugin("cms:catalog", catalogBlocks);
         this.pluginManager.registerPlugin("cms:heading-levels", headingLevels);
+        this.pluginManager.registerPlugin("cms:rich-text-trait", richTextTrait);
+
+        const labels = this.editorLabelsValue ?? {};
 
         const plugins = [
             "pb:init-categories",
@@ -144,6 +148,8 @@ export default class extends PageBuilderController {
             { name: "pb:table", options: { container: this.editorTarget } },
             "pb:trait-select-api",
             "pb:trait-select-icon",
+            // The writing area of the settings panel, on every editorial block.
+            { name: "cms:rich-text-trait", options: { labels: labels.richTextTrait ?? {} } },
             "pb:reorganize-blocks",
         ];
 
