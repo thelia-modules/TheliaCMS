@@ -1,0 +1,102 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Site styles'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-site-styles{% endblock %}
+
+{% block content %}
+    {% form_theme form with bo_form_themes only %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Site styles'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.settings.edit') }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to settings'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">
+        {{ 'These choices dress every CMS page and every preview in the editor. What is left empty keeps the style of the theme.'|trans({}, 'theliacms') }}
+    </p>
+
+    {{ form_start(form) }}
+        {{ form_errors(form) }}
+
+        {% set element_titles = {
+            h1: 'Heading 1'|trans({}, 'theliacms'),
+            h2: 'Heading 2'|trans({}, 'theliacms'),
+            h3: 'Heading 3'|trans({}, 'theliacms'),
+            h4: 'Heading 4'|trans({}, 'theliacms'),
+            h5: 'Heading 5'|trans({}, 'theliacms'),
+            h6: 'Heading 6'|trans({}, 'theliacms'),
+            p: 'Paragraphs'|trans({}, 'theliacms'),
+            a: 'Links'|trans({}, 'theliacms'),
+            button: 'Buttons'|trans({}, 'theliacms'),
+        } %}
+
+        <div class="d-flex flex-column gap-3">
+            <div class="card">
+                <div class="card-header">{{ 'Headings'|trans({}, 'theliacms') }}</div>
+                <div class="card-body d-flex flex-column gap-3">
+                    {% for element in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] %}
+                        <fieldset class="border rounded p-3">
+                            <legend class="fs-6 fw-semibold mb-2">{{ element_titles[element] }}</legend>
+                            <div class="row g-2">
+                                {% for child in form[element] %}
+                                    <div class="col-6 col-lg-3">{{ form_row(child) }}</div>
+                                {% endfor %}
+                            </div>
+                        </fieldset>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">{{ 'Text'|trans({}, 'theliacms') }}</div>
+                <div class="card-body d-flex flex-column gap-3">
+                    {% for element in ['p', 'a', 'button'] %}
+                        <fieldset class="border rounded p-3">
+                            <legend class="fs-6 fw-semibold mb-2">{{ element_titles[element] }}</legend>
+                            <div class="row g-2">
+                                {% for child in form[element] %}
+                                    <div class="col-6 col-lg-3">{{ form_row(child) }}</div>
+                                {% endfor %}
+                            </div>
+                        </fieldset>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">{{ 'Colours'|trans({}, 'theliacms') }}</div>
+                        <div class="card-body">
+                            {{ form_row(form.palette) }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">{{ 'Fonts'|trans({}, 'theliacms') }}</div>
+                        <div class="card-body">
+                            {{ form_row(form.fontUploads) }}
+
+                            {% if form.fontDeletions is defined %}
+                                {{ form_row(form.fontDeletions) }}
+                            {% elseif fonts is empty %}
+                                <p class="text-muted small mb-0">
+                                    {{ 'No font has been uploaded yet. The installed stacks above work without any.'|trans({}, 'theliacms') }}
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary" data-testid="cms-site-styles-submit">{{ 'Save'|trans({}, 'theliacms') }}</button>
+        </div>
+    {{ form_end(form) }}
+{% endblock %}

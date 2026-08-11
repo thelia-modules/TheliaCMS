@@ -19,6 +19,7 @@ use Symfony\Component\AssetMapper\AssetMapperInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Partial\PartialRegistry;
+use TheliaCMS\Settings\SiteStyles;
 use TheliaCMS\TheliaCMS;
 
 /**
@@ -49,6 +50,7 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
         private UrlGeneratorInterface $urls,
         private PartialRegistry $partials,
         private TranslatorInterface $translator,
+        private SiteStyles $siteStyles,
     ) {
     }
 
@@ -107,6 +109,15 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
             // to the page stylesheet, which would restyle the whole site the
             // page is published into. Resets belong to the theme.
             'protectedCss' => '',
+            // The wrapper carries the class every published page is wrapped
+            // in, so the global styles of the site, scoped to that class,
+            // dress the canvas exactly as they dress the front.
+            'wrapperClasses' => PageContentNormalizer::CONTAINER_CLASS,
+            'canvas' => [
+                'styles' => $this->siteStyles->typography()->isEmpty() ? [] : [
+                    $this->urls->generate('cms.site_styles', ['v' => $this->siteStyles->version()]),
+                ],
+            ],
             'deviceManager' => [
                 'devices' => [
                     ['id' => 'desktop', 'name' => 'Desktop', 'width' => ''],
@@ -153,6 +164,12 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
             'settingsTitle' => $this->translate('Block settings'),
             // The delete control put on every row of the layer tree.
             'deleteLayer' => $this->translate('Delete the block'),
+            // The button of the colour picker that leaves the palette for the
+            // full wheel, and the one that comes back.
+            'colorPicker' => [
+                'more' => $this->translate('More colours'),
+                'less' => $this->translate('Back to the palette'),
+            ],
             // The values of the style options are raw CSS keywords in every
             // language: the locale files of the library have no key for them.
             // Only the sets a page editor meets are covered — the flex,
@@ -257,14 +274,8 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
      */
     private function palette(): array
     {
-        $configured = (string) TheliaCMS::getConfigValue('builder_palette', '');
+        $configured = $this->siteStyles->palette();
 
-        if ('' === $configured) {
-            return self::DEFAULT_PALETTE;
-        }
-
-        $colours = json_decode($configured, true);
-
-        return \is_array($colours) ? array_values(array_filter($colours, \is_string(...))) : self::DEFAULT_PALETTE;
+        return [] === $configured ? self::DEFAULT_PALETTE : $configured;
     }
 }

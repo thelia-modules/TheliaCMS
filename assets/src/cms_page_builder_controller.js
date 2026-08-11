@@ -182,6 +182,30 @@ export default class extends PageBuilderController {
         this.pluginManager.initActivePlugins(plugins);
     }
 
+    /**
+     * The palette of the site opens first, as before, but it stops being a
+     * wall: a button switches to the full wheel for the one-off colour the
+     * palette does not have. The two texts of that button are wording, so
+     * they come from the server like the rest.
+     */
+    buildColorPicker() {
+        const picker = super.buildColorPicker();
+
+        if (!picker) {
+            return picker;
+        }
+
+        const labels = this.editorLabelsValue ?? {};
+        const texts = labels.colorPicker ?? {};
+
+        return {
+            ...picker,
+            togglePaletteOnly: true,
+            ...(texts.more ? { togglePaletteMoreText: texts.more } : {}),
+            ...(texts.less ? { togglePaletteLessText: texts.less } : {}),
+        };
+    }
+
     initEditor(options = {}) {
         super.initEditor(options);
 

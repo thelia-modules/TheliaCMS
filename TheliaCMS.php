@@ -280,6 +280,8 @@ class TheliaCMS extends BaseModule
                 // never wired by the container.
                 __DIR__.'/Page/PublishedPage.php',
                 __DIR__.'/Partial/PartialProp.php',
+                __DIR__.'/Settings/ElementStyle.php',
+                __DIR__.'/Settings/SiteTypography.php',
                 // Registered below, guarded: it implements a SEOne interface.
                 __DIR__.'/Seo/*',
                 // Same, for TntSearch: the class extends one of its own, so

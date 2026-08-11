@@ -29,7 +29,11 @@
 {% block body %}
     {{ theme_hook('cmspage.top', {page: cms_page}) }}
 
-    <article class="cms-page__content">
+    {# `cms-page-content` is the class the global styles of the site are
+       scoped to. Content published through the builder carries it on its own
+       wrapper; the article carries it too so a seeded or imported page obeys
+       the same choices. A theme shipping its own template should keep it. #}
+    <article class="cms-page__content cms-page-content">
         {{ theme_hook('cmspage.content.before', {page: cms_page}) }}
         {{ cms_page.html|raw }}
         {{ theme_hook('cmspage.content.after', {page: cms_page}) }}

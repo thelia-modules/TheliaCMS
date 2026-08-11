@@ -38,7 +38,9 @@ final readonly class PageContentNormalizer
             '#<body\b([^>]*)>(.*)</body>#is',
             fn (array $matches): string => \sprintf(
                 '<div class="%s">%s</div>',
-                trim(self::CONTAINER_CLASS.' '.$this->classesOf($matches[1])),
+                // Deduplicated: the canvas wrapper carries the container class
+                // too, so the preview obeys the global styles of the site.
+                implode(' ', array_unique(array_filter(explode(' ', self::CONTAINER_CLASS.' '.$this->classesOf($matches[1]))))),
                 $matches[2],
             ),
             $html,
