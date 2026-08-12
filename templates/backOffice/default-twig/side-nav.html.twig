@@ -38,6 +38,11 @@
                 <a class="nav-link" href="{{ scripts_url }}">{{ scripts_label }}</a>
             </li>
         {% endif %}
+        {% if styles_url %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ styles_url }}">{{ styles_label }}</a>
+            </li>
+        {% endif %}
         {% if settings_url %}
             <li class="nav-item">
                 <a class="nav-link" href="{{ settings_url }}">{{ settings_label }}</a>

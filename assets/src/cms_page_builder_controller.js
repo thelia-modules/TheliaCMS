@@ -2,6 +2,7 @@ import PageBuilderController from "@page-builder/controllers/page_builder_contro
 import partialBlocks from "./plugins/partialBlocks.js";
 import catalogBlocks from "./plugins/catalogBlocks.js";
 import headingLevels from "./plugins/headingLevels.js";
+import richTextTrait from "./plugins/richTextTrait.js";
 
 /**
  * Thelia flavour of the page builder controller.
@@ -58,6 +59,7 @@ export default class extends PageBuilderController {
         this.form?.removeEventListener("submit", this.storeBeforeSubmit);
         window.removeEventListener("beforeunload", this.warnBeforeLeaving);
         clearInterval(this.autosaveTimer);
+        this.layerDeleteObserver?.disconnect();
 
         super.disconnect();
     }
@@ -126,6 +128,9 @@ export default class extends PageBuilderController {
         this.pluginManager.registerPlugin("cms:partials", partialBlocks);
         this.pluginManager.registerPlugin("cms:catalog", catalogBlocks);
         this.pluginManager.registerPlugin("cms:heading-levels", headingLevels);
+        this.pluginManager.registerPlugin("cms:rich-text-trait", richTextTrait);
+
+        const labels = this.editorLabelsValue ?? {};
 
         const plugins = [
             "pb:init-categories",
@@ -143,6 +148,8 @@ export default class extends PageBuilderController {
             { name: "pb:table", options: { container: this.editorTarget } },
             "pb:trait-select-api",
             "pb:trait-select-icon",
+            // The writing area of the settings panel, on every editorial block.
+            { name: "cms:rich-text-trait", options: { labels: labels.richTextTrait ?? {} } },
             "pb:reorganize-blocks",
         ];
 
@@ -181,6 +188,30 @@ export default class extends PageBuilderController {
         this.pluginManager.initActivePlugins(plugins);
     }
 
+    /**
+     * The palette of the site opens first, as before, but it stops being a
+     * wall: a button switches to the full wheel for the one-off colour the
+     * palette does not have. The two texts of that button are wording, so
+     * they come from the server like the rest.
+     */
+    buildColorPicker() {
+        const picker = super.buildColorPicker();
+
+        if (!picker) {
+            return picker;
+        }
+
+        const labels = this.editorLabelsValue ?? {};
+        const texts = labels.colorPicker ?? {};
+
+        return {
+            ...picker,
+            togglePaletteOnly: true,
+            ...(texts.more ? { togglePaletteMoreText: texts.more } : {}),
+            ...(texts.less ? { togglePaletteLessText: texts.less } : {}),
+        };
+    }
+
     initEditor(options = {}) {
         super.initEditor(options);
 
@@ -195,6 +226,8 @@ export default class extends PageBuilderController {
         }
 
         this.translateWhatGrapesJsLeavesInEnglish();
+        this.labelTheViewTabs();
+        this.addDeleteToTheLayerRows();
         this.explainTheEmptyCanvas();
         this.explainTheEmptySettingsPanel();
     }
@@ -223,12 +256,27 @@ export default class extends PageBuilderController {
             return;
         }
 
+        const messages = {};
+
         if (labels.linkTarget) {
-            this.editor.I18n.addMessages({
-                [this.editor.I18n.getLocale()]: {
-                    traitManager: { traits: { labels: { target: labels.linkTarget } } },
-                },
-            });
+            messages.traitManager = { traits: { labels: { target: labels.linkTarget } } };
+        }
+
+        // "Component settings", said to an editor who was told everything on
+        // the page is a block.
+        if (labels.settingsTitle) {
+            messages.traitManager = { ...(messages.traitManager ?? {}), label: labels.settingsTitle };
+        }
+
+        // The values of the style options (left, solid, no-repeat...) have no
+        // key in the locale files the library ships: whatever language the
+        // screen is in, they come out as raw CSS keywords.
+        if (labels.styleOptions) {
+            messages.styleManager = { options: labels.styleOptions };
+        }
+
+        if (Object.keys(messages).length > 0) {
+            this.editor.I18n.addMessages({ [this.editor.I18n.getLocale()]: messages });
         }
 
         for (const [name, title] of Object.entries(labels.richText ?? {})) {
@@ -241,6 +289,113 @@ export default class extends PageBuilderController {
             action.attributes = { ...(action.attributes ?? {}), title };
             action.btn?.setAttribute("title", title);
         }
+    }
+
+    /**
+     * The three tabs of the settings panel are icons alone, and the only mark
+     * of the active one is a tint. A word under each icon says what the tab
+     * holds without hovering for the tooltip.
+     *
+     * The word goes into the label of the button model, not into the rendered
+     * element: the view is rebuilt from that label every time the active tab
+     * changes, and anything appended to the element goes with it.
+     */
+    labelTheViewTabs() {
+        const labels = this.editorLabelsValue ?? {};
+        const tabs = labels.viewTabs;
+
+        if (!tabs || 0 === Object.keys(tabs).length) {
+            return;
+        }
+
+        this.editor.on("load", () => {
+            for (const [id, text] of Object.entries(tabs)) {
+                const button = this.editor.Panels.getButton("views", id);
+
+                if (!button) {
+                    continue;
+                }
+
+                // The label is an HTML string holding the icon; the wording
+                // goes through a text node so it stays wording.
+                const label = document.createElement("span");
+                label.className = "cms-builder__tab-label";
+                label.textContent = text;
+
+                button.set("label", String(button.get("label") ?? "") + label.outerHTML);
+            }
+        });
+    }
+
+    /**
+     * A delete control on every row of the layer tree.
+     *
+     * Deleting from the tree otherwise takes selecting the row and knowing
+     * that the keyboard, or the toolbar over the canvas, can delete what is
+     * selected — nothing in the panel says so.
+     *
+     * The rows carry no identifier, so each button holds the component of its
+     * row, read from the data GrapesJS leaves on the row element. Rows are
+     * redrawn whenever the tree changes, buttons and all: an observer sweeps
+     * the panel and equips whatever row is missing one. Deleting through the
+     * command keeps it undoable, like the delete of the canvas toolbar.
+     */
+    addDeleteToTheLayerRows() {
+        const labels = this.editorLabelsValue ?? {};
+
+        if (!labels.deleteLayer) {
+            return;
+        }
+
+        this.editor.on("load", () => {
+            const panel = this.element.querySelector(".gjs-pn-views-container");
+
+            if (!panel) {
+                return;
+            }
+
+            const sweep = () => {
+                for (const row of panel.querySelectorAll(".gjs-layer")) {
+                    if (row.querySelector(":scope > .gjs-layer-item > .cms-builder__layer-delete")) {
+                        continue;
+                    }
+
+                    const component = row.__cashData?.model;
+
+                    // The root of the tree is the page itself, and a block may
+                    // be marked as not removable by whoever registered it.
+                    if (!component || component === this.editor.getWrapper() || false === component.get("removable")) {
+                        continue;
+                    }
+
+                    const item = row.querySelector(":scope > .gjs-layer-item");
+
+                    if (!item) {
+                        continue;
+                    }
+
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "cms-builder__layer-delete";
+                    button.title = labels.deleteLayer;
+                    button.setAttribute("aria-label", labels.deleteLayer);
+                    button.innerHTML =
+                        '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>';
+
+                    button.addEventListener("click", (event) => {
+                        // The row underneath selects the component on click.
+                        event.stopPropagation();
+                        this.editor.runCommand("core:component-delete", { component });
+                    });
+
+                    item.append(button);
+                }
+            };
+
+            this.layerDeleteObserver = new MutationObserver(sweep);
+            this.layerDeleteObserver.observe(panel, { childList: true, subtree: true });
+            sweep();
+        });
     }
 
     /**

@@ -19,6 +19,7 @@ use Symfony\Component\AssetMapper\AssetMapperInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Partial\PartialRegistry;
+use TheliaCMS\Settings\SiteStyles;
 use TheliaCMS\TheliaCMS;
 
 /**
@@ -49,6 +50,7 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
         private UrlGeneratorInterface $urls,
         private PartialRegistry $partials,
         private TranslatorInterface $translator,
+        private SiteStyles $siteStyles,
     ) {
     }
 
@@ -107,6 +109,15 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
             // to the page stylesheet, which would restyle the whole site the
             // page is published into. Resets belong to the theme.
             'protectedCss' => '',
+            // The wrapper carries the class every published page is wrapped
+            // in, so the global styles of the site, scoped to that class,
+            // dress the canvas exactly as they dress the front.
+            'wrapperClasses' => PageContentNormalizer::CONTAINER_CLASS,
+            'canvas' => [
+                'styles' => $this->siteStyles->typography()->isEmpty() ? [] : [
+                    $this->urls->generate('cms.site_styles', ['v' => $this->siteStyles->version()]),
+                ],
+            ],
             'deviceManager' => [
                 'devices' => [
                     ['id' => 'desktop', 'name' => 'Desktop', 'width' => ''],
@@ -141,6 +152,116 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
                 'link' => $this->translate('Link'),
                 'wrap' => $this->translate('Wrap in a span to style it'),
             ],
+            // The words under the three icons of the settings panel, keyed by
+            // the identifier GrapesJS gives each tab button.
+            'viewTabs' => [
+                'open-sm' => $this->translate('Style'),
+                'open-tm' => $this->translate('Settings'),
+                'open-layers' => $this->translate('Layers'),
+            ],
+            // "Component settings", renamed for people who were told
+            // everything on the page is a block.
+            'settingsTitle' => $this->translate('Block settings'),
+            // The delete control put on every row of the layer tree.
+            'deleteLayer' => $this->translate('Delete the block'),
+            // The button of the colour picker that leaves the palette for the
+            // full wheel, and the one that comes back.
+            'colorPicker' => [
+                'more' => $this->translate('More colours'),
+                'less' => $this->translate('Back to the palette'),
+            ],
+            // The writing area in the settings panel of the editorial blocks.
+            // Not part of `richText` above: that list names the actions of the
+            // canvas toolbar, and is checked against what GrapesJS ships.
+            'richTextTrait' => [
+                'label' => $this->translate('Content'),
+                'bold' => $this->translate('Bold'),
+                'italic' => $this->translate('Italic'),
+                'underline' => $this->translate('Underline'),
+                'strikethrough' => $this->translate('Strikethrough'),
+                'bulletList' => $this->translate('Bulleted list'),
+                'numberedList' => $this->translate('Numbered list'),
+            ],
+            // The values of the style options are raw CSS keywords in every
+            // language: the locale files of the library have no key for them.
+            // Only the sets a page editor meets are covered — the flex,
+            // transition and transform vocabulary has no translation that
+            // says more than the keyword does.
+            'styleOptions' => $this->styleOptionLabels(),
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function styleOptionLabels(): array
+    {
+        return [
+            'text-align' => [
+                'left' => $this->translate('Left'),
+                'center' => $this->translate('Centered'),
+                'right' => $this->translate('Right'),
+                'justify' => $this->translate('Justified'),
+            ],
+            'float' => [
+                'none' => $this->translate('None'),
+                'left' => $this->translate('Left'),
+                'right' => $this->translate('Right'),
+            ],
+            'display' => [
+                'block' => $this->translate('Block'),
+                'inline' => $this->translate('Inline'),
+                'inline-block' => $this->translate('Inline block'),
+                'flex' => $this->translate('Flexible'),
+                'none' => $this->translate('Hidden'),
+            ],
+            'position' => [
+                'static' => $this->translate('Normal'),
+                'relative' => $this->translate('Relative'),
+                'absolute' => $this->translate('Absolute'),
+                'fixed' => $this->translate('Pinned'),
+            ],
+            'border-style-sub' => [
+                'none' => $this->translate('None'),
+                'solid' => $this->translate('Solid'),
+                'dotted' => $this->translate('Dotted'),
+                'dashed' => $this->translate('Dashed'),
+                'double' => $this->translate('Double'),
+                'groove' => $this->translate('Groove'),
+                'ridge' => $this->translate('Ridge'),
+                'inset' => $this->translate('Sunken'),
+                'outset' => $this->translate('Raised'),
+            ],
+            'background-repeat-sub' => [
+                'repeat' => $this->translate('Tiled'),
+                'repeat-x' => $this->translate('Tiled horizontally'),
+                'repeat-y' => $this->translate('Tiled vertically'),
+                'no-repeat' => $this->translate('Not repeated'),
+            ],
+            'background-position-sub' => [
+                'left top' => $this->translate('Top left'),
+                'left center' => $this->translate('Center left'),
+                'left bottom' => $this->translate('Bottom left'),
+                'right top' => $this->translate('Top right'),
+                'right center' => $this->translate('Center right'),
+                'right bottom' => $this->translate('Bottom right'),
+                'center top' => $this->translate('Top center'),
+                'center center' => $this->translate('Center'),
+                'center bottom' => $this->translate('Bottom center'),
+            ],
+            'background-attachment-sub' => [
+                'scroll' => $this->translate('Scrolls with the page'),
+                'fixed' => $this->translate('Stays in place'),
+                'local' => $this->translate('Scrolls with the content'),
+            ],
+            'background-size-sub' => [
+                'auto' => $this->translate('Original size'),
+                'cover' => $this->translate('Fills the area'),
+                'contain' => $this->translate('Fits inside'),
+            ],
+            'box-shadow-type' => [
+                'inset' => $this->translate('Inner'),
+            ],
         ];
     }
 
@@ -165,14 +286,8 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
      */
     private function palette(): array
     {
-        $configured = (string) TheliaCMS::getConfigValue('builder_palette', '');
+        $configured = $this->siteStyles->palette();
 
-        if ('' === $configured) {
-            return self::DEFAULT_PALETTE;
-        }
-
-        $colours = json_decode($configured, true);
-
-        return \is_array($colours) ? array_values(array_filter($colours, \is_string(...))) : self::DEFAULT_PALETTE;
+        return [] === $configured ? self::DEFAULT_PALETTE : $configured;
     }
 }
