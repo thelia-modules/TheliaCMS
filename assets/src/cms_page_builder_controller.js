@@ -213,6 +213,17 @@ export default class extends PageBuilderController {
     }
 
     initEditor(options = {}) {
+        // The bundle leaves the storage on its defaults, and the default is to
+        // store after every single change — which writes the hidden fields and
+        // resets the change counter to zero on the spot. Both the background
+        // save and the unsaved-changes guard ask that counter whether anything
+        // is left to save, so both were answered "no" forever. With autosave
+        // off, the counter counts, and the fields are written by whoever
+        // saves: the background save, and the submit handler.
+        if (this.hasFormFields()) {
+            options = { storageManager: { type: "form", autosave: false }, ...options };
+        }
+
         super.initEditor(options);
 
         // Handle on the GrapesJS instance for anything driving the editor from
