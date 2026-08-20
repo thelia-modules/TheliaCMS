@@ -1,0 +1,881 @@
+/*
+ * The block catalogue of TheliaCMS: what its blocks look like out of the box.
+ *
+ * The module renders semantic markup carrying `cms-*` class names, and this file
+ * is the socle that makes that markup read as a page on any theme. Before it
+ * existed, a page opened on a theme that ships no CMS styles came out as
+ * unstyled markup, which is what happened on the demo site.
+ *
+ * Colours go through `--cms-*` tokens. Text, surface and border tokens borrow
+ * the token of the theme when it names its palette the way the Flexy design
+ * system does, and fall back on neutrals otherwise. The accent is the exception
+ * and is not borrowed: a background and the text written on it cannot be chosen
+ * separately, so the four accent tokens carry a self-consistent default and a
+ * theme states its own mapping.
+ *
+ * Contrast: every text pair used here was measured at 4.5:1 or better against
+ * both palettes. Hairlines and decorative surfaces are not text and are not
+ * held to that ratio; no click target is under 24 by 24 pixels.
+ *
+ * Loaded on every page rather than per block: the socle is a few kilobytes and
+ * caches across the whole site, where per-page CSS is downloaded again on every
+ * page (SPEC 3.5).
+ */
+
+/*
+ * Everything below lives in a cascade layer, so a rule the theme writes outside
+ * one wins over it whatever order the two stylesheets are loaded in. That is
+ * what lets the module link its socle without ever fighting a theme that
+ * restyles the catalogue, and it is why the theme does not need to care where
+ * in the head this file lands.
+ */
+@layer cms {
+  :root {
+    /* Text. The neutrals are dark enough to clear 4.5:1 on white, and the muted
+       and subtle steps stay above it too: a caption is not an excuse. */
+    --cms-color-text: var(--color-black, #23272b);
+    --cms-color-text-muted: var(--color-grey-darker, #43474c);
+    --cms-color-text-subtle: var(--color-grey-dark, #54585e);
+    --cms-color-text-faint: var(--color-grey, #6b6f75);
+
+    /* Surfaces. `surface` tints a section, `on-dark` is what sits on an inverted
+       one, and `border` draws a hairline that is not a colour of its own. */
+    --cms-color-surface: var(--color-grey-lightest, #f4f5f6);
+    --cms-color-on-dark: var(--color-white, #ffffff);
+    --cms-color-border: var(--color-grey-lighter, #d8dade);
+
+    /* The accent, and what is written on it. These four are the only tokens a
+       theme has to map, and the reason is that a background and the text on it
+       cannot be chosen separately: the Flexy palette wants dark text on its
+       brand orange, a dark accent wants white. Borrowing the background from
+       the theme while keeping our own text colour is how a button ends up
+       unreadable, so the default here is a self-consistent dark pair and a
+       theme states its own (see the mapping in the theme of the module). */
+    --cms-color-accent: #2f3337;
+    --cms-color-accent-strong: #1c1f22;
+    --cms-color-on-accent: #ffffff;
+    --cms-color-accent-surface: #f0f1f3;
+
+    --cms-color-error: var(--color-error, #b3261e);
+  }
+
+  /* Both names: the module renders `cms-page__content`, and the class was
+     written `cms-page-content` here first. */
+  :is(.cms-page__content, .cms-page-content) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cms-block-gap, 4rem);
+  }
+
+  /* A page written as plain prose rather than with the blocks of the catalogue,
+     which is what the seeded legal pages are: a reading column, and the rhythm
+     of a document rather than four centimetres between two paragraphs. */
+  :is(.cms-page__content, .cms-page-content):not(:has(> [class*="cms-"])) {
+    --cms-block-gap: 1.5rem;
+
+    padding-block: 3rem;
+  }
+
+  :is(.cms-page__content, .cms-page-content):not(:has(> [class*="cms-"])) > * {
+    width: min(48rem, 100% - 2rem);
+    margin-inline: auto;
+  }
+
+  /* A picture is a direct child too, and a width set on it stretches it to the
+     whole reading column: an icon with no width and height attributes, which is
+     what an SVG imported from another site usually is, came out 768 pixels wide.
+     Its own size, capped by the column. */
+  :is(.cms-page__content, .cms-page-content):not(:has(> [class*="cms-"]))
+    > :is(img, svg, video, picture, iframe) {
+    width: auto;
+    max-width: min(48rem, 100% - 2rem);
+    height: auto;
+  }
+
+  /* Headings written straight into the content carry no class, and the reset
+     leaves them the size of body text. The scale of the theme is applied by hand
+     here rather than through @apply, which would pull a utility into a file the
+     blocks share. */
+  :is(.cms-page__content, .cms-page-content):not(:has(> [class*="cms-"])) :is(h1, h2, h3) {
+    font-weight: var(--font-weight-h2, 600);
+    line-height: 1.2;
+  }
+
+  :is(.cms-page__content, .cms-page-content):not(:has(> [class*="cms-"])) h1 {
+    font-size: var(--font-size-h1-d, 2.5rem);
+  }
+
+  :is(.cms-page__content, .cms-page-content):not(:has(> [class*="cms-"])) h2 {
+    font-size: var(--font-size-h2-d, 1.75rem);
+    margin-top: 1.5rem;
+  }
+
+  :is(.cms-page__content, .cms-page-content):not(:has(> [class*="cms-"])) h3 {
+    font-size: var(--font-size-h3-d, 1.375rem);
+    margin-top: 1rem;
+  }
+
+  /* Blocks span the page, their content is held at a readable width. */
+  .cms-hero,
+  .cms-media-text,
+  .cms-cta,
+  .cms-quote,
+  .cms-testimonials,
+  .cms-figures,
+  .cms-logos,
+  .cms-gallery,
+  .cms-questions,
+  .cms-section {
+    --cms-block-inline: min(75rem, 100% - 2rem);
+
+    margin-inline: auto;
+    width: var(--cms-block-inline);
+  }
+
+  /* `:where()` on purpose: these are defaults, and a block setting a colour of
+     its own (a title on a dark call to action, for instance) has to win without
+     having to out-specify the page. Written with a plain descendant selector,
+     this rule beat every single-class block rule and painted that title black on
+     black. */
+  :where(.cms-page__content, .cms-page-content) :is(h1, h2, h3) {
+    color: var(--cms-color-text);
+    text-wrap: balance;
+  }
+
+  :where(.cms-page__content, .cms-page-content) p {
+    color: var(--cms-color-text-muted);
+  }
+
+  /* A link an author typed into their text carries no class, and the reset leaves
+     it the colour of the text around it with no underline: nothing at all says it
+     is a link. Underlined rather than coloured, because colour on its own is not
+     a distinction either (WCAG 1.4.1). Links the catalogue renders itself have
+     classes and keep their own look. */
+  :where(.cms-page__content, .cms-page-content) a:not([class]) {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  /* Buttons and links ------------------------------------------------------- */
+
+  .cms-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* 2.75rem tall, well past the 24px floor of WCAG 2.2, and comfortable on a
+       phone. */
+    min-height: 2.75rem;
+    padding-inline: 1.5rem;
+    border-radius: 999px;
+    background: var(--cms-color-accent);
+    color: var(--cms-color-on-accent);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .cms-button:hover,
+  .cms-button:focus-visible {
+    background: var(--cms-color-accent-strong);
+  }
+
+  .cms-link {
+    color: var(--cms-color-text-muted);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    /* A link on its own line is a target too. */
+    display: inline-block;
+    min-height: 1.5rem;
+  }
+
+  .cms-link:hover,
+  .cms-link:focus-visible {
+    color: var(--cms-color-text);
+  }
+
+  /* Hero -------------------------------------------------------------------- */
+
+  .cms-hero {
+    display: flex;
+    align-items: center;
+    min-height: min(32rem, 70vh);
+    padding-block: 4rem;
+    background: var(--cms-color-accent-surface);
+    border-radius: 1.5rem;
+  }
+
+  .cms-hero__body {
+    max-width: 42rem;
+    padding-inline: clamp(1.5rem, 5vw, 4rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .cms-hero__title {
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  .cms-hero__text {
+    font-size: 1.125rem;
+    margin: 0;
+  }
+
+  .cms-hero__actions {
+    margin: 0.5rem 0 0;
+  }
+
+  /* Text and image ---------------------------------------------------------- */
+
+  .cms-media-text {
+    display: grid;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  @media (min-width: 48rem) {
+    .cms-media-text {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    /* An editor flips the block by adding this class in the settings panel. */
+    .cms-media-text--reversed .cms-media-text__media {
+      order: 2;
+    }
+  }
+
+  .cms-media-text__media {
+    margin: 0;
+  }
+
+  .cms-media-text__media img {
+    width: 100%;
+    height: auto;
+    border-radius: 1rem;
+    display: block;
+  }
+
+  .cms-media-text__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .cms-media-text__title {
+    font-size: 1.75rem;
+    margin: 0;
+  }
+
+  /* Call to action ---------------------------------------------------------- */
+
+  .cms-cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 2.5rem clamp(1.5rem, 4vw, 3rem);
+    background: var(--cms-color-text);
+    border-radius: 1.5rem;
+  }
+
+  .cms-cta__title {
+    margin: 0 0 0.5rem;
+    font-size: 1.5rem;
+    color: var(--cms-color-on-dark);
+  }
+
+  .cms-cta__text,
+  .cms-cta :is(p) {
+    margin: 0;
+    color: var(--cms-color-border);
+  }
+
+  .cms-cta__actions {
+    margin: 0;
+  }
+
+  /* Quote ------------------------------------------------------------------- */
+
+  .cms-quote {
+    margin: 0 auto;
+    max-width: 48rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .cms-quote__text {
+    margin: 0;
+    font-size: clamp(1.25rem, 3vw, 1.75rem);
+    line-height: 1.4;
+    color: var(--cms-color-text);
+  }
+
+  .cms-quote__text p {
+    margin: 0;
+    color: inherit;
+  }
+
+  .cms-quote__text::before {
+    content: "“";
+    display: block;
+    font-size: 3rem;
+    line-height: 1;
+    color: var(--cms-color-accent);
+  }
+
+  .cms-quote__author {
+    color: var(--cms-color-text-subtle);
+    font-size: 0.9375rem;
+  }
+
+  /* Testimonials ------------------------------------------------------------ */
+
+  .cms-testimonials__title,
+  .cms-figures__title,
+  .cms-logos__title,
+  .cms-gallery__title,
+  .cms-questions__title,
+  .cms-section__title {
+    font-size: 1.75rem;
+    margin: 0 0 2rem;
+  }
+
+  .cms-testimonials__list,
+  .cms-figures__list,
+  .cms-logos__list,
+  .cms-gallery__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 48rem) {
+    .cms-testimonials__list,
+    .cms-gallery__list {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .cms-testimonials__item figure {
+    margin: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--cms-color-surface);
+    border-radius: 1rem;
+  }
+
+  .cms-testimonials__item blockquote {
+    margin: 0;
+    flex: 1;
+  }
+
+  .cms-testimonials__item blockquote p {
+    margin: 0;
+    color: var(--cms-color-text);
+  }
+
+  .cms-testimonials__item figcaption {
+    color: var(--cms-color-text-subtle);
+    font-size: 0.9375rem;
+  }
+
+  /* Key figures ------------------------------------------------------------- */
+
+  @media (min-width: 40rem) {
+    .cms-figures__list {
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+      text-align: center;
+    }
+  }
+
+  .cms-figures__value {
+    margin: 0;
+    font-size: clamp(2.25rem, 6vw, 3.5rem);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--cms-color-text);
+  }
+
+  .cms-figures__label {
+    margin: 0.25rem 0 0;
+    color: var(--cms-color-text-subtle);
+  }
+
+  /* Logos ------------------------------------------------------------------- */
+
+  .cms-logos__list {
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .cms-logos__item img {
+    max-width: 100%;
+    max-height: 3.5rem;
+    margin-inline: auto;
+    display: block;
+    /* Logos are usually multicoloured on white; the neutral treatment keeps the
+       row from looking like a rainbow, and hovering shows them as they are. */
+    filter: grayscale(1);
+    opacity: 0.75;
+    transition: filter 0.2s ease, opacity 0.2s ease;
+  }
+
+  .cms-logos__item img:hover {
+    filter: none;
+    opacity: 1;
+  }
+
+  /* Gallery ----------------------------------------------------------------- */
+
+  .cms-gallery__item figure {
+    margin: 0;
+  }
+
+  .cms-gallery__item img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 1rem;
+    display: block;
+  }
+
+  .cms-gallery__item figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--cms-color-text-subtle);
+  }
+
+  /* Questions and answers --------------------------------------------------- */
+
+  .cms-questions__item {
+    border-top: 1px solid var(--cms-color-border);
+  }
+
+  .cms-questions__item:last-of-type {
+    border-bottom: 1px solid var(--cms-color-border);
+  }
+
+  .cms-questions__question {
+    /* A summary is focusable and operable with a keyboard on its own; the size
+       below keeps it a comfortable target too. */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3.5rem;
+    padding-block: 0.75rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--cms-color-text);
+    list-style: none;
+  }
+
+  .cms-questions__question::-webkit-details-marker {
+    display: none;
+  }
+
+  .cms-questions__question::after {
+    content: "+";
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--cms-color-text-subtle);
+  }
+
+  .cms-questions__item[open] .cms-questions__question::after {
+    content: "−";
+  }
+
+  .cms-questions__answer {
+    padding-block: 0 1.25rem;
+  }
+
+  .cms-questions__answer p {
+    margin: 0;
+  }
+
+  /* Section ----------------------------------------------------------------- */
+
+  .cms-section {
+    padding: clamp(2rem, 5vw, 4rem);
+    background: var(--cms-color-surface);
+    border-radius: 1.5rem;
+  }
+
+  .cms-section__title {
+    margin-bottom: 1.5rem;
+  }
+
+  .cms-section__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Reusable blocks and dynamic partials ------------------------------------ */
+
+  .cms-block {
+    display: contents;
+  }
+
+  .cms-latest-contents__list,
+  .cms-menu__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .cms-latest-contents__list {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 48rem) {
+    .cms-latest-contents__list {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .cms-latest-contents__title {
+    font-size: 1.25rem;
+    margin: 0 0 0.25rem;
+  }
+
+  .cms-latest-contents__title a {
+    color: var(--cms-color-text);
+    text-decoration: none;
+  }
+
+  .cms-latest-contents__title a:hover,
+  .cms-latest-contents__title a:focus-visible {
+    text-decoration: underline;
+  }
+
+  .cms-latest-contents__date {
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+    color: var(--cms-color-text-subtle);
+  }
+
+  .cms-menu__link {
+    display: inline-block;
+    min-height: 1.75rem;
+    color: var(--cms-color-text-muted);
+    text-decoration: none;
+  }
+
+  .cms-menu__link:hover,
+  .cms-menu__link:focus-visible,
+  .cms-menu__item.is-current > .cms-menu__link {
+    color: var(--cms-color-text);
+    text-decoration: underline;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cms-logos__item img {
+      transition: none;
+    }
+  }
+
+  /* Click-to-load embeds ---------------------------------------------------- */
+
+  .cms-facade {
+    position: relative;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: var(--cms-color-surface);
+  }
+
+  .cms-facade__action {
+    display: block;
+    position: relative;
+    min-height: 12rem;
+    text-decoration: none;
+    color: var(--cms-color-text);
+  }
+
+  .cms-facade__poster {
+    display: block;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  /* The label sits over the poster when there is one, and fills the card when
+     there is not. */
+  .cms-facade__label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    /* Solid by default: white on a translucent layer over the light card ends up
+       at 3.9:1, which is not a contrast ratio. Only a poster underneath makes the
+       translucent version safe, and even then it is dark enough to carry text. */
+    background: var(--cms-color-text);
+    color: var(--cms-color-on-dark);
+  }
+
+  .cms-facade__action:has(.cms-facade__poster) .cms-facade__label {
+    background: rgb(40 40 40 / 65%);
+  }
+
+  .cms-facade__icon {
+    display: grid;
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 999px;
+    background: var(--cms-color-accent);
+    color: var(--cms-color-on-accent);
+    font-size: 1.25rem;
+  }
+
+  .cms-facade__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .cms-facade__title {
+    font-size: 1.125rem;
+  }
+
+  .cms-facade__summary,
+  .cms-facade__cta {
+    font-size: 0.9375rem;
+  }
+
+  .cms-facade__cta {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .cms-facade__action:hover .cms-facade__icon,
+  .cms-facade__action:focus-visible .cms-facade__icon {
+    background: var(--cms-color-accent-strong);
+  }
+
+  .cms-facade__notice {
+    margin: 0;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.8125rem;
+    /* Not dimmed: this sentence is the one that says a third party is about to
+       receive something about the visitor. */
+    color: var(--cms-color-text-muted);
+    background: var(--cms-color-on-dark);
+    border-top: 1px solid var(--cms-color-border);
+  }
+
+  .cms-facade__frame {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 0;
+  }
+
+  .cms-facade--social .cms-facade__frame {
+    aspect-ratio: 3 / 4;
+  }
+
+  .cms-map {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cms-map__address {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .cms-map__link {
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+
+  /* Forms ------------------------------------------------------------------- */
+
+  .cms-form {
+    /* Narrower than the other blocks: a line of a form is read one field at a
+       time, and a text input the width of the page is uncomfortable to scan. */
+    --cms-block-inline: min(45rem, 100% - 2rem);
+
+    margin-inline: auto;
+    width: var(--cms-block-inline);
+    /* Sending a form scrolls back to it by its anchor, and the header is sticky:
+       without this the first thing the browser lands on — the sentence saying
+       what went wrong — is hidden underneath it. */
+    scroll-margin-top: 6rem;
+  }
+
+  .cms-form__title {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+  }
+
+  .cms-form__intro {
+    margin: 0 0 1.5rem;
+  }
+
+  .cms-form__required-hint {
+    margin: 0 0 1.5rem;
+    font-size: 0.875rem;
+    color: var(--cms-color-text-muted);
+  }
+
+  .cms-form__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .cms-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .cms-form__label,
+  .cms-form__legend {
+    font-weight: 600;
+  }
+
+  .cms-form__input {
+    width: 100%;
+    /* 44 pixels tall at the default font size: comfortably past the 24 by 24
+       minimum, and the size a thumb actually hits on a phone. */
+    padding: 0.75rem;
+    border: 1px solid var(--cms-color-text-faint);
+    border-radius: 0.5rem;
+    background: var(--cms-color-on-dark);
+    color: var(--cms-color-text);
+    font: inherit;
+  }
+
+  .cms-form__input:focus-visible {
+    outline: 2px solid var(--cms-color-text);
+    outline-offset: 2px;
+  }
+
+  /* The red border alone would carry the message by colour only, so an invalid
+     field also gets its message in text underneath. */
+  .cms-form__field.has-error .cms-form__input {
+    border-color: var(--cms-color-error);
+  }
+
+  textarea.cms-form__input {
+    resize: vertical;
+  }
+
+  /* A tick box and its wording form one target: the whole line is clickable,
+     which is both easier to hit and what a label is for. */
+  .cms-form__tick {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    cursor: pointer;
+  }
+
+  .cms-form__tick input {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.125rem;
+    accent-color: var(--cms-color-text);
+  }
+
+  .cms-form__choices {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .cms-form__legend {
+    padding: 0;
+    margin-bottom: 0.25rem;
+  }
+
+  .cms-form__help {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--cms-color-text-muted);
+  }
+
+  .cms-form__error {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--cms-color-error);
+  }
+
+  .cms-form__error-summary,
+  .cms-form__refused {
+    margin: 0 0 1.5rem;
+    padding: 0.875rem 1rem;
+    border-radius: 0.5rem;
+    background: var(--cms-color-surface);
+    border-inline-start: 4px solid var(--cms-color-error);
+    font-weight: 600;
+  }
+
+  .cms-form__sent {
+    margin: 0;
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    background: var(--cms-color-surface);
+    border-inline-start: 4px solid var(--cms-color-accent);
+    font-weight: 600;
+  }
+
+  .cms-form__legal {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--cms-color-text-muted);
+  }
+
+  .cms-form__legal-link {
+    color: inherit;
+  }
+
+  .cms-form__submit {
+    align-self: flex-start;
+    min-height: 2.75rem;
+    padding: 0.75rem 1.75rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--cms-color-accent);
+    color: var(--cms-color-on-accent);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .cms-form__submit:hover,
+  .cms-form__submit:focus-visible {
+    background: var(--cms-color-accent-strong);
+  }
+
+  .cms-form__submit:focus-visible {
+    outline: 2px solid var(--cms-color-text);
+    outline-offset: 2px;
+  }
+}

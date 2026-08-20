@@ -74,8 +74,19 @@ blocks all answer to them:
 - **No third-party iframe.** The sanitiser removes them at publish time. An
   embed is a dynamic block with a facade (see below).
 
-Your class names are yours, but the theme has to know them: ship the CSS in the
-theme, next to `assets/styles/cms-blocks.css`.
+Your class names are yours, and the CSS that goes with them ships with whoever
+ships the block. The module keeps the socle of its own catalogue in
+`assets/blocks.css`, linked on every page under `/cms/blocks.css`, so a page
+reads as a page on a theme that knows nothing about the CMS. A module adding
+blocks does the same for its own; a theme restyling them writes its rules
+outside any cascade layer and wins, whatever the loading order.
+
+Read the colours through the tokens of the socle (`--cms-color-text`,
+`--cms-color-surface`, `--cms-color-border`, `--cms-color-accent` and
+`--cms-color-on-accent`) rather than through the palette of one theme. The first
+three borrow the theme when it names its colours the way Flexy does and fall
+back on neutrals otherwise; the accent pair is never borrowed, because a
+background and the text on it have to be chosen together.
 
 ## A dynamic block
 

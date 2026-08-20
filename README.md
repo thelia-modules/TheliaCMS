@@ -237,8 +237,10 @@ The editor panel holds three families.
 **Page blocks** are the ten to start a page from: hero, text and image, call to
 action, quote, testimonials, key figures, logos, gallery, questions and answers,
 and a section to group other blocks. They drop semantic markup carrying `cms-*`
-class names and no styling of their own, so a theme decides what they look like
-and a page written today still looks right after the theme is reworked.
+class names, and the module ships the stylesheet that gives them their look, so
+a page reads as a page on a theme that knows nothing about the CMS. A theme
+decides what they look like by overriding it, and a page written today still
+looks right after the theme is reworked.
 
 **Reusable blocks** (**CMS > Blocks**) are written once and placed on as many
 pages as you like: the banner that appears on twenty pages is edited in one
@@ -466,8 +468,8 @@ versions as there are queries, which is exactly what search engines ask sites
 not to have indexed.
 
 A theme takes over the layout by shipping `cms-search.html.twig` at its root.
-Until it does, the module renders its own, in `cms-*` class names with no
-styling of its own.
+Until it does, the module renders its own, in `cms-*` class names styled by the
+stylesheet the module ships.
 
 On a site that also runs TntSearch, the module registers a `CmsPageIndex` over
 the same rows. Without TntSearch nothing is registered and the built-in search

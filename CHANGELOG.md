@@ -9,6 +9,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- The module ships the stylesheet of its own block catalogue, served on
+  `/cms/blocks.css` and linked on every page. A page opened on a theme that
+  knows nothing about the CMS used to come out as unstyled markup, which is what
+  happened on the demonstration site: the socle lived in the companion theme,
+  and nothing else had it. Colours go through `--cms-*` tokens that borrow the
+  palette of the theme when it names its colours the way Flexy does, and fall
+  back on neutrals otherwise. The socle sits in a cascade layer, so any rule a
+  theme writes wins over it whatever order the stylesheets load in, and the
+  companion theme now keeps nothing but its four accent tokens and one rule of
+  its own.
 - An address that differs from a real one only by a trailing slash answers 301
   towards the form without it. It used to answer 404, which costs a site taken
   over from WordPress, Drupal or Prestashop nearly every address it had indexed:
