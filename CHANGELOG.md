@@ -74,6 +74,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- Opening a page in the editor and saving it could empty it. A project saved
+  while the canvas was empty is stored as `{"pages":[]}`, and the editor loaded
+  it, dropped the markup the canvas had been given, then wrote that emptiness
+  back over the HTML and the CSS of the page on the next save. Such a project is
+  now read as nothing to restore, so the canvas keeps the markup it was handed,
+  and the CSS of a page written outside the editor is loaded with it instead of
+  being overwritten. The second half of the fix belongs to
+  `openstudio/page-builder-bundle` and is already in the compiled editor shipped
+  here, so nothing waits on a release of the bundle.
 - The tables of the module are created with the same storage settings as the core
   ones (`utf8mb4`, `utf8mb4_general_ci`, DYNAMIC row format) instead of taking
   whatever the database server defaults to. On a host whose default is not

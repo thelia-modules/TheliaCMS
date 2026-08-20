@@ -31,6 +31,7 @@ use Thelia\Model\Lang;
 use TheliaCMS\Builder\Admin\CmsPageContentType;
 use TheliaCMS\Builder\BlockCatalog;
 use TheliaCMS\Builder\CmsBuilderConfig;
+use TheliaCMS\Builder\InitialCanvas;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\EditLanguage;
@@ -62,6 +63,7 @@ final readonly class CmsBlockBuilderController
         private CmsBuilderConfig $builderConfig,
         private BlockCatalog $catalog,
         private EditLanguage $languages,
+        private InitialCanvas $initialCanvas,
     ) {
     }
 
@@ -87,7 +89,7 @@ final readonly class CmsBlockBuilderController
 
         return new Response($this->twig->render(self::TEMPLATE, [
             'form' => $form->createView(),
-            'initial_html' => null === $content?->getDraftProjectData() ? $content?->getDraftHtml() : null,
+            'initial_html' => $this->initialCanvas->htmlFor($content?->getDraftProjectData(), $content?->getDraftHtml()),
             'block' => $block,
             'status' => $this->blocks->statusOf($block, $locale),
             'edit_locale' => $locale,

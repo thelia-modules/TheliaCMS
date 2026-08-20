@@ -31,6 +31,7 @@ use Thelia\Model\Lang;
 use TheliaCMS\Builder\BlockCatalog;
 use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Builder\HeadingChecker;
+use TheliaCMS\Builder\InitialCanvas;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -69,6 +70,7 @@ final readonly class CmsPageBuilderController
         private EditLanguage $languages,
         private HeadingChecker $headings,
         private PreviewLink $previewLinks,
+        private InitialCanvas $initialCanvas,
     ) {
     }
 
@@ -98,7 +100,7 @@ final readonly class CmsPageBuilderController
             // A page written before the builder existed — a seeded legal page,
             // an import — has HTML but no GrapesJS project. Handing that HTML
             // to the canvas is what keeps opening the editor from wiping it.
-            'initial_html' => null === $content?->getDraftProjectData() ? $content?->getDraftHtml() : null,
+            'initial_html' => $this->initialCanvas->htmlFor($content?->getDraftProjectData(), $content?->getDraftHtml()),
             'page' => $page,
             'status' => $this->pages->statusOf($page, $locale),
             'edit_locale' => $locale,
