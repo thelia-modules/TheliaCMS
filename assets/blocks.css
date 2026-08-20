@@ -581,6 +581,24 @@
     text-decoration: underline;
   }
 
+  /* The footer menu written into the hook of a theme that does not render one
+     itself. It lands wherever that hook fires, which on most themes is just
+     above the footer rather than inside it, so it carries its own reading width
+     and its own rule above: unstyled, it came out flush against the left edge
+     of the window, under a section that stops well short of it. */
+  .cms-menu--footer {
+    width: min(85.375rem, 100% - 3rem);
+    margin-inline: auto;
+    padding-block: 1.5rem;
+    border-top: 1px solid var(--cms-color-border);
+  }
+
+  .cms-menu--footer .cms-menu__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 2rem;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .cms-logos__item img {
       transition: none;
