@@ -544,6 +544,7 @@ Most of them are edited under **CMS > Settings**.
 | `axeptio_cookies_version` | none | Which Axeptio configuration to load, when a project has several. |
 | `axeptio_consent_map` | the two Google products | JSON: vendor to the Consent Mode signals it grants. |
 | `cache_ttl` | `3600` | Seconds a resolved menu is cached for. It is also dropped on every change that affects it. |
+| `footer_menu_hook` | off | Renders the `footer` menu into the `layout.footer.top` hook of the theme. For a theme that does not call `cms_menu('footer')` itself: without it, a CMS page is reachable only by its address. Leave it off on a theme that already renders the menu, or it appears twice. |
 | `heading_check_mode` | `warn` | `warn` reports heading problems and publishes anyway; `block` refuses to publish. |
 | `builder_stylesheet` | none | Public path of the stylesheet the editor canvas loads. Defaults to the asset mapper's `styles/app.css`. |
 | `builder_palette` | none | JSON array of hex colours offered in the editor, e.g. `["#111827","#ffffff"]`. Defaults to a contrast-checked set. |

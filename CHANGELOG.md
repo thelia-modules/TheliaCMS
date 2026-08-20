@@ -9,6 +9,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- `footer_menu_hook` renders the `footer` menu of the CMS into the footer of a
+  theme that never calls `cms_menu('footer')`. Until now a CMS page on such a
+  theme was reachable by its address alone: the footer of the demonstration site
+  listed five native contents and no CMS page. Off by default, since a theme
+  that already renders the menu would show it twice and nothing in a template
+  says whether it does.
 - The module ships the stylesheet of its own block catalogue, served on
   `/cms/blocks.css` and linked on every page. A page opened on a theme that
   knows nothing about the CMS used to come out as unstyled markup, which is what
