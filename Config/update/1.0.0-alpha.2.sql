@@ -28,12 +28,17 @@ DEALLOCATE PREPARE cms_slug_statement;
 -- is read back from the core rewriting table, which is where it has been living
 -- so far. Only the address in use is read, since the rows kept behind a rename
 -- are the 301s and carry the previous segment.
+--
+-- The page identifier is compared as a number, not as text: `view_id` is a
+-- VARCHAR, and casting the numeric identifier to CHAR would give the result the
+-- collation of the connection, which MySQL refuses to compare with the
+-- collation of the column (error 1267 as soon as the two differ).
 UPDATE `cms_page_i18n` `i`
 SET `i`.`slug` = (
         SELECT SUBSTRING_INDEX(CONVERT(`r`.`url` USING utf8mb4), '/', -1)
         FROM `rewriting_url` `r`
         WHERE `r`.`view` = 'cmspage'
-          AND `r`.`view_id` = CAST(`i`.`id` AS CHAR)
+          AND CAST(`r`.`view_id` AS UNSIGNED) = `i`.`id`
           AND `r`.`view_locale` = `i`.`locale`
           AND `r`.`redirected` IS NULL
         ORDER BY `r`.`id` DESC
