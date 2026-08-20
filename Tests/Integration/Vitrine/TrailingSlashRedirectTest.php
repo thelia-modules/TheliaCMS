@@ -24,6 +24,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Thelia\Core\HttpFoundation\Request;
 use Thelia\Model\RewritingUrl;
+use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\TheliaCMS;
@@ -316,12 +317,27 @@ final class TrailingSlashRedirectTest extends CmsIntegrationTestCase
 
     private function addressPointingAt(string $url, CmsPage $page, ?string $view = null): void
     {
-        (new RewritingUrl())
+        $rewritingUrl = (new RewritingUrl())
             ->setUrl($url)
             ->setView($view ?? TheliaCMS::PAGE_VIEW)
             ->setViewId((string) $page->getId())
-            ->setViewLocale($this->locale())
-            ->save();
+            ->setViewLocale($this->locale());
+
+        $rewritingUrl->save();
+
+        if ($rewritingUrl->getUrl() === $url) {
+            return;
+        }
+
+        // `RewritingUrl::preInsert()` folds the accents out of the address it is
+        // given, so a site whose addresses carry them cannot be described through
+        // the model. Those rows exist all the same: they come from the SQL of a
+        // takeover, and the redirection under test is what makes them reachable.
+        // Written back with the column as the model left it, so nothing else of
+        // the row is invented here.
+        RewritingUrlQuery::create()
+            ->filterById($rewritingUrl->getId())
+            ->update(['Url' => $url]);
     }
 
     private function addressOf(CmsPage $page): string
