@@ -188,6 +188,16 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
             // transition and transform vocabulary has no translation that
             // says more than the keyword does.
             'styleOptions' => $this->styleOptionLabels(),
+            // Two labels the page builder bundle spells out in French whatever
+            // the language of the editor, so an English back office reads half
+            // in one language: the block that inserts a list, and the trait
+            // that picks an icon.
+            'blockLabels' => [
+                'list' => $this->translate('List'),
+            ],
+            'traitLabels' => [
+                'icon' => $this->translate('Icon'),
+            ],
         ];
     }
 

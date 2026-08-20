@@ -237,10 +237,27 @@ export default class extends PageBuilderController {
         }
 
         this.translateWhatGrapesJsLeavesInEnglish();
+        this.repaintTheBlockPanel();
         this.labelTheViewTabs();
         this.addDeleteToTheLayerRows();
         this.explainTheEmptyCanvas();
         this.explainTheEmptySettingsPanel();
+    }
+
+    /**
+     * Paints the block panel again once the language and the labels are set.
+     *
+     * The panel is filled while the editor still runs in the language the
+     * bundle ships as its default, and a block keeps the label it was drawn
+     * with: on an English back office every block and every category of the
+     * left panel read French, next to a screen that reads English. Nothing
+     * short of a re-render puts them right, since GrapesJS reads its messages
+     * when it draws a block and does not listen to a locale change.
+     */
+    repaintTheBlockPanel() {
+        const blockManager = this.editor.BlockManager;
+
+        blockManager.render(blockManager.getAll().models);
     }
 
     /**
@@ -284,6 +301,26 @@ export default class extends PageBuilderController {
         // screen is in, they come out as raw CSS keywords.
         if (labels.styleOptions) {
             messages.styleManager = { options: labels.styleOptions };
+        }
+
+        // Two labels the bundle writes in French in its own source, whatever
+        // the locale: the block that inserts a list, and the trait that picks
+        // an icon. Both go through the same mechanism as the rest, so they
+        // become no-ops the day the bundle ships them translated.
+        if (labels.blockLabels) {
+            messages.blockManager = { labels: labels.blockLabels };
+        }
+
+        if (labels.traitLabels) {
+            messages.traitManager = {
+                ...(messages.traitManager ?? {}),
+                traits: {
+                    labels: {
+                        ...(messages.traitManager?.traits?.labels ?? {}),
+                        ...labels.traitLabels,
+                    },
+                },
+            };
         }
 
         if (Object.keys(messages).length > 0) {
