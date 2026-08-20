@@ -68,9 +68,17 @@ final readonly class CoreBlockCatalog implements CatalogBlockProviderInterface
         ];
     }
 
-    public function category(string $locale): string
+    /**
+     * The name of the category the blocks are filed under.
+     *
+     * Read in the language of the back office and not of the page: it is a
+     * label of the panel, next to the categories the editor library names
+     * itself, and a French panel with one English heading in the middle reads
+     * as a bug. Only the sample text inside a block follows the page.
+     */
+    public function category(): string
     {
-        return $this->trans(self::CATEGORY, $locale);
+        return $this->translator->trans(self::CATEGORY, [], TheliaCMS::DOMAIN_NAME);
     }
 
     private function hero(string $locale): CatalogBlock
@@ -249,11 +257,14 @@ final readonly class CoreBlockCatalog implements CatalogBlockProviderInterface
     {
         return new CatalogBlock(
             id: $id,
-            label: $this->trans($label, $locale),
+            // The name of the block belongs to the panel, so it follows the
+            // back office; `$locale` is the language of the page and is spent
+            // on the sample text the caller has already interpolated.
+            label: $this->translator->trans($label, [], TheliaCMS::DOMAIN_NAME),
             // Collapsed: what the editor exports is reformatted anyway, and the
             // indentation of a heredoc would end up in the page as text nodes.
             content: preg_replace('/\s*\n\s*/', '', trim($content)) ?? $content,
-            category: $this->category($locale),
+            category: $this->category(),
         );
     }
 

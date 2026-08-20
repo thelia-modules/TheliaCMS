@@ -24,8 +24,11 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * editor next to the ten shipped here. Nothing else to register — the tag is
  * applied automatically.
  *
- * The blocks are asked for in the language of the page being written, so the
- * sample text of a block reads like the page it lands in.
+ * The locale passed in is the language of the page being written, so the sample
+ * text of a block reads like the page it lands in. The label of a block and the
+ * name of its category are not part of that: they belong to the editor panel
+ * and follow the language of the back office, which is what the translator uses
+ * when no locale is given.
  *
  * See docs/creating-a-block.md for a commented example.
  */

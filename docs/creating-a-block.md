@@ -33,9 +33,9 @@ final readonly class OpeningHoursBlocks implements CatalogBlockProviderInterface
     {
         return [new CatalogBlock(
             id: 'shop-opening-hours',
-            label: $this->translator->trans('Opening hours', [], 'mymodule', $locale),
+            label: $this->translator->trans('Opening hours', [], 'mymodule'),
             content: '<section class="shop-hours" aria-labelledby="shop-hours-title">…</section>',
-            category: $this->translator->trans('My shop', [], 'mymodule', $locale),
+            category: $this->translator->trans('My shop', [], 'mymodule'),
         )];
     }
 }
@@ -44,6 +44,12 @@ final readonly class OpeningHoursBlocks implements CatalogBlockProviderInterface
 The `$locale` you are handed is the language of the **page being written**, not
 of the back office. Translate the sample text with it, or an editor writing the
 German version of a page gets English placeholder text.
+
+The label of the block and the name of its category are the other way round:
+they are read in the panel, alongside the categories the editor library names
+itself, so they follow the back office. Leave the locale out of those two
+`trans()` calls, as above, or a French panel ends up with one English heading in
+the middle of it.
 
 ### The rules a block has to keep
 
