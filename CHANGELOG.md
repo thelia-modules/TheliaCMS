@@ -64,6 +64,28 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- The tables of the module are created with the same storage settings as the core
+  ones (`utf8mb4`, `utf8mb4_general_ci`, DYNAMIC row format) instead of taking
+  whatever the database server defaults to. On a host whose default is not
+  `utf8mb4`, a join between a page and a core table was refused outright (MySQL
+  error 1267, illegal mix of collations) and anything the server charset does not
+  cover was truncated on the way in. Sites already installed are converted table
+  by table, and a site already in `utf8mb4` pays nothing.
+- The migration that reads a slug back from the address it answers on compared the
+  page identifier as text, through a cast that carries the collation of the
+  connection. As soon as that collation differed from the one of the column, the
+  statement was refused and the migration ran without filling a single slug.
+- The block panel of the editor read French on an English back office. The panel
+  is filled while the editor still runs in the language the bundle ships as its
+  default, and a block keeps the label it was drawn with, so every block and
+  every category sat in the wrong language next to a screen in the right one. Two
+  labels the bundle spells out in French whatever the locale, the list block and
+  the icon setting, now come from the server like the rest of the wording.
+- The name of a block of the catalogue, and the name of the category they are
+  filed under, were read in the language of the page being written instead of the
+  language of the back office: editing the English version of a page on a French
+  site put "Page blocks" in the middle of a French panel. The sample text inside
+  a block still follows the page, which is the point of it.
 - The page listing asked the database for the publication state and the address of
   every page, one row at a time. On a tree of 637 pages over four levels that was
   1334 statements, 375 ms and 1.65 MB of HTML for a screen nobody could read; it
