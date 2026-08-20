@@ -27,7 +27,7 @@ CREATE TABLE `cms_page`
     INDEX `idx_cms_page_parent` (`parent`),
     INDEX `idx_cms_page_parent_position` (`parent`, `position`),
     INDEX `idx_cms_page_deleted_at` (`deleted_at`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_page_content
@@ -56,7 +56,7 @@ CREATE TABLE `cms_page_content`
         REFERENCES `cms_page` (`id`)
         ON UPDATE RESTRICT
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_page_revision
@@ -83,7 +83,7 @@ CREATE TABLE `cms_page_revision`
         REFERENCES `cms_page` (`id`)
         ON UPDATE RESTRICT
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_page_search
@@ -104,7 +104,7 @@ CREATE TABLE `cms_page_search`
         REFERENCES `cms_page` (`id`)
         ON UPDATE RESTRICT
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_menu
@@ -120,7 +120,7 @@ CREATE TABLE `cms_menu`
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
     UNIQUE INDEX `unq_cms_menu_code` (`code`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_menu_item
@@ -148,7 +148,7 @@ CREATE TABLE `cms_menu_item`
         REFERENCES `cms_menu` (`id`)
         ON UPDATE RESTRICT
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_block
@@ -168,7 +168,7 @@ CREATE TABLE `cms_block`
     PRIMARY KEY (`id`),
     UNIQUE INDEX `unq_cms_block_code` (`code`),
     INDEX `idx_cms_block_deleted_at` (`deleted_at`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_block_content
@@ -197,7 +197,7 @@ CREATE TABLE `cms_block_content`
         REFERENCES `cms_block` (`id`)
         ON UPDATE RESTRICT
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_form
@@ -224,7 +224,7 @@ CREATE TABLE `cms_form`
     PRIMARY KEY (`id`),
     UNIQUE INDEX `unq_cms_form_code` (`code`),
     INDEX `idx_cms_form_deleted_at` (`deleted_at`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_form_field
@@ -251,7 +251,7 @@ CREATE TABLE `cms_form_field`
         REFERENCES `cms_form` (`id`)
         ON UPDATE RESTRICT
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_form_submission
@@ -277,7 +277,7 @@ CREATE TABLE `cms_form_submission`
         REFERENCES `cms_form` (`id`)
         ON UPDATE RESTRICT
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_script
@@ -300,7 +300,7 @@ CREATE TABLE `cms_script`
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
     INDEX `idx_cms_script_active_placement` (`active`, `placement`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_page_template
@@ -321,7 +321,7 @@ CREATE TABLE `cms_page_template`
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
     UNIQUE INDEX `unq_cms_page_template_code` (`code`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_page_i18n
@@ -349,7 +349,7 @@ CREATE TABLE `cms_page_i18n`
         FOREIGN KEY (`id`)
         REFERENCES `cms_page` (`id`)
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_menu_i18n
@@ -367,7 +367,7 @@ CREATE TABLE `cms_menu_i18n`
         FOREIGN KEY (`id`)
         REFERENCES `cms_menu` (`id`)
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_menu_item_i18n
@@ -385,7 +385,7 @@ CREATE TABLE `cms_menu_item_i18n`
         FOREIGN KEY (`id`)
         REFERENCES `cms_menu_item` (`id`)
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_block_i18n
@@ -403,7 +403,7 @@ CREATE TABLE `cms_block_i18n`
         FOREIGN KEY (`id`)
         REFERENCES `cms_block` (`id`)
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_form_i18n
@@ -427,7 +427,7 @@ CREATE TABLE `cms_form_i18n`
         FOREIGN KEY (`id`)
         REFERENCES `cms_form` (`id`)
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
 -- cms_form_field_i18n
@@ -448,7 +448,7 @@ CREATE TABLE `cms_form_field_i18n`
         FOREIGN KEY (`id`)
         REFERENCES `cms_form_field` (`id`)
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 # This restores the fkey checks, after having unset them earlier
 SET FOREIGN_KEY_CHECKS = 1;

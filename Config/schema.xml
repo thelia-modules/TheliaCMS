@@ -4,6 +4,21 @@
           xsi:noNamespaceSchemaLocation="../../../../vendor/thelia/propel/resources/xsd/database.xsd">
 
     <!--
+        The tables carry the same storage settings as the core ones, spelled out
+        rather than inherited from the server: a table that silently takes the
+        default charset of the host cannot be joined with a core table any more
+        (error 1267, illegal mix of collations), and it truncates anything the
+        default charset does not cover. DYNAMIC raises the index prefix limit to
+        3072 bytes, which a four-byte VARCHAR(255) index needs.
+    -->
+    <vendor type="mysql">
+        <parameter name="Engine" value="InnoDB"/>
+        <parameter name="Charset" value="utf8mb4"/>
+        <parameter name="Collate" value="utf8mb4_general_ci"/>
+        <parameter name="RowFormat" value="DYNAMIC"/>
+    </vendor>
+
+    <!--
         Discriminant columns are VARCHAR + a backed PHP enum, never Propel ENUM:
         Propel maps ENUM to a positional TINYINT, which makes the stored value
         meaningless outside the ORM.
