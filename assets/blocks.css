@@ -599,6 +599,13 @@
     gap: 0.75rem 2rem;
   }
 
+  /* Underlined, like the links of a footer usually are: this list sits next to
+     the ones the theme renders, and a link that does not look like its
+     neighbours reads as a heading. */
+  .cms-menu--footer .cms-menu__link {
+    text-decoration: underline;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .cms-logos__item img {
       transition: none;
