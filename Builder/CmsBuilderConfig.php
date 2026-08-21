@@ -18,6 +18,7 @@ use OpenStudio\PageBuilderBundle\Contract\PageBuilderConfigProviderInterface;
 use Symfony\Component\AssetMapper\AssetMapperInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use TheliaCMS\Front\BlockStyles;
 use TheliaCMS\Partial\PartialRegistry;
 use TheliaCMS\Settings\SiteStyles;
 use TheliaCMS\TheliaCMS;
@@ -51,6 +52,7 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
         private PartialRegistry $partials,
         private TranslatorInterface $translator,
         private SiteStyles $siteStyles,
+        private BlockStyles $blockStyles,
     ) {
     }
 
@@ -114,9 +116,18 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
             // dress the canvas exactly as they dress the front.
             'wrapperClasses' => PageContentNormalizer::CONTAINER_CLASS,
             'canvas' => [
-                'styles' => $this->siteStyles->typography()->isEmpty() ? [] : [
-                    $this->urls->generate('cms.site_styles', ['v' => $this->siteStyles->version()]),
-                ],
+                // What the front loads, in the same order: the socle of the
+                // block catalogue, then the styles of the site. Without the
+                // socle the canvas showed a stack of unstyled paragraphs while
+                // the published page came out laid out, so an editor could not
+                // see what they were building.
+                'styles' => array_values(array_filter([
+                    $this->urls->generate('cms.block_styles', ['v' => $this->blockStyles->version()]),
+                    $this->themeStylesheet(),
+                    $this->siteStyles->typography()->isEmpty()
+                        ? null
+                        : $this->urls->generate('cms.site_styles', ['v' => $this->siteStyles->version()]),
+                ])),
             ],
             'deviceManager' => [
                 'devices' => [

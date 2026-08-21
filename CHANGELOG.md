@@ -80,6 +80,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- The canvas of the editor loaded no stylesheet of the block catalogue, so an
+  author built a page as a stack of unstyled paragraphs while the published page
+  came out laid out. It is handed the same sheets as the front now, in the same
+  order: the socle of the catalogue, the stylesheet of the theme, then the styles
+  configured for the site.
 - Opening a page in the editor and saving it could empty it. A project saved
   while the canvas was empty is stored as `{"pages":[]}`, and the editor loaded
   it, dropped the markup the canvas had been given, then wrote that emptiness

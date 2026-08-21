@@ -26,7 +26,7 @@ final class SiteFontsTest extends TestCase
     protected function setUp(): void
     {
         $this->directory = sys_get_temp_dir().'/cms-fonts-test-'.bin2hex(random_bytes(4));
-        mkdir($this->directory, 0755, true);
+        mkdir($this->directory, 0o755, true);
         $this->fonts = new SiteFonts($this->directory);
     }
 
