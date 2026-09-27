@@ -421,6 +421,9 @@ final readonly class CmsPageWriter
     public function setAsHome(CmsPage $page): void
     {
         TheliaCMS::setConfigValue('home_page_id', (string) $page->getId());
+        // Menus link the home page to the root of the site: the old home page
+        // would keep that link, the new one would keep its own address.
+        $this->menuCache->invalidate();
 
         $this->activityLog->record('UPDATE', (int) $page->getId(), \sprintf('CMS page #%d set as the home page', $page->getId()));
     }

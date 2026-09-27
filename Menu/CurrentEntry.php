@@ -22,16 +22,23 @@ namespace TheliaCMS\Menu;
  * current on any search, whatever was searched. Every parameter the entry names
  * has to hold the same value on the page; parameters it does not name (paging,
  * campaign tags) are left out, so the entry stays current on page 2 of its own
- * results.
+ * results. An entry pointing at another site is never current: a recruitment
+ * site served on `/` passed for the home page.
  */
 final class CurrentEntry
 {
     /**
      * @param array<string, mixed> $currentQuery
      */
-    public static function matches(mixed $url, string $currentPath, array $currentQuery): bool
+    public static function matches(mixed $url, string $currentPath, array $currentQuery, ?string $currentHost = null): bool
     {
         if (!\is_string($url)) {
+            return false;
+        }
+
+        $host = parse_url($url, \PHP_URL_HOST);
+
+        if (\is_string($host) && null !== $currentHost && 0 !== strcasecmp($host, $currentHost)) {
             return false;
         }
 

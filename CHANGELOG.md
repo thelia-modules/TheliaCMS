@@ -85,6 +85,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- A menu entry pointing at another site is never current: an external link
+  served on `/` was marked current on the home page. An entry pointing at the
+  home page links to the root of the site, where the page is served, instead of
+  its own address, which redirects there; it is current on the home page now.
+  Choosing another home page drops the cached menus.
 - An import file listing the choices of a form field (`"choices": ["A", "B"]`)
   imports like one writing them as text. The list reached the model as an
   array and stopped the whole import on a type error.

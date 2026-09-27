@@ -75,6 +75,13 @@ final readonly class MenuTargetResolver
 
         $url = $this->rewrittenUrl(TheliaCMS::PAGE_VIEW, $pageId, $locale);
 
+        // The home page is served on the root of the site and its own address
+        // redirects there: linking to the root spares the redirect and lets the
+        // entry be current on the home page.
+        if (null !== $url && $pageId === (int) TheliaCMS::getConfigValue('home_page_id', 0)) {
+            $url = SiteRoot::of($url);
+        }
+
         return $this->linked($label, $title, $url);
     }
 

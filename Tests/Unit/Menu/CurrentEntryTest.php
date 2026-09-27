@@ -24,9 +24,9 @@ final class CurrentEntryTest extends TestCase
      * @param array<string, mixed> $currentQuery
      */
     #[DataProvider('currentEntries')]
-    public function testAnEntryIsCurrentOnThePageItPointsAt(string $url, string $path, array $currentQuery): void
+    public function testAnEntryIsCurrentOnThePageItPointsAt(string $url, string $path, array $currentQuery, ?string $host = null): void
     {
-        self::assertTrue(CurrentEntry::matches($url, $path, $currentQuery));
+        self::assertTrue(CurrentEntry::matches($url, $path, $currentQuery, $host));
     }
 
     public static function currentEntries(): iterable
@@ -36,15 +36,16 @@ final class CurrentEntryTest extends TestCase
         yield 'absolute url' => ['https://example.org/about', '/about', []];
         yield 'same query' => ['/search?q=recipes', '/search', ['q' => 'recipes']];
         yield 'extra parameters on the page' => ['/search?q=recipes', '/search', ['q' => 'recipes', 'page' => '2']];
+        yield 'this site, host in any case' => ['https://WWW.example.org/about', '/about', [], 'www.example.org'];
     }
 
     /**
      * @param array<string, mixed> $currentQuery
      */
     #[DataProvider('otherEntries')]
-    public function testAnEntryIsNotCurrentElsewhere(mixed $url, string $path, array $currentQuery): void
+    public function testAnEntryIsNotCurrentElsewhere(mixed $url, string $path, array $currentQuery, ?string $host = null): void
     {
-        self::assertFalse(CurrentEntry::matches($url, $path, $currentQuery));
+        self::assertFalse(CurrentEntry::matches($url, $path, $currentQuery, $host));
     }
 
     public static function otherEntries(): iterable
@@ -54,5 +55,6 @@ final class CurrentEntryTest extends TestCase
         yield 'search without the parameter' => ['/search?q=recipes', '/search', []];
         yield 'anchor only' => ['#prices', '/', []];
         yield 'no url' => [null, '/', []];
+        yield 'another site on the same path' => ['https://jobs.example.org/', '/', [], 'www.example.org'];
     }
 }

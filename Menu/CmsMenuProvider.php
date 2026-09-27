@@ -57,7 +57,7 @@ final readonly class CmsMenuProvider
 
         // Left out of the cache on purpose: it depends on the page being served,
         // not on the menu.
-        return $this->markCurrent($nodes, $request?->getPathInfo() ?? '', $request?->query->all() ?? []);
+        return $this->markCurrent($nodes, $request?->getPathInfo() ?? '', $request?->query->all() ?? [], $request?->getHost());
     }
 
     /**
@@ -153,15 +153,15 @@ final readonly class CmsMenuProvider
      *
      * @return list<array<string, mixed>>
      */
-    private function markCurrent(array $nodes, string $currentPath, array $currentQuery = []): array
+    private function markCurrent(array $nodes, string $currentPath, array $currentQuery = [], ?string $currentHost = null): array
     {
         foreach ($nodes as $index => $node) {
             /** @var list<array<string, mixed>> $children */
             $children = $node['children'];
-            $children = $this->markCurrent($children, $currentPath, $currentQuery);
+            $children = $this->markCurrent($children, $currentPath, $currentQuery, $currentHost);
 
             $nodes[$index]['children'] = $children;
-            $nodes[$index]['active'] = CurrentEntry::matches($node['url'], $currentPath, $currentQuery);
+            $nodes[$index]['active'] = CurrentEntry::matches($node['url'], $currentPath, $currentQuery, $currentHost);
             $nodes[$index]['in_trail'] = $nodes[$index]['active'] || [] !== array_filter(
                 $children,
                 static fn (array $child): bool => (bool) $child['in_trail'],
