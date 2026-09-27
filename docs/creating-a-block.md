@@ -81,6 +81,28 @@ reads as a page on a theme that knows nothing about the CMS. A module adding
 blocks does the same for its own; a theme restyling them writes its rules
 outside any cascade layer and wins, whatever the loading order.
 
+The editor canvas needs that stylesheet too, or the blocks look right once
+published and bare while an editor drags them in. Implement
+`TheliaCMS\Builder\CanvasStylesheetProviderInterface` next to your block
+provider and return the public URL of the stylesheet, as the front loads it:
+
+```php
+final readonly class MyBlocksCanvasStylesheet implements CanvasStylesheetProviderInterface
+{
+    public function __construct(private UrlGeneratorInterface $urls) {}
+
+    public function canvasStylesheets(): array
+    {
+        // The route your module serves its stylesheet from, the way this
+        // module serves its own socle under `cms.block_styles`.
+        return [$this->urls->generate('my_module.block_styles')];
+    }
+}
+```
+
+The canvas loads it after the socle and before the theme, the order of the
+front. Nothing to register: the tag comes with the interface.
+
 Read the colours through the tokens of the socle (`--cms-color-text`,
 `--cms-color-surface`, `--cms-color-border`, `--cms-color-accent` and
 `--cms-color-on-accent`) rather than through the palette of one theme. The first

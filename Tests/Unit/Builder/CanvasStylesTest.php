@@ -39,7 +39,10 @@ final class CanvasStylesTest extends TestCase
 
         self::assertNotFalse($start, 'The canvas no longer declares its stylesheets.');
 
-        return substr($source, $start, 900);
+        $end = strpos($source, "'deviceManager' => [", $start);
+        self::assertNotFalse($end, 'The canvas block no longer ends before the device manager.');
+
+        return substr($source, $start, $end - $start);
     }
 
     public function testTheCanvasLoadsTheStylesheetOfTheBlockCatalogue(): void
@@ -50,6 +53,21 @@ final class CanvasStylesTest extends TestCase
     public function testTheCanvasLoadsTheStylesheetOfTheTheme(): void
     {
         self::assertStringContainsString('themeStylesheet()', $this->canvasStyles());
+    }
+
+    public function testTheCanvasLoadsTheStylesheetsContributedByOtherModules(): void
+    {
+        self::assertStringContainsString('contributedStylesheets()', $this->canvasStyles());
+    }
+
+    public function testContributedStylesheetsComeBeforeTheThemeSoTheThemeKeepsTheLastWord(): void
+    {
+        $styles = $this->canvasStyles();
+
+        self::assertLessThan(
+            strpos($styles, 'themeStylesheet()'),
+            strpos($styles, 'contributedStylesheets()'),
+        );
     }
 
     public function testTheCanvasLoadsTheStylesConfiguredForTheSite(): void

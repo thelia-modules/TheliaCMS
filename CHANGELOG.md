@@ -9,6 +9,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- `CanvasStylesheetProviderInterface` hands the editor canvas the stylesheet
+  of the blocks a module contributes. The canvas only loaded the socle of the
+  catalogue and the theme, so a block from another module was laid out once
+  published and unstyled while an editor dragged it in. The stylesheet is
+  loaded after the socle and before the theme, as on the front.
 - `footer_menu_hook` renders the `footer` menu of the CMS into the footer of a
   theme that never calls `cms_menu('footer')`. Until now a CMS page on such a
   theme was reachable by its address alone: the footer of the demonstration site

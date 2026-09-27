@@ -16,6 +16,7 @@ namespace TheliaCMS\Builder;
 
 use OpenStudio\PageBuilderBundle\Contract\PageBuilderConfigProviderInterface;
 use Symfony\Component\AssetMapper\AssetMapperInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Front\BlockStyles;
@@ -30,6 +31,8 @@ use TheliaCMS\TheliaCMS;
  */
 final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterface
 {
+    public const string CANVAS_STYLESHEET_TAG = 'thelia_cms.canvas_stylesheet';
+
     /**
      * Compiled stylesheet of the front-office theme, as the asset mapper knows
      * it. Themes that build their CSS some other way set `builder_stylesheet`.
@@ -53,6 +56,9 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
         private TranslatorInterface $translator,
         private SiteStyles $siteStyles,
         private BlockStyles $blockStyles,
+        /** @var iterable<CanvasStylesheetProviderInterface> */
+        #[AutowireIterator(self::CANVAS_STYLESHEET_TAG)]
+        private iterable $canvasStylesheets = [],
     ) {
     }
 
@@ -123,6 +129,9 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
                 // see what they were building.
                 'styles' => array_values(array_filter([
                     $this->urls->generate('cms.block_styles', ['v' => $this->blockStyles->version()]),
+                    // Blocks contributed by other modules, styled by their own
+                    // stylesheet: between the socle and the theme, as on the front.
+                    ...$this->contributedStylesheets(),
                     $this->themeStylesheet(),
                     $this->siteStyles->typography()->isEmpty()
                         ? null
@@ -289,6 +298,22 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
     private function translate(string $message): string
     {
         return $this->translator->trans($message, [], TheliaCMS::DOMAIN_NAME);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function contributedStylesheets(): array
+    {
+        $stylesheets = [];
+
+        foreach ($this->canvasStylesheets as $provider) {
+            foreach ($provider->canvasStylesheets() as $stylesheet) {
+                $stylesheets[] = $stylesheet;
+            }
+        }
+
+        return array_values(array_unique($stylesheets));
     }
 
     private function themeStylesheet(): ?string
