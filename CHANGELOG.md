@@ -85,6 +85,9 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- An import file listing the choices of a form field (`"choices": ["A", "B"]`)
+  imports like one writing them as text. The list reached the model as an
+  array and stopped the whole import on a type error.
 - A menu entry that carries a query string is current only when the page has
   the same parameters. Entries pointing at `/search?q=recipes` and
   `/search?q=labels` were both marked current on any search.

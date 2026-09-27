@@ -74,4 +74,19 @@ final class FieldChoicesTest extends TestCase
 
         self::assertSame($choices, FieldChoices::parse(FieldChoices::toText($choices)));
     }
+
+    public function testReadsTheChoicesOfAnExportWrittenAsText(): void
+    {
+        self::assertSame("One\nTwo", FieldChoices::fromExport("One\nTwo"));
+    }
+
+    public function testReadsTheChoicesOfAnExportWrittenAsAList(): void
+    {
+        self::assertSame("One\nTwo", FieldChoices::fromExport(['One', ' Two ', '', 'One']));
+    }
+
+    public function testReadsNoChoicesFromAnExportThatHasNone(): void
+    {
+        self::assertNull(FieldChoices::fromExport(null));
+    }
 }

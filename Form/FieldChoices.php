@@ -63,6 +63,23 @@ final readonly class FieldChoices
     }
 
     /**
+     * Reads the choices of a field from an export file, as stored text.
+     *
+     * The export writes the text as stored, one choice per line. A file written
+     * by hand, or by a script turning another site into an export, naturally
+     * lists them instead: both read the same, where the list used to reach the
+     * model as an array and stop the whole import on a type error.
+     */
+    public static function fromExport(mixed $value): ?string
+    {
+        if (\is_array($value)) {
+            return self::toText(self::parse(implode("\n", array_map(strval(...), array_filter($value, is_scalar(...))))));
+        }
+
+        return \is_string($value) ? $value : null;
+    }
+
+    /**
      * @param list<string> $choices
      */
     public static function toText(array $choices): string

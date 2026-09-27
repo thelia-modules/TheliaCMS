@@ -18,6 +18,7 @@ use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Form\FieldChoices;
 use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsBlockContent;
@@ -606,7 +607,7 @@ final readonly class SiteImporter
                         ->setLabel($translation['label'] ?? null)
                         ->setPlaceholder($translation['placeholder'] ?? null)
                         ->setHelp($translation['help'] ?? null)
-                        ->setChoices($translation['choices'] ?? null);
+                        ->setChoices(FieldChoices::fromExport($translation['choices'] ?? null));
                 }
 
                 $fieldModel->save($connection);
