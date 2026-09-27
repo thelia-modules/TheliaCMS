@@ -85,6 +85,9 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- A menu entry that carries a query string is current only when the page has
+  the same parameters. Entries pointing at `/search?q=recipes` and
+  `/search?q=labels` were both marked current on any search.
 - The canvas of the editor loaded no stylesheet of the block catalogue, so an
   author built a page as a stack of unstyled paragraphs while the published page
   came out laid out. It is handed the same sheets as the front now, in the same

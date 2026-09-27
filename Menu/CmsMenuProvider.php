@@ -57,7 +57,7 @@ final readonly class CmsMenuProvider
 
         // Left out of the cache on purpose: it depends on the page being served,
         // not on the menu.
-        return $this->markCurrent($nodes, $request?->getPathInfo() ?? '');
+        return $this->markCurrent($nodes, $request?->getPathInfo() ?? '', $request?->query->all() ?? []);
     }
 
     /**
@@ -149,21 +149,19 @@ final readonly class CmsMenuProvider
      * theme can highlight the current section without comparing URLs itself.
      *
      * @param list<array<string, mixed>> $nodes
+     * @param array<string, mixed>       $currentQuery
      *
      * @return list<array<string, mixed>>
      */
-    private function markCurrent(array $nodes, string $currentPath): array
+    private function markCurrent(array $nodes, string $currentPath, array $currentQuery = []): array
     {
         foreach ($nodes as $index => $node) {
             /** @var list<array<string, mixed>> $children */
             $children = $node['children'];
-            $children = $this->markCurrent($children, $currentPath);
-
-            $url = $node['url'];
-            $path = \is_string($url) ? (string) parse_url($url, \PHP_URL_PATH) : null;
+            $children = $this->markCurrent($children, $currentPath, $currentQuery);
 
             $nodes[$index]['children'] = $children;
-            $nodes[$index]['active'] = null !== $path && '' !== $path && rtrim($path, '/') === rtrim($currentPath, '/');
+            $nodes[$index]['active'] = CurrentEntry::matches($node['url'], $currentPath, $currentQuery);
             $nodes[$index]['in_trail'] = $nodes[$index]['active'] || [] !== array_filter(
                 $children,
                 static fn (array $child): bool => (bool) $child['in_trail'],
