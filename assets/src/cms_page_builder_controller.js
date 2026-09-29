@@ -3,6 +3,7 @@ import partialBlocks from "./plugins/partialBlocks.js";
 import catalogBlocks from "./plugins/catalogBlocks.js";
 import headingLevels from "./plugins/headingLevels.js";
 import richTextTrait from "./plugins/richTextTrait.js";
+import canvasWrapperClasses from "./plugins/canvasWrapperClasses.js";
 
 /**
  * Thelia flavour of the page builder controller.
@@ -35,6 +36,9 @@ export default class extends PageBuilderController {
         contentLocale: { type: String, default: "" },
         partialCategory: { type: String, default: "Dynamic" },
         partialLabels: { type: Object, default: {} },
+        // Classes the theme wraps its page content in, shown on the canvas and
+        // never saved with the page.
+        canvasWrapperClasses: { type: Array, default: [] },
     };
 
     connect() {
@@ -129,6 +133,7 @@ export default class extends PageBuilderController {
         this.pluginManager.registerPlugin("cms:catalog", catalogBlocks);
         this.pluginManager.registerPlugin("cms:heading-levels", headingLevels);
         this.pluginManager.registerPlugin("cms:rich-text-trait", richTextTrait);
+        this.pluginManager.registerPlugin("cms:canvas-wrapper-classes", canvasWrapperClasses);
 
         const labels = this.editorLabelsValue ?? {};
 
@@ -164,6 +169,10 @@ export default class extends PageBuilderController {
 
         if (this.endpointsValue?.uploadImage) {
             plugins.push({ name: "pb:asset-manager-upload", options: { endpoints: this.endpointsValue, context: this.contextValue } });
+        }
+
+        if (this.canvasWrapperClassesValue.length > 0) {
+            plugins.push({ name: "cms:canvas-wrapper-classes", options: { classes: this.canvasWrapperClassesValue } });
         }
 
         if (this.catalogValue.length > 0) {

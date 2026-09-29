@@ -52,7 +52,7 @@ final class CanvasStylesTest extends TestCase
 
     public function testTheCanvasLoadsTheStylesheetOfTheTheme(): void
     {
-        self::assertStringContainsString('themeStylesheet()', $this->canvasStyles());
+        self::assertStringContainsString('themeStylesheets(', $this->canvasStyles());
     }
 
     public function testTheCanvasLoadsTheStylesheetsContributedByOtherModules(): void
@@ -65,7 +65,7 @@ final class CanvasStylesTest extends TestCase
         $styles = $this->canvasStyles();
 
         self::assertLessThan(
-            strpos($styles, 'themeStylesheet()'),
+            strpos($styles, 'themeStylesheets('),
             strpos($styles, 'contributedStylesheets()'),
         );
     }
