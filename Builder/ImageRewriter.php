@@ -30,8 +30,10 @@ use TheliaCMS\Media\MediaResolver;
 final readonly class ImageRewriter
 {
     /**
-     * Widths offered in the srcset. Only those below the intrinsic width are
-     * kept: upscaling an image serves a bigger file for a blurrier result.
+     * Widths offered in the srcset besides the original. Only those below the
+     * intrinsic width are kept: upscaling an image serves a bigger file for a
+     * blurrier result. The original itself always closes the list, so an image
+     * between two widths is not served at the smaller one and shown blurred.
      */
     private const array WIDTHS = [480, 960, 1440];
 
@@ -162,12 +164,14 @@ final readonly class ImageRewriter
     }
 
     /**
-     * @param list<int> $widths
+     * @param list<int> $widths ascending, the last one being the original width
      */
     private function srcset(int $imageId, array $widths, string $format): string
     {
+        $original = $widths[array_key_last($widths)];
+
         return implode(', ', array_map(
-            fn (int $width): string => $this->url($imageId, $width, $format).' '.$width.'w',
+            fn (int $width): string => $this->url($imageId, $width === $original ? null : $width, $format).' '.$width.'w',
             $widths,
         ));
     }
@@ -185,15 +189,20 @@ final readonly class ImageRewriter
     }
 
     /**
+     * The widths below the original, then the original itself: a width equal
+     * to a step is offered once, as the original.
+     *
      * @return list<int>
      */
     private function widthsFor(?int $intrinsicWidth): array
     {
-        if (null === $intrinsicWidth) {
+        if (null === $intrinsicWidth || $intrinsicWidth <= 0) {
             return [];
         }
 
-        return array_values(array_filter(self::WIDTHS, static fn (int $width): bool => $width < $intrinsicWidth));
+        $smaller = array_filter(self::WIDTHS, static fn (int $width): bool => $width < $intrinsicWidth);
+
+        return [...$smaller, $intrinsicWidth];
     }
 
     private function innerHtml(\DOMDocument $document, \DOMElement $root): string
