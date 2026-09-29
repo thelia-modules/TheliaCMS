@@ -9,6 +9,17 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- A theme declares the canvas of the editor in `config/theliacms.yaml`: the
+  stylesheets it loads, written the way its templates pass them to `asset()`,
+  and the classes of `<html>`, `<body>` and of the container around the page
+  content. The canvas loaded one stylesheet and wrapped the page in
+  `cms-page-content` only, so a theme styling its text through a class on
+  `<html>` or through its own content container was previewed in the wrong
+  font and without its columns. Declared stylesheets replace `styles/app.css`
+  and are resolved at every opening, so a new build is picked up; the
+  container classes are shown in the canvas and never saved with the page. A
+  child theme inherits what it does not declare. Without the file, nothing
+  changes. See `docs/editor-canvas.md`.
 - `CanvasStylesheetProviderInterface` hands the editor canvas the stylesheet
   of the blocks a module contributes. The canvas only loaded the socle of the
   catalogue and the theme, so a block from another module was laid out once
