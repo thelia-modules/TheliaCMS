@@ -95,6 +95,7 @@ final readonly class CmsBlockBuilderController
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
             'builder_options' => $this->builderConfig->editorOptions(),
+            'builder_canvas_wrapper_classes' => $this->builderConfig->canvasWrapperClasses(),
             'builder_labels' => $this->builderConfig->editorLabels(),
             'builder_catalog' => $this->catalog->toEditor($locale),
             'builder_locale' => substr($request->getLocale(), 0, 2),

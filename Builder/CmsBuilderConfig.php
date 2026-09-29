@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Builder;
 
 use OpenStudio\PageBuilderBundle\Contract\PageBuilderConfigProviderInterface;
+use Symfony\Component\Asset\Packages;
 use Symfony\Component\AssetMapper\AssetMapperInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -35,7 +36,9 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
 
     /**
      * Compiled stylesheet of the front-office theme, as the asset mapper knows
-     * it. Themes that build their CSS some other way set `builder_stylesheet`.
+     * it. A theme that loads other sheets declares them in its
+     * `config/theliacms.yaml` (see {@see ThemeCanvas}); a site can also force
+     * one URL with the `builder_stylesheet` setting.
      */
     private const string THEME_STYLESHEET = 'styles/app.css';
 
@@ -56,6 +59,8 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
         private TranslatorInterface $translator,
         private SiteStyles $siteStyles,
         private BlockStyles $blockStyles,
+        private ActiveThemeCanvas $themeCanvas,
+        private Packages $packages,
         /** @var iterable<CanvasStylesheetProviderInterface> */
         #[AutowireIterator(self::CANVAS_STYLESHEET_TAG)]
         private iterable $canvasStylesheets = [],
@@ -65,7 +70,7 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
     public function getConfig(?string $context = null): array
     {
         return [
-            'appStylesheet' => $this->themeStylesheet(),
+            'appStylesheet' => $this->leadingStylesheet(),
             'icons' => [],
             'palette' => $this->palette(),
             // Where the editor asks the server what a dynamic block looks like.
@@ -112,6 +117,9 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
      */
     public function editorOptions(): array
     {
+        $theme = $this->themeCanvas->declaration();
+        $canvasDocument = $theme->canvasDocument();
+
         return [
             // GrapesJS otherwise prepends a reset of its own (`*` and `body`)
             // to the page stylesheet, which would restyle the whole site the
@@ -132,11 +140,15 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
                     // Blocks contributed by other modules, styled by their own
                     // stylesheet: between the socle and the theme, as on the front.
                     ...$this->contributedStylesheets(),
-                    $this->themeStylesheet(),
+                    ...$this->themeStylesheets($theme),
                     $this->siteStyles->typography()->isEmpty()
                         ? null
                         : $this->urls->generate('cms.site_styles', ['v' => $this->siteStyles->version()]),
                 ])),
+                // The classes the theme puts on <html> and <body>, for CSS
+                // written `.brand body` or `body.page`. Left to GrapesJS when
+                // the theme declares none.
+                ...(null === $canvasDocument ? [] : ['frameContent' => $canvasDocument]),
             ],
             'deviceManager' => [
                 'devices' => [
@@ -146,6 +158,23 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
                 ],
             ],
         ];
+    }
+
+    /**
+     * Classes the canvas puts on the element holding the page, next to
+     * `cms-page-content`, as the theme declares them.
+     *
+     * Kept out of the editor options on purpose: GrapesJS saves the classes of
+     * its wrapper with the page, and the page template of the theme already
+     * wraps the published content in that container. Saved, they would nest
+     * it twice on the front and follow the page into the next theme. The
+     * editor puts them on the canvas element only.
+     *
+     * @return list<string>
+     */
+    public function canvasWrapperClasses(): array
+    {
+        return $this->themeCanvas->declaration()->wrapperClasses();
     }
 
     /**
@@ -316,15 +345,54 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
         return array_values(array_unique($stylesheets));
     }
 
-    private function themeStylesheet(): ?string
+    /**
+     * The stylesheets of the theme, in the order the canvas loads them.
+     *
+     * The `builder_stylesheet` setting of the site comes first, then what the
+     * theme declares, then the compiled stylesheet of the asset mapper. A
+     * declaration replaces that default rather than adding to it: the default
+     * is the sheet of the parent theme, the very one a child theme overrides.
+     *
+     * @return list<string>
+     */
+    private function themeStylesheets(ThemeCanvas $theme): array
     {
-        $configured = (string) TheliaCMS::getConfigValue('builder_stylesheet', '');
+        $configured = $this->configuredStylesheet();
 
         if ('' !== $configured) {
-            return $configured;
+            return [$configured];
         }
 
-        return $this->assetMapper->getAsset(self::THEME_STYLESHEET)?->publicPath;
+        if ($theme->declaresStylesheets()) {
+            return $theme->stylesheetUrls($this->packages);
+        }
+
+        $default = $this->assetMapper->getAsset(self::THEME_STYLESHEET)?->publicPath;
+
+        return null === $default ? [] : [$default];
+    }
+
+    /**
+     * The one stylesheet the page builder bundle loads ahead of every other.
+     *
+     * None when the theme declares its own: they are all in `canvas.styles`,
+     * in their order, and the default sheet they replace would otherwise still
+     * be loaded first.
+     */
+    private function leadingStylesheet(): ?string
+    {
+        $theme = $this->themeCanvas->declaration();
+
+        if ('' === $this->configuredStylesheet() && $theme->declaresStylesheets()) {
+            return null;
+        }
+
+        return $this->themeStylesheets($theme)[0] ?? null;
+    }
+
+    private function configuredStylesheet(): string
+    {
+        return (string) TheliaCMS::getConfigValue('builder_stylesheet', '');
     }
 
     /**
