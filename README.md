@@ -283,8 +283,8 @@ Uploads accept JPEG, PNG and WebP. SVG is refused: it is a document that can
 carry script.
 
 At publication every image becomes a `<picture>` with a WebP alternative, a
-`srcset` bounded by the file's real width, explicit `width` and `height`, and
-lazy loading on everything but the first image.
+`srcset` bounded by the file's real width and ending on the original, explicit
+`width` and `height`, and lazy loading on everything but the first image.
 
 ## Menus
 

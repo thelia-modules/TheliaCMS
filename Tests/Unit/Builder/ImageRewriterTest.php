@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Unit\Builder;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Media\MediaFile;
@@ -69,18 +70,117 @@ final class ImageRewriterTest extends TestCase
 
     /**
      * Serving a 480 wide copy of a 300 wide file is a bigger download for a
-     * blurrier result.
+     * blurrier result: the file itself is the only candidate.
      */
-    public function testOnlyOffersWidthsBelowTheIntrinsicOne(): void
+    public function testOffersOnlyTheOriginalOfAnImageSmallerThanTheFirstWidth(): void
     {
         $html = $this->rewrite(
             '<img src="/image-library/8/full/max/0/default.png" alt="">',
             new MediaFile(id: 8, format: 'png', width: 300, height: 200),
         );
 
-        self::assertStringNotContainsString('srcset="/image-library/8/full/480', $html);
-        self::assertStringContainsString('<source type="image/webp" srcset="/image-library/8/full/max/0/default.webp"', $html);
+        self::assertSame(
+            ['/image-library/8/full/max/0/default.png 300w'],
+            $this->candidates($this->imageSrcset($html)),
+        );
+        self::assertSame(
+            ['/image-library/8/full/max/0/default.webp 300w'],
+            $this->candidates($this->sourceSrcset($html)),
+        );
+    }
+
+    /**
+     * A 900 wide image shown at 1440 used to be offered at 480 only, and came
+     * out blurred: the original width is a candidate too.
+     */
+    public function testOffersTheOriginalWidthOfAnImageBetweenTwoWidths(): void
+    {
+        $html = $this->rewrite(
+            '<img src="/image-library/8/full/max/0/default.jpg" alt="">',
+            new MediaFile(id: 8, format: 'jpg', width: 900, height: 600),
+        );
+
+        self::assertSame(
+            ['/image-library/8/full/480,!/0/default.jpg 480w', '/image-library/8/full/max/0/default.jpg 900w'],
+            $this->candidates($this->imageSrcset($html)),
+        );
+        self::assertSame(
+            ['/image-library/8/full/480,!/0/default.webp 480w', '/image-library/8/full/max/0/default.webp 900w'],
+            $this->candidates($this->sourceSrcset($html)),
+        );
+    }
+
+    public function testDoesNotRepeatAWidthWhenTheOriginalIsOneOfThem(): void
+    {
+        $html = $this->rewrite(
+            '<img src="/image-library/8/full/max/0/default.jpg" alt="">',
+            new MediaFile(id: 8, format: 'jpg', width: 960, height: 640),
+        );
+
+        self::assertSame(
+            ['/image-library/8/full/480,!/0/default.jpg 480w', '/image-library/8/full/max/0/default.jpg 960w'],
+            $this->candidates($this->imageSrcset($html)),
+        );
+        self::assertSame(
+            ['/image-library/8/full/480,!/0/default.webp 480w', '/image-library/8/full/max/0/default.webp 960w'],
+            $this->candidates($this->sourceSrcset($html)),
+        );
+    }
+
+    /**
+     * No candidate is wider than the file: nothing is ever enlarged.
+     */
+    public function testOffersTheOriginalAfterEveryWidthOfAnImageLargerThanTheLastOne(): void
+    {
+        $html = $this->rewrite(
+            '<img src="/image-library/8/full/max/0/default.jpg" alt="">',
+            new MediaFile(id: 8, format: 'jpg', width: 2400, height: 1600),
+        );
+
+        self::assertSame(
+            [
+                '/image-library/8/full/480,!/0/default.jpg 480w',
+                '/image-library/8/full/960,!/0/default.jpg 960w',
+                '/image-library/8/full/1440,!/0/default.jpg 1440w',
+                '/image-library/8/full/max/0/default.jpg 2400w',
+            ],
+            $this->candidates($this->imageSrcset($html)),
+        );
+        self::assertSame(
+            [
+                '/image-library/8/full/480,!/0/default.webp 480w',
+                '/image-library/8/full/960,!/0/default.webp 960w',
+                '/image-library/8/full/1440,!/0/default.webp 1440w',
+                '/image-library/8/full/max/0/default.webp 2400w',
+            ],
+            $this->candidates($this->sourceSrcset($html)),
+        );
+    }
+
+    public function testKeepsTheSizesAndTheFallbackConsistentWithTheOriginalCandidate(): void
+    {
+        $html = $this->rewrite(
+            '<img src="/image-library/8/full/max/0/default.jpg" alt="">',
+            new MediaFile(id: 8, format: 'jpg', width: 900, height: 600),
+        );
+
+        self::assertStringContainsString('src="/image-library/8/full/max/0/default.jpg"', $html);
+        self::assertStringContainsString('width="900"', $html);
+        self::assertStringContainsString('height="600"', $html);
+        self::assertSame(2, substr_count($html, 'sizes="(max-width: 1440px) 100vw, 1440px"'));
+    }
+
+    #[DataProvider('unknownWidths')]
+    public function testOffersNoWidthWhenTheLibraryDoesNotKnowTheIntrinsicOne(?int $width): void
+    {
+        $html = $this->rewrite(
+            '<img src="/image-library/8/full/max/0/default.jpg" alt="">',
+            new MediaFile(id: 8, format: 'jpg', width: $width),
+        );
+
         self::assertStringNotContainsString('sizes=', $html);
+        self::assertStringNotContainsString('w,', $html);
+        self::assertStringContainsString('<source type="image/webp" srcset="/image-library/8/full/max/0/default.webp"', $html);
     }
 
     public function testLeavesAnImageTheLibraryDoesNotOwnUntouchedApartFromLoadingHints(): void
@@ -148,6 +248,38 @@ final class ImageRewriterTest extends TestCase
     private function rewrite(string $html, ?MediaFile $media = new MediaFile(id: 7, format: 'jpg', width: 1600, height: 900)): string
     {
         return (string) (new ImageRewriter($this->resolver($media)))->rewrite($html);
+    }
+
+    /**
+     * @return iterable<string, array{?int}>
+     */
+    public static function unknownWidths(): iterable
+    {
+        yield 'never measured' => [null];
+        yield 'measured as zero' => [0];
+    }
+
+    private function imageSrcset(string $html): string
+    {
+        self::assertSame(1, preg_match('#<img\b[^>]*\ssrcset="([^"]*)"#', $html, $matches));
+
+        return $matches[1];
+    }
+
+    private function sourceSrcset(string $html): string
+    {
+        self::assertSame(1, preg_match('#<source\b[^>]*\ssrcset="([^"]*)"#', $html, $matches));
+
+        return $matches[1];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function candidates(string $srcset): array
+    {
+        // Candidates are separated by ", "; the ",!" inside a URL has no space.
+        return explode(', ', $srcset);
     }
 
     /**

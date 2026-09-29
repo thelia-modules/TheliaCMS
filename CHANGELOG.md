@@ -96,6 +96,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- The `srcset` of a published image offers the file at its original width. It
+  only listed the fixed widths below it, so an image of 900 px shown at 1440 px
+  was served at 480 px and came out blurred; the same held for every image
+  between two widths. The original is the last candidate of the `<img>` and of
+  each `<source>`, never repeated when it equals a fixed width, and nothing is
+  enlarged past it.
 - A menu entry pointing at another site is never current: an external link
   served on `/` was marked current on the home page. An entry pointing at the
   home page links to the root of the site, where the page is served, instead of
