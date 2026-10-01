@@ -58,13 +58,36 @@ jobs:
       - name: Prepare the test database credentials
         run: printf 'DATABASE_HOST=127.0.0.1\nDATABASE_PORT=3306\nDATABASE_USER=root\nDATABASE_PASSWORD=root\nDATABASE_NAME=test\n' > .env.test.local
 
+      - name: Leave the module out of the requirements of Thelia
+        # thelia/thelia may require this module for its own tests. The copy
+        # under test is the checkout in local/modules: a second one installed
+        # from Packagist into vendor would load the module twice. Nothing is
+        # changed when Thelia does not require it.
+        run: |
+          # shellcheck disable=SC2016
+          php -r '
+            $composer = json_decode(file_get_contents("composer.json"), false, 512, JSON_THROW_ON_ERROR);
+            $removed = false;
+            foreach (["require", "require-dev"] as $section) {
+                if (isset($composer->{$section}->{"thelia/cms-module"})) {
+                    unset($composer->{$section}->{"thelia/cms-module"});
+                    $removed = true;
+                }
+            }
+            if ($removed) {
+                file_put_contents("composer.json", json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR).PHP_EOL);
+            }
+            echo $removed ? "thelia/cms-module removed from the requirements of Thelia" : "Thelia does not require thelia/cms-module", PHP_EOL;
+          '
+
       - name: Require the themes from their development branch and the dependencies of the module
         # Same theme pins as the CI of thelia/thelia. The module sits in
         # local/modules rather than being required, so Composer never reads its
         # composer.json: its own dependencies are required from it here, every
         # package but PHP, the core (the checkout above) and the installer.
         run: |
-          deps=$(php -r '
+          # shellcheck disable=SC2016
+          requirements=$(php -r '
             $require = json_decode(file_get_contents("local/modules/TheliaCMS/composer.json"), true)["require"] ?? [];
             foreach ($require as $package => $constraint) {
                 if ("php" === $package || str_starts_with($package, "ext-") || in_array($package, ["thelia/core", "thelia/installer"], true)) {
@@ -73,13 +96,14 @@ jobs:
                 echo $package.":".$constraint, PHP_EOL;
             }
           ')
-          echo "$deps"
+          mapfile -t deps <<< "$requirements"
+          printf '%s\n' "${deps[@]}"
           composer require --no-update --no-scripts --no-audit \
             "thelia/flexy:dev-main as 1.99.0" \
             "thelia/backoffice-default-twig-template:dev-main as 1.99.0" \
             "thelia/email-default-template:dev-main as 1.99.0" \
             "thelia/pdf-default-template:dev-main as 1.99.0" \
-            $deps
+            "${deps[@]}"
 
       - name: Locate the Composer download cache
         id: composer-cache
