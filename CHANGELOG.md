@@ -100,6 +100,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- Deleting an image from the image library of the editor works. The editor
+  sent the deletion to an address no route answered, so it got a 404 and the
+  image stayed in the library. The deletion now follows the rules of the media
+  screen: an image a page or a reusable block still shows is kept and the editor
+  says why, and only images of the CMS can be deleted, not those uploaded for a
+  product.
+- The media screen keeps an image a reusable block still shows. It only looked
+  at the pages, so deleting the image left a broken picture on every page using
+  the block.
 - The `srcset` of a published image offers the file at its original width. It
   only listed the fixed widths below it, so an image of 900 px shown at 1440 px
   was served at 480 px and came out blurred; the same held for every image
