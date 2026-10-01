@@ -40,9 +40,6 @@ use TheliaCMS\TheliaCMS;
  */
 final class ThemeCanvasDeclarationTest extends CmsIntegrationTestCase
 {
-    /** A stylesheet the asset mapper of the shop knows, other than the default. */
-    private const string LOGICAL_PATH = 'styles/cms-blocks.css';
-
     private const string FONT_URL = 'https://fonts.example.com/css2?family=Brand';
 
     private string $root;
@@ -92,16 +89,17 @@ final class ThemeCanvasDeclarationTest extends CmsIntegrationTestCase
 
     public function testDeclaredStylesheetsReplaceTheDefaultOne(): void
     {
-        $this->writeThemes(child: <<<'YAML'
+        $logicalPath = $this->anotherStylesheetOfTheTheme();
+        $this->writeThemes(child: <<<YAML
             canvas:
                 stylesheets:
-                    - styles/cms-blocks.css
+                    - {$logicalPath}
                     - https://fonts.example.com/css2?family=Brand
             YAML);
 
         $builder = $this->builderOnTheChildTheme();
         $styles = $builder->editorOptions()['canvas']['styles'];
-        $resolved = $this->getService(AssetMapperInterface::class)->getAsset(self::LOGICAL_PATH)?->publicPath;
+        $resolved = $this->getService(AssetMapperInterface::class)->getAsset($logicalPath)?->publicPath;
 
         self::assertNotNull($resolved);
         self::assertMatchesRegularExpression('#-[\w-]{7,}\.css$#', $resolved, 'The name of the last build, not the logical path.');
@@ -162,6 +160,24 @@ final class ThemeCanvasDeclarationTest extends CmsIntegrationTestCase
         self::assertContains('/site/canvas.css', $builder->editorOptions()['canvas']['styles']);
         self::assertNotContains(self::FONT_URL, $builder->editorOptions()['canvas']['styles']);
         self::assertSame('/site/canvas.css', $builder->getConfig()['appStylesheet'] ?? null);
+    }
+
+    /**
+     * A stylesheet the asset mapper of the shop knows, other than the default.
+     *
+     * Looked up rather than named: which sheets a theme ships besides
+     * `styles/app.css` is the theme's business, and a name copied from one
+     * theme fails on every shop running another.
+     */
+    private function anotherStylesheetOfTheTheme(): string
+    {
+        foreach ($this->getService(AssetMapperInterface::class)->allAssets() as $asset) {
+            if (str_starts_with($asset->logicalPath, 'styles/') && str_ends_with($asset->logicalPath, '.css') && 'styles/app.css' !== $asset->logicalPath) {
+                return $asset->logicalPath;
+            }
+        }
+
+        self::markTestSkipped('The theme of the shop ships no stylesheet besides styles/app.css.');
     }
 
     private function writeThemes(string $child, ?string $parent = null): void
