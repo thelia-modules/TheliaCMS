@@ -89,7 +89,13 @@ class TheliaCMS extends BaseModule
     {
         if (!self::getConfigValue('is_initialized')) {
             $this->installSchema($con);
-            (new LegalPagesSeeder())->seed();
+
+            // A site that lost this flag but kept its pages (a config purged by
+            // hand, a restored dump) already has its legal pages, or chose not to.
+            if (0 === CmsPageQuery::create()->count()) {
+                (new LegalPagesSeeder())->seed();
+            }
+
             self::setConfigValue('is_initialized', '1');
         }
 
