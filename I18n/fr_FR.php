@@ -613,7 +613,7 @@ return [
     'This form is closed and no longer accepts messages.' => 'Ce formulaire est fermé et n’accepte plus de messages.',
     'This form keeps its answers until someone deletes them, which is rarely what a privacy policy says.' => 'Ce formulaire garde ses réponses jusqu’à ce que quelqu’un les supprime, ce que dit rarement une politique de confidentialité.',
     'This image is decorative' => 'Cette image est décorative',
-    'This image is still used by %count% page(s). Remove it from them first.' => 'Cette image est encore utilisée par %count% page(s). Retirez-la de ces pages d\'abord.',
+    'This image is still used by %count% page(s) or block(s). Remove it from them first.' => 'Cette image est encore utilisée par %count% page(s) ou bloc(s). Retirez-la d\'abord.',
     'This is not a date.' => 'Ceci n’est pas une date.',
     'This is not an email address.' => 'Ceci n’est pas une adresse e-mail.',
     'This is not an email address: %s' => 'Ceci n’est pas une adresse e-mail : %s',

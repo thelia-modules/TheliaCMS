@@ -150,11 +150,11 @@ final readonly class CmsMediaAdminController
         $lang = $this->editLang($request);
         $image = $this->ownedImageOrFail($id);
 
-        $usageCount = \count($this->usages->pagesUsing($id));
+        $usageCount = $this->usages->useCount($id);
 
         if ($usageCount > 0) {
             return $this->backToList($request, $lang, $this->translator->trans(
-                'This image is still used by %count% page(s). Remove it from them first.',
+                'This image is still used by %count% page(s) or block(s). Remove it from them first.',
                 ['%count%' => $usageCount],
                 TheliaCMS::DOMAIN_NAME,
             ), 'warning');
