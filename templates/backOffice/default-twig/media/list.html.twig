@@ -12,6 +12,7 @@
         <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-start"
               action="{{ path('admin.cms.media.add', { edit_language_id: edit_language_id }) }}"
               data-testid="cms-media-upload-form">
+            <input type="hidden" name="_token" value="{{ assignToken() }}">
             <div>
                 <label class="visually-hidden" for="cms-media-files">{{ 'Add images'|trans({}, 'theliacms') }}</label>
                 <input class="form-control" type="file" id="cms-media-files" name="files[]" multiple

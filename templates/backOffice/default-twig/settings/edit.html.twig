@@ -15,6 +15,7 @@
     {% endembed %}
 
     {{ form_start(form) }}
+        <input type="hidden" name="_token" value="{{ assignToken() }}">
         {{ form_errors(form) }}
 
         <div class="row g-3">

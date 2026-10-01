@@ -93,6 +93,7 @@
                     {% endif %}
 
                     {{ form_start(consent_form) }}
+                        <input type="hidden" name="_token" value="{{ assignToken() }}">
                         {{ form_errors(consent_form) }}
                         {{ form_row(consent_form.clientId) }}
                         {{ form_row(consent_form.cookiesVersion) }}

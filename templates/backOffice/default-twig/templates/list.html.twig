@@ -67,6 +67,7 @@
                                                 <div class="border rounded p-3 mt-2 bg-body-tertiary" style="min-width: 22rem">
                                                     {% form_theme row.form with bo_form_themes only %}
                                                     {{ form_start(row.form) }}
+                                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
                                                         {{ form_row(row.form.title) }}
                                                         {{ form_row(row.form.parentId) }}
                                                         <button class="btn btn-sm btn-primary" type="submit">
@@ -78,6 +79,7 @@
                                             <form method="post"
                                                   action="{{ path('admin.cms.templates.delete', { id: template.id, edit_language_id: edit_language_id }) }}"
                                                   onsubmit="return confirm('{{ 'Remove this template? The pages already made from it stay as they are.'|trans({}, 'theliacms')|e('js') }}')">
+                                                <input type="hidden" name="_token" value="{{ assignToken() }}">
                                                 <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}">
                                                     <i class="bi bi-trash3" aria-hidden="true"></i>
                                                 </button>
@@ -99,6 +101,7 @@
             <div class="card-body">
                 {% if has_pages %}
                     {{ form_start(save_form) }}
+                        <input type="hidden" name="_token" value="{{ assignToken() }}">
                         <div class="row g-3">
                             <div class="col-md-4">{{ form_row(save_form.pageId) }}</div>
                             <div class="col-md-4">{{ form_row(save_form.title) }}</div>

@@ -24,6 +24,7 @@
             <div class="card">
                 <div class="card-body">
                     {{ form_start(block_form) }}
+                        <input type="hidden" name="_token" value="{{ assignToken() }}">
                         {{ form_row(block_form.title) }}
                         {{ form_row(block_form.code) }}
 
@@ -47,6 +48,7 @@
                         <form method="post" id="cms-block-delete"
                               action="{{ path('admin.cms.blocks.delete', { id: block.id, edit_language_id: edit_language_id }) }}"
                               onsubmit="return confirm('{{ 'Delete this block?'|trans({}, 'theliacms')|e('js') }}')">
+                            <input type="hidden" name="_token" value="{{ assignToken() }}">
                         </form>
                     {% endif %}
                 </div>
