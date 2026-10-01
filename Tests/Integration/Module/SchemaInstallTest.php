@@ -16,6 +16,7 @@ namespace TheliaCMS\Tests\Integration\Module;
 
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormQuery;
+use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\TheliaCMS;
 
@@ -64,5 +65,22 @@ final class SchemaInstallTest extends CmsIntegrationTestCase
             'The activation dropped the tables the install had filled.',
         );
         self::assertSame('1', (string) TheliaCMS::getConfigValue('is_initialized'));
+    }
+
+    /**
+     * A site whose state was lost but whose pages were not (a module config
+     * purged by hand, a restored dump) is not handed the sample legal pages a
+     * second time: four more drafts named like the ones it has would take the
+     * next free addresses.
+     */
+    public function testAFirstActivationOnASiteWithPagesSeedsNoLegalPage(): void
+    {
+        $this->createPage('Mentions legales du site');
+        $before = CmsPageQuery::create()->count();
+
+        TheliaCMS::setConfigValue('is_initialized', '0');
+        (new TheliaCMS())->postActivation($this->getPropelConnection());
+
+        self::assertSame($before, CmsPageQuery::create()->count());
     }
 }
