@@ -88,9 +88,9 @@ class TheliaCMS extends BaseModule
     public function postActivation(?ConnectionInterface $con = null): void
     {
         if (!self::getConfigValue('is_initialized')) {
-            (new Database($con))->insertSql(null, [__DIR__.'/Config/TheliaMain.sql']);
+            $this->installSchema($con);
             (new LegalPagesSeeder())->seed();
-            self::setConfigValue('is_initialized', 1);
+            self::setConfigValue('is_initialized', '1');
         }
 
         $this->createSearchIndex();
@@ -124,6 +124,45 @@ class TheliaCMS extends BaseModule
     }
 
     /**
+     * Creates the tables of the module, unless they exist already.
+     *
+     * A fresh install of Thelia creates them itself, with every update file
+     * played on top, before the module is ever activated: `TheliaMain.sql`
+     * drops each table before creating it, so playing it again there emptied
+     * the tables the install had just filled, the contact form with them.
+     *
+     * When the tables are created here, the update files follow: the schema
+     * file holds no rows, and the rows every site starts with (the two menus,
+     * the contact form) are seeded by the update file that introduced their
+     * table. Those files tolerate being applied twice.
+     */
+    private function installSchema(?ConnectionInterface $con): void
+    {
+        if ($this->schemaIsInstalled($con)) {
+            return;
+        }
+
+        $database = new Database($con);
+        $database->insertSql(null, [__DIR__.'/Config/TheliaMain.sql']);
+
+        foreach (self::everyMigration() as $file) {
+            $database->insertSql(null, [$file]);
+        }
+    }
+
+    private function schemaIsInstalled(?ConnectionInterface $con): bool
+    {
+        $connection = $con ?? Propel::getConnection('TheliaMain');
+
+        $statement = $connection->prepare(
+            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table'
+        );
+        $statement->execute(['table' => 'cms_page']);
+
+        return (int) $statement->fetchColumn() > 0;
+    }
+
+    /**
      * Applies the schema changes of every version between the one installed and
      * the one shipped.
      *
@@ -148,21 +187,31 @@ class TheliaCMS extends BaseModule
      * The migration files to apply to move a site from one version to another,
      * oldest first.
      *
+     * @return list<string> absolute paths
+     */
+    public static function migrationsBetween(string $currentVersion, string $newVersion): array
+    {
+        return array_values(array_filter(self::everyMigration(), static function (string $file) use ($currentVersion, $newVersion): bool {
+            $version = basename($file, '.sql');
+
+            return version_compare($version, $currentVersion, '>') && version_compare($version, $newVersion, '<=');
+        }));
+    }
+
+    /**
+     * Every migration file the module ships, oldest first.
+     *
      * Ordered by version rather than by name: a plain sort puts 0.10.0 before
      * 0.9.0, and a table would then be altered before it is created.
      *
      * @return list<string> absolute paths
      */
-    public static function migrationsBetween(string $currentVersion, string $newVersion): array
+    public static function everyMigration(): array
     {
         $files = glob(__DIR__.'/Config/update/*.sql') ?: [];
         usort($files, static fn (string $a, string $b): int => version_compare(basename($a, '.sql'), basename($b, '.sql')));
 
-        return array_values(array_filter($files, static function (string $file) use ($currentVersion, $newVersion): bool {
-            $version = basename($file, '.sql');
-
-            return version_compare($version, $currentVersion, '>') && version_compare($version, $newVersion, '<=');
-        }));
+        return $files;
     }
 
     /**
