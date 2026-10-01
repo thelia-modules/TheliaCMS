@@ -445,10 +445,14 @@ element.
 
 ## Search
 
-The module answers on `/recherche` and on `/search` with a results page. Both
-paths are on the reserved list, so no page can be given a slug that would shadow
-them, and the language of the page is the one the visitor is reading the site
-in rather than one the address imposes.
+On a showcase site, the module answers on `/recherche` and on `/search` with a
+results page. On a shop it leaves both paths alone: the search bar of the theme
+sends visitors to `/search`, and the product search of the theme keeps answering
+there. The choice is made when the path is matched, so switching the site mode
+takes effect on the next request. Both paths are on the reserved list either way,
+so no page can be given a slug that would shadow them, and the language of the
+page is the one the visitor is reading the site in rather than one the address
+imposes.
 
 The query runs against the plain text extracted when a page was published, never
 against the HTML: a full-text index over markup matches tag names and ranks a
