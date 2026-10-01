@@ -5,7 +5,6 @@ return [
     '%count% image(s)' => '%count% image(s)',
     '%count% images added. Describe each of them before using it in a page.' => '%count% images added. Describe each of them before using it in a page.',
     '%count% in total' => '%count% in total',
-    '%count% measurement script(s) running' => '%count% measurement script(s) running',
     '%count% not published yet' => '%count% not published yet',
     '%count% page(s)' => '%count% page(s)',
     '%count% page(s) found' => '%count% page(s) found',

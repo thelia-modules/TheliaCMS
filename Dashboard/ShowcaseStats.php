@@ -20,7 +20,6 @@ use TheliaCMS\Model\CmsFormSubmissionQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
-use TheliaCMS\Model\CmsScriptQuery;
 
 /**
  * What somebody running a showcase site opens the back office to find out.
@@ -44,7 +43,6 @@ final readonly class ShowcaseStats
      *     pages_draft: int,
      *     recent_pages: list<array{id: int, title: string, updated_at: ?\DateTimeInterface}>,
      *     completeness: list<array{locale: string, title: string, published: int, total: int}>,
-     *     measurement: int,
      * }
      */
     public function collect(string $locale): array
@@ -61,9 +59,6 @@ final readonly class ShowcaseStats
             'pages_draft' => $this->livePages()->count() - $this->publishedPageCount(),
             'recent_pages' => $this->recentPages($locale),
             'completeness' => $this->completeness(),
-            // Whether anything is actually measuring. A site nobody measures is
-            // a site whose owner finds out about a problem from a phone call.
-            'measurement' => CmsScriptQuery::create()->filterByActive(1)->count(),
         ];
     }
 

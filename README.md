@@ -396,9 +396,8 @@ is a screen of zeros somebody has to scroll past.
 
 It shows how many messages the forms received over the last thirty days, how
 many pages are online and how many are still drafts, how much of the site exists
-in each active language, the five pages changed last, and whether anything is
-measuring the site at all. Nothing here re-implements analytics: the last line
-links to the scripts screen and says how many are running.
+in each active language, and the five pages changed last. Nothing here
+re-implements analytics.
 
 Above all of that, when there is something to say: the pages that are online with
 the example text of the seeded legal pages still on them. The same warning is on
