@@ -54,6 +54,11 @@ final readonly class CmsSearchController
         name: 'cms.search',
         requirements: ['cmsSearchPath' => 'recherche|search'],
         methods: ['GET'],
+        // A shop keeps the product search of its theme on `/search`, where its
+        // search bar sends visitors; only a showcase site, with no catalogue to
+        // search, hands the path to its pages. Read when the path is matched,
+        // so switching the mode needs no cache clear.
+        condition: "service('theliacms_settings').isShowcase()",
         priority: -100,
     )]
     public function search(Request $request): Response

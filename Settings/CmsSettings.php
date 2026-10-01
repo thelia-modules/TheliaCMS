@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Settings;
 
+use Symfony\Bundle\FrameworkBundle\Routing\Attribute\AsRoutingConditionService;
 use TheliaCMS\Http\PageCachePolicy;
 use TheliaCMS\Page\TrashRetention;
 use TheliaCMS\TheliaCMS;
@@ -25,9 +26,17 @@ use TheliaCMS\TheliaCMS;
  * when it is uninstalled. Everything that reads them goes through here: a
  * listener asking `'1' === getConfigValue(...)` in its own way is how a flag
  * ends up meaning two different things in two places.
+ *
+ * Routes read them too, through `service('theliacms_settings')` in their
+ * condition: a route that only exists on a showcase site is one the router
+ * skips on a shop, so the next route claiming the path answers instead.
  */
+#[AsRoutingConditionService(alias: CmsSettings::ROUTING_ALIAS)]
 final readonly class CmsSettings
 {
+    /** Name routes call these settings by in their condition. */
+    public const string ROUTING_ALIAS = 'theliacms_settings';
+
     public const string SITE_MODE = 'site_mode';
     public const string NOT_FOUND_PAGE = '404_page_id';
     public const string MAINTENANCE_ACTIVE = 'maintenance_active';
