@@ -39,6 +39,14 @@ Nothing is served on the front until you publish them, and publishing is refused
 while a page still holds the sample text, from the back office and from a command
 alike: the instructions the module wrote are not a legal notice.
 
+A shop that already holds contents (an update, or an install with the demo) is
+told that they stay in Folders, which the back-office menu now reaches from the
+CMS section, and that nothing is converted into pages. The line is written at the
+end of `module:activate`, `module:post-activate-all` and `thelia:demo:import`
+(so `bin/install --with-demo` shows it), and the Pages screen carries the same
+message until somebody with the right to change pages closes it. Nothing waits
+on it: the activation goes through either way.
+
 Deactivating the module removes the rewritten URLs it owns, so the site answers
 404 rather than 500; reactivating puts them back.
 
@@ -566,6 +574,7 @@ Most of them are edited under **CMS > Settings**.
 | `footer_menu_hook` | off | Renders the `footer` menu into the `layout.footer.top` hook of the theme. For a theme that does not call `cms_menu('footer')` itself: without it, a CMS page is reachable only by its address. Leave it off on a theme that already renders the menu, or it appears twice. |
 | `heading_check_mode` | `warn` | `warn` reports heading problems and publishes anyway; `block` refuses to publish. |
 | `builder_stylesheet` | none | Public path of the stylesheet the editor canvas loads, for this site only. Wins over what the theme declares in `config/theliacms.yaml`, which itself replaces the asset mapper's `styles/app.css` ([docs/editor-canvas.md](docs/editor-canvas.md)). |
+| `native_content_notice_dismissed` | `0` | `1` once the notice about existing contents has been closed on the Pages screen. |
 | `builder_palette` | none | JSON array of hex colours offered in the editor, e.g. `["#111827","#ffffff"]`. Defaults to a contrast-checked set. |
 
 ## Showcase mode, maintenance and the 404
