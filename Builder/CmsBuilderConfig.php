@@ -213,6 +213,9 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
             'settingsTitle' => $this->translate('Block settings'),
             // The delete control put on every row of the layer tree.
             'deleteLayer' => $this->translate('Delete the block'),
+            // The close button of a notice the editor shows, such as an image
+            // the server refused to delete.
+            'close' => $this->translate('Close'),
             // The button of the colour picker that leaves the palette for the
             // full wheel, and the one that comes back.
             'colorPicker' => [

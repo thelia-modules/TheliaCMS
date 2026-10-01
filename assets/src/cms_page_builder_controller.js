@@ -40,6 +40,9 @@ export default class extends PageBuilderController {
         // Classes the theme wraps its page content in, shown on the canvas and
         // never saved with the page.
         canvasWrapperClasses: { type: Array, default: [] },
+        // The media library of the module: an image of the editor is deleted
+        // on `{mediaEndpoint}/{id}`.
+        mediaEndpoint: { type: String, default: "" },
     };
 
     connect() {
@@ -172,7 +175,14 @@ export default class extends PageBuilderController {
         // The image library of the bundle, with the token of the back office
         // on its upload and its deletion.
         if (this.endpointsValue?.uploadImage) {
-            plugins.push({ name: "cms:asset-manager-upload", options: { endpoints: this.endpointsValue, context: this.contextValue } });
+            plugins.push({
+                name: "cms:asset-manager-upload",
+                options: {
+                    endpoints: { ...this.endpointsValue, media: this.mediaEndpointValue },
+                    context: this.contextValue,
+                    closeLabel: labels.close,
+                },
+            });
         }
 
         if (this.canvasWrapperClassesValue.length > 0) {

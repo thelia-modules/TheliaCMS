@@ -68,6 +68,7 @@
                     controller: 'cms-page-builder',
                     context: 'cms-page-' ~ page.id,
                     options: builder_options,
+                    'data-cms-page-builder-media-endpoint-value': path('admin.cms.media.list'),
                     'data-cms-page-builder-canvas-wrapper-classes-value': builder_canvas_wrapper_classes|json_encode,
                     'data-cms-page-builder-locale-value': builder_locale,
                     'data-cms-page-builder-catalog-value': builder_catalog|json_encode,
