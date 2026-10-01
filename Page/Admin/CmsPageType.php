@@ -81,6 +81,7 @@ final class CmsPageType extends AbstractType
             ->add('canonical', UrlType::class, [
                 'label' => 'Canonical URL',
                 'required' => false,
+                'default_protocol' => 'https',
                 'help' => 'Only fill this in to point search engines at another page.',
             ])
             ->add('noindex', ChoiceType::class, [
