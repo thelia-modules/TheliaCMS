@@ -64,6 +64,21 @@ final class ShowcaseStatsTest extends CmsIntegrationTestCase
     }
 
     /**
+     * Every figure costs at least one query on each opening of the dashboard,
+     * so only the ones the dashboard shows are worked out.
+     */
+    public function testOnlyTheFiguresTheDashboardShowsAreWorkedOut(): void
+    {
+        $figures = array_keys($this->collect());
+        sort($figures);
+
+        self::assertSame(
+            ['completeness', 'pages_draft', 'pages_published', 'recent_days', 'recent_pages', 'submissions_recent', 'submissions_total'],
+            $figures,
+        );
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function collect(): array
