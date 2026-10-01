@@ -23,6 +23,7 @@ use Propel\Runtime\Propel;
 use SEOne\Service\SeoDefaultModels\SeoElementInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Install\Database;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\LangQuery;
@@ -40,6 +41,7 @@ use TheliaCMS\Media\LibraryImageCatalog;
 use TheliaCMS\Media\LibraryImageUploader;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Notice\NativeContentConsoleNotice;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Partial\PartialFragmentRenderer;
 use TheliaCMS\Partial\PartialFragmentRendererInterface;
@@ -95,6 +97,30 @@ class TheliaCMS extends BaseModule
         $this->seedAdminResources();
         (new MenuSeeder())->seed();
         $this->regenerateRewrittenUrls();
+        $this->tellTheConsoleAboutTheExistingContents();
+    }
+
+    /**
+     * A shop that already has contents is told, once the command that
+     * activated the module ends, that they stay in Folders and that nothing is
+     * converted. The Pages screen says the same in the back office.
+     *
+     * The console output is out of reach from here, and the services of this
+     * module do not exist yet in the container of the command that activates
+     * it: the dispatcher of that container is what carries the line to the end
+     * of the command. Outside a console command the listener simply never runs.
+     */
+    private function tellTheConsoleAboutTheExistingContents(): void
+    {
+        if (!$this->hasContainer() || !$this->getContainer()->has('event_dispatcher')) {
+            return;
+        }
+
+        $dispatcher = $this->getContainer()->get('event_dispatcher');
+
+        if ($dispatcher instanceof EventDispatcherInterface) {
+            NativeContentConsoleNotice::writeWhenTheCommandEnds($dispatcher);
+        }
     }
 
     /**

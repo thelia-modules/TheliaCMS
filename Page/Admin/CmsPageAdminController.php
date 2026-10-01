@@ -30,6 +30,7 @@ use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
+use TheliaCMS\Notice\NativeContentNotice;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -60,16 +61,17 @@ final readonly class CmsPageAdminController
         private EditLanguage $languages,
         private CmsUrlService $addresses,
         private PageListPresenter $listing,
+        private NativeContentNotice $nativeContents,
     ) {
     }
 
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): Response
     {
-        return new Response($this->twig->render(
-            self::LIST_TEMPLATE,
-            $this->listing->present(PageFilters::fromRequest($request), $this->editLang($request)),
-        ));
+        return new Response($this->twig->render(self::LIST_TEMPLATE, [
+            ...$this->listing->present(PageFilters::fromRequest($request), $this->editLang($request)),
+            'native_content_count' => $this->nativeContents->bannerCount(),
+        ]));
     }
 
     #[Route('/new', name: 'create', methods: ['GET', 'POST'])]

@@ -1,0 +1,27 @@
+{# Told to a shop that already had contents when the CMS arrived: they stay in
+   Folders, which the menu now reaches from the CMS section, and nothing is
+   converted. Shown until the merchant closes it; the choice is stored for the
+   whole shop. Closing it is a POST with the token of the back office, so a link
+   in an email cannot do it on somebody's behalf. #}
+{% if native_content_count %}
+    <div class="alert alert-info d-flex flex-wrap align-items-start gap-3" data-testid="cms-native-content-notice">
+        <div class="flex-grow-1">
+            <h2 class="h6 alert-heading">
+                <i class="bi bi-info-circle-fill me-1" aria-hidden="true"></i>
+                {{ 'Your existing contents stay in Folders'|trans({}, 'theliacms') }}
+            </h2>
+            <p class="mb-0">
+                {{ 'This shop holds %count% content(s) made before the CMS. They stay in Folders, now reached from the CMS section of the menu. Nothing is converted into pages.'|trans({'%count%': native_content_count}, 'theliacms') }}
+                {% if is_granted('VIEW', 'admin.folder') %}
+                    <a class="alert-link" href="{{ path('admin.folders.default') }}">{{ 'Open Folders'|trans({}, 'theliacms') }}</a>
+                {% endif %}
+            </p>
+        </div>
+        <form method="post" action="{{ path('admin.cms.pages.native_content_notice.dismiss') }}">
+            <input type="hidden" name="_token" value="{{ assignToken() }}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary" data-testid="cms-native-content-notice-dismiss">
+                {{ 'Hide this message'|trans({}, 'theliacms') }}
+            </button>
+        </form>
+    </div>
+{% endif %}
