@@ -83,6 +83,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed
 
+- Every write of the back office under `/admin/cms` requires the back-office
+  token, in the `_token` field of the body or in the `X-CSRF-Token` header. A
+  script of your own that posts to these routes now gets a 403 until it sends
+  the token. Saving a block also needs the right to change pages.
 - **CMS > Pages** shows the tree branch by branch, with a search box and filters
   on the publication state and on the visibility. It used to list every page of
   the site flat, with nothing to search: on the pilot of a takeover that meant 128
