@@ -32,17 +32,23 @@
                                 {{ 'Save'|trans({}, 'theliacms') }}
                             </button>
 
+                            {# The button belongs to the deletion form below: a form
+                               cannot sit inside another, the browser drops the
+                               inner one and the button saves the block instead. #}
                             {% if block is not null and may_write %}
-                                <form method="post"
-                                      action="{{ path('admin.cms.blocks.delete', { id: block.id, edit_language_id: edit_language_id }) }}"
-                                      onsubmit="return confirm('{{ 'Delete this block?'|trans({}, 'theliacms')|e('js') }}')">
-                                    <button class="btn btn-outline-danger" type="submit">
-                                        <i class="bi bi-trash3 me-1" aria-hidden="true"></i>{{ 'Delete'|trans({}, 'theliacms') }}
-                                    </button>
-                                </form>
+                                <button class="btn btn-outline-danger" type="submit" form="cms-block-delete">
+                                    <i class="bi bi-trash3 me-1" aria-hidden="true"></i>{{ 'Delete'|trans({}, 'theliacms') }}
+                                </button>
                             {% endif %}
                         </div>
                     {{ form_end(block_form) }}
+
+                    {% if block is not null and may_write %}
+                        <form method="post" id="cms-block-delete"
+                              action="{{ path('admin.cms.blocks.delete', { id: block.id, edit_language_id: edit_language_id }) }}"
+                              onsubmit="return confirm('{{ 'Delete this block?'|trans({}, 'theliacms')|e('js') }}')">
+                        </form>
+                    {% endif %}
                 </div>
             </div>
         </div>
