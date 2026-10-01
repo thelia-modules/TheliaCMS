@@ -17,7 +17,6 @@ namespace TheliaCMS\Vitrine;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Model\RewritingUrl;
 use Thelia\Model\RewritingUrlQuery;
-use TheliaCMS\Front\ThemeTemplateRenderer;
 use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\TheliaCMS;
 
@@ -35,7 +34,6 @@ final readonly class RewrittenAddressReachability
 {
     public function __construct(
         private PublishedPageRepository $pages,
-        private ThemeTemplateRenderer $templates,
     ) {
     }
 
@@ -63,21 +61,18 @@ final readonly class RewrittenAddressReachability
             return false;
         }
 
-        $view = (string) $address->getView();
-
-        // Views belonging to somebody else are theirs to serve. What can be
-        // checked from here is whether the theme renders that view at all: a
-        // shop whose theme ships no `product.html.twig` answers 404 on every
-        // product, so those addresses lead nowhere. Whether one particular
-        // product is in stock, visible or online is not knowable from here, and
-        // the row is the site saying the address exists.
-        if (TheliaCMS::PAGE_VIEW !== $view) {
-            return $this->templates->themeRenders($view);
+        // Only the pages of this module are answered for. Whether a product, a
+        // brand or a content of the shop is online is not knowable from here,
+        // and the shop answers 404 on their addresses with a slash: redirecting
+        // on the strength of the row alone sent visitors to addresses nobody
+        // checked.
+        if (TheliaCMS::PAGE_VIEW !== (string) $address->getView()) {
+            return false;
         }
 
-        // A page of this module, on the other hand, is known: an address whose
-        // page is binned, offline or waiting for its publication date answers
-        // 404 too, and redirecting to a 404 is worse than the 404 asked for.
+        // An address whose page is binned, offline or waiting for its
+        // publication date answers 404 too, and redirecting to a 404 is worse
+        // than the 404 asked for.
         return $this->pages->isReachable((int) $address->getViewId(), (string) $address->getViewLocale());
     }
 

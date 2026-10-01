@@ -86,8 +86,8 @@ descendants is walked once rather than followed forever.
 
 ### Trailing slashes
 
-An address that differs from a real one only by a trailing slash answers 301
-towards the form without it, so `/mentions-legales/` reaches
+An address of a CMS page that differs from the real one only by a trailing
+slash answers 301 towards the form without it, so `/mentions-legales/` reaches
 `/mentions-legales`. Symfony does that for its own routes; the rewriting router
 does not, and a site taken over from WordPress, Drupal or Prestashop arrives with
 the slash on every indexed address and every inbound link.
@@ -98,13 +98,13 @@ redirected to never carries one, so there is no chain and no loop. A POST is lef
 with the 404 it asked for, because a browser turns a redirected POST into a GET
 and drops the body.
 
-Nothing is redirected unless the address without the slash answers. For a page of
-this module that means published, visible and inside its publication window. For
-an address belonging to another view (a content, a folder, a product) the module
-checks that the active theme renders that view at all, and takes the row in
-`rewriting_url` as the site saying the address exists. Whether one particular
-product is currently online is that module's business, so an address of that kind
-can still redirect to a 404.
+Only the addresses of this module are redirected, and only when the address
+without the slash answers: the page is published, visible and inside its
+publication window. An address belonging to another view (a content, a folder,
+a product, a brand) is left alone, so the shop answers it as it always did,
+with a 404 on the form carrying a slash. Whether one particular product or
+brand is online is that module's business, and a redirection decided on the
+rewriting table alone would send visitors to addresses nobody checked.
 
 The root, the back office and the API are never touched. The first segment of the
 path is what is compared, not a prefix, so a page addressed
