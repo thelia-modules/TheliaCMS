@@ -59,34 +59,23 @@ final class TrailingSlashRedirectTest extends CmsIntegrationTestCase
     }
 
     /**
-     * A view of another module, which this module cannot interrogate.
+     * An address of another view (a content, a folder, a product, a brand) is
+     * left to whoever owns it, whether its theme renders that view or not.
      *
-     * The address exists and the theme renders that view, so the redirection
-     * happens: contents and folders taken over from another CMS are the reason
-     * any of this exists, and they are not pages of this module.
+     * Whether one particular row of another module answers is not knowable from
+     * here, and a shop answers 404 on those addresses with their slash: a
+     * redirection decided on the rewriting table alone sends a visitor towards a
+     * product or a brand nobody checked.
      */
-    public function testAnAddressOfAnotherViewTheThemeRendersIsRedirected(): void
+    public function testAnAddressOfAnotherViewIsLeftAlone(): void
     {
         $page = $this->createPage('Support de la reecriture');
         $this->addressPointingAt('un-article-repris', $page, 'content');
-
-        $response = $this->answerFor('/un-article-repris/');
-
-        self::assertInstanceOf(RedirectResponse::class, $response);
-        self::assertSame('http://localhost/un-article-repris', $response->getTargetUrl());
-    }
-
-    /**
-     * A view no theme renders answers 404 for every address pointing at it, so
-     * there is nothing on the other side to send a visitor to. The theme of a
-     * content-only site ships no `product.html.twig`, and every product address
-     * of the shop it grew out of is in that state.
-     */
-    public function testAnAddressOfAViewTheThemeCannotRenderIsLeftAlone(): void
-    {
-        $page = $this->createPage('Support de la reecriture');
+        $this->addressPointingAt('une-marque-reprise', $page, 'brand');
         $this->addressPointingAt('une-vue-sans-gabarit', $page, 'gabarit-absent');
 
+        self::assertNull($this->answerFor('/un-article-repris/'), 'A content is not a page of this module.');
+        self::assertNull($this->answerFor('/une-marque-reprise/'), 'A brand is not a page of this module.');
         self::assertNull($this->answerFor('/une-vue-sans-gabarit/'));
     }
 
@@ -101,7 +90,7 @@ final class TrailingSlashRedirectTest extends CmsIntegrationTestCase
     public function testAnAccentedAddressIsRecognisedThoughItArrivesEncoded(): void
     {
         $page = $this->createPage('Support de la reecriture');
-        $this->addressPointingAt('salle-à-manger', $page, 'content');
+        $this->addressPointingAt('salle-à-manger', $page);
 
         $response = $this->answerFor('/salle-%C3%A0-manger/');
 
@@ -291,8 +280,8 @@ final class TrailingSlashRedirectTest extends CmsIntegrationTestCase
     {
         $page = $this->createPage('Cible dune ancienne adresse');
 
-        $this->addressPointingAt('ancien-chemin', $page, 'content');
-        $this->addressPointingAt('ancien-chemin/', $page, 'content');
+        $this->addressPointingAt('ancien-chemin', $page);
+        $this->addressPointingAt('ancien-chemin/', $page);
 
         self::assertNull(
             $this->answerFor('/ancien-chemin/'),
