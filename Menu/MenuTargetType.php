@@ -44,6 +44,22 @@ enum MenuTargetType: string
     }
 
     /**
+     * The source of a content slot link built from an entry of this kind, in
+     * the words of `Thelia\Core\Content\Slot\ContentSlotLink`. A heading has
+     * no target of its own, so the entry itself is its source.
+     */
+    public function slotSource(): string
+    {
+        return match ($this) {
+            self::Page => 'cms_page',
+            self::Content => 'content',
+            self::Folder => 'folder',
+            self::Url => 'url',
+            self::None => 'cms_menu_item',
+        };
+    }
+
+    /**
      * Label shown in the back office, translated through the module domain.
      */
     public function label(): string

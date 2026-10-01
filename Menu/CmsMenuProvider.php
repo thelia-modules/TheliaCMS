@@ -41,7 +41,7 @@ final readonly class CmsMenuProvider
     }
 
     /**
-     * @return list<array{id: int, label: string, url: string|null, blank: bool, children: list<array<string, mixed>>, active: bool, in_trail: bool}>
+     * @return list<array{id: int, label: string, url: string|null, blank: bool, source: string, source_id: int|null, children: list<array<string, mixed>>, active: bool, in_trail: bool}>
      */
     public function menu(string $code, ?string $locale = null): array
     {
@@ -58,6 +58,23 @@ final readonly class CmsMenuProvider
         // Left out of the cache on purpose: it depends on the page being served,
         // not on the menu.
         return $this->markCurrent($nodes, $request?->getPathInfo() ?? '', $request?->query->all() ?? [], $request?->getHost());
+    }
+
+    /**
+     * Whether the menu stores at least one entry, whether or not any of them
+     * resolves in the language being read.
+     *
+     * A menu somebody filled in is a merchant taking that part of the site
+     * over, even on the day all of its entries are offline: falling back to
+     * something else then would show links nobody chose.
+     */
+    public function hasEntries(string $code): bool
+    {
+        return $this->cache->storedEntryCount($code, static function () use ($code): int {
+            $menu = CmsMenuQuery::create()->findOneByCode($code);
+
+            return null === $menu ? 0 : CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->count();
+        }) > 0;
     }
 
     /**
@@ -115,12 +132,12 @@ final readonly class CmsMenuProvider
                     continue;
                 }
 
-                $nodes[] = $this->node($id, $target->label, null, false, $children);
+                $nodes[] = $this->node($item, $target->label, null, false, $children);
 
                 continue;
             }
 
-            $nodes[] = $this->node($id, $target->label, $target->url, 1 === $item->getOpenNewTab(), $children);
+            $nodes[] = $this->node($item, $target->label, $target->url, 1 === $item->getOpenNewTab(), $children);
         }
 
         return $nodes;
@@ -131,13 +148,23 @@ final readonly class CmsMenuProvider
      *
      * @return array<string, mixed>
      */
-    private function node(int $id, string $label, ?string $url, bool $blank, array $children): array
+    private function node(CmsMenuItem $item, string $label, ?string $url, bool $blank, array $children): array
     {
+        $type = MenuTargetType::fromStorage($item->getTargetType());
+
         return [
-            'id' => $id,
+            'id' => (int) $item->getId(),
             'label' => $label,
             'url' => $url,
             'blank' => $blank,
+            // What the entry points at, for a reader that has to tell a folder
+            // from a page: the content slots of the core say it that way.
+            'source' => $type->slotSource(),
+            'source_id' => match (true) {
+                $type->needsTargetId() => (int) $item->getTargetId(),
+                MenuTargetType::None === $type => (int) $item->getId(),
+                default => null,
+            },
             'children' => $children,
             'active' => false,
             'in_trail' => false,

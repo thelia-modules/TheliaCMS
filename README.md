@@ -307,6 +307,15 @@ the language being read is **left out of the menu** in that language, and listed
 in the back office with the reason. A heading that still has usable children
 stays as a heading, rather than let its children move up a level.
 
+The two menus also fill the content slots of Thelia, which is how a theme that
+knows nothing of this module (Flexy among them) shows them: `main` answers the
+`header_links` slot and `footer` the `footer_links` one. A menu takes its slot
+over as soon as it stores one entry, even if none of its entries can be shown in
+the language being read; while it is empty, the slot keeps the folders and
+contents the shop configured, so activating the module changes nothing on the
+front until somebody builds a menu. The consent slots (the terms of sale linked
+from the checkout) stay with the contents of the shop.
+
 ## Forms
 
 Forms live under **CMS > Forms**. A form has a code, the way a menu does, and
