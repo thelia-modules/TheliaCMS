@@ -613,7 +613,7 @@ return [
     'This form is closed and no longer accepts messages.' => 'This form is closed and no longer accepts messages.',
     'This form keeps its answers until someone deletes them, which is rarely what a privacy policy says.' => 'This form keeps its answers until someone deletes them, which is rarely what a privacy policy says.',
     'This image is decorative' => 'This image is decorative',
-    'This image is still used by %count% page(s). Remove it from them first.' => 'This image is still used by %count% page(s). Remove it from them first.',
+    'This image is still used by %count% page(s) or block(s). Remove it from them first.' => 'This image is still used by %count% page(s) or block(s). Remove it from them first.',
     'This is not a date.' => 'This is not a date.',
     'This is not an email address.' => 'This is not an email address.',
     'This is not an email address: %s' => 'This is not an email address: %s',

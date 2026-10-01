@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Media\Admin;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use TheliaCMS\Model\CmsBlockContentQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
@@ -83,6 +84,38 @@ final readonly class MediaUsageFinder
         }
 
         return $usages;
+    }
+
+    /**
+     * Number of live pages and live reusable blocks using an image.
+     *
+     * A block shows its images on every page it is placed on, so an image a
+     * block holds is as much in use as one a page holds.
+     */
+    public function useCount(int $imageId): int
+    {
+        return \count($this->pagesUsing($imageId)) + $this->blockCount($imageId);
+    }
+
+    private function blockCount(int $imageId): int
+    {
+        $rows = CmsBlockContentQuery::create()
+            ->useCmsBlockQuery()
+                ->filterByDeletedAt(null, Criteria::ISNULL)
+            ->endUse()
+            ->select(['BlockId', 'DraftHtml', 'PublishedHtml', 'DraftProjectData'])
+            ->find()
+            ->toArray();
+
+        $blockIds = [];
+
+        foreach ($rows as $row) {
+            if ($this->references((string) $row['DraftHtml'].(string) $row['PublishedHtml'].(string) $row['DraftProjectData'], $imageId)) {
+                $blockIds[(int) $row['BlockId']] = true;
+            }
+        }
+
+        return \count($blockIds);
     }
 
     /**
