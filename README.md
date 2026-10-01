@@ -778,6 +778,11 @@ so the content of the shop is left alone. The exception is the search: InnoDB
 only adds a row to a FULLTEXT index when the transaction writing it commits, so
 those tests commit and clean up after themselves.
 
+The GitHub Actions workflow (`.github/workflows/ci.yml`) runs both suites on
+every push and pull request to `main`, on PHP 8.3, 8.4 and 8.5, inside the tip of
+`thelia/thelia` with the themes on their development branch and the module in
+`local/modules/TheliaCMS`.
+
 Accessibility is checked separately, with axe-core driving a browser against a
 running shop. `Tests/Accessibility/README.md` says how to run it and what the
 last run found.
