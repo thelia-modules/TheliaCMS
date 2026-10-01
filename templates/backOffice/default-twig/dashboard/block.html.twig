@@ -66,15 +66,5 @@
         {% endfor %}
     </ul>
 {% endif %}
-
-<p class="small mb-0">
-    {% if stats.measurement > 0 %}
-        <i class="bi bi-graph-up me-1" aria-hidden="true"></i>
-        <a href="{{ scripts_url }}">{{ '%count% measurement script(s) running'|trans({'%count%': stats.measurement}, 'theliacms') }}</a>
-    {% else %}
-        <i class="bi bi-exclamation-circle me-1 text-warning" aria-hidden="true"></i>
-        <a href="{{ scripts_url }}">{{ 'Nothing is measuring this site yet.'|trans({}, 'theliacms') }}</a>
-    {% endif %}
-</p>
     </div>
 </div>

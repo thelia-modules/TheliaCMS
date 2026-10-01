@@ -17,6 +17,7 @@ namespace TheliaCMS\Security;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\ControllerEvent;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
@@ -54,6 +55,17 @@ final readonly class CmsAdminGuard
         'scripts' => CmsResources::CUSTOM_CODE,
     ];
 
+    /**
+     * Screens kept out of the back office: the third-party scripts and the site
+     * styles. What they configure keeps applying (the saved snippets are still
+     * written into the pages, and the custom-code permission still governs free
+     * HTML in a page); only the screens are closed, to everybody, so they answer
+     * 404 rather than a 403 that would say they exist.
+     *
+     * @var list<string>
+     */
+    private const array HIDDEN_PREFIXES = ['/admin/cms/scripts', '/admin/cms/settings/styles'];
+
     public function __construct(
         private SecurityContext $securityContext,
     ) {
@@ -70,6 +82,12 @@ final readonly class CmsAdminGuard
 
         if (self::PREFIX !== $path && !str_starts_with($path, self::PREFIX.'/')) {
             return;
+        }
+
+        foreach (self::HIDDEN_PREFIXES as $hidden) {
+            if ($hidden === $path || str_starts_with($path, $hidden.'/')) {
+                throw new NotFoundHttpException();
+            }
         }
 
         if (null === $this->securityContext->getAdminUser()) {

@@ -490,6 +490,12 @@ answers alone.
 
 ## Scripts and measurement
 
+> **Not offered in this version.** The scripts screen and the site styles
+> screen are left out of the back office: neither the menu nor the dashboard
+> links to them, and their addresses answer 404. Snippets saved before keep
+> being written into the pages as described below, and the custom-code
+> permission keeps governing free HTML in the editor.
+
 **CMS > Scripts and measurement** holds the third-party snippets of the site: the
 measurement tags, the chat widget, whatever the agency was asked to add. They
 live here rather than in the theme, so they are the same on every page and

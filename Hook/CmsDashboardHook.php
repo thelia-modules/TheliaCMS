@@ -90,7 +90,6 @@ class CmsDashboardHook extends BaseHook
             'title' => $this->trans('The site', [], TheliaCMS::DOMAIN_NAME),
             'pages_url' => $this->urls->generate('admin.cms.pages.list'),
             'forms_url' => $this->urls->generate('admin.cms.forms.list'),
-            'scripts_url' => $this->urls->generate('admin.cms.scripts.list'),
         ]));
     }
 
