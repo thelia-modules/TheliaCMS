@@ -198,6 +198,7 @@ return [
     'Fits inside' => 'Tient dans la zone',
     'Flexible' => 'Flexible',
     'Folder' => 'Dossier',
+    'Folders' => 'Dossiers',
     'Follow links' => 'Suivre les liens',
     'Font' => 'Police',
     'Font weight' => 'Graisse',
