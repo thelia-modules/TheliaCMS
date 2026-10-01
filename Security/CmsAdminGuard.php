@@ -21,6 +21,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Tools\TokenProvider;
 
 /**
  * Guards every route under `/admin/cms`, including the ones imported from the
@@ -31,6 +32,11 @@ use Thelia\Core\Security\SecurityContext;
  * protected as the check its own controller performs — and the bundle's
  * controllers perform none by design. A listener on the whole prefix means a
  * new route can never ship unguarded by omission.
+ *
+ * The same goes for the token of the back office: every request that is not a
+ * read (POST, PUT, PATCH, DELETE) must carry it, in the `_token` field of the
+ * body or in the `X-CSRF-Token` header, the way the core and the back-office
+ * theme send it.
  */
 final readonly class CmsAdminGuard
 {
@@ -68,6 +74,7 @@ final readonly class CmsAdminGuard
 
     public function __construct(
         private SecurityContext $securityContext,
+        private TokenProvider $tokens,
     ) {
     }
 
@@ -98,6 +105,12 @@ final readonly class CmsAdminGuard
         // CREATE/UPDATE/DELETE on the same resource.
         if (!$this->securityContext->isGranted(['ADMIN'], [$this->resourceFor($path)], [], [AccessManager::VIEW])) {
             throw new AccessDeniedHttpException('You are not allowed to access the CMS section.');
+        }
+
+        // Throws TokenAuthenticationException, which the back-office theme
+        // answers with a 403 (JSON for a script).
+        if (!$event->getRequest()->isMethodSafe()) {
+            $this->tokens->checkRequestToken($event->getRequest());
         }
     }
 
