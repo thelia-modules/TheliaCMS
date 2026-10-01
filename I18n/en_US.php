@@ -198,6 +198,7 @@ return [
     'Fits inside' => 'Fits inside',
     'Flexible' => 'Flexible',
     'Folder' => 'Folder',
+    'Folders' => 'Folders',
     'Follow links' => 'Follow links',
     'Font' => 'Font',
     'Font weight' => 'Font weight',

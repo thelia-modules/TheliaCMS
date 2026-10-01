@@ -19,6 +19,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Hook\BaseHook;
 use Thelia\Core\Security\AccessManager;
+use Thelia\Core\Security\Resource\AdminResources;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Core\Template\Parser\ParserResolver;
 use TheliaCMS\Security\CmsResources;
@@ -36,6 +37,14 @@ class CmsSideNavHook extends BaseHook
 {
     /** Where every screen of this module answers. */
     private const string SECTION_PATH = '/admin/cms';
+
+    /**
+     * The folder and content screens of the shop, linked from this section
+     * since it replaces the folder section of the theme.
+     *
+     * @var list<string>
+     */
+    private const array FOLDER_PATHS = ['/admin/folder', '/admin/content'];
 
     public function __construct(
         private readonly SecurityContext $securityContext,
@@ -59,7 +68,11 @@ class CmsSideNavHook extends BaseHook
 
     public function onMainInTopMenuItems(HookRenderEvent $event): void
     {
-        if (!$this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::VIEW])) {
+        $maySeePages = $this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::VIEW]);
+
+        // The folders used to have a section of their own: a profile allowed on
+        // them and on nothing of the CMS still finds them here.
+        if (!$maySeePages && !$this->securityContext->isGranted(['ADMIN'], [AdminResources::FOLDER], [], [AccessManager::VIEW])) {
             return;
         }
 
@@ -75,11 +88,11 @@ class CmsSideNavHook extends BaseHook
         // the parser only knows the module template directories registered for
         // the *active* template, so a namespaced name is the reliable form.
         $event->add($this->twig->render('@TheliaCMSModule/backOffice/default-twig/side-nav.html.twig', [
-            'pages_url' => $this->urls->generate('admin.cms.pages.list'),
+            'pages_url' => $maySeePages ? $this->urls->generate('admin.cms.pages.list') : null,
             // Reusable blocks belong to the page resource: whoever may edit a
             // page may edit what pages share.
-            'blocks_url' => $this->urls->generate('admin.cms.blocks.list'),
-            'templates_url' => $this->urls->generate('admin.cms.templates.list'),
+            'blocks_url' => $maySeePages ? $this->urls->generate('admin.cms.blocks.list') : null,
+            'templates_url' => $maySeePages ? $this->urls->generate('admin.cms.templates.list') : null,
             'menus_url' => $maySeeMenus ? $this->urls->generate('admin.cms.menus.list') : null,
             'forms_url' => $maySeeForms ? $this->urls->generate('admin.cms.forms.list') : null,
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
@@ -97,6 +110,7 @@ class CmsSideNavHook extends BaseHook
             'blocks_label' => $this->trans('Blocks', [], TheliaCMS::DOMAIN_NAME),
             'templates_label' => $this->trans('Templates', [], TheliaCMS::DOMAIN_NAME),
             'menus_label' => $this->trans('Menus', [], TheliaCMS::DOMAIN_NAME),
+            'folders_label' => $this->trans('Folders', [], TheliaCMS::DOMAIN_NAME),
             'forms_label' => $this->trans('Forms', [], TheliaCMS::DOMAIN_NAME),
             'media_label' => $this->trans('Media', [], TheliaCMS::DOMAIN_NAME),
             'settings_label' => $this->trans('Settings', [], TheliaCMS::DOMAIN_NAME),
@@ -116,6 +130,18 @@ class CmsSideNavHook extends BaseHook
     {
         $path = (string) $this->getRequest()?->getPathInfo();
 
-        return self::SECTION_PATH === $path || str_starts_with($path, self::SECTION_PATH.'/');
+        if (self::SECTION_PATH === $path || str_starts_with($path, self::SECTION_PATH.'/')) {
+            return true;
+        }
+
+        // Matched the way the theme matches its own folder section, as a prefix:
+        // the folder screens answer on `/admin/folders` and `/admin/folder/...`.
+        foreach (self::FOLDER_PATHS as $folderPath) {
+            if (str_starts_with($path, $folderPath)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -603,6 +603,13 @@ profile under **Configuration > Administrators**.
 Every route under `/admin/cms` is guarded by the resource of its section, so a
 route added later cannot ship unprotected by omission.
 
+While the module is active, the Folders section of the back-office menu is
+hidden and the CMS section links to the folders instead, so the content of the
+site has one place in the menu. The folder and content screens are those of the
+shop, unchanged, and keep their own permission (`admin.folder`): a profile
+allowed on the folders and on nothing of the CMS still sees the CMS section,
+with that one entry in it.
+
 ## Theme integration
 
 The module renders a page with `cmspage.html.twig` from the active theme when
