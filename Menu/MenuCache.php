@@ -58,6 +58,24 @@ final readonly class MenuCache
         });
     }
 
+    /**
+     * How many entries a menu stores, usable or not, cached and invalidated
+     * with the resolved menus.
+     *
+     * @param callable(): int $count
+     */
+    public function storedEntryCount(string $code, callable $count): int
+    {
+        $key = \sprintf('thelia_cms_menu_entries.%s', preg_replace('/[^a-z0-9_-]/i', '_', $code));
+
+        return (int) $this->cache->get($key, function (ItemInterface $item) use ($count): int {
+            $item->tag(self::TAG);
+            $item->expiresAfter($this->ttl());
+
+            return $count();
+        });
+    }
+
     public function invalidate(): void
     {
         $this->cache->invalidateTags([self::TAG]);
