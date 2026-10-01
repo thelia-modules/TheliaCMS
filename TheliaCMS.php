@@ -34,7 +34,6 @@ use Thelia\Model\ResourceQuery;
 use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
 use TheliaCMS\Builder\CmsBuilderConfig;
-use TheliaCMS\Http\RoutingConditionFunctionsPass;
 use TheliaCMS\Install\LegalPagesSeeder;
 use TheliaCMS\Install\MenuSeeder;
 use TheliaCMS\Media\LibraryImageCatalog;
@@ -321,7 +320,7 @@ class TheliaCMS extends BaseModule
 
     public static function getCompilers(): array
     {
-        return [new CmsAdminResourcesCompiler(), new RoutingConditionFunctionsPass()];
+        return [new CmsAdminResourcesCompiler()];
     }
 
     /**
