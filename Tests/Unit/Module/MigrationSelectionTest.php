@@ -39,6 +39,16 @@ final class MigrationSelectionTest extends TestCase
         self::assertSame(['0.3.0', '0.4.0', '0.5.0', '0.6.0'], $versions);
     }
 
+    /**
+     * What a first activation plays after the schema: every file, in the
+     * order the versions rank.
+     */
+    public function testAFirstActivationGetsEveryFileInOrder(): void
+    {
+        self::assertSame(TheliaCMS::migrationsBetween('0.0.0', '99.0.0'), TheliaCMS::everyMigration());
+        self::assertContains('0.4.0', $this->versionsBetween('0.0.0', '99.0.0'), 'The contact form is seeded by 0.4.0.');
+    }
+
     public function testASiteAlreadyUpToDateGetsNothing(): void
     {
         $current = $this->versionsBetween('0.0.0', '99.0.0');
