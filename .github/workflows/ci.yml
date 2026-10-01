@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# A new push to a pull request makes its previous run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tests:
+    # The module is tested inside the tip of Thelia, where it is meant to run:
+    # thelia/thelia on main with the themes on their development branch, the
+    # module checked out in local/modules/TheliaCMS. Its two PHPUnit
+    # configurations bootstrap from that place (../../../vendor/autoload.php and
+    # ../../../tests/bootstrap.php).
+    name: Tests (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '8.3', '8.4', '8.5' ]
+    timeout-minutes: 30
+    env:
+      # Without a token, Flex skips the thelia/thelia-recipes endpoint in silence
+      # and the GitHub archives of the theme branches are rate limited.
+      COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
+    steps:
+      - name: Check out Thelia
+        uses: actions/checkout@v4
+        with:
+          repository: thelia/thelia
+          ref: main
+
+      - name: Check out the module
+        uses: actions/checkout@v4
+        with:
+          path: local/modules/TheliaCMS
+
+      - name: Start MySQL
+        # The runner ships MySQL 8 (root/root on 127.0.0.1:3306), utf8mb4 by
+        # default and with InnoDB FULLTEXT, which the page search needs.
+        run: sudo systemctl start mysql.service
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '${{ matrix.php }}'
+          ini-values: post_max_size=20M
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, mysql, gd, zip
+          coverage: none
+          tools: composer
+
+      - name: Prepare the test database credentials
+        run: printf 'DATABASE_HOST=127.0.0.1\nDATABASE_PORT=3306\nDATABASE_USER=root\nDATABASE_PASSWORD=root\nDATABASE_NAME=test\n' > .env.test.local
+
+      - name: Require the themes from their development branch and the dependencies of the module
+        # Same theme pins as the CI of thelia/thelia. The module sits in
+        # local/modules rather than being required, so Composer never reads its
+        # composer.json: its own dependencies are required from it here, every
+        # package but PHP, the core (the checkout above) and the installer.
+        run: |
+          deps=$(php -r '
+            $require = json_decode(file_get_contents("local/modules/TheliaCMS/composer.json"), true)["require"] ?? [];
+            foreach ($require as $package => $constraint) {
+                if ("php" === $package || str_starts_with($package, "ext-") || in_array($package, ["thelia/core", "thelia/installer"], true)) {
+                    continue;
+                }
+                echo $package.":".$constraint, PHP_EOL;
+            }
+          ')
+          echo "$deps"
+          composer require --no-update --no-scripts --no-audit \
+            "thelia/flexy:dev-main as 1.99.0" \
+            "thelia/backoffice-default-twig-template:dev-main as 1.99.0" \
+            "thelia/email-default-template:dev-main as 1.99.0" \
+            "thelia/pdf-default-template:dev-main as 1.99.0" \
+            $deps
+
+      - name: Locate the Composer download cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the Composer download cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.json', 'local/modules/TheliaCMS/composer.json') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install Composer dependencies
+        run: composer update --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Build the test database
+        # Creates the test database, builds the Propel models (the module's
+        # included) and activates every module present, this one among them.
+        run: php bin/test-prepare
+
+      - name: Check that the module is active in the test database
+        # A module test-prepare left inactive would make the integration suite
+        # test a shop without it.
+        run: |
+          active=$(mysql -h127.0.0.1 -uroot -proot -N -e "SELECT activate FROM test.module WHERE code = 'TheliaCMS'")
+          echo "TheliaCMS active: ${active:-missing}"
+          test "$active" = "1"
+
+      - name: Restore the Sass and Tailwind binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            var/dart-sass
+            var/tailwind/v*
+          key: asset-binaries-${{ runner.os }}-${{ hashFiles('templates/frontOffice/*/config/**') }}
+          restore-keys: asset-binaries-${{ runner.os }}-
+
+      - name: Build the theme assets and warm the test container
+        # The integration suite renders pages and the editor canvas reads the
+        # compiled stylesheets of the theme. --no-debug: the PHPUnit
+        # configurations force APP_DEBUG=0.
+        run: |
+          php bin/console importmap:install --env=test --no-debug
+          php bin/console tailwind:build --env=test --no-debug
+          php bin/console sass:build --env=test --no-debug
+          php bin/console cache:warmup --env=test --no-debug
+
+      - name: Unit tests
+        run: vendor/bin/phpunit -c local/modules/TheliaCMS/phpunit.xml.dist
+
+      - name: Integration tests
+        if: ${{ !cancelled() }}
+        run: vendor/bin/phpunit -c local/modules/TheliaCMS/phpunit.integration.xml.dist
