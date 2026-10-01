@@ -166,6 +166,8 @@ final readonly class CmsBlockAdminController
 
     private function saveBlock(FormInterface $form, CmsBlock $block, Lang $lang): bool
     {
+        $this->denyUnless($block->isNew() ? AccessManager::CREATE : AccessManager::UPDATE);
+
         $data = $form->getData();
         $code = (string) $data['code'];
 
