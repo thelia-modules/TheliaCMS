@@ -9,7 +9,8 @@ published as plain HTML and CSS. A published page ships no builder JavaScript.
 
 ## Compatibility
 
-- Thelia 3.0
+- Thelia 3.2 or later: the module answers the content slots and the
+  back-office navigation that version introduced
 - PHP 8.3+
 - MySQL 5.6+ or MariaDB 10.0.5+, because the front-office search uses a native
   FULLTEXT index
