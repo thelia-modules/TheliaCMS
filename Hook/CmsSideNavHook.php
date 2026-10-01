@@ -82,11 +82,12 @@ class CmsSideNavHook extends BaseHook
         $maySeeForms = $this->securityContext->isGranted(['ADMIN'], [CmsResources::FORM], [], [AccessManager::VIEW]);
         $maySeeMedia = $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::VIEW]);
         $maySeeSettings = $this->securityContext->isGranted(['ADMIN'], [CmsResources::SETTINGS], [], [AccessManager::VIEW]);
-        $maySeeScripts = $this->securityContext->isGranted(['ADMIN'], [CmsResources::CUSTOM_CODE], [], [AccessManager::VIEW]);
 
         // Rendered through the Twig environment rather than BaseHook::render():
         // the parser only knows the module template directories registered for
         // the *active* template, so a namespaced name is the reliable form.
+        // The scripts and site styles screens are not offered: they are closed
+        // by CmsAdminGuard, which says why.
         $event->add($this->twig->render('@TheliaCMSModule/backOffice/default-twig/side-nav.html.twig', [
             'pages_url' => $maySeePages ? $this->urls->generate('admin.cms.pages.list') : null,
             // Reusable blocks belong to the page resource: whoever may edit a
@@ -97,9 +98,6 @@ class CmsSideNavHook extends BaseHook
             'forms_url' => $maySeeForms ? $this->urls->generate('admin.cms.forms.list') : null,
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
             'settings_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.edit') : null,
-            // The global styles belong to whoever may change the settings.
-            'styles_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.styles.edit') : null,
-            'scripts_url' => $maySeeScripts ? $this->urls->generate('admin.cms.scripts.list') : null,
             'is_active' => $this->isOnACmsScreen(),
             // On a showcase site the content *is* the site, so its section comes
             // before the shop ones. The sidebar is a flex column, so ordering it
@@ -114,8 +112,6 @@ class CmsSideNavHook extends BaseHook
             'forms_label' => $this->trans('Forms', [], TheliaCMS::DOMAIN_NAME),
             'media_label' => $this->trans('Media', [], TheliaCMS::DOMAIN_NAME),
             'settings_label' => $this->trans('Settings', [], TheliaCMS::DOMAIN_NAME),
-            'styles_label' => $this->trans('Site styles', [], TheliaCMS::DOMAIN_NAME),
-            'scripts_label' => $this->trans('Scripts and measurement', [], TheliaCMS::DOMAIN_NAME),
         ]));
     }
 
