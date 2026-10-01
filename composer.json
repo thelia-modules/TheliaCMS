@@ -5,6 +5,7 @@
     "description": "All-in-one CMS for Thelia 3: page tree, visual page builder, menus, forms and media.",
     "require": {
         "php": ">=8.3",
+        "thelia/core": "^3.2",
         "thelia/installer": "~1.6",
         "openstudio/page-builder-bundle": "^0.2.1",
         "symfony/html-sanitizer": "^7.4",
