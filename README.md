@@ -17,6 +17,27 @@ published as plain HTML and CSS. A published page ships no builder JavaScript.
 - URL rewriting switched on: every CMS page is served through a rewritten URL,
   and the module refuses to activate without it
 
+## Pages, Page module and TheliaBlocks
+
+A Thelia 3.2 shop on the Flexy theme already has two modules that edit content,
+both required by the theme:
+
+- **Page** (`thelia/page-module`) makes standalone pages out of TheliaBlocks,
+  served on rewritten `*.html` addresses. It has its own home page: a page
+  flagged as home is served on `/`.
+- **TheliaBlocks** (`thelia/thelia-blocks-module`) attaches groups of blocks to
+  the shop's own items: products, categories, brands, contents and folders.
+
+TheliaCMS runs alongside them, with its own tables, screens and addresses. It
+never reads what Page and TheliaBlocks store, and they ignore it in return. The
+CMS also has a home page (`home_page_id`, see [Configuration](#configuration)),
+so set one in a single module only.
+
+The contents and folders of the shop are not CMS pages. They stay where they
+are, in Folders, which the back-office menu now reaches from the CMS section.
+Nothing is converted: not the contents, not the Page pages, not the TheliaBlocks
+groups.
+
 ## Installation
 
 The released versions are alpha, which Composer will not pick on its own, so ask
