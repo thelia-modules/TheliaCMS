@@ -77,6 +77,7 @@
                         {% if may_delete %}
                             <form method="post" action="{{ path('admin.cms.forms.submissions_delete', { id: cms_form.id, submissionId: submission.id }) }}"
                                   onsubmit="return confirm('{{ 'Delete this answer for good? This is what answering a request to be forgotten does.'|trans({}, 'theliacms')|e('js') }}')">
+                                <input type="hidden" name="_token" value="{{ assignToken() }}">
                                 <input type="hidden" name="email" value="{{ email }}">
                                 <input type="hidden" name="edit_language_id" value="{{ edit_language_id }}">
                                 <button class="btn btn-sm btn-outline-danger" type="submit">

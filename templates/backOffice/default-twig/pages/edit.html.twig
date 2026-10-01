@@ -54,6 +54,7 @@
     </div>
 
     {{ form_start(form) }}
+        <input type="hidden" name="_token" value="{{ assignToken() }}">
         <div class="tab-content">
             <div class="tab-pane fade show active" id="tab-general" role="tabpanel">
                 <div class="row g-3">
@@ -100,16 +101,20 @@
         {# Kept out of the settings form: each one is a POST of its own. #}
         <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
             <form method="post" action="{{ path('admin.cms.pages.publish', { id: page.id, edit_language_id: edit_language_id }) }}">
+                <input type="hidden" name="_token" value="{{ assignToken() }}">
                 <button type="submit" class="btn btn-sm btn-success">{{ 'Publish this version'|trans({}, 'theliacms') }}</button>
             </form>
             <form method="post" action="{{ path('admin.cms.pages.unpublish', { id: page.id, edit_language_id: edit_language_id }) }}">
+                <input type="hidden" name="_token" value="{{ assignToken() }}">
                 <button type="submit" class="btn btn-sm btn-outline-secondary">{{ 'Unpublish'|trans({}, 'theliacms') }}</button>
             </form>
             <form method="post" action="{{ path('admin.cms.pages.duplicate', { id: page.id, edit_language_id: edit_language_id }) }}">
+                <input type="hidden" name="_token" value="{{ assignToken() }}">
                 <button type="submit" class="btn btn-sm btn-outline-secondary">{{ 'Duplicate'|trans({}, 'theliacms') }}</button>
             </form>
             {% if not is_home %}
                 <form method="post" action="{{ path('admin.cms.pages.set_as_home', { id: page.id, edit_language_id: edit_language_id }) }}">
+                    <input type="hidden" name="_token" value="{{ assignToken() }}">
                     <button type="submit" class="btn btn-sm btn-outline-secondary">{{ 'Set as home page'|trans({}, 'theliacms') }}</button>
                 </form>
             {% endif %}

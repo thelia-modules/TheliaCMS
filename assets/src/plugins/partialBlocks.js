@@ -1,3 +1,5 @@
+import { TOKEN_HEADER, backOfficeToken } from "../backOfficeToken.js";
+
 const TYPE = "cms-partial";
 const NAME_ATTRIBUTE = "data-cms-partial";
 const PROPS_ATTRIBUTE = "data-props";
@@ -174,7 +176,11 @@ export default (editor, options = {}) => {
                     const response = await fetch(endpoint, {
                         method: "POST",
                         credentials: "same-origin",
-                        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Requested-With": "XMLHttpRequest",
+                            [TOKEN_HEADER]: backOfficeToken(),
+                        },
                         body: JSON.stringify({ name: definition.name, props, locale }),
                     });
 

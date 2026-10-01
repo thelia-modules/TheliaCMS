@@ -15,6 +15,12 @@
 (function () {
     'use strict';
 
+    function backOfficeToken() {
+        var meta = document.querySelector('meta[name="bo-token"]');
+
+        return meta ? meta.getAttribute('content') || '' : '';
+    }
+
     function bindTargetFields(select) {
         var form = select.closest('form');
 
@@ -128,6 +134,9 @@
             var body = new FormData();
             body.append('parent', parent);
             body.append('position', String(position));
+            // The token of the back office, rendered by its layout: a write is
+            // refused without it, and it travels in the body, never in the URL.
+            body.append('_token', backOfficeToken());
 
             fetch(tree.dataset.placeUrl.replace('{id}', id), {
                 method: 'POST',

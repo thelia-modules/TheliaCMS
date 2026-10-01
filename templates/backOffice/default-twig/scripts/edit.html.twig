@@ -19,6 +19,7 @@
     {% endembed %}
 
     {{ form_start(form) }}
+        <input type="hidden" name="_token" value="{{ assignToken() }}">
         <div class="row g-3">
             <div class="col-lg-7">
                 <div class="card">

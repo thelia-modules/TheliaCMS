@@ -19,6 +19,7 @@
     </p>
 
     {{ form_start(form) }}
+        <input type="hidden" name="_token" value="{{ assignToken() }}">
         {{ form_errors(form) }}
 
         {% set element_titles = {

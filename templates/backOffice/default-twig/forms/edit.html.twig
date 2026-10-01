@@ -90,12 +90,14 @@
                                             <td class="text-end" style="width: 12rem">
                                                 <div class="d-inline-flex gap-1">
                                                     <form method="post" action="{{ path('admin.cms.forms.field_move', { id: cms_form.id, fieldId: row.field.id, direction: 'up', edit_language_id: edit_language_id }) }}">
+                                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
                                                         <button class="btn btn-sm btn-outline-secondary" type="submit"
                                                                 aria-label="{{ 'Move up'|trans({}, 'theliacms') }}" {{ row.canMoveUp ? '' : 'disabled' }}>
                                                             <i class="bi bi-arrow-up" aria-hidden="true"></i>
                                                         </button>
                                                     </form>
                                                     <form method="post" action="{{ path('admin.cms.forms.field_move', { id: cms_form.id, fieldId: row.field.id, direction: 'down', edit_language_id: edit_language_id }) }}">
+                                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
                                                         <button class="btn btn-sm btn-outline-secondary" type="submit"
                                                                 aria-label="{{ 'Move down'|trans({}, 'theliacms') }}" {{ row.canMoveDown ? '' : 'disabled' }}>
                                                             <i class="bi bi-arrow-down" aria-hidden="true"></i>
@@ -107,6 +109,7 @@
                                                     </a>
                                                     <form method="post" action="{{ path('admin.cms.forms.field_delete', { id: cms_form.id, fieldId: row.field.id, edit_language_id: edit_language_id }) }}"
                                                           onsubmit="return confirm('{{ 'Remove this field? The answers already received keep it.'|trans({}, 'theliacms')|e('js') }}')">
+                                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
                                                         <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}">
                                                             <i class="bi bi-trash3" aria-hidden="true"></i>
                                                         </button>
@@ -129,6 +132,7 @@
                 </div>
                 <div class="card-body">
                     {{ form_start(settings_form) }}
+                        <input type="hidden" name="_token" value="{{ assignToken() }}">
                         {{ form_errors(settings_form) }}
 
                         {{ form_row(settings_form.title) }}
@@ -186,6 +190,7 @@
                     </div>
                     <div class="card-body">
                         {{ form_start(field_form) }}
+                            <input type="hidden" name="_token" value="{{ assignToken() }}">
                             {{ form_errors(field_form) }}
                             {{ form_row(field_form.type) }}
                             {{ form_row(field_form.label) }}

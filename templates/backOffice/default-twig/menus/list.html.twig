@@ -59,6 +59,7 @@
                                         </a>
                                         <form method="post" action="{{ path('admin.cms.menus.delete', { id: menu.id, edit_language_id: edit_language_id }) }}"
                                               onsubmit="return confirm('{{ 'Delete this menu and all of its entries?'|trans({}, 'theliacms')|e('js') }}')">
+                                            <input type="hidden" name="_token" value="{{ assignToken() }}">
                                             <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}">
                                                 <i class="bi bi-trash3" aria-hidden="true"></i>
                                             </button>

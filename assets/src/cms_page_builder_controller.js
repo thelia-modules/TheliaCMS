@@ -4,6 +4,7 @@ import catalogBlocks from "./plugins/catalogBlocks.js";
 import headingLevels from "./plugins/headingLevels.js";
 import richTextTrait from "./plugins/richTextTrait.js";
 import canvasWrapperClasses from "./plugins/canvasWrapperClasses.js";
+import assetManagerUpload from "./plugins/assetManagerUpload.js";
 
 /**
  * Thelia flavour of the page builder controller.
@@ -134,6 +135,7 @@ export default class extends PageBuilderController {
         this.pluginManager.registerPlugin("cms:heading-levels", headingLevels);
         this.pluginManager.registerPlugin("cms:rich-text-trait", richTextTrait);
         this.pluginManager.registerPlugin("cms:canvas-wrapper-classes", canvasWrapperClasses);
+        this.pluginManager.registerPlugin("cms:asset-manager-upload", assetManagerUpload);
 
         const labels = this.editorLabelsValue ?? {};
 
@@ -167,8 +169,10 @@ export default class extends PageBuilderController {
             plugins.push("pb:button-save");
         }
 
+        // The image library of the bundle, with the token of the back office
+        // on its upload and its deletion.
         if (this.endpointsValue?.uploadImage) {
-            plugins.push({ name: "pb:asset-manager-upload", options: { endpoints: this.endpointsValue, context: this.contextValue } });
+            plugins.push({ name: "cms:asset-manager-upload", options: { endpoints: this.endpointsValue, context: this.contextValue } });
         }
 
         if (this.canvasWrapperClassesValue.length > 0) {

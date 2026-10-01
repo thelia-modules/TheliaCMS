@@ -88,6 +88,7 @@
                                 <td class="text-end">
                                     {% if row.restorable %}
                                         <form method="post" action="{{ path('admin.cms.pages.restore', { id: page.id, edit_language_id: edit_language_id }) }}">
+                                            <input type="hidden" name="_token" value="{{ assignToken() }}">
                                             <button type="submit" class="btn btn-sm btn-outline-primary">{{ 'Restore'|trans({}, 'theliacms') }}</button>
                                         </form>
                                     {% else %}
