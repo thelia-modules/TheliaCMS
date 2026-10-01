@@ -100,6 +100,9 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- The page form no longer raises a Symfony deprecation each time it is built.
+  Its canonical URL field left the default scheme unset; a canonical address
+  typed without its scheme is now read as `https://`, as in SEOne.
 - Deleting an image from the image library of the editor works. The editor
   sent the deletion to an address no route answered, so it got a 404 and the
   image stayed in the library. The deletion now follows the rules of the media
