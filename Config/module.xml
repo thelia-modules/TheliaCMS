@@ -24,7 +24,7 @@
     </authors>
     <type>classic</type>
     <thelia>3.2.0</thelia>
-    <stability>alpha</stability>
+    <stability>prod</stability>
     <mandatory>0</mandatory>
     <hidden>0</hidden>
 </module>
