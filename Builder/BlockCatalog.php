@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Builder;
 
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+use TheliaCMS\Settings\DisabledBlocks;
 
 /**
  * Every block the editor offers: the ten shipped with the module, plus
@@ -57,13 +58,22 @@ final readonly class BlockCatalog
     }
 
     /**
+     * The blocks the editor offers: the catalogue, less what was switched off
+     * under CMS > Settings. {@see blocks()} keeps listing those, since that
+     * screen is where they are switched back on.
+     *
      * @return list<array<string, string>>
      */
-    public function toEditor(string $locale): array
+    public function toEditor(string $locale, ?DisabledBlocks $disabled = null): array
     {
+        $disabled ??= DisabledBlocks::none();
+
         return array_map(
             static fn (CatalogBlock $block): array => $block->toEditor(),
-            $this->blocks($locale),
+            array_values(array_filter(
+                $this->blocks($locale),
+                static fn (CatalogBlock $block): bool => !$disabled->contains($block->id),
+            )),
         );
     }
 }

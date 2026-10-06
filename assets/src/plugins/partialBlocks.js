@@ -244,7 +244,10 @@ export default (editor, options = {}) => {
         canvasDocument.head.appendChild(style);
     });
 
-    partials.forEach((partial) => {
+    // A block switched off under CMS > Settings was described above with
+    // the others, so a page that already holds it keeps its preview and its
+    // settings; it is only left out of the panel.
+    partials.filter((partial) => partial.enabled !== false).forEach((partial) => {
         editor.Blocks.add(`cms-partial:${partial.name}`, {
             label: partial.label,
             media: ICON,

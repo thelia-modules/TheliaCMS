@@ -17,6 +17,7 @@ namespace TheliaCMS\Tests\Unit\Partial;
 use PHPUnit\Framework\TestCase;
 use TheliaCMS\Partial\PartialProp;
 use TheliaCMS\Partial\PartialRegistry;
+use TheliaCMS\Settings\DisabledBlocks;
 
 /**
  * The registry is the allow list of the whole feature: a page names a block,
@@ -56,6 +57,23 @@ final class PartialRegistryTest extends TestCase
         self::assertSame(['count', 'folder'], array_column($described[0]['props'], 'name'));
         self::assertSame('integer', $described[0]['props'][0]['type']);
         self::assertSame('/sources/folders', $described[0]['props'][1]['source']);
+    }
+
+    /**
+     * A page holding a block switched off under CMS > Settings still has to
+     * preview it and edit its settings, so the block is described with the
+     * others and only flagged.
+     */
+    public function testASwitchedOffPartialIsDescribedAllTheSameAndFlagged(): void
+    {
+        $registry = new PartialRegistry([new FakePartial('cms-menu'), new FakePartial('latest-contents')]);
+
+        self::assertSame([true, true], array_column($registry->toEditor(), 'enabled'), 'Everything is on until something is switched off.');
+
+        $described = $registry->toEditor(new DisabledBlocks(['cms-menu']));
+
+        self::assertSame(['cms-menu', 'latest-contents'], array_column($described, 'name'));
+        self::assertSame([false, true], array_column($described, 'enabled'));
     }
 
     /**

@@ -22,6 +22,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Front\BlockStyles;
 use TheliaCMS\Partial\PartialRegistry;
+use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\SiteStyles;
 use TheliaCMS\TheliaCMS;
 
@@ -61,6 +62,7 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
         private BlockStyles $blockStyles,
         private ActiveThemeCanvas $themeCanvas,
         private Packages $packages,
+        private CmsSettings $settings,
         /** @var iterable<CanvasStylesheetProviderInterface> */
         #[AutowireIterator(self::CANVAS_STYLESHEET_TAG)]
         private iterable $canvasStylesheets = [],
@@ -79,13 +81,14 @@ final readonly class CmsBuilderConfig implements PageBuilderConfigProviderInterf
     }
 
     /**
-     * The dynamic blocks the editor offers, with their settings.
+     * The dynamic blocks the editor offers, with their settings; the ones
+     * switched off under CMS > Settings are flagged rather than left out.
      *
      * @return list<array<string, mixed>>
      */
     public function partials(): array
     {
-        return $this->partials->toEditor();
+        return $this->partials->toEditor($this->settings->disabledBlocks());
     }
 
     /**

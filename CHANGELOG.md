@@ -9,6 +9,18 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- **CMS > Settings** lists every block the editor can offer, group by group as
+  the panel shows them — the basic, layout and advanced blocks of the editor
+  itself, the page blocks of the catalogue, the live content — and lets an
+  administrator untick the ones a site has no use for. Until now every block
+  was offered to every editor, so a theme that styles no gallery still had a
+  gallery in the panel, and the "Video" and "Map" blocks of the editor sat next
+  to the facades that replace them. A block is offered until it is unticked,
+  which is why the setting stores the blocks that are off: one a module or the
+  editor adds later shows up on its own. Unticking changes the panel and
+  nothing else: a page that already holds the block keeps it, previewed and
+  editable in the editor, rendered on the front. The list travels with the
+  site export as `disabled_blocks`.
 - A theme declares the canvas of the editor in `config/theliacms.yaml`: the
   stylesheets it loads, written the way its templates pass them to `asset()`,
   and the classes of `<html>`, `<body>` and of the container around the page

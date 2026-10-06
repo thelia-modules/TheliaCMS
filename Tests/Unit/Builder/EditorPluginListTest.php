@@ -51,6 +51,27 @@ final class EditorPluginListTest extends TestCase
         );
     }
 
+    /**
+     * The blocks of the bundle and of the presets are registered by their own
+     * plugins; removing one before its plugin ran would remove nothing.
+     */
+    public function testTheSwitchedOffBlocksLeaveOnceEveryPluginAddedItsOwn(): void
+    {
+        $source = $this->controllerSource();
+        $removal = strpos($source, 'name: "cms:disabled-blocks"');
+
+        self::assertNotFalse($removal, 'The removal plugin is expected in the controller.');
+
+        foreach (['plugins.push("grapesjs:custom-code")', 'name: "cms:catalog"', 'name: "cms:partials"', 'name: "pb:form-storage"'] as $earlier) {
+            $position = strpos($source, $earlier);
+
+            self::assertNotFalse($position, $earlier.' is expected in the controller.');
+            self::assertLessThan($removal, $position, $earlier.' adds blocks, so it has to run before they are removed.');
+        }
+
+        self::assertGreaterThan($removal, strpos($source, 'initActivePlugins(plugins)'), 'The removal is pushed before the list is applied.');
+    }
+
     /** The plugins turned on for every editor, in the order they are applied. */
     private function pluginList(): string
     {

@@ -5,6 +5,7 @@ import headingLevels from "./plugins/headingLevels.js";
 import richTextTrait from "./plugins/richTextTrait.js";
 import canvasWrapperClasses from "./plugins/canvasWrapperClasses.js";
 import assetManagerUpload from "./plugins/assetManagerUpload.js";
+import disabledBlocks from "./plugins/disabledBlocks.js";
 
 /**
  * Thelia flavour of the page builder controller.
@@ -34,6 +35,9 @@ export default class extends PageBuilderController {
         // The block catalogue, described by the server so its sample text is in
         // the language of the page rather than of the back office.
         catalog: { type: Array, default: [] },
+        // Ids of the blocks switched off under CMS > Settings: the ones the
+        // editor registers itself are taken out of the panel here.
+        disabledBlocks: { type: Array, default: [] },
         contentLocale: { type: String, default: "" },
         partialCategory: { type: String, default: "Dynamic" },
         partialLabels: { type: Object, default: {} },
@@ -139,6 +143,7 @@ export default class extends PageBuilderController {
         this.pluginManager.registerPlugin("cms:rich-text-trait", richTextTrait);
         this.pluginManager.registerPlugin("cms:canvas-wrapper-classes", canvasWrapperClasses);
         this.pluginManager.registerPlugin("cms:asset-manager-upload", assetManagerUpload);
+        this.pluginManager.registerPlugin("cms:disabled-blocks", disabledBlocks);
 
         const labels = this.editorLabelsValue ?? {};
 
@@ -206,6 +211,12 @@ export default class extends PageBuilderController {
                     labels: this.partialLabelsValue,
                 },
             });
+        }
+
+        // Last of all: the blocks switched off leave the panel once every
+        // plugin has added its own.
+        if (this.disabledBlocksValue.length > 0) {
+            plugins.push({ name: "cms:disabled-blocks", options: { ids: this.disabledBlocksValue } });
         }
 
         this.pluginManager.initActivePlugins(plugins);
