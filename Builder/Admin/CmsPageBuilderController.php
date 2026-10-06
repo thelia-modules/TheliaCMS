@@ -43,6 +43,7 @@ use TheliaCMS\Page\Admin\EmptyPageContentException;
 use TheliaCMS\Page\Admin\PlaceholderPageContentException;
 use TheliaCMS\Preview\PreviewLink;
 use TheliaCMS\Security\CmsResources;
+use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\TheliaCMS;
 use Twig\Environment;
 
@@ -67,6 +68,7 @@ final readonly class CmsPageBuilderController
         private CmsPageWriter $writer,
         private CmsBuilderConfig $builderConfig,
         private BlockCatalog $catalog,
+        private CmsSettings $settings,
         private EditLanguage $languages,
         private HeadingChecker $headings,
         private PreviewLink $previewLinks,
@@ -95,6 +97,8 @@ final readonly class CmsPageBuilderController
 
         $content = $this->contentOf($page, $locale);
 
+        $disabledBlocks = $this->settings->disabledBlocks();
+
         return new Response($this->twig->render(self::TEMPLATE, [
             'form' => $form->createView(),
             // A page written before the builder existed — a seeded legal page,
@@ -116,7 +120,9 @@ final readonly class CmsPageBuilderController
             'builder_partials' => $this->builderConfig->partials(),
             // The starting blocks, with their sample text in the language of
             // the page rather than of the back office.
-            'builder_catalog' => $this->catalog->toEditor($locale),
+            'builder_catalog' => $this->catalog->toEditor($locale, $disabledBlocks),
+            // The blocks of the editor itself the panel leaves out.
+            'builder_disabled_blocks' => $disabledBlocks->ids(),
             // The editor speaks the language the back office is displayed in,
             // which is not the language of the page being translated.
             'builder_locale' => substr($request->getLocale(), 0, 2),

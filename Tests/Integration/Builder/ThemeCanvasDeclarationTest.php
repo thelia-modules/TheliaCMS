@@ -25,6 +25,7 @@ use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Builder\ThemeCanvas;
 use TheliaCMS\Front\BlockStyles;
 use TheliaCMS\Partial\PartialRegistry;
+use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\SiteStyles;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\TheliaCMS;
@@ -215,6 +216,7 @@ final class ThemeCanvasDeclarationTest extends CmsIntegrationTestCase
             $this->getService(BlockStyles::class),
             new ActiveThemeCanvas($templates),
             $this->getService(Packages::class),
+            $this->getService(CmsSettings::class),
         );
     }
 

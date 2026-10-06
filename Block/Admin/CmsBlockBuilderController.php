@@ -36,6 +36,7 @@ use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaCMS\Security\CmsResources;
+use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\TheliaCMS;
 use Twig\Environment;
 
@@ -62,6 +63,7 @@ final readonly class CmsBlockBuilderController
         private CmsBlockWriter $writer,
         private CmsBuilderConfig $builderConfig,
         private BlockCatalog $catalog,
+        private CmsSettings $settings,
         private EditLanguage $languages,
         private InitialCanvas $initialCanvas,
     ) {
@@ -87,6 +89,8 @@ final readonly class CmsBlockBuilderController
         $block->setLocale($locale);
         $content = $this->blocks->contentOf($block, $locale);
 
+        $disabledBlocks = $this->settings->disabledBlocks();
+
         return new Response($this->twig->render(self::TEMPLATE, [
             'form' => $form->createView(),
             'initial_html' => $this->initialCanvas->htmlFor($content?->getDraftProjectData(), $content?->getDraftHtml()),
@@ -97,7 +101,9 @@ final readonly class CmsBlockBuilderController
             'builder_options' => $this->builderConfig->editorOptions(),
             'builder_canvas_wrapper_classes' => $this->builderConfig->canvasWrapperClasses(),
             'builder_labels' => $this->builderConfig->editorLabels(),
-            'builder_catalog' => $this->catalog->toEditor($locale),
+            'builder_catalog' => $this->catalog->toEditor($locale, $disabledBlocks),
+            // The blocks of the editor itself the panel leaves out.
+            'builder_disabled_blocks' => $disabledBlocks->ids(),
             'builder_locale' => substr($request->getLocale(), 0, 2),
             'allow_custom_code' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::CUSTOM_CODE], [], [AccessManager::UPDATE]),
             'editor_version' => $this->builderConfig->editorVersion(),

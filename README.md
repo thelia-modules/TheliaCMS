@@ -588,6 +588,7 @@ Most of them are edited under **CMS > Settings**.
 | `maintenance_page_id` | none | CMS page shown while the site is closed. |
 | `trash_retention_days` | `30` | Days a deleted page stays in the bin before it is deleted for good. `0` keeps it until somebody deletes it by hand. |
 | `http_cache_ttl` | `0` | Seconds a shared cache may keep a page. `0` disables it, which is the default. |
+| `disabled_blocks` | empty | Ids of the blocks the editor panel leaves out, separated by commas: the blocks of the editor itself (`video`, `column2`), the catalogue (`cms-logos`) and the dynamic blocks (`cms-menu`) alike. Edited under **CMS > Settings**: every block is offered until it is listed here, and a page that already holds one keeps it. |
 | `axeptio_client_id` | none | Axeptio project. Without it no banner shows, and every snippet waiting for consent stays off. |
 | `axeptio_cookies_version` | none | Which Axeptio configuration to load, when a project has several. |
 | `axeptio_consent_map` | the two Google products | JSON: vendor to the Consent Mode signals it grants. |
@@ -633,7 +634,7 @@ profile under **Configuration > Administrators**.
 | `admin.cms.menu` | the menus and their entries |
 | `admin.cms.media` | the media library |
 | `admin.cms.custom-code` | free HTML in the editor, and `<iframe>` in published content |
-| `admin.cms.settings` | the settings screen: showcase mode, maintenance, the 404 page |
+| `admin.cms.settings` | the settings screen: showcase mode, maintenance, the 404 page, the blocks the editor offers |
 | `admin.cms.form` | reserved for the screens still to come |
 
 Every route under `/admin/cms` is guarded by the resource of its section, so a

@@ -41,6 +41,7 @@ use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Search\SearchTextExtractor;
 use TheliaCMS\Settings\CmsSettings;
+use TheliaCMS\Settings\DisabledBlocks;
 use TheliaCMS\Settings\SiteMode;
 use TheliaCMS\TheliaCMS;
 use TheliaLibrary\Model\LibraryImageQuery;
@@ -640,6 +641,9 @@ final readonly class SiteImporter
             $page($settings['maintenance_page'] ?? null),
             (int) ($settings['trash_retention_days'] ?? 30),
             (int) ($settings['http_cache_ttl'] ?? 0),
+            // A document written before the list existed says nothing about it,
+            // and leaves the site as it was.
+            \is_array($settings['disabled_blocks'] ?? null) ? new DisabledBlocks($settings['disabled_blocks']) : $this->settings->disabledBlocks(),
         );
 
         TheliaCMS::setConfigValue('home_page_id', (string) ($homePageId ?? ''));

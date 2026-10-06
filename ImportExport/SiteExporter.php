@@ -367,6 +367,10 @@ final readonly class SiteExporter
             'maintenance_page' => null !== $maintenancePageId ? self::pageUid($maintenancePageId) : null,
             'trash_retention_days' => $this->settings->trashRetentionDays(),
             'http_cache_ttl' => $this->settings->httpCacheTtl(),
+            // Which blocks the editor offers is part of what the site is made
+            // of, as the mode is: a starter kit built without a gallery stays
+            // without one.
+            'disabled_blocks' => $this->settings->disabledBlocks()->ids(),
             // Left out on purpose: whether the site is under maintenance right
             // now, and the addresses allowed through it. Those describe how one
             // installation is being operated, not what it holds.

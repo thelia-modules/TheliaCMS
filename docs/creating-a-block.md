@@ -13,6 +13,11 @@ Thelia CMS has two kinds of block, and picking the right one takes one question:
 Both are plain PHP classes in a module or a bundle. Neither needs a line of
 configuration: implementing the interface is what registers them.
 
+Either kind is offered to editors as soon as it is registered. A site that has
+no use for one takes it out of the panel under **CMS > Settings**, by the id you
+gave it; nothing in your code has to know, and a page that already holds the
+block keeps it.
+
 The two examples below are shipped and commented in `docs/examples/`.
 
 ## A static block

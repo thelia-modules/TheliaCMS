@@ -44,6 +44,7 @@ final readonly class CmsSettings
     public const string MAINTENANCE_PAGE = 'maintenance_page_id';
     public const string TRASH_RETENTION_DAYS = 'trash_retention_days';
     public const string HTTP_CACHE_TTL = PageCachePolicy::TTL_SETTING;
+    public const string DISABLED_BLOCKS = 'disabled_blocks';
 
     /**
      * How long a client is asked to wait before coming back. Long enough for a
@@ -98,6 +99,14 @@ final readonly class CmsSettings
         ));
     }
 
+    /**
+     * The blocks the editor panel leaves out, static and dynamic alike.
+     */
+    public function disabledBlocks(): DisabledBlocks
+    {
+        return DisabledBlocks::fromStorage(TheliaCMS::getConfigValue(self::DISABLED_BLOCKS));
+    }
+
     public function isMaintenanceActive(): bool
     {
         return '1' === (string) TheliaCMS::getConfigValue(self::MAINTENANCE_ACTIVE, '0');
@@ -128,6 +137,7 @@ final readonly class CmsSettings
         ?int $maintenancePageId,
         ?int $trashRetentionDays,
         ?int $httpCacheTtl,
+        DisabledBlocks $disabledBlocks,
     ): void {
         TheliaCMS::setConfigValue(self::SITE_MODE, $mode->value);
         TheliaCMS::setConfigValue(self::NOT_FOUND_PAGE, (string) ($notFoundPageId ?? ''));
@@ -136,6 +146,7 @@ final readonly class CmsSettings
         TheliaCMS::setConfigValue(self::MAINTENANCE_PAGE, (string) ($maintenancePageId ?? ''));
         TheliaCMS::setConfigValue(self::TRASH_RETENTION_DAYS, (string) TrashRetention::normalize($trashRetentionDays));
         TheliaCMS::setConfigValue(self::HTTP_CACHE_TTL, (string) max(0, min((int) $httpCacheTtl, PageCachePolicy::MAX_TTL)));
+        TheliaCMS::setConfigValue(self::DISABLED_BLOCKS, $disabledBlocks->toStorage());
     }
 
     private function pageId(string $key): ?int

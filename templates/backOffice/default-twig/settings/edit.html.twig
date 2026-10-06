@@ -3,6 +3,19 @@
 {% block title %}{{ 'Site settings'|trans({}, 'theliacms') }}{% endblock %}
 {% block body_testid %}cms-settings{% endblock %}
 
+{% macro block_choices(field) %}
+    <div class="mb-3">
+        {{ form_label(field) }}
+        {% for choice in field %}
+            <div class="form-check">
+                {{ form_widget(choice) }}
+                {{ form_label(choice) }}
+            </div>
+        {% endfor %}
+        {{ form_errors(field) }}
+    </div>
+{% endmacro %}
+
 {% block content %}
     {% form_theme form with bo_form_themes only %}
 
@@ -99,6 +112,28 @@
 
                         <p class="text-muted small mb-0">
                             {{ 'While the site is closed, visitors get a 503 answer asking them to come back in %minutes% minutes, and the back office stays reachable.'|trans({'%minutes%': (retry_after / 60)|round}, 'theliacms') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card" data-testid="cms-settings-blocks">
+                    <div class="card-header">{{ 'Blocks offered in the editor'|trans({}, 'theliacms') }}</div>
+                    <div class="card-body">
+                        {# Rendered by hand rather than through form_row: the back-office
+                           theme draws a checkbox without its label, and leaves the label to
+                           the row, so the checkboxes of an expanded choice came out bare. #}
+                        <div class="row g-3">
+                            {% for group in form.enabledBlocks %}
+                                <div class="col-lg-4">
+                                    {{ _self.block_choices(group) }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <p class="text-muted small mb-0">
+                            {{ 'A block left unticked leaves the panel of the editor, and nothing else: the pages that already hold it keep it. A block a module adds later is offered until it is unticked here.'|trans({}, 'theliacms') }}
                         </p>
                     </div>
                 </div>
