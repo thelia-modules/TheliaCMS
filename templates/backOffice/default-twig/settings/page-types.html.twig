@@ -1,0 +1,81 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Page types'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-page-types{% endblock %}
+
+{% block content %}
+    {% form_theme form with bo_form_themes only %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Page types'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.settings.edit') }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to settings'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">
+        {{ 'The type of a page picks the template it is displayed with: cmspage-{code}.html.twig in the theme, otherwise the usual page template.'|trans({}, 'theliacms') }}
+    </p>
+
+    {% set template_sources = {
+        'theme': 'Theme'|trans({}, 'theliacms'),
+        'module': 'Thelia CMS module'|trans({}, 'theliacms'),
+        'theme-fallback': 'Usual page template of the theme'|trans({}, 'theliacms'),
+        'module-fallback': 'Usual page template of the module'|trans({}, 'theliacms'),
+    } %}
+
+    <div class="card mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'Code'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Displayed with'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Pages'|trans({}, 'theliacms') }}</th>
+                        <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in types %}
+                        <tr data-testid="cms-page-type-row-{{ row.code }}">
+                            <td><code>{{ row.code }}</code></td>
+                            <td data-testid="cms-page-type-template-{{ row.code }}" data-source="{{ row.template.source.value }}">
+                                <div>{{ template_sources[row.template.source.value] }}</div>
+                                <code class="text-muted small">{{ row.template.name }}</code>
+                            </td>
+                            <td>{{ row.pages }}</td>
+                            <td class="text-end">
+                                {% if may_delete and row.deletable %}
+                                    <form method="post"
+                                          action="{{ path('admin.cms.settings.page_types.delete', { code: row.code }) }}"
+                                          onsubmit="return confirm('{{ 'Delete this page type?'|trans({}, 'theliacms')|e('js') }}')">
+                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}" data-testid="cms-page-type-delete-{{ row.code }}">
+                                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if may_create %}
+        <div class="card">
+            <div class="card-header">{{ 'Add a page type'|trans({}, 'theliacms') }}</div>
+            <div class="card-body">
+                {{ form_start(form) }}
+                    <input type="hidden" name="_token" value="{{ assignToken() }}">
+                    {{ form_row(form.code) }}
+                    <button class="btn btn-primary" type="submit" data-testid="cms-page-type-add">
+                        {{ 'Add'|trans({}, 'theliacms') }}
+                    </button>
+                {{ form_end(form) }}
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

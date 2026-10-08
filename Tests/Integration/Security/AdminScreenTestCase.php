@@ -137,7 +137,7 @@ abstract class AdminScreenTestCase extends WebIntegrationTestCase
         \assert($writer instanceof CmsPageWriter);
 
         $page = new CmsPage();
-        $page->setParent(0)->setPosition(0)->setVisible(1)->setLayout('default');
+        $page->setParent(0)->setPosition(0)->setVisible(1)->setPageType('default');
 
         $writer->saveDraft($page, $this->locale(), new PageDraft(title: $title));
         $writer->saveContent($page, $this->locale(), new BuilderContent(

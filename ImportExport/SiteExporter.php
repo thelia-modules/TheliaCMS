@@ -127,7 +127,7 @@ final readonly class SiteExporter
             'parent' => $withTree && $parent > 0 ? self::pageUid($parent) : null,
             'position' => (int) $page->getPosition(),
             'visible' => 1 === $page->getVisible(),
-            'layout' => (string) $page->getLayout(),
+            'page_type' => (string) $page->getPageType(),
             'image_id' => $page->getImageId(),
             'publish_at' => $this->date($page->getPublishAt()),
             'unpublish_at' => $this->date($page->getUnpublishAt()),

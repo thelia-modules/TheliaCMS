@@ -117,6 +117,12 @@ final readonly class CmsPageWriter
             $connection->commit();
 
             $this->menuCache->invalidate();
+            // The settings of a page are live as soon as they are saved — its
+            // type picks the template it is served with, its SEO fields are in
+            // its head — so the copy a shared cache holds is stale already.
+            if (!$wasNew) {
+                $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
+            }
             $this->activityLog->record($wasNew ? 'CREATE' : 'UPDATE', (int) $page->getId(), \sprintf('CMS page "%s" saved in %s', $draft->title, $locale));
         } catch (\Throwable $throwable) {
             $connection->rollBack();
@@ -362,7 +368,7 @@ final readonly class CmsPageWriter
             $copy->setParent($page->getParent())
                 ->setPosition($page->getPosition() + 1)
                 ->setVisible(0)
-                ->setLayout($page->getLayout())
+                ->setPageType($page->getPageType())
                 ->setImageId($page->getImageId())
                 ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
 

@@ -1,9 +1,10 @@
 {#
     Fallback layout for a CMS page.
 
-    A theme takes over by shipping its own `cmspage.html.twig` at its root; until
-    it does, this file keeps the module usable on any Twig theme exposing a
-    `base.html.twig`. Both versions must emit the `cmspage.*` theme hooks, which
+    A theme takes over by shipping its own `cmspage.html.twig` at its root, and
+    gives a page type its own layout with `cmspage-{type}.html.twig`; until it
+    does, this file keeps the module usable on any Twig theme exposing a
+    `base.html.twig`. Every version must emit the `cmspage.*` theme hooks, which
     are the documented extension points for third-party modules.
 #}
 {% extends 'base.html.twig' %}
@@ -17,7 +18,7 @@
     {% endif %}
 {% endblock %}
 
-{% block body_class %}cms-page cms-page--{{ cms_page.layout.value }}{% endblock %}
+{% block body_class %}cms-page cms-page--{{ cms_page.pageType }}{% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}

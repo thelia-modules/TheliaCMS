@@ -76,6 +76,7 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.scripts.edit',
         'admin.cms.scripts.list',
         'admin.cms.settings.edit',
+        'admin.cms.settings.page_types.list',
         'admin.cms.settings.styles.edit',
         'admin.cms.templates.list',
         'openstudio_page_builder_image_list',
@@ -184,6 +185,7 @@ final class WriteRoutesTest extends AdminScreenTestCase
             '/admin/cms/media',
             '/admin/cms/templates',
             '/admin/cms/settings',
+            '/admin/cms/settings/page-types',
         ];
 
         $offending = [];

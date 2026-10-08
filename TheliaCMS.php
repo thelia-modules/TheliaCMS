@@ -361,6 +361,8 @@ class TheliaCMS extends BaseModule
                 // never wired by the container.
                 __DIR__.'/Builder/ThemeCanvas.php',
                 __DIR__.'/Page/PageImage.php',
+                __DIR__.'/Page/PageTemplate.php',
+                __DIR__.'/Page/PageTypeCode.php',
                 __DIR__.'/Page/PublishedPage.php',
                 __DIR__.'/Partial/PartialProp.php',
                 __DIR__.'/Settings/ElementStyle.php',

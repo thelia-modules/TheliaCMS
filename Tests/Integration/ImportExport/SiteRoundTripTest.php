@@ -44,6 +44,7 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
         $image->setLocale($this->locale())->setFileName('round-trip-page-image.jpg')->setTitle('Image de page');
         $image->save();
         $parent->setImageId((int) $image->getId());
+        $parent->setPageType('full-width');
         $parent->setLocale($this->locale())
             ->setChapo('<p>Un résumé reconnaissable.</p>')
             ->setDescription('<p>Une description reconnaissable.</p>')
@@ -55,6 +56,7 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
         self::assertArrayHasKey('nos-services/conseil-et-accompagnement', $before);
         self::assertSame('<p>Un résumé reconnaissable.</p>', $before['nos-services']['chapo']);
         self::assertSame('round-trip-page-image.jpg', $before['nos-services']['image_file']);
+        self::assertSame('full-width', $before['nos-services']['page_type']);
         self::assertStringContainsString(
             'reconnaissable, 42',
             (string) $before['nos-services/conseil-et-accompagnement']['published_html'],
@@ -149,6 +151,7 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
             "SELECT u.url,
                     i.title,
                     i.locale,
+                    p.page_type,
                     i.chapo,
                     i.description,
                     c.published_html,

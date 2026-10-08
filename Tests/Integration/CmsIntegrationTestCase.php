@@ -179,7 +179,7 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
         $page->setParent($parent)
             ->setPosition(0)
             ->setVisible($visible ? 1 : 0)
-            ->setLayout('default');
+            ->setPageType('default');
 
         $writer = $this->writer();
         $writer->saveDraft($page, $locale, new PageDraft(title: $title));

@@ -186,7 +186,7 @@ trees of different sizes and fails if the two numbers differ.
 ## Editing a page
 
 A page carries a title, a slug, a summary, a detailed description, a parent, a
-layout, a publication window and its SEO metadata, all per language, and one
+type, a publication window and its SEO metadata, all per language, and one
 image shared by every language. The "Image" tab picks it from the CMS media
 library or uploads a new one into it, saved with the rest of the page. Content is edited on its own full-screen route,
 `/admin/cms/pages/{id}/builder`:
@@ -674,6 +674,46 @@ back office, as HTML, or null when left empty, and `image`, a
 is an empty string for a decorative image and null for one nobody has
 described yet. None of the three is rendered by the fallback layout: they are
 what a theme shows about the page elsewhere, a heading block or a card.
+
+### Page types
+
+A page has one type, picked in the "General" tab, which chooses the template it
+is displayed with: a recipe and a news item can look nothing alike. The types
+of the site are listed under **CMS > Settings > Page types**. A type is a code
+and nothing else — lowercase letters, digits and single hyphens, such as
+`recipe` or `news-item` — so it is shown as it is, never translated.
+
+A page of type `recipe` is rendered with the first of these templates that
+exists:
+
+1. `cmspage-recipe.html.twig` as the front parser finds it: the active theme,
+   the themes it inherits from, and the front templates another module ships
+   for the theme or for `default`;
+2. `cmspage-recipe.html.twig` in `templates/front/` of this module;
+3. `cmspage.html.twig` of the theme;
+4. `cmspage.html.twig` of this module.
+
+A type without a template of its own is therefore displayed like any other
+page, and the page types screen says, for each type, which template it gets.
+A typed template receives the same `cms_page` as `cmspage.html.twig`, with
+`cms_page.pageType` holding the code, and must emit the same hooks.
+
+Every site has the `default` type, which cannot be deleted, and the update to
+1.2.0 turns the three former layouts into the types `default`, `full-width` and
+`landing`, so a page keeps the one it had. A type some page has, the bin
+included, cannot be deleted. Changing the type of a page applies as soon as the
+page is saved, without publishing it again. With a shared cache in front of the
+site, a template added to the theme shows at the next expiry of
+`http_cache_ttl`: see [docs/shared-cache.md](docs/shared-cache.md).
+
+The type travels with the site export. An import of a site creates the types
+the site lacks (a type no page has is not exported). A page started from a
+saved template whose type the site no longer has gets the default type:
+starting a page needs the right to write pages, not the right to change the
+settings.
+
+The fallback template puts `cms-page--{type}` on the `<body>`, for a theme that
+only needs a class to tell the types apart.
 
 A theme whose CSS depends on its layout (several stylesheets, a class on
 `<html>`, a container around the page content) declares them in

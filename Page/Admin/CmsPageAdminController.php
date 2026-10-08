@@ -34,6 +34,7 @@ use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Notice\NativeContentNotice;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
 use Twig\Environment;
@@ -66,6 +67,7 @@ final readonly class CmsPageAdminController
         private NativeContentNotice $nativeContents,
         private PageImageChoices $imageChoices,
         private CmsMediaWriter $media,
+        private PageTypeRepository $pageTypes,
     ) {
     }
 
@@ -265,7 +267,7 @@ final readonly class CmsPageAdminController
             'chapo' => $page->isNew() ? null : $page->getChapo(),
             'description' => $page->isNew() ? null : $page->getDescription(),
             'parent' => (int) $page->getParent(),
-            'layout' => $page->getLayout() ?? 'default',
+            'pageType' => $page->getPageType(),
             'image' => $page->getImageId(),
             'visible' => $page->isNew() ? 1 : $page->getVisible(),
             'publishAt' => $page->getPublishAt(),
@@ -284,6 +286,7 @@ final readonly class CmsPageAdminController
         ], [
             'parent_choices' => $this->pages->parentChoices($locale, $page->isNew() ? null : (int) $page->getId()),
             'image_choices' => $imageChoices,
+            'page_type_choices' => $this->pageTypes->codes(),
         ]);
     }
 
@@ -292,7 +295,7 @@ final readonly class CmsPageAdminController
         $data = $form->getData();
 
         $page->setParent((int) $data['parent'])
-            ->setLayout($data['layout'])
+            ->setPageType($data['pageType'])
             ->setImageId($this->chosenImage($data, $locale))
             ->setVisible((int) $data['visible'])
             ->setPublishAt($data['publishAt'])

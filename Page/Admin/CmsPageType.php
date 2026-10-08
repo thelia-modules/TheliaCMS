@@ -27,7 +27,7 @@ use Symfony\Component\Validator\Constraints\Image;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use TheliaCMS\Media\Admin\CmsMediaType;
-use TheliaCMS\Page\PageLayout;
+use TheliaCMS\Page\PageTypeCode;
 
 final class CmsPageType extends AbstractType
 {
@@ -52,13 +52,13 @@ final class CmsPageType extends AbstractType
                 'label' => 'Parent page',
                 'choices' => ['None (top level)' => 0] + $options['parent_choices'],
             ])
-            ->add('layout', ChoiceType::class, [
-                'label' => 'Layout',
-                'choices' => [
-                    'Default' => PageLayout::Default->value,
-                    'Full width' => PageLayout::FullWidth->value,
-                    'Landing page' => PageLayout::Landing->value,
-                ],
+            // A type is a code and nothing else: shown as it is, never
+            // translated. Managed under CMS > Settings > Page types.
+            ->add('pageType', ChoiceType::class, [
+                'label' => 'Page type',
+                'choices' => array_combine($options['page_type_choices'], $options['page_type_choices']),
+                'choice_translation_domain' => false,
+                'help' => 'Picks the template the page is displayed with.',
             ])
             ->add('visible', ChoiceType::class, [
                 'label' => 'Online',
@@ -130,8 +130,10 @@ final class CmsPageType extends AbstractType
                 'translation_domain' => 'theliacms',
                 'parent_choices' => [],
                 'image_choices' => [],
+                'page_type_choices' => [PageTypeCode::DEFAULT],
             ])
             ->setAllowedTypes('parent_choices', 'array')
-            ->setAllowedTypes('image_choices', 'array');
+            ->setAllowedTypes('image_choices', 'array')
+            ->setAllowedTypes('page_type_choices', 'array');
     }
 }
