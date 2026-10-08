@@ -185,8 +185,8 @@ trees of different sizes and fails if the two numbers differ.
 
 ## Editing a page
 
-A page carries a title, a slug, a parent, a layout, a publication window and its
-SEO metadata, all per language. Content is edited on its own full-screen route,
+A page carries a title, a slug, a summary, a detailed description, a parent, a
+layout, a publication window and its SEO metadata, all per language. Content is edited on its own full-screen route,
 `/admin/cms/pages/{id}/builder`:
 
 - drafts autosave every 30 seconds, and leaving with unsaved work asks first;
@@ -663,6 +663,13 @@ modules. Each receives the page as `page`.
 | `cmspage.content.before` | front | inside the article, before the content |
 | `cmspage.content.after` | front | inside the article, after the content |
 | `cmspage.bottom` | front | after the content |
+
+The page is a `TheliaCMS\Page\PublishedPage`: `cms_page` in the template,
+`page` in the hooks. Besides its title, its HTML and its SEO fields, it holds
+`chapo` and `description`, the summary and detailed description typed in the
+back office, as HTML, or null when left empty. Neither is rendered by the
+fallback layout: they are what a theme shows about the page elsewhere, a
+heading block or a card.
 
 A theme whose CSS depends on its layout (several stylesheets, a class on
 `<html>`, a container around the page content) declares them in

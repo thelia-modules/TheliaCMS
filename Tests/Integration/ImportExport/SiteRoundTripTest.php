@@ -39,11 +39,16 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
             html: '<h1>Conseil</h1><p>Un texte reconnaissable, 42.</p>',
         );
         $this->createPage('Brouillon en cours', published: false);
+        $parent->setLocale($this->locale())
+            ->setChapo('<p>Un résumé reconnaissable.</p>')
+            ->setDescription('<p>Une description reconnaissable.</p>')
+            ->save();
 
         $before = $this->snapshot();
 
         self::assertArrayHasKey('nos-services', $before);
         self::assertArrayHasKey('nos-services/conseil-et-accompagnement', $before);
+        self::assertSame('<p>Un résumé reconnaissable.</p>', $before['nos-services']['chapo']);
         self::assertStringContainsString(
             'reconnaissable, 42',
             (string) $before['nos-services/conseil-et-accompagnement']['published_html'],
@@ -138,6 +143,8 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
             "SELECT u.url,
                     i.title,
                     i.locale,
+                    i.chapo,
+                    i.description,
                     c.published_html,
                     c.published_at,
                     parent_i18n.title AS parent_title

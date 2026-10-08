@@ -375,6 +375,8 @@ final readonly class CmsPageWriter
 
                 $copy->setLocale($lang->getLocale())
                     ->setTitle($title.' '.$titleSuffix)
+                    ->setChapo($source->getChapo())
+                    ->setDescription($source->getDescription())
                     ->setMetaTitle($source->getMetaTitle())
                     ->setMetaDescription($source->getMetaDescription())
                     ->setOgTitle($source->getOgTitle())

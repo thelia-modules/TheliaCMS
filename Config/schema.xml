@@ -57,6 +57,14 @@
             the next activation.
         -->
         <column name="slug" size="255" type="VARCHAR"/>
+        <!--
+            The same pair as the core content and folder: a short summary and a
+            longer description, HTML from the back-office editor. Neither is
+            the body of the page, which the builder owns: they are what a list
+            of pages, a card or a theme shows about it.
+        -->
+        <column name="chapo" type="LONGVARCHAR"/>
+        <column name="description" type="CLOB"/>
         <column name="meta_title" size="255" type="VARCHAR"/>
         <column name="meta_description" type="LONGVARCHAR"/>
         <column name="og_title" size="255" type="VARCHAR"/>
@@ -86,7 +94,7 @@
 
         <behavior name="i18n">
             <parameter name="i18n_columns"
-                       value="title, slug, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow"/>
+                       value="title, slug, chapo, description, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow"/>
         </behavior>
         <behavior name="timestampable"/>
     </table>

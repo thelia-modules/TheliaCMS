@@ -142,6 +142,8 @@ final readonly class SiteImporter
                     ->setTitle((string) ($pageLocale === $locale && null !== $title && '' !== $title
                         ? $title
                         : ($translation['title'] ?? '')))
+                    ->setChapo($translation['chapo'] ?? null)
+                    ->setDescription($translation['description'] ?? null)
                     ->setMetaTitle($translation['meta_title'] ?? null)
                     ->setMetaDescription($translation['meta_description'] ?? null)
                     ->setOgTitle($translation['og_title'] ?? null)
@@ -283,6 +285,8 @@ final readonly class SiteImporter
             foreach ($translations as $locale => $translation) {
                 $model->setLocale((string) $locale)
                     ->setTitle((string) ($translation['title'] ?? ''))
+                    ->setChapo($translation['chapo'] ?? null)
+                    ->setDescription($translation['description'] ?? null)
                     ->setMetaTitle($translation['meta_title'] ?? null)
                     ->setMetaDescription($translation['meta_description'] ?? null)
                     ->setOgTitle($translation['og_title'] ?? null)

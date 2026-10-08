@@ -253,6 +253,8 @@ final readonly class CmsPageAdminController
             // would fold it into the segment on the next save and move the page
             // to `parent/parent-child`.
             'slug' => $page->isNew() ? null : $this->addresses->slugOf($page, $locale),
+            'chapo' => $page->isNew() ? null : $page->getChapo(),
+            'description' => $page->isNew() ? null : $page->getDescription(),
             'parent' => (int) $page->getParent(),
             'layout' => $page->getLayout() ?? 'default',
             'visible' => $page->isNew() ? 1 : $page->getVisible(),
@@ -287,6 +289,8 @@ final readonly class CmsPageAdminController
         // The i18n columns are written on the localized object before the
         // writer saves it, so a single save() covers page + translation.
         $page->setLocale($locale)
+            ->setChapo($data['chapo'])
+            ->setDescription($data['description'])
             ->setMetaTitle($data['metaTitle'])
             ->setMetaDescription($data['metaDescription'])
             ->setOgTitle($data['ogTitle'])

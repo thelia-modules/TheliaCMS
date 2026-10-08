@@ -170,6 +170,7 @@ return [
     'Describe one thing here, in a few sentences. Add a second block for the next one.' => 'Décrivez une seule chose ici, en quelques phrases. Ajoutez un deuxième bloc pour la suivante.',
     'Describe the image, or tick "This image is decorative".' => 'Décrivez l\'image, ou cochez « Cette image est décorative ».',
     'Description' => 'Description',
+    'Detailed description' => 'Description détaillée',
     'Didone serif' => 'Serif Didone',
     'Dimensions' => 'Dimensions',
     'Divider' => 'Séparateur',

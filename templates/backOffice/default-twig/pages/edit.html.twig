@@ -61,6 +61,8 @@
                     <div class="col-lg-8">
                         {{ form_row(form.title) }}
                         {{ form_row(form.slug) }}
+                        {{ form_row(form.chapo) }}
+                        {{ form_row(form.description) }}
                     </div>
 
                     <div class="col-lg-4">
@@ -120,4 +122,9 @@
             {% endif %}
         </div>
     {% endif %}
+{% endblock %}
+
+{% block scripts_extra %}
+    {{ parent() }}
+    {{ safe_hook('wysiwyg.js', { location: 'cms-page-edit-js' }) }}
 {% endblock %}

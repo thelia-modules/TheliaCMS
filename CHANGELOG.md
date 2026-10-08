@@ -9,6 +9,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- A page carries a summary and a detailed description per language, the same
+  pair as a core content, typed under its address in the "General" tab with
+  the back-office rich text editor when Tiptap is installed. They are not the
+  body of the page, which the builder owns, and nothing renders them on their
+  own: a theme reads them as `cms_page.chapo` and `cms_page.description`, and
+  the modules hooked on `cmspage.*` as `page.chapo` and `page.description`.
+  Both follow the page when it is duplicated and travel with the site export.
+  The update to 1.1.0 adds the two columns to `cms_page_i18n`.
 - **CMS > Settings** lists every block the editor can offer, group by group as
   the panel shows them — the basic, layout and advanced blocks of the editor
   itself, the page blocks of the catalogue, the live content — and lets an

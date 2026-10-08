@@ -40,6 +40,11 @@ final class CmsPageType extends AbstractType
                 'required' => false,
                 'help' => 'Leave empty to derive it from the title. Parent pages prefix it automatically.',
             ])
+            // `wysiwyg` is the opt-in class of the back-office rich text
+            // editor: the same editor as the summary and description of a
+            // core content, when one is installed, a plain textarea otherwise.
+            ->add('chapo', TextareaType::class, ['label' => 'Summary', 'required' => false, 'attr' => ['rows' => 3, 'class' => 'wysiwyg']])
+            ->add('description', TextareaType::class, ['label' => 'Detailed description', 'required' => false, 'attr' => ['rows' => 8, 'class' => 'wysiwyg']])
             ->add('parent', ChoiceType::class, [
                 'label' => 'Parent page',
                 'choices' => ['None (top level)' => 0] + $options['parent_choices'],
