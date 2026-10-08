@@ -24,10 +24,10 @@ use TheliaCMS\Model\CmsPageQuery;
  * Which pages use which image.
  *
  * Editors delete images they believe unused, and a deleted image leaves broken
- * pictures behind. There is no join to make: an image reaches a page as a URL
- * inside its stored HTML, so the contents are read once and scanned in memory
- * for every image at a time — one query for a whole grid rather than one per
- * card.
+ * pictures behind. An image reaches a page two ways: as a URL inside its stored
+ * HTML, which has no join to make, so the contents are read once and scanned in
+ * memory for every image at a time — one query for a whole grid rather than one
+ * per card — and as the image of the page, read from its column.
  */
 final readonly class MediaUsageFinder
 {
@@ -40,17 +40,23 @@ final readonly class MediaUsageFinder
      */
     public function countsFor(array $imageIds): array
     {
-        $counts = array_fill_keys($imageIds, 0);
+        // Page ids as keys: a page holding the image in two languages, or in its
+        // content and as its image, is one page using it.
+        $pagesByImage = array_fill_keys($imageIds, []);
 
         foreach ($this->pageContents() as $content) {
             foreach ($imageIds as $imageId) {
                 if ($this->references($content['html'], $imageId)) {
-                    ++$counts[$imageId];
+                    $pagesByImage[$imageId][$content['pageId']] = true;
                 }
             }
         }
 
-        return $counts;
+        foreach ($this->pagesShowing($imageIds) as $pageId => $imageId) {
+            $pagesByImage[$imageId][$pageId] = true;
+        }
+
+        return array_map(\count(...), $pagesByImage);
     }
 
     /**
@@ -68,6 +74,11 @@ final readonly class MediaUsageFinder
             }
 
             $localesByPage[$content['pageId']][] = $content['locale'];
+        }
+
+        // The image of a page is the same in every language, so it names none.
+        foreach (array_keys($this->pagesShowing([$imageId])) as $pageId) {
+            $localesByPage[$pageId] ??= [];
         }
 
         if ([] === $localesByPage) {
@@ -151,6 +162,35 @@ final readonly class MediaUsageFinder
         }
 
         return $contents;
+    }
+
+    /**
+     * Live pages whose image is one of these, as page id => image id.
+     *
+     * @param list<int> $imageIds
+     *
+     * @return array<int, int>
+     */
+    private function pagesShowing(array $imageIds): array
+    {
+        if ([] === $imageIds) {
+            return [];
+        }
+
+        $rows = CmsPageQuery::create()
+            ->filterByDeletedAt(null, Criteria::ISNULL)
+            ->filterByImageId($imageIds, Criteria::IN)
+            ->select(['Id', 'ImageId'])
+            ->find()
+            ->toArray();
+
+        $pages = [];
+
+        foreach ($rows as $row) {
+            $pages[(int) $row['Id']] = (int) $row['ImageId'];
+        }
+
+        return $pages;
     }
 
     private function references(string $html, int $imageId): bool

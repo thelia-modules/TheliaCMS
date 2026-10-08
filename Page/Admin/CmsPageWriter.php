@@ -363,6 +363,7 @@ final readonly class CmsPageWriter
                 ->setPosition($page->getPosition() + 1)
                 ->setVisible(0)
                 ->setLayout($page->getLayout())
+                ->setImageId($page->getImageId())
                 ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
 
             foreach (LangQuery::create()->filterByActive(1)->find() as $lang) {

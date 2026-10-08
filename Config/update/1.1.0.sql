@@ -1,4 +1,4 @@
--- The summary and the description of a page, added in 1.1.0.
+-- The summary, the description and the image of a page, added in 1.1.0.
 --
 -- Written to be replayable: the same file is applied by a fresh install (after
 -- TheliaMain.sql, which already declares the columns) and by an update of an
@@ -40,3 +40,20 @@ PREPARE cms_description_statement FROM @cms_description_add;
 EXECUTE cms_description_statement;
 
 DEALLOCATE PREPARE cms_description_statement;
+
+SET @cms_image_column_exists := (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = 'cms_page' AND column_name = 'image_id'
+);
+
+SET @cms_image_add := IF(
+    0 = @cms_image_column_exists,
+    'ALTER TABLE `cms_page` ADD COLUMN `image_id` INTEGER DEFAULT NULL AFTER `layout`',
+    'DO 0'
+);
+
+PREPARE cms_image_statement FROM @cms_image_add;
+
+EXECUTE cms_image_statement;
+
+DEALLOCATE PREPARE cms_image_statement;

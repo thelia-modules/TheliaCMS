@@ -135,7 +135,8 @@ final readonly class SiteImporter
                 ->setParent($parentId)
                 ->setPosition((int) ($source['position'] ?? 0))
                 ->setVisible(0)
-                ->setLayout((string) ($source['layout'] ?? 'default'));
+                ->setLayout((string) ($source['layout'] ?? 'default'))
+                ->setImageId($this->mappedImage($source['image_id'] ?? null, $mediaMap));
 
             foreach ($source['translations'] ?? [] as $pageLocale => $translation) {
                 $page->setLocale((string) $pageLocale)
@@ -279,6 +280,7 @@ final readonly class SiteImporter
                 ->setPosition((int) ($page['position'] ?? 0))
                 ->setVisible(($page['visible'] ?? true) ? 1 : 0)
                 ->setLayout((string) ($page['layout'] ?? 'default'))
+                ->setImageId($this->mappedImage($page['image_id'] ?? null, $mediaMap))
                 ->setPublishAt($this->date($page['publish_at'] ?? null))
                 ->setUnpublishAt($this->date($page['unpublish_at'] ?? null));
 

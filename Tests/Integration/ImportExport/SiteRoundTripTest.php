@@ -20,6 +20,7 @@ use TheliaCMS\ImportExport\SiteDocument;
 use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\ImportExport\SiteImporter;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaLibrary\Model\LibraryImage;
 
 /**
  * The export file is the backup of a site. What it has to hold is not "most of
@@ -39,6 +40,10 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
             html: '<h1>Conseil</h1><p>Un texte reconnaissable, 42.</p>',
         );
         $this->createPage('Brouillon en cours', published: false);
+        $image = new LibraryImage();
+        $image->setLocale($this->locale())->setFileName('round-trip-page-image.jpg')->setTitle('Image de page');
+        $image->save();
+        $parent->setImageId((int) $image->getId());
         $parent->setLocale($this->locale())
             ->setChapo('<p>Un résumé reconnaissable.</p>')
             ->setDescription('<p>Une description reconnaissable.</p>')
@@ -49,6 +54,7 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
         self::assertArrayHasKey('nos-services', $before);
         self::assertArrayHasKey('nos-services/conseil-et-accompagnement', $before);
         self::assertSame('<p>Un résumé reconnaissable.</p>', $before['nos-services']['chapo']);
+        self::assertSame('round-trip-page-image.jpg', $before['nos-services']['image_file']);
         self::assertStringContainsString(
             'reconnaissable, 42',
             (string) $before['nos-services/conseil-et-accompagnement']['published_html'],
@@ -147,12 +153,14 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
                     i.description,
                     c.published_html,
                     c.published_at,
-                    parent_i18n.title AS parent_title
+                    parent_i18n.title AS parent_title,
+                    image.file_name AS image_file
              FROM rewriting_url u
              INNER JOIN cms_page p ON p.id = u.view_id AND p.deleted_at IS NULL
              INNER JOIN cms_page_i18n i ON i.id = p.id AND i.locale = u.view_locale
              LEFT JOIN cms_page_content c ON c.page_id = p.id AND c.locale = u.view_locale
              LEFT JOIN cms_page_i18n parent_i18n ON parent_i18n.id = p.parent AND parent_i18n.locale = u.view_locale
+             LEFT JOIN library_image image ON image.id = p.image_id
              WHERE u.view = 'cmspage' AND u.redirected IS NULL
              ORDER BY u.url",
         );

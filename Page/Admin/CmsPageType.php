@@ -17,13 +17,16 @@ namespace TheliaCMS\Page\Admin;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\UrlType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\Image;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
+use TheliaCMS\Media\Admin\CmsMediaType;
 use TheliaCMS\Page\PageLayout;
 
 final class CmsPageType extends AbstractType
@@ -98,6 +101,25 @@ final class CmsPageType extends AbstractType
                 'label' => 'Link following',
                 'choices' => ['Follow links' => 0, 'Do not follow links (nofollow)' => 1],
                 'expanded' => true,
+            ])
+            ->add('image', ChoiceType::class, [
+                'label' => 'Image of the page',
+                'required' => false,
+                'expanded' => true,
+                'placeholder' => 'No image',
+                'choices' => $options['image_choices'],
+                'choice_label' => static fn (int $imageId): string => (string) $imageId,
+            ])
+            // Wins over the choice above: the file is stored in the CMS library
+            // and becomes the image of the page in the same save.
+            ->add('imageUpload', FileType::class, [
+                'label' => 'Or upload a new image',
+                'required' => false,
+                'constraints' => [new Image(
+                    mimeTypes: CmsMediaType::ACCEPTED_MIME_TYPES,
+                    mimeTypesMessage: 'Only JPEG, PNG and WebP images can be uploaded.',
+                )],
+                'help' => 'It is added to the CMS media library. Describe it there so the page can say what it shows.',
             ]);
     }
 
@@ -107,7 +129,9 @@ final class CmsPageType extends AbstractType
             ->setDefaults([
                 'translation_domain' => 'theliacms',
                 'parent_choices' => [],
+                'image_choices' => [],
             ])
-            ->setAllowedTypes('parent_choices', 'array');
+            ->setAllowedTypes('parent_choices', 'array')
+            ->setAllowedTypes('image_choices', 'array');
     }
 }

@@ -16,6 +16,7 @@ CREATE TABLE `cms_page`
     `position` INTEGER DEFAULT 0 NOT NULL,
     `visible` TINYINT(4) DEFAULT 1 NOT NULL,
     `layout` VARCHAR(20) DEFAULT 'default' NOT NULL,
+    `image_id` INTEGER,
     `publish_at` TIMESTAMP NULL,
     `unpublish_at` TIMESTAMP NULL,
     `deleted_at` TIMESTAMP NULL,

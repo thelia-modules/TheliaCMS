@@ -17,6 +17,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   the modules hooked on `cmspage.*` as `page.chapo` and `page.description`.
   Both follow the page when it is duplicated and travel with the site export.
   The update to 1.1.0 adds the two columns to `cms_page_i18n`.
+- An "Image" tab gives a page one image, the same in every language, chosen
+  from the CMS media library or uploaded into it, and saved with the rest of
+  the page. A theme reads it as `cms_page.image` (`url`, `alt`, `width`,
+  `height`); an image deleted from the library leaves the page without one.
+  It follows the page when it is duplicated, travels with the site export
+  like the images of the content, and counts as a use on the media screen, so
+  the image of a page cannot be deleted from under it. The update to 1.1.0
+  adds `image_id` to `cms_page`.
 - **CMS > Settings** lists every block the editor can offer, group by group as
   the panel shows them — the basic, layout and advanced blocks of the editor
   itself, the page blocks of the catalogue, the live content — and lets an
@@ -120,6 +128,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- The media screen counted a page once per language using an image, so an
+  image on a page in French and English read "Used in 2 page(s)".
 - The page form no longer raises a Symfony deprecation each time it is built.
   Its canonical URL field left the default scheme unset; a canonical address
   typed without its scheme is now read as `https://`, as in SEOne.

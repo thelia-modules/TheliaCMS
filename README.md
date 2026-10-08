@@ -186,7 +186,9 @@ trees of different sizes and fails if the two numbers differ.
 ## Editing a page
 
 A page carries a title, a slug, a summary, a detailed description, a parent, a
-layout, a publication window and its SEO metadata, all per language. Content is edited on its own full-screen route,
+layout, a publication window and its SEO metadata, all per language, and one
+image shared by every language. The "Image" tab picks it from the CMS media
+library or uploads a new one into it, saved with the rest of the page. Content is edited on its own full-screen route,
 `/admin/cms/pages/{id}/builder`:
 
 - drafts autosave every 30 seconds, and leaving with unsaved work asks first;
@@ -306,8 +308,8 @@ mandatory in every language unless the image is marked decorative, which
 publishes it with an empty `alt`. An empty attribute on its own cannot say
 whether an image was described or simply forgotten, so the choice is recorded.
 
-Each image shows its dimensions, weight, format and the pages using it. One
-still in use cannot be deleted.
+Each image shows its dimensions, weight, format and the pages using it, in their
+content or as their image. One still in use cannot be deleted.
 
 Uploads accept JPEG, PNG and WebP. SVG is refused: it is a document that can
 carry script.
@@ -667,9 +669,11 @@ modules. Each receives the page as `page`.
 The page is a `TheliaCMS\Page\PublishedPage`: `cms_page` in the template,
 `page` in the hooks. Besides its title, its HTML and its SEO fields, it holds
 `chapo` and `description`, the summary and detailed description typed in the
-back office, as HTML, or null when left empty. Neither is rendered by the
-fallback layout: they are what a theme shows about the page elsewhere, a
-heading block or a card.
+back office, as HTML, or null when left empty, and `image`, a
+`TheliaCMS\Page\PageImage` or null: `url`, `alt`, `width`, `height`. Its `alt`
+is an empty string for a decorative image and null for one nobody has
+described yet. None of the three is rendered by the fallback layout: they are
+what a theme shows about the page elsewhere, a heading block or a card.
 
 A theme whose CSS depends on its layout (several stylesheets, a class on
 `<html>`, a container around the page content) declares them in

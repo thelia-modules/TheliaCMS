@@ -35,6 +35,12 @@
         <column defaultValue="0" name="position" required="true" type="INTEGER"/>
         <column defaultValue="1" name="visible" required="true" type="TINYINT" size="4"/>
         <column defaultValue="default" name="layout" required="true" size="20" type="VARCHAR"/>
+        <!--
+            The image of the page, a TheliaLibrary image, the same in every
+            language like the image of a core content. No foreign key, for the
+            reason given on `og_image_id`: a stale id renders as "no image".
+        -->
+        <column name="image_id" type="INTEGER"/>
         <column name="publish_at" type="TIMESTAMP"/>
         <column name="unpublish_at" type="TIMESTAMP"/>
         <column name="deleted_at" type="TIMESTAMP"/>

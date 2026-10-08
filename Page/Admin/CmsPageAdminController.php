@@ -16,6 +16,7 @@ namespace TheliaCMS\Page\Admin;
 
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,6 +29,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
+use TheliaCMS\Media\Admin\CmsMediaWriter;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Notice\NativeContentNotice;
@@ -62,6 +64,8 @@ final readonly class CmsPageAdminController
         private CmsUrlService $addresses,
         private PageListPresenter $listing,
         private NativeContentNotice $nativeContents,
+        private PageImageChoices $imageChoices,
+        private CmsMediaWriter $media,
     ) {
     }
 
@@ -214,7 +218,8 @@ final readonly class CmsPageAdminController
     {
         $lang = $this->editLang($request);
         $locale = $lang->getLocale();
-        $form = $this->buildForm($page, $locale);
+        $images = $this->imageChoices->for($page, $locale);
+        $form = $this->buildForm($page, $locale, array_keys($images));
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -227,6 +232,7 @@ final readonly class CmsPageAdminController
         return new Response($this->twig->render(self::EDIT_TEMPLATE, [
             'form' => $form->createView(),
             'page' => $page,
+            'images' => $images,
             'status' => $page->isNew() ? PageStatus::Draft : $this->pages->statusOf($page, $locale),
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
@@ -235,7 +241,10 @@ final readonly class CmsPageAdminController
         ]));
     }
 
-    private function buildForm(CmsPage $page, string $locale): FormInterface
+    /**
+     * @param list<int> $imageChoices
+     */
+    private function buildForm(CmsPage $page, string $locale, array $imageChoices): FormInterface
     {
         $content = $page->isNew() ? null : CmsPageContentQuery::create()
             ->filterByPageId($page->getId())
@@ -257,6 +266,7 @@ final readonly class CmsPageAdminController
             'description' => $page->isNew() ? null : $page->getDescription(),
             'parent' => (int) $page->getParent(),
             'layout' => $page->getLayout() ?? 'default',
+            'image' => $page->getImageId(),
             'visible' => $page->isNew() ? 1 : $page->getVisible(),
             'publishAt' => $page->getPublishAt(),
             'unpublishAt' => $page->getUnpublishAt(),
@@ -273,6 +283,7 @@ final readonly class CmsPageAdminController
             'nofollow' => $page->isNew() ? 0 : $page->getNofollow(),
         ], [
             'parent_choices' => $this->pages->parentChoices($locale, $page->isNew() ? null : (int) $page->getId()),
+            'image_choices' => $imageChoices,
         ]);
     }
 
@@ -282,6 +293,7 @@ final readonly class CmsPageAdminController
 
         $page->setParent((int) $data['parent'])
             ->setLayout($data['layout'])
+            ->setImageId($this->chosenImage($data, $locale))
             ->setVisible((int) $data['visible'])
             ->setPublishAt($data['publishAt'])
             ->setUnpublishAt($data['unpublishAt']);
@@ -304,6 +316,18 @@ final readonly class CmsPageAdminController
             title: $data['title'],
             slug: $data['slug'],
         ));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function chosenImage(array $data, string $locale): ?int
+    {
+        if ($data['imageUpload'] instanceof UploadedFile) {
+            return (int) $this->media->add([$data['imageUpload']], $locale)[0]->getId();
+        }
+
+        return null === $data['image'] ? null : (int) $data['image'];
     }
 
     private function livePageOrFail(int $id): CmsPage
