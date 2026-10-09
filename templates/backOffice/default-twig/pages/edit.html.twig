@@ -124,9 +124,11 @@
                             <p class="text-muted" data-testid="cms-page-current-image">{{ 'This page has no image.'|trans({}, 'theliacms') }}</p>
                         {% endif %}
                     </div>
-                    <div class="col-lg-8">
-                        {{ form_row(form.imageUpload, { attr: { accept: 'image/jpeg,image/png,image/webp' } }) }}
-                    </div>
+                    {% if form.imageUpload is defined %}
+                        <div class="col-lg-8">
+                            {{ form_row(form.imageUpload, { attr: { accept: 'image/jpeg,image/png,image/webp' } }) }}
+                        </div>
+                    {% endif %}
                 </div>
 
                 <fieldset>

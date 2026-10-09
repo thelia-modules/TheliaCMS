@@ -109,18 +109,26 @@ final class CmsPageType extends AbstractType
                 'placeholder' => 'No image',
                 'choices' => $options['image_choices'],
                 'choice_label' => static fn (int $imageId): string => (string) $imageId,
-            ])
-            // Wins over the choice above: the file is stored in the CMS library
-            // and becomes the image of the page in the same save.
-            ->add('imageUpload', FileType::class, [
-                'label' => 'Or upload a new image',
-                'required' => false,
-                'constraints' => [new Image(
-                    mimeTypes: CmsMediaType::ACCEPTED_MIME_TYPES,
-                    mimeTypesMessage: 'Only JPEG, PNG and WebP images can be uploaded.',
-                )],
-                'help' => 'It is added to the CMS media library. Describe it there so the page can say what it shows.',
             ]);
+
+        // Uploading adds an image to the CMS library, which is the right to
+        // create media, not the right to change pages: without it the field is
+        // not there, and a request that sends a file anyway is an invalid form.
+        if (!$options['allow_image_upload']) {
+            return;
+        }
+
+        // Wins over the choice above: the file is stored in the CMS library
+        // and becomes the image of the page in the same save.
+        $builder->add('imageUpload', FileType::class, [
+            'label' => 'Or upload a new image',
+            'required' => false,
+            'constraints' => [new Image(
+                mimeTypes: CmsMediaType::ACCEPTED_MIME_TYPES,
+                mimeTypesMessage: 'Only JPEG, PNG and WebP images can be uploaded.',
+            )],
+            'help' => 'It is added to the CMS media library. Describe it there so the page can say what it shows.',
+        ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -131,9 +139,11 @@ final class CmsPageType extends AbstractType
                 'parent_choices' => [],
                 'image_choices' => [],
                 'page_type_choices' => [PageTypeCode::DEFAULT],
+                'allow_image_upload' => false,
             ])
             ->setAllowedTypes('parent_choices', 'array')
             ->setAllowedTypes('image_choices', 'array')
-            ->setAllowedTypes('page_type_choices', 'array');
+            ->setAllowedTypes('page_type_choices', 'array')
+            ->setAllowedTypes('allow_image_upload', 'bool');
     }
 }

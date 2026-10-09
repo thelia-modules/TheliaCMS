@@ -44,11 +44,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   body of the page, which the builder owns, and nothing renders them on their
   own: a theme reads them as `cms_page.chapo` and `cms_page.description`, and
   the modules hooked on `cmspage.*` as `page.chapo` and `page.description`.
-  Both follow the page when it is duplicated and travel with the site export.
+  Both are HTML filtered on save like the content of the page: no script, and
+  no iframe without the custom code right; an imported file gets no iframe
+  either. Both follow the page when it is duplicated and travel with the site
+  export.
   The update to 1.1.0 adds the two columns to `cms_page_i18n`.
 - An "Image" tab gives a page one image, the same in every language, chosen
   from the CMS media library or uploaded into it, and saved with the rest of
-  the page. A theme reads it as `cms_page.image` (`url`, `alt`, `width`,
+  the page. Uploading takes the right to create media, as on the media screen:
+  without it the tab only offers the images already in the library. A theme reads it as `cms_page.image` (`url`, `alt`, `width`,
   `height`); an image deleted from the library leaves the page without one.
   It follows the page when it is duplicated, travels with the site export
   like the images of the content, and counts as a use on the media screen, so

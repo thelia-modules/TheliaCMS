@@ -79,6 +79,21 @@ final class CmsPageTypeTest extends TestCase
         self::assertFalse($form->get('pageType')->isValid());
     }
 
+    public function testTheUploadFieldIsThereOnlyWhenUploadingIsAllowed(): void
+    {
+        self::assertFalse($this->createForm()->has('imageUpload'));
+        self::assertTrue($this->createForm(['allow_image_upload' => true])->has('imageUpload'));
+    }
+
+    public function testAFileSentWithoutTheRightToUploadIsAnInvalidForm(): void
+    {
+        $form = $this->createForm();
+        $form->submit(['title' => 'Page', 'imageUpload' => 'forged'], false);
+
+        self::assertFalse($form->isValid());
+        self::assertArrayHasKey('imageUpload', $form->getExtraData());
+    }
+
     /**
      * @param array<string, mixed> $options
      */

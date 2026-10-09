@@ -287,6 +287,7 @@ final readonly class CmsPageAdminController
             'parent_choices' => $this->pages->parentChoices($locale, $page->isNew() ? null : (int) $page->getId()),
             'image_choices' => $imageChoices,
             'page_type_choices' => $this->pageTypes->codes(),
+            'allow_image_upload' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::CREATE]),
         ]);
     }
 
@@ -326,7 +327,7 @@ final readonly class CmsPageAdminController
      */
     private function chosenImage(array $data, string $locale): ?int
     {
-        if ($data['imageUpload'] instanceof UploadedFile) {
+        if (($data['imageUpload'] ?? null) instanceof UploadedFile) {
             return (int) $this->media->add([$data['imageUpload']], $locale)[0]->getId();
         }
 

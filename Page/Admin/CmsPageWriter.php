@@ -91,7 +91,13 @@ final readonly class CmsPageWriter
             }
 
             $page->setUpdatedBy($adminId);
-            $page->setLocale($locale)->setTitle($draft->title);
+            // The summary and the description are HTML a theme prints as it
+            // is: they go through the filter the page content goes through.
+            $mayPublishCustomCode = $this->mayPublishCustomCode();
+            $page->setLocale($locale)
+                ->setTitle($draft->title)
+                ->setChapo($this->sanitizer->html($page->getChapo(), $mayPublishCustomCode))
+                ->setDescription($this->sanitizer->html($page->getDescription(), $mayPublishCustomCode));
             $page->save($connection);
 
             // The content itself belongs to the builder screen. The row is

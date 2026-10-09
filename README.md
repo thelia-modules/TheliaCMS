@@ -188,7 +188,8 @@ trees of different sizes and fails if the two numbers differ.
 A page carries a title, a slug, a summary, a detailed description, a parent, a
 type, a publication window and its SEO metadata, all per language, and one
 image shared by every language. The "Image" tab picks it from the CMS media
-library or uploads a new one into it, saved with the rest of the page. Content is edited on its own full-screen route,
+library or uploads a new one into it, saved with the rest of the page; uploading
+takes the right to create media. Content is edited on its own full-screen route,
 `/admin/cms/pages/{id}/builder`:
 
 - drafts autosave every 30 seconds, and leaving with unsaved work asks first;
@@ -669,7 +670,8 @@ modules. Each receives the page as `page`.
 The page is a `TheliaCMS\Page\PublishedPage`: `cms_page` in the template,
 `page` in the hooks. Besides its title, its HTML and its SEO fields, it holds
 `chapo` and `description`, the summary and detailed description typed in the
-back office, as HTML, or null when left empty, and `image`, a
+back office, as HTML filtered on save like the content of the page, or null
+when left empty, and `image`, a
 `TheliaCMS\Page\PageImage` or null: `url`, `alt`, `width`, `height`. Its `alt`
 is an empty string for a decorative image and null for one nobody has
 described yet. None of the three is rendered by the fallback layout: they are

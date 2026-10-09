@@ -18,6 +18,7 @@ use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Builder\PublishedContentSanitizer;
 use TheliaCMS\Form\FieldChoices;
 use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Model\CmsBlock;
@@ -71,6 +72,7 @@ final readonly class SiteImporter
         private MenuCache $menuCache,
         private PageTypeRepository $pageTypes,
         private PageTypeWriter $pageTypeWriter,
+        private PublishedContentSanitizer $sanitizer,
     ) {
     }
 
@@ -148,8 +150,8 @@ final readonly class SiteImporter
                     ->setTitle((string) ($pageLocale === $locale && null !== $title && '' !== $title
                         ? $title
                         : ($translation['title'] ?? '')))
-                    ->setChapo($translation['chapo'] ?? null)
-                    ->setDescription($translation['description'] ?? null)
+                    ->setChapo($this->summaryHtml($translation['chapo'] ?? null))
+                    ->setDescription($this->summaryHtml($translation['description'] ?? null))
                     ->setMetaTitle($translation['meta_title'] ?? null)
                     ->setMetaDescription($translation['meta_description'] ?? null)
                     ->setOgTitle($translation['og_title'] ?? null)
@@ -293,8 +295,8 @@ final readonly class SiteImporter
             foreach ($translations as $locale => $translation) {
                 $model->setLocale((string) $locale)
                     ->setTitle((string) ($translation['title'] ?? ''))
-                    ->setChapo($translation['chapo'] ?? null)
-                    ->setDescription($translation['description'] ?? null)
+                    ->setChapo($this->summaryHtml($translation['chapo'] ?? null))
+                    ->setDescription($this->summaryHtml($translation['description'] ?? null))
                     ->setMetaTitle($translation['meta_title'] ?? null)
                     ->setMetaDescription($translation['meta_description'] ?? null)
                     ->setOgTitle($translation['og_title'] ?? null)
@@ -778,6 +780,16 @@ final readonly class SiteImporter
         }
 
         return $mediaMap[(int) $imageId] ?? null;
+    }
+
+    /**
+     * The summary and the description of a page are printed by the theme as
+     * they are. A file is not a trusted author either: nothing in it gets past
+     * the filter an editor without the custom code right is held to.
+     */
+    private function summaryHtml(mixed $html): ?string
+    {
+        return \is_string($html) ? $this->sanitizer->html($html) : null;
     }
 
     private function date(mixed $value): ?\DateTimeImmutable
