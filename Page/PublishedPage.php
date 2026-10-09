@@ -21,19 +21,33 @@ namespace TheliaCMS\Page;
  */
 final readonly class PublishedPage
 {
+    /**
+     * @deprecated since 1.2.0, removed in 2.0.0: read $pageType. Kept for the
+     *             hooks written against 1.x, derived from the type — a type
+     *             that is not one of the former layouts reads as Default.
+     */
+    public PageLayout $layout;
+
+    /**
+     * @param string $pageType the code of the type of the page, always a valid one
+     */
     public function __construct(
         public int $id,
         public string $locale,
         public string $title,
-        public PageLayout $layout,
+        public string $pageType,
         public string $html,
         public string $css,
+        public ?string $chapo = null,
+        public ?string $description = null,
+        public ?PageImage $image = null,
         public ?string $metaTitle = null,
         public ?string $metaDescription = null,
         public bool $noindex = false,
         public bool $nofollow = false,
         public ?\DateTimeInterface $publishedAt = null,
     ) {
+        $this->layout = PageLayout::fromStorage($pageType);
     }
 
     /**
@@ -46,9 +60,12 @@ final readonly class PublishedPage
             id: $this->id,
             locale: $this->locale,
             title: $this->title,
-            layout: $this->layout,
+            pageType: $this->pageType,
             html: $html,
             css: $this->css,
+            chapo: $this->chapo,
+            description: $this->description,
+            image: $this->image,
             metaTitle: $this->metaTitle,
             metaDescription: $this->metaDescription,
             noindex: $this->noindex,

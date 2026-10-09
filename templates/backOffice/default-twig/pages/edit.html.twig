@@ -45,6 +45,11 @@
                     {{ 'Search engines and sharing'|trans({}, 'theliacms') }}
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-image" type="button" data-testid="cms-page-tab-image">
+                    {{ 'Image'|trans({}, 'theliacms') }}
+                </button>
+            </li>
         </ul>
         {% if not is_new %}
             <div class="bo-tab-bar__aside">
@@ -61,12 +66,14 @@
                     <div class="col-lg-8">
                         {{ form_row(form.title) }}
                         {{ form_row(form.slug) }}
+                        {{ form_row(form.chapo) }}
+                        {{ form_row(form.description) }}
                     </div>
 
                     <div class="col-lg-4">
                         {{ form_row(form.visible) }}
                         {{ form_row(form.parent) }}
-                        {{ form_row(form.layout) }}
+                        {{ form_row(form.pageType) }}
                         {{ form_row(form.publishAt) }}
                         {{ form_row(form.unpublishAt) }}
                     </div>
@@ -89,6 +96,69 @@
                         {{ form_row(form.nofollow) }}
                     </div>
                 </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-image" role="tabpanel">
+                {% set current_image = images[page.imageId] ?? null %}
+                <div class="row g-3 mb-3">
+                    <div class="col-lg-4">
+                        <p class="form-label mb-2">{{ 'Current image'|trans({}, 'theliacms') }}</p>
+                        {% if current_image %}
+                            <div class="card" data-testid="cms-page-current-image">
+                                <div class="ratio ratio-4x3 bg-body-secondary rounded-top overflow-hidden">
+                                    <img src="{{ current_image.thumbnailUrl }}" alt="" style="object-fit: scale-down">
+                                </div>
+                                <div class="card-body py-2">
+                                    <a class="d-block text-truncate fw-medium text-decoration-none"
+                                       href="{{ path('admin.cms.media.edit', { id: current_image.id, edit_language_id: edit_language_id }) }}"
+                                       title="{{ current_image.title }}">{{ current_image.title }}</a>
+                                    {% if not current_image.isDescribed %}
+                                        <span class="badge text-bg-warning">
+                                            <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                                            {{ 'No alternative text'|trans({}, 'theliacms') }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <p class="text-muted" data-testid="cms-page-current-image">{{ 'This page has no image.'|trans({}, 'theliacms') }}</p>
+                        {% endif %}
+                    </div>
+                    {% if form.imageUpload is defined %}
+                        <div class="col-lg-8">
+                            {{ form_row(form.imageUpload, { attr: { accept: 'image/jpeg,image/png,image/webp' } }) }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <fieldset>
+                    <legend class="form-label fs-6">{{ 'Choose from the CMS media library'|trans({}, 'theliacms') }}</legend>
+                    {{ form_errors(form.image) }}
+                    <div class="row row-cols-2 row-cols-md-4 row-cols-xl-6 g-3" data-testid="cms-page-image-choices">
+                        {% for choice in form.image %}
+                            {% set item = images[choice.vars.value] ?? null %}
+                            <div class="col">
+                                <div class="card h-100 {{ choice.vars.checked ? 'border-primary' }}">
+                                    <label for="{{ choice.vars.id }}" class="ratio ratio-4x3 bg-body-secondary rounded-top overflow-hidden">
+                                        {% if item %}
+                                            <img src="{{ item.thumbnailUrl }}" alt="" loading="lazy" decoding="async" style="object-fit: scale-down">
+                                        {% else %}
+                                            <span class="d-flex align-items-center justify-content-center text-muted">
+                                                <i class="bi bi-slash-circle fs-2" aria-hidden="true"></i>
+                                            </span>
+                                        {% endif %}
+                                    </label>
+                                    <div class="card-body py-2 small">
+                                        {{ form_widget(choice, { label: item ? item.title : 'No image'|trans({}, 'theliacms'), translation_domain: false }) }}
+                                        {% if item and not item.isDescribed %}
+                                            <span class="badge text-bg-warning">{{ 'No alternative text'|trans({}, 'theliacms') }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </fieldset>
             </div>
         </div>
 
@@ -120,4 +190,9 @@
             {% endif %}
         </div>
     {% endif %}
+{% endblock %}
+
+{% block scripts_extra %}
+    {{ parent() }}
+    {{ safe_hook('wysiwyg.js', { location: 'cms-page-edit-js' }) }}
 {% endblock %}

@@ -59,6 +59,17 @@ final class ThemeTemplateRenderer
         return $parser->render($template, $context);
     }
 
+    /**
+     * Renders a template already chosen — a file name the theme parser finds,
+     * or a namespaced path — with the parser configured on the active theme.
+     *
+     * @param array<string, mixed> $context
+     */
+    public function renderTemplate(string $template, array $context = []): string
+    {
+        return $this->parser()->render($template, $context);
+    }
+
     private function parser(): ParserInterface
     {
         if (null !== $this->parser) {

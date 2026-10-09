@@ -71,7 +71,7 @@ final readonly class LegalPagesSeeder
                 // Online, but with no published content: the page is a draft
                 // until someone writes the real text and hits publish.
                 ->setVisible(1)
-                ->setLayout('default');
+                ->setPageType('default');
 
             foreach ($locales as $locale) {
                 $page->setLocale($locale)->setTitle($translations[$locale]['title']);

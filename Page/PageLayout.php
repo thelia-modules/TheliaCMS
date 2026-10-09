@@ -15,8 +15,11 @@ declare(strict_types=1);
 namespace TheliaCMS\Page;
 
 /**
- * Drives the wrapper the theme puts around the page content: whether it sits in
- * a container, and whether the header and footer are the full ones.
+ * The three layouts a page could have before page types replaced them.
+ *
+ * @deprecated since 1.2.0, removed in 2.0.0: a page has a type instead
+ *             (PublishedPage::$pageType), which picks its template. Each of
+ *             these values is still a page type of the same code.
  */
 enum PageLayout: string
 {

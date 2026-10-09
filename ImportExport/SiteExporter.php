@@ -127,7 +127,8 @@ final readonly class SiteExporter
             'parent' => $withTree && $parent > 0 ? self::pageUid($parent) : null,
             'position' => (int) $page->getPosition(),
             'visible' => 1 === $page->getVisible(),
-            'layout' => (string) $page->getLayout(),
+            'page_type' => (string) $page->getPageType(),
+            'image_id' => $page->getImageId(),
             'publish_at' => $this->date($page->getPublishAt()),
             'unpublish_at' => $this->date($page->getUnpublishAt()),
             'translations' => [],
@@ -145,6 +146,8 @@ final readonly class SiteExporter
             $document['translations'][$locale] = [
                 'title' => $title,
                 'slug' => $this->slugOf($page, $locale),
+                'chapo' => $page->getChapo(),
+                'description' => $page->getDescription(),
                 'meta_title' => $page->getMetaTitle(),
                 'meta_description' => $page->getMetaDescription(),
                 'og_title' => $page->getOgTitle(),
@@ -425,6 +428,10 @@ final readonly class SiteExporter
         }
 
         $ids = $this->media->collect($fragments);
+
+        if (null !== ($document['image_id'] ?? null)) {
+            $ids[] = (int) $document['image_id'];
+        }
 
         foreach ($document['translations'] ?? [] as $translation) {
             if (null !== ($translation['og_image_id'] ?? null)) {

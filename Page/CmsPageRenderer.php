@@ -18,19 +18,23 @@ use TheliaCMS\Front\ThemeTemplateRenderer;
 use TheliaCMS\Partial\PartialRenderer;
 
 /**
- * Renders a CMS page: the theme layout if there is one, the layout shipped with
- * the module otherwise.
+ * Renders a CMS page with the template of its type: see PageTemplateResolver
+ * for the order the theme and the module are tried in.
  *
  * The dynamic blocks of the page are resolved here rather than at publish time —
  * a news list stored in the page would be the news of the day it was published.
  */
 final readonly class CmsPageRenderer
 {
-    public const string THEME_TEMPLATE = 'cmspage';
+    /** @deprecated since 1.2.0, removed in 2.0.0: the template depends on the type of the page, see PageTemplateResolver */
+    public const string THEME_TEMPLATE = PageTemplateResolver::BASE_TEMPLATE;
+
+    /** @deprecated since 1.2.0, removed in 2.0.0: the template depends on the type of the page, see PageTemplateResolver */
     public const string MODULE_TEMPLATE = '@TheliaCMSModule/front/cmspage.html.twig';
 
     public function __construct(
         private ThemeTemplateRenderer $templates,
+        private PageTemplateResolver $templateResolver,
         private PartialRenderer $partials,
     ) {
     }
@@ -39,7 +43,7 @@ final readonly class CmsPageRenderer
     {
         $html = $this->partials->substitute($page->html, $page->locale);
 
-        return $this->templates->render(self::THEME_TEMPLATE, self::MODULE_TEMPLATE, [
+        return $this->templates->renderTemplate($this->templateResolver->resolve($page->pageType)->name, [
             'cms_page' => $page->withHtml((string) $html),
         ]);
     }

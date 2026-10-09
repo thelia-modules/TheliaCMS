@@ -114,7 +114,7 @@ final class PublishPipelineTest extends CmsIntegrationTestCase
         $page->setParent(0)
             ->setPosition(0)
             ->setVisible(1)
-            ->setLayout('default');
+            ->setPageType('default');
 
         $this->writer()->saveDraft($page, $this->locale(), new PageDraft(title: $title));
 

@@ -17,14 +17,17 @@ namespace TheliaCMS\Page\Admin;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\UrlType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\Image;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
-use TheliaCMS\Page\PageLayout;
+use TheliaCMS\Media\Admin\CmsMediaType;
+use TheliaCMS\Page\PageTypeCode;
 
 final class CmsPageType extends AbstractType
 {
@@ -40,17 +43,22 @@ final class CmsPageType extends AbstractType
                 'required' => false,
                 'help' => 'Leave empty to derive it from the title. Parent pages prefix it automatically.',
             ])
+            // `wysiwyg` is the opt-in class of the back-office rich text
+            // editor: the same editor as the summary and description of a
+            // core content, when one is installed, a plain textarea otherwise.
+            ->add('chapo', TextareaType::class, ['label' => 'Summary', 'required' => false, 'attr' => ['rows' => 3, 'class' => 'wysiwyg']])
+            ->add('description', TextareaType::class, ['label' => 'Detailed description', 'required' => false, 'attr' => ['rows' => 8, 'class' => 'wysiwyg']])
             ->add('parent', ChoiceType::class, [
                 'label' => 'Parent page',
                 'choices' => ['None (top level)' => 0] + $options['parent_choices'],
             ])
-            ->add('layout', ChoiceType::class, [
-                'label' => 'Layout',
-                'choices' => [
-                    'Default' => PageLayout::Default->value,
-                    'Full width' => PageLayout::FullWidth->value,
-                    'Landing page' => PageLayout::Landing->value,
-                ],
+            // A type is a code and nothing else: shown as it is, never
+            // translated. Managed under CMS > Settings > Page types.
+            ->add('pageType', ChoiceType::class, [
+                'label' => 'Page type',
+                'choices' => array_combine($options['page_type_choices'], $options['page_type_choices']),
+                'choice_translation_domain' => false,
+                'help' => 'Picks the template the page is displayed with.',
             ])
             ->add('visible', ChoiceType::class, [
                 'label' => 'Online',
@@ -93,7 +101,34 @@ final class CmsPageType extends AbstractType
                 'label' => 'Link following',
                 'choices' => ['Follow links' => 0, 'Do not follow links (nofollow)' => 1],
                 'expanded' => true,
+            ])
+            ->add('image', ChoiceType::class, [
+                'label' => 'Image of the page',
+                'required' => false,
+                'expanded' => true,
+                'placeholder' => 'No image',
+                'choices' => $options['image_choices'],
+                'choice_label' => static fn (int $imageId): string => (string) $imageId,
             ]);
+
+        // Uploading adds an image to the CMS library, which is the right to
+        // create media, not the right to change pages: without it the field is
+        // not there, and a request that sends a file anyway is an invalid form.
+        if (!$options['allow_image_upload']) {
+            return;
+        }
+
+        // Wins over the choice above: the file is stored in the CMS library
+        // and becomes the image of the page in the same save.
+        $builder->add('imageUpload', FileType::class, [
+            'label' => 'Or upload a new image',
+            'required' => false,
+            'constraints' => [new Image(
+                mimeTypes: CmsMediaType::ACCEPTED_MIME_TYPES,
+                mimeTypesMessage: 'Only JPEG, PNG and WebP images can be uploaded.',
+            )],
+            'help' => 'It is added to the CMS media library. Describe it there so the page can say what it shows.',
+        ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -102,7 +137,13 @@ final class CmsPageType extends AbstractType
             ->setDefaults([
                 'translation_domain' => 'theliacms',
                 'parent_choices' => [],
+                'image_choices' => [],
+                'page_type_choices' => [PageTypeCode::DEFAULT],
+                'allow_image_upload' => false,
             ])
-            ->setAllowedTypes('parent_choices', 'array');
+            ->setAllowedTypes('parent_choices', 'array')
+            ->setAllowedTypes('image_choices', 'array')
+            ->setAllowedTypes('page_type_choices', 'array')
+            ->setAllowedTypes('allow_image_upload', 'bool');
     }
 }

@@ -121,8 +121,9 @@ addresses, which Fastly does in `vcl_recv` exactly as above.
 
 ## Telling the proxy what to drop
 
-The module works out which tags are stale: the page just published, the pages
-drawing a menu that changed, the pages using a reusable block that was edited.
+The module works out which tags are stale: the page just published, the page
+whose settings were just saved (its type, its SEO fields), the pages drawing a
+menu that changed, the pages using a reusable block that was edited.
 It hands them to every service tagged `thelia_cms.cache_purger`, and ships none
 of its own. What a purge means depends on the proxy, on its address, on its
 authentication and on whether it invalidates by key or by ban, and a wrong guess
@@ -131,6 +132,10 @@ is worse than doing nothing at all.
 Writing one is a few lines. `docs/examples/VarnishCachePurger.php.example` is a
 complete one; copy it into a project, rename it to `.php`, and the container
 picks it up through the tag on the interface.
+
+A template file is not something the module sees change. A theme that adds
+`cmspage-{type}.html.twig` changes the pages of that type at the next
+expiry of `http_cache_ttl`, unless the deployment purges the site.
 
 A purger that throws is logged and skipped: a CDN that cannot be reached must
 not turn publishing a page into an error the editor has to understand.

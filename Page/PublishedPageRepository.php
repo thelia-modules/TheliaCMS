@@ -15,9 +15,12 @@ declare(strict_types=1);
 namespace TheliaCMS\Page;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
+use TheliaLibrary\Model\LibraryImage;
+use TheliaLibrary\Model\LibraryImageQuery;
 
 /**
  * The single front-office read path for pages. Draft columns are never selected
@@ -25,6 +28,11 @@ use TheliaCMS\Model\CmsPageQuery;
  */
 final readonly class PublishedPageRepository
 {
+    public function __construct(
+        private CmsMediaLibrary $library,
+    ) {
+    }
+
     public function find(int $pageId, string $locale, ?\DateTimeInterface $now = null): ?PublishedPage
     {
         $page = CmsPageQuery::create()->findPk($pageId);
@@ -48,9 +56,12 @@ final readonly class PublishedPageRepository
             id: $pageId,
             locale: $locale,
             title: (string) $page->getTitle(),
-            layout: PageLayout::fromStorage($page->getLayout()),
+            pageType: PageTypeCode::orDefault($page->getPageType()),
             html: (string) $content->getPublishedHtml(),
             css: (string) $content->getPublishedCss(),
+            chapo: $this->nullIfBlank($page->getChapo()),
+            description: $this->nullIfBlank($page->getDescription()),
+            image: $this->imageOf($page, $locale),
             metaTitle: $this->nullIfBlank($page->getMetaTitle()),
             metaDescription: $this->nullIfBlank($page->getMetaDescription()),
             noindex: 1 === $page->getNoindex(),
@@ -90,9 +101,12 @@ final readonly class PublishedPageRepository
             id: $pageId,
             locale: $locale,
             title: (string) $page->getTitle(),
-            layout: PageLayout::fromStorage($page->getLayout()),
+            pageType: PageTypeCode::orDefault($page->getPageType()),
             html: (string) $content->getDraftHtml(),
             css: (string) $content->getDraftCss(),
+            chapo: $this->nullIfBlank($page->getChapo()),
+            description: $this->nullIfBlank($page->getDescription()),
+            image: $this->imageOf($page, $locale),
             metaTitle: $this->nullIfBlank($page->getMetaTitle()),
             metaDescription: $this->nullIfBlank($page->getMetaDescription()),
             noindex: true,
@@ -164,5 +178,41 @@ final readonly class PublishedPageRepository
     private function nullIfBlank(?string $value): ?string
     {
         return '' === trim((string) $value) ? null : $value;
+    }
+
+    /**
+     * Null for a page without an image, and for one whose image has since been
+     * deleted from the library: there is no foreign key to keep the id honest.
+     */
+    private function imageOf(CmsPage $page, string $locale): ?PageImage
+    {
+        $imageId = $page->getImageId();
+
+        if (null === $imageId) {
+            return null;
+        }
+
+        $image = LibraryImageQuery::create()->findPk($imageId);
+
+        if (!$image instanceof LibraryImage) {
+            return null;
+        }
+
+        $url = $this->library->publicUrl($image);
+
+        if (null === $url) {
+            return null;
+        }
+
+        $this->library->measure($image);
+        $image->setLocale($locale);
+
+        return new PageImage(
+            id: (int) $image->getId(),
+            url: $url,
+            alt: 1 === $image->getDecorative() ? '' : $this->nullIfBlank($image->getAlt()),
+            width: $image->getWidth(),
+            height: $image->getHeight(),
+        );
     }
 }

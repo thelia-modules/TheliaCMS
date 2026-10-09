@@ -53,11 +53,55 @@ final class CmsPageTypeTest extends TestCase
         self::assertSame('https://www.example.com/page', $form->get('canonical')->getData());
     }
 
-    private function createForm(): FormInterface
+    public function testThePageTypeIsOneOfTheTypesOffered(): void
+    {
+        $form = $this->createForm(['page_type_choices' => ['default', 'recipe']]);
+        $form->submit(['pageType' => 'recipe'], false);
+
+        self::assertTrue($form->get('pageType')->isValid());
+        self::assertSame('recipe', $form->get('pageType')->getData());
+    }
+
+    public function testATypeMadeOfDigitsOnlyIsKeptAsItsCode(): void
+    {
+        $form = $this->createForm(['page_type_choices' => ['default', '2024']]);
+        $form->submit(['pageType' => '2024'], false);
+
+        self::assertTrue($form->get('pageType')->isValid());
+        self::assertSame('2024', $form->get('pageType')->getData());
+    }
+
+    public function testATypeTheSiteDoesNotHaveIsRefused(): void
+    {
+        $form = $this->createForm(['page_type_choices' => ['default', 'recipe']]);
+        $form->submit(['pageType' => 'news'], false);
+
+        self::assertFalse($form->get('pageType')->isValid());
+    }
+
+    public function testTheUploadFieldIsThereOnlyWhenUploadingIsAllowed(): void
+    {
+        self::assertFalse($this->createForm()->has('imageUpload'));
+        self::assertTrue($this->createForm(['allow_image_upload' => true])->has('imageUpload'));
+    }
+
+    public function testAFileSentWithoutTheRightToUploadIsAnInvalidForm(): void
+    {
+        $form = $this->createForm();
+        $form->submit(['title' => 'Page', 'imageUpload' => 'forged'], false);
+
+        self::assertFalse($form->isValid());
+        self::assertArrayHasKey('imageUpload', $form->getExtraData());
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function createForm(array $options = []): FormInterface
     {
         return Forms::createFormFactoryBuilder()
             ->addExtension(new ValidatorExtension(Validation::createValidator()))
             ->getFormFactory()
-            ->create(CmsPageType::class);
+            ->create(CmsPageType::class, null, $options);
     }
 }

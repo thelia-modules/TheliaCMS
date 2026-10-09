@@ -15,7 +15,8 @@ CREATE TABLE `cms_page`
     `parent` INTEGER DEFAULT 0 NOT NULL,
     `position` INTEGER DEFAULT 0 NOT NULL,
     `visible` TINYINT(4) DEFAULT 1 NOT NULL,
-    `layout` VARCHAR(20) DEFAULT 'default' NOT NULL,
+    `page_type` VARCHAR(50) DEFAULT 'default' NOT NULL,
+    `image_id` INTEGER,
     `publish_at` TIMESTAMP NULL,
     `unpublish_at` TIMESTAMP NULL,
     `deleted_at` TIMESTAMP NULL,
@@ -335,6 +336,8 @@ CREATE TABLE `cms_page_i18n`
     `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
     `title` VARCHAR(255),
     `slug` VARCHAR(255),
+    `chapo` TEXT,
+    `description` LONGTEXT,
     `meta_title` VARCHAR(255),
     `meta_description` TEXT,
     `og_title` VARCHAR(255),
@@ -448,6 +451,22 @@ CREATE TABLE `cms_form_field_i18n`
         FOREIGN KEY (`id`)
         REFERENCES `cms_form_field` (`id`)
         ON DELETE CASCADE
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+-- ---------------------------------------------------------------------
+-- cms_page_type
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_page_type`;
+
+CREATE TABLE `cms_page_type`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(50) NOT NULL,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_page_type_code` (`code`)
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 # This restores the fkey checks, after having unset them earlier

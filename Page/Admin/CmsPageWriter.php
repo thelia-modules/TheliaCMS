@@ -91,7 +91,13 @@ final readonly class CmsPageWriter
             }
 
             $page->setUpdatedBy($adminId);
-            $page->setLocale($locale)->setTitle($draft->title);
+            // The summary and the description are HTML a theme prints as it
+            // is: they go through the filter the page content goes through.
+            $mayPublishCustomCode = $this->mayPublishCustomCode();
+            $page->setLocale($locale)
+                ->setTitle($draft->title)
+                ->setChapo($this->sanitizer->html($page->getChapo(), $mayPublishCustomCode))
+                ->setDescription($this->sanitizer->html($page->getDescription(), $mayPublishCustomCode));
             $page->save($connection);
 
             // The content itself belongs to the builder screen. The row is
@@ -117,6 +123,12 @@ final readonly class CmsPageWriter
             $connection->commit();
 
             $this->menuCache->invalidate();
+            // The settings of a page are live as soon as they are saved — its
+            // type picks the template it is served with, its SEO fields are in
+            // its head — so the copy a shared cache holds is stale already.
+            if (!$wasNew) {
+                $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
+            }
             $this->activityLog->record($wasNew ? 'CREATE' : 'UPDATE', (int) $page->getId(), \sprintf('CMS page "%s" saved in %s', $draft->title, $locale));
         } catch (\Throwable $throwable) {
             $connection->rollBack();
@@ -362,7 +374,8 @@ final readonly class CmsPageWriter
             $copy->setParent($page->getParent())
                 ->setPosition($page->getPosition() + 1)
                 ->setVisible(0)
-                ->setLayout($page->getLayout())
+                ->setPageType($page->getPageType())
+                ->setImageId($page->getImageId())
                 ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
 
             foreach (LangQuery::create()->filterByActive(1)->find() as $lang) {
@@ -375,6 +388,8 @@ final readonly class CmsPageWriter
 
                 $copy->setLocale($lang->getLocale())
                     ->setTitle($title.' '.$titleSuffix)
+                    ->setChapo($source->getChapo())
+                    ->setDescription($source->getDescription())
                     ->setMetaTitle($source->getMetaTitle())
                     ->setMetaDescription($source->getMetaDescription())
                     ->setOgTitle($source->getOgTitle())

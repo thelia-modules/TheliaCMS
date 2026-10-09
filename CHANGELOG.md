@@ -7,8 +7,57 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Upgrading to 1.2.0
+
+- The update renames `cms_page.layout` to `page_type` and adds the
+  `cms_page_type` table. Update the module before serving pages, and remove
+  `var/propel/<env>` so the models are generated again: until both are done,
+  every CMS page fails on `Unknown column 'page_type'`, or on `layout` the other
+  way round.
+- Going back to 1.1 after the update needs the column back under its former
+  name, kept at 50 characters so no code is cut. Export the database first:
+
+  ```sql
+  ALTER TABLE `cms_page` CHANGE COLUMN `page_type` `layout` VARCHAR(50) NOT NULL DEFAULT 'default';
+  DROP TABLE `cms_page_type`;
+  ```
+
 ### Added
 
+- A page has a type, which picks the template it is displayed with:
+  `cmspage-{type}.html.twig` from the theme, then from this module, before the
+  usual `cmspage.html.twig`. The types are listed, added and deleted under
+  **CMS > Settings > Page types**, which says for each one the template it
+  gets. A type is a code and nothing else; the three former layouts become the
+  types `default`, `full-width` and `landing`, and each page keeps its own. A
+  type a page has, the bin included, cannot be deleted. Themes read the code as
+  `cms_page.pageType`, the modules hooked on `cmspage.*` as `page.pageType`.
+  The type follows a page when it is duplicated, travels with the site export
+  and with saved templates. An import of a site creates the types the site
+  lacks; a page started from a saved template whose type the site no longer
+  has gets the default type, since starting a page needs no right on the
+  settings. Files and templates written before 1.2.0 are read through their
+  `layout`.
+- A page carries a summary and a detailed description per language, the same
+  pair as a core content, typed under its address in the "General" tab with
+  the back-office rich text editor when Tiptap is installed. They are not the
+  body of the page, which the builder owns, and nothing renders them on their
+  own: a theme reads them as `cms_page.chapo` and `cms_page.description`, and
+  the modules hooked on `cmspage.*` as `page.chapo` and `page.description`.
+  Both are HTML filtered on save like the content of the page: no script, and
+  no iframe without the custom code right; an imported file gets no iframe
+  either. Both follow the page when it is duplicated and travel with the site
+  export.
+  The update to 1.1.0 adds the two columns to `cms_page_i18n`.
+- An "Image" tab gives a page one image, the same in every language, chosen
+  from the CMS media library or uploaded into it, and saved with the rest of
+  the page. Uploading takes the right to create media, as on the media screen:
+  without it the tab only offers the images already in the library. A theme reads it as `cms_page.image` (`url`, `alt`, `width`,
+  `height`); an image deleted from the library leaves the page without one.
+  It follows the page when it is duplicated, travels with the site export
+  like the images of the content, and counts as a use on the media screen, so
+  the image of a page cannot be deleted from under it. The update to 1.1.0
+  adds `image_id` to `cms_page`.
 - **CMS > Settings** lists every block the editor can offer, group by group as
   the panel shows them — the basic, layout and advanced blocks of the editor
   itself, the page blocks of the catalogue, the live content — and lets an
@@ -95,6 +144,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed
 
+- The constructor of `PublishedPage` takes `string $pageType` where it took
+  `PageLayout $layout`. The module is the only one meant to build that object;
+  a hook reading `$layout` keeps working.
+- Saving the settings of a page drops it from the shared cache. Its type, its
+  title and its SEO fields are live as soon as they are saved, and a cached copy
+  kept showing the previous ones until it expired.
 - Every write of the back office under `/admin/cms` requires the back-office
   token, in the `_token` field of the body or in the `X-CSRF-Token` header. A
   script of your own that posts to these routes now gets a 403 until it sends
@@ -110,8 +165,20 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - A site of fewer than forty pages opens whole, so nothing changes for a site that
   never needed folding.
 
+### Deprecated
+
+- `CmsPageRenderer::THEME_TEMPLATE` and `MODULE_TEMPLATE`: the template of a
+  page now depends on its type, which `PageTemplateResolver` resolves. Both go
+  in 2.0.0.
+- `PublishedPage::$layout` and the `PageLayout` enum, replaced by
+  `PublishedPage::$pageType`. `layout` is still filled for the hooks written
+  against 1.x, from the type: `full-width` and `landing` read as before, any
+  other type as `Default`. Both go in 2.0.0.
+
 ### Fixed
 
+- The media screen counted a page once per language using an image, so an
+  image on a page in French and English read "Used in 2 page(s)".
 - The page form no longer raises a Symfony deprecation each time it is built.
   Its canonical URL field left the default scheme unset; a canonical address
   typed without its scheme is now read as `https://`, as in SEOne.

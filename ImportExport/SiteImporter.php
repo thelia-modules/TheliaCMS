@@ -18,6 +18,7 @@ use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Builder\PublishedContentSanitizer;
 use TheliaCMS\Form\FieldChoices;
 use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Model\CmsBlock;
@@ -39,6 +40,9 @@ use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsPageSearch;
 use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\PageTypeCode;
+use TheliaCMS\Page\PageTypeRepository;
+use TheliaCMS\Page\PageTypeWriter;
 use TheliaCMS\Search\SearchTextExtractor;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\DisabledBlocks;
@@ -66,6 +70,9 @@ final readonly class SiteImporter
         private SearchTextExtractor $searchText,
         private CmsSettings $settings,
         private MenuCache $menuCache,
+        private PageTypeRepository $pageTypes,
+        private PageTypeWriter $pageTypeWriter,
+        private PublishedContentSanitizer $sanitizer,
     ) {
     }
 
@@ -135,13 +142,16 @@ final readonly class SiteImporter
                 ->setParent($parentId)
                 ->setPosition((int) ($source['position'] ?? 0))
                 ->setVisible(0)
-                ->setLayout((string) ($source['layout'] ?? 'default'));
+                ->setPageType($this->pageTypeOf($source, $report, $connection))
+                ->setImageId($this->mappedImage($source['image_id'] ?? null, $mediaMap));
 
             foreach ($source['translations'] ?? [] as $pageLocale => $translation) {
                 $page->setLocale((string) $pageLocale)
                     ->setTitle((string) ($pageLocale === $locale && null !== $title && '' !== $title
                         ? $title
                         : ($translation['title'] ?? '')))
+                    ->setChapo($this->summaryHtml($translation['chapo'] ?? null))
+                    ->setDescription($this->summaryHtml($translation['description'] ?? null))
                     ->setMetaTitle($translation['meta_title'] ?? null)
                     ->setMetaDescription($translation['meta_description'] ?? null)
                     ->setOgTitle($translation['og_title'] ?? null)
@@ -248,6 +258,7 @@ final readonly class SiteImporter
         ConnectionInterface $connection,
     ): array {
         $pageIds = [];
+        $knownTypes = $this->pageTypes->codes($connection);
 
         foreach ($document->pages() as $page) {
             $uid = (string) ($page['uid'] ?? '');
@@ -276,13 +287,16 @@ final readonly class SiteImporter
                 ->setParent($parentId)
                 ->setPosition((int) ($page['position'] ?? 0))
                 ->setVisible(($page['visible'] ?? true) ? 1 : 0)
-                ->setLayout((string) ($page['layout'] ?? 'default'))
+                ->setPageType($this->pageTypeOf($page, $report, $connection, $knownTypes))
+                ->setImageId($this->mappedImage($page['image_id'] ?? null, $mediaMap))
                 ->setPublishAt($this->date($page['publish_at'] ?? null))
                 ->setUnpublishAt($this->date($page['unpublish_at'] ?? null));
 
             foreach ($translations as $locale => $translation) {
                 $model->setLocale((string) $locale)
                     ->setTitle((string) ($translation['title'] ?? ''))
+                    ->setChapo($this->summaryHtml($translation['chapo'] ?? null))
+                    ->setDescription($this->summaryHtml($translation['description'] ?? null))
                     ->setMetaTitle($translation['meta_title'] ?? null)
                     ->setMetaDescription($translation['meta_description'] ?? null)
                     ->setOgTitle($translation['og_title'] ?? null)
@@ -720,6 +734,43 @@ final readonly class SiteImporter
     }
 
     /**
+     * The type of an imported page.
+     *
+     * Files written before 1.2.0 carry the former `layout` key, whose three
+     * values are page types of the same code. A type this site lacks is created
+     * when `$knownTypes` is given, which only an import of a site does: that is
+     * the gesture of whoever runs the site. Starting a page from a template
+     * needs nothing more than the right to write pages, so there a missing type
+     * is the default one, never a type added behind the settings screen.
+     *
+     * @param array<string, mixed> $page
+     * @param list<string>|null    $knownTypes the codes of the site, completed as types are created
+     */
+    private function pageTypeOf(array $page, ImportReport $report, ConnectionInterface $connection, ?array &$knownTypes = null): string
+    {
+        $raw = $page['page_type'] ?? $page['layout'] ?? PageTypeCode::DEFAULT;
+        $code = \is_string($raw) ? $raw : '';
+
+        if (!PageTypeCode::isValid($code)) {
+            $report->warn('A page type that is not a valid code was replaced by the default type.');
+
+            return PageTypeCode::DEFAULT;
+        }
+
+        if (null === $knownTypes) {
+            return $this->pageTypes->exists($code, $connection) ? $code : PageTypeCode::DEFAULT;
+        }
+
+        if (!\in_array($code, $knownTypes, true)) {
+            $this->pageTypeWriter->add($code, $connection);
+            $knownTypes[] = $code;
+            $report->warn(\sprintf('Page type "%s" did not exist on this site: it was created.', $code));
+        }
+
+        return $code;
+    }
+
+    /**
      * @param array<int, int> $mediaMap
      */
     private function mappedImage(mixed $imageId, array $mediaMap): ?int
@@ -729,6 +780,16 @@ final readonly class SiteImporter
         }
 
         return $mediaMap[(int) $imageId] ?? null;
+    }
+
+    /**
+     * The summary and the description of a page are printed by the theme as
+     * they are. A file is not a trusted author either: nothing in it gets past
+     * the filter an editor without the custom code right is held to.
+     */
+    private function summaryHtml(mixed $html): ?string
+    {
+        return \is_string($html) ? $this->sanitizer->html($html) : null;
     }
 
     private function date(mixed $value): ?\DateTimeImmutable

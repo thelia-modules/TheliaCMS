@@ -34,7 +34,18 @@
         <column defaultValue="0" name="parent" required="true" type="INTEGER"/>
         <column defaultValue="0" name="position" required="true" type="INTEGER"/>
         <column defaultValue="1" name="visible" required="true" type="TINYINT" size="4"/>
-        <column defaultValue="default" name="layout" required="true" size="20" type="VARCHAR"/>
+        <!--
+            The code of a row of `cms_page_type`, not its id: a page keeps its
+            type through an export and an import into another site. No foreign
+            key, for the same reason; a type in use cannot be deleted.
+        -->
+        <column defaultValue="default" name="page_type" required="true" size="50" type="VARCHAR"/>
+        <!--
+            The image of the page, a TheliaLibrary image, the same in every
+            language like the image of a core content. No foreign key, for the
+            reason given on `og_image_id`: a stale id renders as "no image".
+        -->
+        <column name="image_id" type="INTEGER"/>
         <column name="publish_at" type="TIMESTAMP"/>
         <column name="unpublish_at" type="TIMESTAMP"/>
         <column name="deleted_at" type="TIMESTAMP"/>
@@ -57,6 +68,14 @@
             the next activation.
         -->
         <column name="slug" size="255" type="VARCHAR"/>
+        <!--
+            The same pair as the core content and folder: a short summary and a
+            longer description, HTML from the back-office editor. Neither is
+            the body of the page, which the builder owns: they are what a list
+            of pages, a card or a theme shows about it.
+        -->
+        <column name="chapo" type="LONGVARCHAR"/>
+        <column name="description" type="CLOB"/>
         <column name="meta_title" size="255" type="VARCHAR"/>
         <column name="meta_description" type="LONGVARCHAR"/>
         <column name="og_title" size="255" type="VARCHAR"/>
@@ -86,7 +105,7 @@
 
         <behavior name="i18n">
             <parameter name="i18n_columns"
-                       value="title, slug, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow"/>
+                       value="title, slug, chapo, description, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow"/>
         </behavior>
         <behavior name="timestampable"/>
     </table>
@@ -463,6 +482,23 @@
         <column name="updated_by" type="INTEGER"/>
 
         <unique name="unq_cms_page_template_code">
+            <unique-column name="code"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        The types a page can have. A type is a code and nothing else: it picks
+        the `cmspage-{code}` template the page is rendered with. Named
+        CmsPageTypeDefinition in PHP because `CmsPageType` is the form of a
+        page.
+    -->
+    <table name="cms_page_type" namespace="TheliaCMS\Model" phpName="CmsPageTypeDefinition">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="code" required="true" size="50" type="VARCHAR"/>
+
+        <unique name="unq_cms_page_type_code">
             <unique-column name="code"/>
         </unique>
 
