@@ -43,6 +43,14 @@ final class PublishedPageTest extends TestCase
         self::assertSame('<p>resolved</p>', $page->html);
     }
 
+    public function testResolvingTheBlocksKeepsTheTag(): void
+    {
+        $page = new PublishedPage(id: 1, locale: 'fr_FR', title: 'Gratin', pageType: 'recipe', html: '', css: '', tag: 'Recette');
+
+        self::assertSame('Recette', $page->withHtml('<p>resolved</p>')->tag);
+        self::assertNull($this->page('recipe')->tag, 'A page without a tag has none.');
+    }
+
     private function page(string $pageType): PublishedPage
     {
         return new PublishedPage(id: 1, locale: 'fr_FR', title: 'Gratin', pageType: $pageType, html: '', css: '');

@@ -19,6 +19,9 @@ use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Model\CmsTag;
+use TheliaCMS\Model\CmsTagQuery;
+use TheliaCMS\Model\Map\CmsPageContentTableMap;
 use TheliaLibrary\Model\LibraryImage;
 use TheliaLibrary\Model\LibraryImageQuery;
 
@@ -67,7 +70,75 @@ final readonly class PublishedPageRepository
             noindex: 1 === $page->getNoindex(),
             nofollow: 1 === $page->getNofollow(),
             publishedAt: $content->getPublishedAt(),
+            tag: $this->tagOf($page),
         );
+    }
+
+    /**
+     * The pages online that carry this tag, the most recently published first.
+     *
+     * Online means what find() means: visible, out of the bin, inside the
+     * publication window, and published in this language. Only the columns a
+     * list needs are read; the body of a page is for find().
+     *
+     * @return list<PageCard>
+     */
+    public function withTag(string $tag, string $locale, ?\DateTimeInterface $now = null): array
+    {
+        $name = PageTagName::normalize($tag);
+
+        if ('' === $name) {
+            return [];
+        }
+
+        // Read once: the name the site stores is the one every card carries,
+        // whatever the case the caller typed it in.
+        $tag = CmsTagQuery::create()->filterByName($name)->findOne();
+
+        if (!$tag instanceof CmsTag) {
+            return [];
+        }
+
+        $now ??= new \DateTimeImmutable();
+
+        $pages = CmsPageQuery::create()
+            ->filterByTagId($tag->getId())
+            ->filterByDeletedAt(null, Criteria::ISNULL)
+            ->filterByVisible(1)
+            ->useCmsPageContentQuery()
+                ->filterByLocale($locale)
+                ->filterByPublishedAt(null, Criteria::ISNOTNULL)
+                ->filterByPublishedHtml(null, Criteria::ISNOTNULL)
+            ->endUse()
+            ->withColumn(CmsPageContentTableMap::COL_PUBLISHED_AT, 'content_published_at')
+            ->addDescendingOrderByColumn('content_published_at')
+            ->find();
+
+        $cards = [];
+
+        foreach ($pages as $page) {
+            if (!$this->isLive($page, $now)) {
+                continue;
+            }
+
+            $page->setLocale($locale);
+            $publishedAt = $page->getVirtualColumn('content_published_at');
+
+            $cards[] = new PageCard(
+                id: (int) $page->getId(),
+                locale: $locale,
+                title: (string) $page->getTitle(),
+                url: (string) $page->getUrl($locale),
+                pageType: PageTypeCode::orDefault($page->getPageType()),
+                chapo: $this->nullIfBlank($page->getChapo()),
+                description: $this->nullIfBlank($page->getDescription()),
+                image: $this->imageOf($page, $locale),
+                tag: (string) $tag->getName(),
+                publishedAt: \is_string($publishedAt) ? new \DateTimeImmutable($publishedAt) : null,
+            );
+        }
+
+        return $cards;
     }
 
     /**
@@ -111,6 +182,7 @@ final readonly class PublishedPageRepository
             metaDescription: $this->nullIfBlank($page->getMetaDescription()),
             noindex: true,
             nofollow: true,
+            tag: $this->tagOf($page),
         );
     }
 
@@ -173,6 +245,17 @@ final readonly class PublishedPageRepository
         $unpublishAt = $page->getUnpublishAt();
 
         return null === $unpublishAt || $unpublishAt > $now;
+    }
+
+    private function tagOf(CmsPage $page): ?string
+    {
+        if (null === $page->getTagId()) {
+            return null;
+        }
+
+        $tag = $page->getCmsTag();
+
+        return $tag instanceof CmsTag ? (string) $tag->getName() : null;
     }
 
     private function nullIfBlank(?string $value): ?string

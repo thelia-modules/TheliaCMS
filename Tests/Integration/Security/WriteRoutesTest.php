@@ -20,6 +20,7 @@ use Symfony\Component\Routing\RouterInterface;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsMenu;
+use TheliaCMS\Model\CmsTag;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 
 /**
@@ -78,6 +79,8 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.settings.edit',
         'admin.cms.settings.page_types.list',
         'admin.cms.settings.styles.edit',
+        'admin.cms.tags.edit',
+        'admin.cms.tags.list',
         'admin.cms.templates.list',
         'openstudio_page_builder_image_list',
     ];
@@ -165,6 +168,9 @@ final class WriteRoutesTest extends AdminScreenTestCase
         $form->setLocale($this->locale())->setTitle('Token screens form');
         $form->save();
 
+        $tag = (new CmsTag())->setName('Token screens tag');
+        $tag->save();
+
         $screens = [
             '/admin/cms/pages',
             '/admin/cms/pages/new',
@@ -186,6 +192,8 @@ final class WriteRoutesTest extends AdminScreenTestCase
             '/admin/cms/templates',
             '/admin/cms/settings',
             '/admin/cms/settings/page-types',
+            '/admin/cms/tags',
+            '/admin/cms/tags/'.$tag->getId(),
         ];
 
         $offending = [];

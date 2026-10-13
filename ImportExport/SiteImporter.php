@@ -40,6 +40,8 @@ use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsPageSearch;
 use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\PageTagName;
+use TheliaCMS\Page\PageTagWriter;
 use TheliaCMS\Page\PageTypeCode;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\PageTypeWriter;
@@ -73,6 +75,7 @@ final readonly class SiteImporter
         private PageTypeRepository $pageTypes,
         private PageTypeWriter $pageTypeWriter,
         private PublishedContentSanitizer $sanitizer,
+        private PageTagWriter $tagWriter,
     ) {
     }
 
@@ -143,6 +146,7 @@ final readonly class SiteImporter
                 ->setPosition((int) ($source['position'] ?? 0))
                 ->setVisible(0)
                 ->setPageType($this->pageTypeOf($source, $report, $connection))
+                ->setTagId($this->tagIdOf($source, $report, $connection))
                 ->setImageId($this->mappedImage($source['image_id'] ?? null, $mediaMap));
 
             foreach ($source['translations'] ?? [] as $pageLocale => $translation) {
@@ -288,6 +292,7 @@ final readonly class SiteImporter
                 ->setPosition((int) ($page['position'] ?? 0))
                 ->setVisible(($page['visible'] ?? true) ? 1 : 0)
                 ->setPageType($this->pageTypeOf($page, $report, $connection, $knownTypes))
+                ->setTagId($this->tagIdOf($page, $report, $connection))
                 ->setImageId($this->mappedImage($page['image_id'] ?? null, $mediaMap))
                 ->setPublishAt($this->date($page['publish_at'] ?? null))
                 ->setUnpublishAt($this->date($page['unpublish_at'] ?? null));
@@ -768,6 +773,33 @@ final readonly class SiteImporter
         }
 
         return $code;
+    }
+
+    /**
+     * The tag of an imported page, created here when the site lacks it: a tag
+     * is a label of the content, so bringing one in takes no more than the
+     * right to write the page, from a site file or from a saved template.
+     * Files written before 1.3.0 carry no tag.
+     *
+     * @param array<string, mixed> $page
+     */
+    private function tagIdOf(array $page, ImportReport $report, ConnectionInterface $connection): ?int
+    {
+        $raw = $page['tag'] ?? null;
+
+        if (null === $raw) {
+            return null;
+        }
+
+        $name = \is_string($raw) ? PageTagName::normalize($raw) : '';
+
+        if (!PageTagName::isValid($name)) {
+            $report->warn('A page tag that is not a name was left out.');
+
+            return null;
+        }
+
+        return (int) $this->tagWriter->add($name, $connection)->getId();
     }
 
     /**

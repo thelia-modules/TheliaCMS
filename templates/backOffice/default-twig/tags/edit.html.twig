@@ -1,0 +1,30 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Rename the tag'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-tag-edit{% endblock %}
+
+{% block content %}
+    {% form_theme form with bo_form_themes only %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: tag.name } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.tags.list') }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to tags'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">{{ 'Carried by %count% page(s), the bin included. Renaming it changes the label on each of them.'|trans({ '%count%': tag.pages }, 'theliacms') }}</p>
+
+    <div class="card">
+        <div class="card-body">
+            {{ form_start(form) }}
+                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                {{ form_row(form.name) }}
+                <button class="btn btn-primary" type="submit" data-testid="cms-tag-rename">
+                    {{ 'Save'|trans({}, 'theliacms') }}
+                </button>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

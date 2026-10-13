@@ -15,8 +15,12 @@ declare(strict_types=1);
 namespace TheliaCMS\Twig;
 
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Thelia\Domain\Localization\Service\LangService;
+use Thelia\Model\Lang;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
+use TheliaCMS\Page\PageCard;
+use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\SiteIcon;
 use Twig\Extension\AbstractExtension;
@@ -36,6 +40,8 @@ final class CmsExtension extends AbstractExtension
         private readonly SiteIcon $icon,
         private readonly UrlGeneratorInterface $urls,
         private readonly CmsSettings $settings,
+        private readonly PublishedPageRepository $pages,
+        private readonly LangService $langService,
     ) {
     }
 
@@ -49,7 +55,25 @@ final class CmsExtension extends AbstractExtension
             // checkout answer 404, and a header linking to them puts a dead link
             // on every page of the site.
             new TwigFunction('cms_is_showcase', $this->settings->isShowcase(...)),
+            new TwigFunction('cms_pages_tagged', $this->pagesTagged(...)),
         ];
+    }
+
+    /**
+     * The pages online carrying a tag, the most recently published first, in
+     * the language being served unless told otherwise. Data, not markup: what
+     * a theme puts around a page is the theme's business.
+     *
+     * @return list<PageCard>
+     */
+    public function pagesTagged(string $tag, ?string $locale = null): array
+    {
+        return $this->pages->withTag($tag, $locale ?? $this->currentLocale());
+    }
+
+    private function currentLocale(): string
+    {
+        return $this->langService->getLang()?->getLocale() ?? Lang::getDefaultLanguage()->getLocale();
     }
 
     /**

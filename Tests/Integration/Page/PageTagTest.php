@@ -1,0 +1,287 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Tests\Integration\Page;
+
+use Psr\Log\NullLogger;
+use TheliaCMS\Http\CachePurger;
+use TheliaCMS\Http\CachePurgerInterface;
+use TheliaCMS\Http\CacheTags;
+use TheliaCMS\ImportExport\ImportOptions;
+use TheliaCMS\ImportExport\SiteDocument;
+use TheliaCMS\ImportExport\SiteExporter;
+use TheliaCMS\ImportExport\SiteImporter;
+use TheliaCMS\Model\CmsPage;
+use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Model\CmsTag;
+use TheliaCMS\Model\CmsTagQuery;
+use TheliaCMS\Model\Map\CmsPageTableMap;
+use TheliaCMS\Page\PageCard;
+use TheliaCMS\Page\PageTagExistsException;
+use TheliaCMS\Page\PageTagRepository;
+use TheliaCMS\Page\PageTagWriter;
+use TheliaCMS\Page\PublishedPageRepository;
+use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\Twig\CmsExtension;
+
+/**
+ * The tag of a page: the list the site keeps, the pages a tag gathers on the
+ * front, and the ways a page gets one — the form, a duplicate, an import, a
+ * saved template.
+ */
+final class PageTagTest extends CmsIntegrationTestCase
+{
+    public function testATagIsAddedOnceWhateverItsSpacingAndCase(): void
+    {
+        $tag = $this->tagWriter()->add('  Recette   d’été ');
+
+        self::assertSame('Recette d’été', $tag->getName());
+        self::assertSame((int) $tag->getId(), (int) $this->tagWriter()->add('recette d’été')->getId(), 'The column ignores case: one tag.');
+        self::assertSame(1, CmsTagQuery::create()->filterByName('Recette d’été')->count());
+    }
+
+    public function testAnEmptyNameIsRefused(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->tagWriter()->add('   ');
+    }
+
+    public function testTheTagsComeInAlphabeticalOrder(): void
+    {
+        $this->tagWriter()->add('Zèbre du test');
+        $this->tagWriter()->add('Abricot du test');
+
+        $names = array_values($this->tags()->namesById());
+
+        self::assertLessThan(array_search('Zèbre du test', $names, true), array_search('Abricot du test', $names, true));
+    }
+
+    public function testRenamingToTheNameOfAnotherTagIsRefused(): void
+    {
+        $recipe = $this->tagWriter()->add('Recette');
+        $this->tagWriter()->add('Actualité');
+
+        $this->expectException(PageTagExistsException::class);
+
+        $this->tagWriter()->rename($recipe, 'actualité');
+    }
+
+    public function testATagIsRenamedUnderItsOwnNameWithAnotherCase(): void
+    {
+        $recipe = $this->tagWriter()->add('recette');
+
+        $this->tagWriter()->rename($recipe, 'Recette');
+
+        self::assertSame('Recette', $this->tags()->find((int) $recipe->getId())?->getName());
+    }
+
+    public function testDeletingATagDetachesItsPagesTheBinIncluded(): void
+    {
+        $tag = $this->tagWriter()->add('Recette');
+        $live = $this->tagged('Gratin de pâtes', $tag);
+        $binned = $this->tagged('Tarte', $tag);
+        $this->writer()->moveToTrash($binned);
+
+        self::assertSame(2, $this->tags()->countPagesOf($tag), 'The bin counts.');
+
+        $detached = $this->tagWriter()->delete($tag);
+
+        self::assertSame(2, $detached);
+        self::assertNull($this->tagIdInDatabase($live));
+        self::assertNull($this->tagIdInDatabase($binned));
+        self::assertNull($this->tags()->findByName('Recette'));
+    }
+
+    public function testThePublishedPageCarriesTheNameOfItsTag(): void
+    {
+        $page = $this->tagged('Gratin de pâtes', $this->tagWriter()->add('Recette'));
+
+        self::assertSame('Recette', $this->published($page)->tag);
+        self::assertNull($this->published($this->createPage('Sans étiquette'))->tag);
+    }
+
+    public function testThePagesOfATagAreTheOnesOnlineInTheLanguage(): void
+    {
+        $tag = $this->tagWriter()->add('Recette');
+        $other = $this->tagWriter()->add('Actualité');
+        $online = $this->tagged('Gratin de pâtes', $tag);
+        $this->tagged('Actualité du jour', $other);
+        $hidden = $this->tagged('Page masquée', $tag);
+        $hidden->setVisible(0)->save();
+        $this->writer()->moveToTrash($this->tagged('Page en corbeille', $tag));
+        $draft = $this->createPage('Brouillon', published: false);
+        $draft->setTagId($tag->getId())->save();
+        $later = $this->tagged('Page programmée', $tag);
+        $later->setPublishAt(new \DateTimeImmutable('+1 day'))->save();
+        $unpublished = $this->tagged('Page dépubliée', $tag);
+        $this->writer()->unpublish($unpublished, $this->locale());
+
+        $cards = $this->repository()->withTag('recette', $this->locale());
+
+        self::assertSame([(int) $online->getId()], array_map(static fn (PageCard $card): int => $card->id, $cards));
+        self::assertSame('Gratin de pâtes', $cards[0]->title);
+        self::assertSame('Recette', $cards[0]->tag);
+        self::assertSame($online->getUrl($this->locale()), $cards[0]->url);
+        self::assertNotNull($cards[0]->publishedAt);
+    }
+
+    public function testThePagesOfATagComeMostRecentlyPublishedFirst(): void
+    {
+        $tag = $this->tagWriter()->add('Recette');
+        $first = $this->tagged('Première recette', $tag);
+        $second = $this->tagged('Seconde recette', $tag);
+        $this->getPropelConnection()->exec(\sprintf("UPDATE cms_page_content SET published_at = '2020-01-01 10:00:00' WHERE page_id = %d", $second->getId()));
+
+        $ids = array_map(static fn (PageCard $card): int => $card->id, $this->repository()->withTag('Recette', $this->locale()));
+
+        self::assertSame([(int) $first->getId(), (int) $second->getId()], $ids);
+    }
+
+    public function testATagNobodyHasOrAnEmptyNameGathersNoPage(): void
+    {
+        self::assertSame([], $this->repository()->withTag('Étiquette inconnue du test', $this->locale()));
+        self::assertSame([], $this->repository()->withTag('  ', $this->locale()));
+    }
+
+    public function testTheThemeReadsTheTaggedPagesInTheLanguageServed(): void
+    {
+        $page = $this->tagged('Gratin de pâtes', $this->tagWriter()->add('Recette'));
+
+        $cards = $this->getService(CmsExtension::class)->pagesTagged('Recette');
+
+        self::assertSame([(int) $page->getId()], array_map(static fn (PageCard $card): int => $card->id, $cards));
+    }
+
+    public function testADuplicatedPageKeepsItsTag(): void
+    {
+        $tag = $this->tagWriter()->add('Recette');
+        $page = $this->tagged('Gratin de pâtes', $tag);
+
+        $copy = $this->writer()->duplicate($page, $this->locale(), '(copie)');
+
+        self::assertSame((int) $tag->getId(), (int) $copy->getTagId());
+    }
+
+    public function testRenamingOrDeletingATagDropsItsPagesFromTheSharedCache(): void
+    {
+        $tag = $this->tagWriter()->add('Recette');
+        $page = $this->tagged('Gratin de pâtes', $tag);
+        $purger = new class implements CachePurgerInterface {
+            /** @var list<string> */
+            public array $purged = [];
+
+            public function purge(array $tags): void
+            {
+                array_push($this->purged, ...$tags);
+            }
+        };
+        $writer = new PageTagWriter($this->tags(), $this->getService(\TheliaCMS\Page\Admin\CmsActivityLog::class), new CachePurger([$purger], new NullLogger()));
+
+        $writer->rename($tag, 'Recettes');
+        $writer->delete($tag);
+
+        self::assertSame([CacheTags::page((int) $page->getId()), CacheTags::page((int) $page->getId())], $purger->purged);
+    }
+
+    public function testTheTagTravelsWithTheExportAndIsCreatedByTheImport(): void
+    {
+        $page = $this->tagged('Gratin de pâtes', $this->tagWriter()->add('Recette'));
+        $document = $this->getService(SiteExporter::class)->exportPage($page);
+
+        self::assertSame('Recette', $document['pages'][0]['tag']);
+
+        $document['pages'][0]['tag'] = 'Étiquette importée';
+        $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
+
+        self::assertSame([], $report->warnings());
+        $imported = $this->tags()->findByName('Étiquette importée');
+        self::assertInstanceOf(CmsTag::class, $imported);
+        self::assertSame((int) $imported->getId(), $this->tagIdInDatabase($page));
+    }
+
+    public function testAFileWrittenBeforeTagsImportsPagesWithoutOne(): void
+    {
+        $page = $this->tagged('Gratin de pâtes', $this->tagWriter()->add('Recette'));
+        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        unset($document['pages'][0]['tag']);
+
+        $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
+
+        self::assertNull($this->tagIdInDatabase($page));
+    }
+
+    public function testAnImportedTagThatIsNotANameIsLeftOut(): void
+    {
+        $page = $this->createPage('Gratin de pâtes');
+        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        $document['pages'][0]['tag'] = ['Recette'];
+
+        $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
+
+        self::assertNull($this->tagIdInDatabase($page));
+        self::assertCount(1, $report->warnings());
+    }
+
+    public function testAPageStartedFromATemplateGetsTheTagOfTheTemplateCreatedIfNeeded(): void
+    {
+        $page = $this->tagged('Modèle de recette', $this->tagWriter()->add('Recette'));
+        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        $document['pages'][0]['tag'] = 'Étiquette du modèle';
+
+        $created = $this->getService(SiteImporter::class)->importPageFrom(SiteDocument::fromArray($document), 0, 'Nouvelle recette', $this->locale());
+
+        self::assertSame('Étiquette du modèle', $created->getCmsTag()?->getName());
+    }
+
+    private function tagged(string $title, CmsTag $tag): CmsPage
+    {
+        $page = $this->createPage($title);
+        $page->setTagId($tag->getId())->save();
+
+        return $page;
+    }
+
+    private function tagIdInDatabase(CmsPage $page): ?int
+    {
+        CmsPageTableMap::clearInstancePool();
+        $reloaded = CmsPageQuery::create()->findPk($page->getId());
+        self::assertNotNull($reloaded);
+
+        return null === $reloaded->getTagId() ? null : (int) $reloaded->getTagId();
+    }
+
+    private function published(CmsPage $page): \TheliaCMS\Page\PublishedPage
+    {
+        $published = $this->repository()->find((int) $page->getId(), $this->locale());
+        self::assertNotNull($published);
+
+        return $published;
+    }
+
+    private function repository(): PublishedPageRepository
+    {
+        return $this->getService(PublishedPageRepository::class);
+    }
+
+    private function tags(): PageTagRepository
+    {
+        return $this->getService(PageTagRepository::class);
+    }
+
+    private function tagWriter(): PageTagWriter
+    {
+        return $this->getService(PageTagWriter::class);
+    }
+}
