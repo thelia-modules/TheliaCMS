@@ -17,6 +17,7 @@ CREATE TABLE `cms_page`
     `visible` TINYINT(4) DEFAULT 1 NOT NULL,
     `page_type` VARCHAR(50) DEFAULT 'default' NOT NULL,
     `image_id` INTEGER,
+    `tag_id` INTEGER,
     `publish_at` TIMESTAMP NULL,
     `unpublish_at` TIMESTAMP NULL,
     `deleted_at` TIMESTAMP NULL,
@@ -27,7 +28,13 @@ CREATE TABLE `cms_page`
     PRIMARY KEY (`id`),
     INDEX `idx_cms_page_parent` (`parent`),
     INDEX `idx_cms_page_parent_position` (`parent`, `position`),
-    INDEX `idx_cms_page_deleted_at` (`deleted_at`)
+    INDEX `idx_cms_page_deleted_at` (`deleted_at`),
+    INDEX `idx_cms_page_tag` (`tag_id`),
+    CONSTRAINT `fk_cms_page_tag`
+        FOREIGN KEY (`tag_id`)
+        REFERENCES `cms_tag` (`id`)
+        ON UPDATE RESTRICT
+        ON DELETE SET NULL
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
@@ -467,6 +474,22 @@ CREATE TABLE `cms_page_type`
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
     UNIQUE INDEX `unq_cms_page_type_code` (`code`)
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+-- ---------------------------------------------------------------------
+-- cms_tag
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_tag`;
+
+CREATE TABLE `cms_tag`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(100) NOT NULL,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_tag_name` (`name`)
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 # This restores the fkey checks, after having unset them earlier

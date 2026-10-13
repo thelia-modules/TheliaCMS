@@ -60,6 +60,16 @@ final class CmsPageType extends AbstractType
                 'choice_translation_domain' => false,
                 'help' => 'Picks the template the page is displayed with.',
             ])
+            // The tags of the site, managed under CMS > Tags: a page carries
+            // one of them or none.
+            ->add('tag', ChoiceType::class, [
+                'label' => 'Tag',
+                'required' => false,
+                'placeholder' => 'No tag',
+                'choices' => array_flip($options['tag_choices']),
+                'choice_translation_domain' => false,
+                'help' => 'Tags are managed under CMS > Tags.',
+            ])
             ->add('visible', ChoiceType::class, [
                 'label' => 'Online',
                 'choices' => ['Yes' => 1, 'No' => 0],
@@ -139,11 +149,13 @@ final class CmsPageType extends AbstractType
                 'parent_choices' => [],
                 'image_choices' => [],
                 'page_type_choices' => [PageTypeCode::DEFAULT],
+                'tag_choices' => [],
                 'allow_image_upload' => false,
             ])
             ->setAllowedTypes('parent_choices', 'array')
             ->setAllowedTypes('image_choices', 'array')
             ->setAllowedTypes('page_type_choices', 'array')
+            ->setAllowedTypes('tag_choices', 'array')
             ->setAllowedTypes('allow_image_upload', 'bool');
     }
 }

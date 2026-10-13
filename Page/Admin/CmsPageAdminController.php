@@ -34,6 +34,7 @@ use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Notice\NativeContentNotice;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\PageTagRepository;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -68,6 +69,7 @@ final readonly class CmsPageAdminController
         private PageImageChoices $imageChoices,
         private CmsMediaWriter $media,
         private PageTypeRepository $pageTypes,
+        private PageTagRepository $tags,
     ) {
     }
 
@@ -268,6 +270,7 @@ final readonly class CmsPageAdminController
             'description' => $page->isNew() ? null : $page->getDescription(),
             'parent' => (int) $page->getParent(),
             'pageType' => $page->getPageType(),
+            'tag' => $page->getTagId(),
             'image' => $page->getImageId(),
             'visible' => $page->isNew() ? 1 : $page->getVisible(),
             'publishAt' => $page->getPublishAt(),
@@ -287,6 +290,7 @@ final readonly class CmsPageAdminController
             'parent_choices' => $this->pages->parentChoices($locale, $page->isNew() ? null : (int) $page->getId()),
             'image_choices' => $imageChoices,
             'page_type_choices' => $this->pageTypes->codes(),
+            'tag_choices' => $this->tags->namesById(),
             'allow_image_upload' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::CREATE]),
         ]);
     }
@@ -297,6 +301,7 @@ final readonly class CmsPageAdminController
 
         $page->setParent((int) $data['parent'])
             ->setPageType($data['pageType'])
+            ->setTagId(null === $data['tag'] ? null : (int) $data['tag'])
             ->setImageId($this->chosenImage($data, $locale))
             ->setVisible((int) $data['visible'])
             ->setPublishAt($data['publishAt'])

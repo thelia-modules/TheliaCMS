@@ -715,12 +715,41 @@ A theme whose CSS depends on its layout (several stylesheets, a class on
 `config/theliacms.yaml`, so the canvas of the editor renders the page the way
 the front does: see [docs/editor-canvas.md](docs/editor-canvas.md).
 
+### Tags
+
+A page carries one tag or none, picked in the "General" tab among the tags of
+the site, which are listed, added, renamed and deleted under **CMS > Tags**. A
+tag is a name shown as it is in every language — "Recette", "Actualité" — and
+managing them takes the same right as editing pages. Deleting a tag leaves its
+pages without one; the screen says how many.
+
+The tag is what gathers pages: a theme lists the pages of a tag with
+`cms_pages_tagged('Recette')`, which answers with the pages online in the
+language served, the most recently published first, each as `id`, `title`,
+`url`, `chapo`, `description`, `image`, `pageType`, `tag` and `publishedAt`.
+The page being served reads its own tag as `cms_page.tag`, and the modules
+hooked on `cmspage.*` as `page.tag`. From PHP, the same list comes from
+`PublishedPageRepository::withTag($tag, $locale)`.
+
+```twig
+{% for card in cms_pages_tagged(cms_page.tag) %}
+    {% if card.id != cms_page.id %}
+        <a href="{{ card.url }}">{{ card.title }}</a>
+    {% endif %}
+{% endfor %}
+```
+
+The tag follows a page when it is duplicated and travels with the site export
+and with saved templates; an import creates the tags the site lacks. The update
+to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
+
 ### Twig functions
 
 | Function | Returns |
 |---|---|
 | `cms_menu(code, locale)` | the tree of a menu. Each entry has `label`, `url` (null for a heading), `blank`, `children`, `active`, `in_trail`. The locale defaults to the one being served. |
 | `cms_page_alternates()` | the page being served, in each language it exists in: `locale`, `code`, `title`, `url`, `current` |
+| `cms_pages_tagged(tag, locale)` | the pages online carrying the tag, the most recently published first. The locale defaults to the one being served. |
 
 They return data rather than markup, because navigation markup belongs to the
 theme. A menu of any depth takes a dozen lines:

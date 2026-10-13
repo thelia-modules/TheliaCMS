@@ -375,6 +375,7 @@ final readonly class CmsPageWriter
                 ->setPosition($page->getPosition() + 1)
                 ->setVisible(0)
                 ->setPageType($page->getPageType())
+                ->setTagId($page->getTagId())
                 ->setImageId($page->getImageId())
                 ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
 

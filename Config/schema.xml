@@ -46,6 +46,11 @@
             reason given on `og_image_id`: a stale id renders as "no image".
         -->
         <column name="image_id" type="INTEGER"/>
+        <!--
+            The one tag of the page, or none. Deleting a tag detaches its
+            pages: a tag is a label, nothing a page cannot live without.
+        -->
+        <column name="tag_id" type="INTEGER"/>
         <column name="publish_at" type="TIMESTAMP"/>
         <column name="unpublish_at" type="TIMESTAMP"/>
         <column name="deleted_at" type="TIMESTAMP"/>
@@ -102,6 +107,13 @@
         <index name="idx_cms_page_deleted_at">
             <index-column name="deleted_at"/>
         </index>
+        <index name="idx_cms_page_tag">
+            <index-column name="tag_id"/>
+        </index>
+
+        <foreign-key foreignTable="cms_tag" name="fk_cms_page_tag" onDelete="SET NULL" onUpdate="RESTRICT">
+            <reference foreign="id" local="tag_id"/>
+        </foreign-key>
 
         <behavior name="i18n">
             <parameter name="i18n_columns"
@@ -500,6 +512,23 @@
 
         <unique name="unq_cms_page_type_code">
             <unique-column name="code"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        The tags of the site. A tag is a name shown as it is, in every
+        language, and a page carries at most one of them (`cms_page.tag_id`).
+        The name is unique under the collation of the column, so two spellings
+        of the same word cannot both exist.
+    -->
+    <table name="cms_tag" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="name" required="true" size="100" type="VARCHAR"/>
+
+        <unique name="unq_cms_tag_name">
+            <unique-column name="name"/>
         </unique>
 
         <behavior name="timestampable"/>

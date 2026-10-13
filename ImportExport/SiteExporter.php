@@ -128,6 +128,7 @@ final readonly class SiteExporter
             'position' => (int) $page->getPosition(),
             'visible' => 1 === $page->getVisible(),
             'page_type' => (string) $page->getPageType(),
+            'tag' => $page->getCmsTag()?->getName(),
             'image_id' => $page->getImageId(),
             'publish_at' => $this->date($page->getPublishAt()),
             'unpublish_at' => $this->date($page->getUnpublishAt()),

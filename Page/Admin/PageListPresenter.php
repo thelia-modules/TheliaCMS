@@ -16,6 +16,7 @@ namespace TheliaCMS\Page\Admin;
 
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Model\Lang;
+use TheliaCMS\Page\PageTagRepository;
 use TheliaCMS\Page\SampleTextPageFinder;
 use TheliaCMS\TheliaCMS;
 
@@ -34,6 +35,7 @@ final readonly class PageListPresenter
         private PageFilterPresenter $filterBar,
         private SampleTextPageFinder $sampleTextPages,
         private UrlGeneratorInterface $urls,
+        private PageTagRepository $tags,
     ) {
     }
 
@@ -95,6 +97,9 @@ final readonly class PageListPresenter
     {
         $firstOfParent = [];
         $lastOfParent = [];
+        // One query for the whole listing: asking each page for its tag would
+        // be a query per line.
+        $tagNames = $this->tags->namesById();
 
         // Siblings always come out of the tree walk together and in position
         // order, so the ends of each group are the pages that cannot move
@@ -133,6 +138,7 @@ final readonly class PageListPresenter
                 'is_unpublished' => PageStatus::Unpublished === $row->status,
                 'visible' => 1 === $row->page->getVisible(),
                 'ancestor_path' => $row->ancestorPath(),
+                'tag' => $tagNames[(int) $row->page->getTagId()] ?? null,
                 'toggle_url' => $row->hasChildren() ? $this->filterBar->toggleUrl($filters, $languageId, $id) : null,
                 'edit_url' => $this->route('admin.cms.pages.edit', $id, $languageId),
                 'builder_url' => $this->route('admin.cms.pages.builder', $id, $languageId),

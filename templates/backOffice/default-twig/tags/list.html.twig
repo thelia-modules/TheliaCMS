@@ -1,0 +1,79 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Tags'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-tags{% endblock %}
+
+{% block content %}
+    {% form_theme form with bo_form_themes only %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Tags'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.pages.list') }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to pages'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">
+        {{ 'A tag labels pages: each page carries one tag or none, chosen in its "General" tab. Deleting a tag leaves its pages without one.'|trans({}, 'theliacms') }}
+    </p>
+
+    <div class="card mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'Name'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Pages'|trans({}, 'theliacms') }}</th>
+                        <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in tags %}
+                        <tr data-testid="cms-tag-row-{{ row.id }}">
+                            <td>
+                                {% if may_update %}
+                                    <a class="fw-medium" href="{{ path('admin.cms.tags.edit', { id: row.id }) }}" data-testid="cms-tag-edit-{{ row.id }}">{{ row.name }}</a>
+                                {% else %}
+                                    <span class="fw-medium">{{ row.name }}</span>
+                                {% endif %}
+                            </td>
+                            <td data-testid="cms-tag-pages-{{ row.id }}">{{ row.pages }}</td>
+                            <td class="text-end">
+                                {% if may_delete %}
+                                    <form method="post"
+                                          action="{{ path('admin.cms.tags.delete', { id: row.id }) }}"
+                                          onsubmit="return confirm('{{ (row.pages > 0 ? 'Delete this tag? %count% page(s) will no longer carry one.'|trans({ '%count%': row.pages }, 'theliacms') : 'Delete this tag?'|trans({}, 'theliacms'))|e('js') }}')">
+                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}" data-testid="cms-tag-delete-{{ row.id }}">
+                                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="text-muted" data-testid="cms-tags-empty">{{ 'No tag yet.'|trans({}, 'theliacms') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if may_create %}
+        <div class="card">
+            <div class="card-header">{{ 'Add a tag'|trans({}, 'theliacms') }}</div>
+            <div class="card-body">
+                {{ form_start(form) }}
+                    <input type="hidden" name="_token" value="{{ assignToken() }}">
+                    {{ form_row(form.name) }}
+                    <button class="btn btn-primary" type="submit" data-testid="cms-tag-add">
+                        {{ 'Add'|trans({}, 'theliacms') }}
+                    </button>
+                {{ form_end(form) }}
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

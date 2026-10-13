@@ -29,7 +29,8 @@ final readonly class PublishedPage
     public PageLayout $layout;
 
     /**
-     * @param string $pageType the code of the type of the page, always a valid one
+     * @param string      $pageType the code of the type of the page, always a valid one
+     * @param string|null $tag      the name of the tag of the page, when it has one
      */
     public function __construct(
         public int $id,
@@ -46,6 +47,7 @@ final readonly class PublishedPage
         public bool $noindex = false,
         public bool $nofollow = false,
         public ?\DateTimeInterface $publishedAt = null,
+        public ?string $tag = null,
     ) {
         $this->layout = PageLayout::fromStorage($pageType);
     }
@@ -71,6 +73,7 @@ final readonly class PublishedPage
             noindex: $this->noindex,
             nofollow: $this->nofollow,
             publishedAt: $this->publishedAt,
+            tag: $this->tag,
         );
     }
 }

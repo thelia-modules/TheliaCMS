@@ -79,6 +79,29 @@ final class CmsPageTypeTest extends TestCase
         self::assertFalse($form->get('pageType')->isValid());
     }
 
+    public function testThePageTagIsOneOfTheTagsOfTheSiteOrNone(): void
+    {
+        $form = $this->createForm(['tag_choices' => [3 => 'Recette', 7 => 'Actualité']]);
+        $form->submit(['tag' => '7'], false);
+
+        self::assertTrue($form->get('tag')->isValid());
+        self::assertSame(7, $form->get('tag')->getData());
+
+        $form = $this->createForm(['tag_choices' => [3 => 'Recette']]);
+        $form->submit(['tag' => ''], false);
+
+        self::assertTrue($form->get('tag')->isValid());
+        self::assertNull($form->get('tag')->getData());
+    }
+
+    public function testATagTheSiteDoesNotHaveIsRefused(): void
+    {
+        $form = $this->createForm(['tag_choices' => [3 => 'Recette']]);
+        $form->submit(['tag' => '4'], false);
+
+        self::assertFalse($form->get('tag')->isValid());
+    }
+
     public function testTheUploadFieldIsThereOnlyWhenUploadingIsAllowed(): void
     {
         self::assertFalse($this->createForm()->has('imageUpload'));

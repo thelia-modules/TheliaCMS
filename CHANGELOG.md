@@ -7,6 +7,33 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Upgrading to 1.3.0
+
+- The update adds the `cms_tag` table and `cms_page.tag_id`, with a constraint
+  that detaches the pages of a deleted tag. Update the module before serving
+  pages, and remove `var/propel/<env>` so the models are generated again.
+- Going back to 1.2 after the update:
+
+  ```sql
+  ALTER TABLE `cms_page` DROP FOREIGN KEY `fk_cms_page_tag`, DROP COLUMN `tag_id`;
+  DROP TABLE `cms_tag`;
+  ```
+
+### Added (1.3.0)
+
+- A page carries one tag or none, picked in the "General" tab among the tags
+  of the site, which are listed, added, renamed and deleted under
+  **CMS > Tags** with the right to edit pages. A tag is a name shown as it is
+  in every language. Deleting a tag leaves its pages without one, the bin
+  included, and the screen says how many. Themes read the tag of the page
+  served as `cms_page.tag`, the modules hooked on `cmspage.*` as `page.tag`,
+  and list the pages online carrying a tag with `cms_pages_tagged(tag)`, the
+  most recently published first; from PHP,
+  `PublishedPageRepository::withTag()` answers the same. The tag shows in the
+  page listing, follows a page when it is duplicated, travels with the site
+  export and with saved templates, and an import creates the tags the site
+  lacks. Files written before 1.3.0 import pages without a tag.
+
 ### Upgrading to 1.2.0
 
 - The update renames `cms_page.layout` to `page_type` and adds the
