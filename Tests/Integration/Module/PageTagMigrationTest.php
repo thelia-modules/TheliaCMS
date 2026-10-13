@@ -71,10 +71,10 @@ final class PageTagMigrationTest extends CmsIntegrationTestCase
         $module->update('1.2.0', '1.3.0', $this->getPropelConnection());
 
         self::assertSame([], $this->rows('SELECT id FROM cms_tag'));
-        self::assertSame('int(11)', strtolower((string) $this->rows("SHOW COLUMNS FROM cms_page LIKE 'tag_id'")[0]['Type']));
+        self::assertSame('int', strtolower((string) $this->rows("SELECT DATA_TYPE AS data_type FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page' AND column_name = 'tag_id'")[0]['data_type']));
         self::assertNull($this->rows(\sprintf('SELECT tag_id FROM cms_page WHERE id = %d', $page))[0]['tag_id']);
 
-        $constraints = $this->rows("SELECT delete_rule FROM information_schema.referential_constraints WHERE constraint_schema = DATABASE() AND table_name = 'cms_page' AND constraint_name = 'fk_cms_page_tag'");
+        $constraints = $this->rows("SELECT DELETE_RULE AS delete_rule FROM information_schema.referential_constraints WHERE constraint_schema = DATABASE() AND table_name = 'cms_page' AND constraint_name = 'fk_cms_page_tag'");
         self::assertSame('SET NULL', $constraints[0]['delete_rule'] ?? null, 'Deleting a tag detaches its pages.');
 
         $connection = $this->getPropelConnection();
