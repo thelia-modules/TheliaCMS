@@ -502,6 +502,11 @@ on the addresses it is allowed to cache, which is the same thing every Varnish
 setup in front of Thelia already does. The tags are written either way, so the
 invalidation side works from the start.
 
+On a Thelia core that brings the shared cache of the public pages, turning
+`shared_cache_mode` on hands all of this to the core: it shares the pages of
+the module under the tags above and sends the purges of the module to its
+proxy. See [docs/shared-cache.md](docs/shared-cache.md).
+
 `docs/shared-cache.md` has the VCL that does it, the same thing for Fastly and
 Cloudflare, and a complete purger to copy into a project.
 

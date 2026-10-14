@@ -18,6 +18,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Block\BlockUsageFinder;
 use TheliaCMS\Block\Item\ItemBlockRepository;
+use TheliaCMS\Block\Item\ItemType;
 use TheliaCMS\Builder\EmptyContentChecker;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
@@ -197,9 +198,21 @@ final readonly class CmsBlockWriter
      */
     private function purgePagesUsing(CmsBlock $block): void
     {
+        if ($block->isNew()) {
+            return;
+        }
+
         // No CMS page shows the block of a catalogue item, and the scan reads
-        // every page of the site.
-        if ($block->isNew() || $this->belongsToAnItem($block)) {
+        // every page of the site: the page of the item is the one to drop.
+        $link = $this->itemBlocks->linkOf($block);
+
+        if (null !== $link) {
+            $type = ItemType::tryFrom((string) $link->getItemType());
+
+            if (null !== $type) {
+                $this->httpCache->purge([CacheTags::item($type, (int) $link->getItemId())]);
+            }
+
             return;
         }
 
