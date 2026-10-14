@@ -16,17 +16,18 @@ namespace TheliaCMS\Tests\Integration\Block;
 
 use Thelia\Core\Event\Brand\BrandDeleteEvent;
 use Thelia\Core\Event\Category\CategoryDeleteEvent;
-use Propel\Runtime\ActiveQuery\Criteria;
+use Thelia\Model\Category;
 use TheliaCMS\Block\Admin\CmsBlockRepository;
 use TheliaCMS\Block\Admin\CmsBlockWriter;
+use TheliaCMS\Block\BlockUsageFinder;
 use TheliaCMS\Block\Item\ItemBlockPurgeListener;
 use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Block\Item\ItemBlockWriter;
 use TheliaCMS\Block\Item\ItemType;
 use TheliaCMS\Block\Item\PublishedItemBlockRepository;
 use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsItemBlockQuery;
 use TheliaCMS\Model\CmsItemBlock;
+use TheliaCMS\Model\CmsItemBlockQuery;
 use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 
@@ -110,7 +111,7 @@ final class ItemBlockTest extends CmsIntegrationTestCase
         $categoryId = (int) $category->getId();
         $block = $this->itemBlockWriter()->blockFor(ItemType::Category, $categoryId, $this->locale());
 
-        $this->getService(ItemBlockPurgeListener::class)->onCategoryDelete(new CategoryDeleteEvent($categoryId));
+        $this->deleteCategoryLikeTheCore($category);
 
         self::assertNull($this->itemBlocks()->blockFor(ItemType::Category, $categoryId));
         self::assertNull($this->blocks()->findLive((int) $block->getId()), 'The block itself is deleted, not only its link.');
@@ -151,12 +152,28 @@ final class ItemBlockTest extends CmsIntegrationTestCase
         $this->itemBlockWriter()->blockFor(ItemType::Category, $parentId, $this->locale());
         $this->itemBlockWriter()->blockFor(ItemType::Category, $childId, $this->locale());
 
-        // The core dispatches the event for the top category only, and the
-        // listener runs before it deletes the subtree.
-        $this->getService(ItemBlockPurgeListener::class)->onCategoryDelete(new CategoryDeleteEvent($parentId));
+        // The core dispatches the event for the top category only: the
+        // listener reads the subtree before the core and deletes after it.
+        $this->deleteCategoryLikeTheCore($parent);
 
         self::assertNull($this->itemBlocks()->blockFor(ItemType::Category, $parentId));
         self::assertNull($this->itemBlocks()->blockFor(ItemType::Category, $childId), 'The child category kept its block.');
+    }
+
+    public function testTheBlocksStayWhenTheCoreDidNotDeleteTheCategory(): void
+    {
+        $category = $this->createFixtureFactory()->category();
+        $categoryId = (int) $category->getId();
+        $block = $this->itemBlockWriter()->blockFor(ItemType::Category, $categoryId, $this->locale());
+
+        // A deletion the core refused or rolled back leaves the event without
+        // its category.
+        $event = new CategoryDeleteEvent($categoryId);
+        $listener = $this->getService(ItemBlockPurgeListener::class);
+        $listener->rememberCategorySubtree($event);
+        $listener->onCategoryDeleted($event);
+
+        self::assertSame((int) $block->getId(), (int) $this->itemBlocks()->blockFor(ItemType::Category, $categoryId)?->getId());
     }
 
     public function testAPageReferringToTheBlockDoesNotStopItsDeletion(): void
@@ -169,6 +186,8 @@ final class ItemBlockTest extends CmsIntegrationTestCase
         // block, but an id is guessable, and a reusable block in that state
         // is refused deletion.
         $this->createPage('Page pointing at an item block', html: \sprintf('<div data-cms-partial="cms-block" data-props=\'{"block":%d}\'></div>', $block->getId()));
+
+        self::assertNotSame([], $this->getService(BlockUsageFinder::class)->pagesUsing((int) $block->getId()), 'The page does refer to the block.');
 
         $this->itemBlockWriter()->deleteFor(ItemType::Category, $categoryId);
 
@@ -191,6 +210,21 @@ final class ItemBlockTest extends CmsIntegrationTestCase
         self::assertNotSame($first->getId(), $second->getId());
         self::assertSame((int) $second->getId(), (int) $this->itemBlocks()->linkFor(ItemType::Category, $categoryId)?->getBlockId(), 'The link now points at the new block.');
         self::assertSame(1, CmsItemBlockQuery::create()->filterByItemType('category')->filterByItemId($categoryId)->count());
+    }
+
+    /**
+     * What the core does on CATEGORY_DELETE, around the two listeners: the
+     * subtree is read first, the rows go, the event carries the category.
+     */
+    private function deleteCategoryLikeTheCore(Category $category): void
+    {
+        $event = new CategoryDeleteEvent((int) $category->getId());
+        $listener = $this->getService(ItemBlockPurgeListener::class);
+
+        $listener->rememberCategorySubtree($event);
+        $category->delete();
+        $event->setCategory($category);
+        $listener->onCategoryDeleted($event);
     }
 
     private function itemBlockWriter(): ItemBlockWriter
