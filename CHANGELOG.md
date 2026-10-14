@@ -7,6 +7,24 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added (1.5.0)
+
+- On a Thelia core that brings the shared cache of the public pages
+  (`shared_cache_mode`), the pages of the module are shared like the
+  catalogue pages once the shop turns it on: the `cmspage` view, and so the
+  home page the module takes over, is declared to the core, which then
+  decides whether an answer may be kept and writes its headers. The module
+  steps aside from its own `Cache-Control`, `Cache-Tag` and `Surrogate-Key`
+  while the core shares, and files every page under `cms` and `cms-menu`
+  (the menus and settings of the module can show on any page), a page of the
+  module under `cms-page-<id>` as well. Every purge of the module (a page
+  published, a menu or the settings saved, a block edited) is handed to the
+  proxy of the core, and publishing the block of a catalogue item purges the
+  page of that item (`product-42`, `category-7`, `brand-3`). On an older core
+  nothing changes: the module keeps its own headers and `http_cache_ttl`.
+  Publishing a page purges `cms` like before, which on a shop that shares
+  means every page.
+
 ### Upgrading to 1.4.0
 
 - The update adds the `cms_item_block` table. Update the module before

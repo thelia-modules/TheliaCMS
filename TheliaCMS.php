@@ -25,6 +25,7 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Install\Database;
+use Thelia\Core\SharedCache\SharedCacheContributorInterface;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\LangQuery;
 use Thelia\Model\ProfileQuery;
@@ -34,6 +35,8 @@ use Thelia\Model\ResourceQuery;
 use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
 use TheliaCMS\Builder\CmsBuilderConfig;
+use TheliaCMS\Http\SharedCache\CmsSharedCacheContributor;
+use TheliaCMS\Http\SharedCache\CoreSharedCache;
 use TheliaCMS\Install\LegalPagesSeeder;
 use TheliaCMS\Install\MenuSeeder;
 use TheliaCMS\Media\LibraryImageCatalog;
@@ -375,6 +378,9 @@ class TheliaCMS extends BaseModule
                 // Same, for TntSearch: the class extends one of its own, so
                 // reflecting it on a site without the module is a fatal error.
                 __DIR__.'/Search/Tnt/*',
+                // Same, for the shared cache of the public pages of the core,
+                // absent from a core that predates it.
+                __DIR__.'/Http/SharedCache/*',
             ])
             ->autowire(true)
             ->autoconfigure(true);
@@ -406,6 +412,17 @@ class TheliaCMS extends BaseModule
                 ->autoconfigure(true);
 
             $servicesConfigurator->set(StandInPageCanonicalListener::class)
+                ->autowire(true)
+                ->autoconfigure(true);
+        }
+
+        // The shared cache of the core: the pages of the module are shared under
+        // its view and its tags, and every purge of the module reaches it.
+        if (interface_exists(SharedCacheContributorInterface::class)) {
+            $servicesConfigurator->set(CmsSharedCacheContributor::class)
+                ->autoconfigure(true);
+
+            $servicesConfigurator->set(CoreSharedCache::class)
                 ->autowire(true)
                 ->autoconfigure(true);
         }

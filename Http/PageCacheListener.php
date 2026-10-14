@@ -17,6 +17,7 @@ namespace TheliaCMS\Http;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
+use TheliaCMS\Http\SharedCache\CoreSharedCache;
 
 /**
  * Writes the cache headers of a CMS page, once everything else is done with the
@@ -34,6 +35,7 @@ final readonly class PageCacheListener
 
     public function __construct(
         private PageCachePolicy $policy,
+        private ?CoreSharedCache $sharedCache = null,
     ) {
     }
 
@@ -50,6 +52,16 @@ final readonly class PageCacheListener
 
         $request = $event->getRequest();
         $tags = $request->attributes->get(self::TAGS_ATTRIBUTE);
+
+        // The shared cache of the core has the last word once the shop turns it on.
+        // Every page may show the menus and the site settings of the module (a theme
+        // hook, a footer menu), so every page is filed under them, and a page of the
+        // module under its own tags as well.
+        if (null !== $this->sharedCache && $this->sharedCache->isActive()) {
+            $this->sharedCache->tag([CacheTags::SITE, CacheTags::MENUS, ...(\is_array($tags) ? array_values($tags) : [])]);
+
+            return;
+        }
 
         if (!\is_array($tags) || [] === $tags) {
             return;
