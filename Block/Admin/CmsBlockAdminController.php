@@ -29,6 +29,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Block\BlockUsageFinder;
+use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaCMS\Security\CmsResources;
@@ -57,6 +58,7 @@ final readonly class CmsBlockAdminController
         private CmsBlockWriter $writer,
         private BlockUsageFinder $usages,
         private EditLanguage $languages,
+        private ItemBlockRepository $itemBlocks,
     ) {
     }
 
@@ -182,11 +184,17 @@ final readonly class CmsBlockAdminController
         return true;
     }
 
+    /**
+     * A reusable block only: the block of a catalogue item has no settings of
+     * its own and is deleted from the screen of its item, so these screens
+     * answer 404 for it rather than let its code be changed or its link be
+     * left behind.
+     */
     private function blockOrFail(int $id): CmsBlock
     {
         $block = $this->blocks->findLive($id);
 
-        if (!$block instanceof CmsBlock) {
+        if (!$block instanceof CmsBlock || null !== $this->itemBlocks->linkOf($block)) {
             throw new NotFoundHttpException();
         }
 

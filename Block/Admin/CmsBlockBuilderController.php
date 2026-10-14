@@ -28,25 +28,33 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
+use TheliaCMS\Block\Item\ItemAddress;
+use TheliaCMS\Block\Item\ItemBlockRepository;
+use TheliaCMS\Block\Item\ItemTitle;
+use TheliaCMS\Block\Item\ItemType;
 use TheliaCMS\Builder\Admin\CmsPageContentType;
 use TheliaCMS\Builder\BlockCatalog;
 use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Builder\InitialCanvas;
 use TheliaCMS\Model\CmsBlock;
+use TheliaCMS\Model\CmsItemBlock;
 use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\EditLanguage;
+use TheliaCMS\Partial\Definition\BlockPartial;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\TheliaCMS;
 use Twig\Environment;
 
 /**
- * The visual editor for a reusable block.
+ * The visual editor for a block, reusable or belonging to a catalogue item.
  *
- * The same builder as a page, with two things left out on purpose: a block has
- * no SEO of its own (it is part of whichever page shows it), and it offers no
- * dynamic blocks — a block inside a block would have to be resolved
- * recursively, and a block that contains itself would never stop.
+ * The same builder as a page, with one thing left out on purpose: a block has
+ * no SEO of its own (it is part of whichever page shows it). A reusable block
+ * also offers no dynamic blocks — a block inside a block would have to be
+ * resolved recursively, and a block that contains itself would never stop. The
+ * block of an item is never placed inside another block, so it gets them all
+ * but the reusable block itself, and the bar leads back to its item.
  */
 #[Route('/admin/cms/blocks/{id}/builder', name: 'admin.cms.blocks.builder', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
 final readonly class CmsBlockBuilderController
@@ -66,6 +74,9 @@ final readonly class CmsBlockBuilderController
         private CmsSettings $settings,
         private EditLanguage $languages,
         private InitialCanvas $initialCanvas,
+        private ItemBlockRepository $itemBlocks,
+        private ItemTitle $itemTitles,
+        private ItemAddress $itemAddresses,
     ) {
     }
 
@@ -90,11 +101,14 @@ final readonly class CmsBlockBuilderController
         $content = $this->blocks->contentOf($block, $locale);
 
         $disabledBlocks = $this->settings->disabledBlocks();
+        $item = $this->itemOf($block, $locale);
 
         return new Response($this->twig->render(self::TEMPLATE, [
             'form' => $form->createView(),
             'initial_html' => $this->initialCanvas->htmlFor($content?->getDraftProjectData(), $content?->getDraftHtml()),
             'block' => $block,
+            'item' => $item,
+            'builder_partials' => null !== $item ? $this->partialsForAnItemBlock() : null,
             'status' => $this->blocks->statusOf($block, $locale),
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
@@ -130,7 +144,9 @@ final readonly class CmsBlockBuilderController
         if ('publish' === $intent) {
             try {
                 $this->writer->publish($block, $lang->getLocale());
-                $this->flash($request, 'success', 'The block is online on every page using it.');
+                $this->flash($request, 'success', null !== $this->itemBlocks->linkOf($block)
+                    ? 'The block is online on the page of its item.'
+                    : 'The block is online on every page using it.');
             } catch (EmptyBlockContentException) {
                 $this->flash($request, 'danger', 'This block has nothing in it yet: add at least one element in the editor before publishing it.');
             }
@@ -147,6 +163,49 @@ final readonly class CmsBlockBuilderController
         if ($request->hasSession()) {
             $request->getSession()->getFlashBag()->add($type, $this->translator->trans($message, [], TheliaCMS::DOMAIN_NAME));
         }
+    }
+
+    /**
+     * The item a block belongs to, for the bar of the builder: what to call
+     * the block, and where its back button leads.
+     *
+     * @return array{type: ItemType, id: int, title: string, url: string}|null
+     */
+    private function itemOf(CmsBlock $block, string $locale): ?array
+    {
+        $link = $this->itemBlocks->linkOf($block);
+
+        if (!$link instanceof CmsItemBlock) {
+            return null;
+        }
+
+        $type = ItemType::tryFrom((string) $link->getItemType());
+        $itemId = (int) $link->getItemId();
+
+        if (!$type instanceof ItemType) {
+            return null;
+        }
+
+        return [
+            'type' => $type,
+            'id' => $itemId,
+            'title' => $this->itemTitles->of($type, $itemId, $locale) ?? \sprintf('#%d', $itemId),
+            'url' => $this->itemAddresses->adminUrl($type, $itemId),
+        ];
+    }
+
+    /**
+     * The dynamic blocks of a page, minus the reusable block: a block holding
+     * a block is the recursion the reusable builder refuses.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function partialsForAnItemBlock(): array
+    {
+        return array_values(array_filter(
+            $this->builderConfig->partials(),
+            static fn (array $partial): bool => BlockPartial::NAME !== $partial['name'],
+        ));
     }
 
     private function buildForm(CmsBlock $block, string $locale): FormInterface

@@ -22,8 +22,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Thelia\Model\FolderQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
+use TheliaCMS\Block\Admin\CmsBlockRepository;
 use TheliaCMS\Media\CmsMediaLibrary;
-use TheliaCMS\Model\CmsBlockQuery;
 use TheliaCMS\Model\CmsFormQuery;
 use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Partial\MissingPartialPropException;
@@ -44,6 +44,7 @@ final readonly class CmsPartialController
     public function __construct(
         private PartialRenderer $partials,
         private CmsMediaLibrary $library,
+        private CmsBlockRepository $blocks,
     ) {
     }
 
@@ -127,8 +128,9 @@ final readonly class CmsPartialController
     public function blocks(Request $request): Response
     {
         $locale = $request->getLocale();
-        $blocks = CmsBlockQuery::create()
-            ->filterByDeletedAt(null, Criteria::ISNULL)
+        // Reusable blocks only: the block of a catalogue item belongs to the
+        // page of that item, and offering it here would show it twice.
+        $blocks = $this->blocks->reusableQuery()
             ->orderByCode()
             ->find();
 

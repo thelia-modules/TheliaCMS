@@ -313,6 +313,41 @@
     </table>
 
     <!--
+        The one block of a catalogue item: a product, a category, a brand or a
+        store. The block itself is a `cms_block` row, edited with the same
+        builder and put online through the same publish pipeline as a reusable
+        block; this table only says which item it belongs to.
+
+        One block per item, and one item per block, both enforced here rather
+        than in PHP. `item_type` is a VARCHAR and a backed enum, see above.
+        `item_id` carries no foreign key: the item lives in one of several
+        tables, two of them in the core and one in another module, so a
+        constraint would have to be conditional. The row goes when the item is
+        deleted, through the deletion events of the core and of the Dealer
+        module.
+    -->
+    <table name="cms_item_block" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="item_type" required="true" size="20" type="VARCHAR"/>
+        <column name="item_id" required="true" type="INTEGER"/>
+        <column name="block_id" required="true" type="INTEGER"/>
+
+        <foreign-key foreignTable="cms_block" name="fk_cms_item_block_block" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="block_id"/>
+        </foreign-key>
+
+        <unique name="unq_cms_item_block_item">
+            <unique-column name="item_type"/>
+            <unique-column name="item_id"/>
+        </unique>
+        <unique name="unq_cms_item_block_block">
+            <unique-column name="block_id"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
         Forms are addressed by code like menus and reusable blocks, so a page
         keeps pointing at the right form after it has been renamed.
 

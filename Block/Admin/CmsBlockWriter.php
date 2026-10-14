@@ -155,6 +155,22 @@ final readonly class CmsBlockWriter
         $this->activityLog->record('DELETE', (int) $block->getId(), \sprintf('CMS block #%d deleted', $block->getId()));
     }
 
+    /**
+     * Hard delete, usage unchecked: for the block of a catalogue item, which
+     * goes with its item whatever a page may say. The contents, the titles
+     * and the link cascade with the row, so the code is free again.
+     */
+    public function discard(CmsBlock $block): void
+    {
+        $blockId = (int) $block->getId();
+        $this->purgePagesUsing($block);
+
+        $block->delete();
+
+        $this->partialCache->invalidateBlocks();
+        $this->activityLog->record('DELETE', $blockId, \sprintf('CMS block #%d discarded', $blockId));
+    }
+
     private function contentFor(CmsBlock $block, string $locale): CmsBlockContent
     {
         $content = CmsBlockContentQuery::create()
