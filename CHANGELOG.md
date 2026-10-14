@@ -7,6 +7,35 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Upgrading to 1.4.0
+
+- The update adds the `cms_item_block` table. Update the module before
+  opening a catalogue screen, and remove `var/propel/<env>` so the models are
+  generated again.
+- Going back to 1.3 after the update:
+
+  ```sql
+  DROP TABLE `cms_item_block`;
+  ```
+
+### Added (1.4.0)
+
+- A product, a category, a brand and, when the Dealer module is active, a
+  store can each carry one content block: a free layout built with the page
+  editor, the way a reusable block is, and shown by the theme on the page of
+  the item. The block is created, opened and deleted from a "Content block"
+  card in the right column of the product, category and brand screens, and
+  from a tab of the same name on the store screen; its builder leads back to
+  the item. It is published per language like any block, and the theme reads
+  it with `cms_item_block('product', product.id)`, which answers the published
+  HTML and CSS or null — or from PHP with `PublishedItemBlockRepository`. The
+  dynamic blocks of a page are offered in it, the reusable block excepted.
+  The block goes with its item when the item is deleted. The blocks of items
+  are kept out of **CMS > Blocks**, of the reusable blocks a page may embed
+  and of the site export, and an import leaves their codes alone. Editing
+  them takes the right to edit pages, on any item. The module purges the
+  cache of its own pages only: the page of the item follows its HTTP cache.
+
 ### Upgrading to 1.3.0
 
 - The update adds the `cms_tag` table and `cms_page.tag_id`, with a constraint

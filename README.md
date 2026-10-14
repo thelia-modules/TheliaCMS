@@ -23,6 +23,9 @@ both required by the theme:
   flagged as home is served on `/`.
 - **TheliaBlocks** (`thelia/thelia-blocks-module`) attaches groups of blocks to
   the shop's own items: products, categories, brands, contents and folders.
+  TheliaCMS gives products, categories, brands and stores a content block of
+  its own (see [Blocks](#blocks)), so a theme built on it needs no
+  TheliaBlocks.
 
 TheliaCMS runs alongside them, with its own tables, screens and addresses. It
 never reads what Page and TheliaBlocks store, and they ignore it in return. The
@@ -273,6 +276,35 @@ pages as you like: the banner that appears on twenty pages is edited in one
 place. Pages hold a reference rather than a copy, so publishing the block
 updates every page showing it. A block still used by a page cannot be deleted,
 and the settings screen lists where it appears.
+
+**Item blocks** belong to a product, a category, a brand or, when the Dealer
+module is active, a store: one block per item, built with the same editor and
+published per language like a reusable block. The "Content block" card on the
+screen of the item creates it, opens it and deletes it; its builder leads back
+to the item, and the block goes when the item is deleted. The theme shows it
+where it likes with `cms_item_block('product', product.id)`, which answers an
+object carrying the published `html` and `css`, or null when nothing is online
+in the language served:
+
+```twig
+{% set block = cms_item_block('product', product.id) %}
+{% if block %}
+    <style>{{ block.css|raw }}</style>
+    {{ block.html|raw }}
+{% endif %}
+```
+
+The function takes the locale as a third argument when the page is not served
+in the current one. Publishing writes the block at once, but the module purges
+only the cache of its own pages: a product page kept by an HTTP cache shows the
+new block when that cache lets it go.
+
+Item blocks are kept out of **CMS > Blocks**, of the reusable blocks a page may
+embed and of the site export; a file naming the code of one is left alone by
+the import. The block goes with its item through the deletion events of the
+core and of the Dealer module; a row deleted straight through Propel or the API
+dispatches none and keeps its block, which the card of a new item with that id
+would then show.
 
 **Live content** is rendered by the server on every visit rather than stored in
 the page: the latest news, a menu, a reusable block, and the three

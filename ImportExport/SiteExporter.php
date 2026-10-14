@@ -17,9 +17,9 @@ namespace TheliaCMS\ImportExport;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Model\LangQuery;
 use Thelia\Model\ModuleQuery;
+use TheliaCMS\Block\Admin\CmsBlockRepository;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsBlockContentQuery;
-use TheliaCMS\Model\CmsBlockQuery;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormFieldQuery;
 use TheliaCMS\Model\CmsFormQuery;
@@ -53,6 +53,7 @@ final readonly class SiteExporter
     public function __construct(
         private CmsSettings $settings,
         private MediaReferences $media,
+        private CmsBlockRepository $blocks,
     ) {
     }
 
@@ -73,7 +74,9 @@ final readonly class SiteExporter
 
         $blocks = [];
 
-        foreach (CmsBlockQuery::create()->filterByDeletedAt(null, Criteria::ISNULL)->orderById()->find() as $block) {
+        // The reusable blocks only. The block of a catalogue item is tied to
+        // a product or a category by id, and neither exists on the other site.
+        foreach ($this->blocks->reusableQuery()->orderById()->find() as $block) {
             $document = $this->blockDocument($block, $locales);
             $blocks[] = $document;
             $mediaIds = [...$mediaIds, ...$this->mediaOf($document)];

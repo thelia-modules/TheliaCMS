@@ -34,11 +34,15 @@ final readonly class CmsBlockRepository
     }
 
     /**
+     * The reusable blocks: the ones an editor placed nowhere in particular.
+     * The block of a catalogue item is edited from the screen of its item and
+     * is left out here, as it is from the blocks a page may embed.
+     *
      * @return list<array{block: CmsBlock, status: BlockStatus, usages: int}>
      */
     public function all(string $locale): array
     {
-        $blocks = iterator_to_array($this->liveQuery()->joinWithI18n($locale, Criteria::LEFT_JOIN)->orderByCode()->find(), false);
+        $blocks = iterator_to_array($this->reusableQuery()->joinWithI18n($locale, Criteria::LEFT_JOIN)->orderByCode()->find(), false);
         $counts = $this->usages->countsFor(array_map(static fn (CmsBlock $block): int => (int) $block->getId(), $blocks));
 
         return array_map(
@@ -78,6 +82,17 @@ final readonly class CmsBlockRepository
         }
 
         return null !== $query->findOne();
+    }
+
+    /**
+     * Live blocks that belong to no catalogue item.
+     */
+    public function reusableQuery(): CmsBlockQuery
+    {
+        return $this->liveQuery()
+            ->useCmsItemBlockQuery(null, Criteria::LEFT_JOIN)
+                ->filterById(null, Criteria::ISNULL)
+            ->endUse();
     }
 
     private function liveQuery(): CmsBlockQuery

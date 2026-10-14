@@ -14,11 +14,10 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Partial\Definition;
 
-use Propel\Runtime\ActiveQuery\Criteria;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use TheliaCMS\Block\Admin\CmsBlockRepository;
 use TheliaCMS\Model\CmsBlockContentQuery;
-use TheliaCMS\Model\CmsBlockQuery;
 use TheliaCMS\Partial\PartialDefinitionInterface;
 use TheliaCMS\Partial\PartialProp;
 use TheliaCMS\TheliaCMS;
@@ -42,6 +41,7 @@ final readonly class BlockPartial implements PartialDefinitionInterface
     public function __construct(
         private TranslatorInterface $translator,
         private UrlGeneratorInterface $urls,
+        private CmsBlockRepository $blocks,
     ) {
     }
 
@@ -74,9 +74,11 @@ final readonly class BlockPartial implements PartialDefinitionInterface
 
     public function context(array $props, string $locale): array
     {
-        $block = CmsBlockQuery::create()
+        // Reusable blocks only: the block of a catalogue item is shown on the
+        // page of its item, and a placeholder naming its id — the picker
+        // never offers it, but an id is guessable — renders nothing.
+        $block = $this->blocks->reusableQuery()
             ->filterById((int) $props['block'])
-            ->filterByDeletedAt(null, Criteria::ISNULL)
             ->findOne();
 
         if (null === $block) {

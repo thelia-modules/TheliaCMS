@@ -1,0 +1,89 @@
+{#
+    The block card of a catalogue item: in the right column of a product, a
+    category or a brand, in a tab of its own on a store.
+
+    The right column sits inside the form of the item, and a form inside a
+    form is dropped by the HTML parser: a nested <form> would make the button
+    submit the item itself, with this card's token in place of its own. The
+    buttons therefore post through a form built next to <body> when they are
+    pressed, carrying the token of the back office that the guard of
+    /admin/cms checks.
+#}
+{% set item_label = item_type.label|trans({}, 'theliacms') %}
+<div class="card mb-3" data-testid="cms-item-block-card">
+    <div class="card-header">
+        <h6 class="card-title mb-0">{{ 'Content block'|trans({}, 'theliacms') }}</h6>
+    </div>
+    <div class="card-body">
+        {% if block is null %}
+            <p class="text-muted small mb-3">
+                {{ 'This %item% has no content block yet. A content block is a free layout, built with the page editor, that the theme shows on the page of the %item%.'|trans({'%item%': item_label}, 'theliacms') }}
+            </p>
+            {% if may_write %}
+                <button type="button" class="btn btn-sm btn-primary"
+                        data-cms-item-block-post="{{ edit_url }}"
+                        data-cms-item-block-token="{{ assignToken() }}">
+                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                    {{ 'Create the block'|trans({}, 'theliacms') }}
+                </button>
+            {% endif %}
+        {% else %}
+            <p class="mb-2">
+                <span class="badge {{ status.badgeClass }}">{{ status.label|trans({}, 'theliacms') }}</span>
+            </p>
+            <p class="text-muted small mb-3">
+                {{ 'Published, the block is shown on the page of this %item%. Until then, visitors see nothing of it.'|trans({'%item%': item_label}, 'theliacms') }}
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                {% if may_write %}
+                    <button type="button" class="btn btn-sm btn-primary"
+                            data-cms-item-block-post="{{ edit_url }}"
+                            data-cms-item-block-token="{{ assignToken() }}">
+                        <i class="bi bi-pencil me-1" aria-hidden="true"></i>
+                        {{ 'Edit the block'|trans({}, 'theliacms') }}
+                    </button>
+                {% else %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ builder_url }}">{{ 'See the block'|trans({}, 'theliacms') }}</a>
+                {% endif %}
+                {% if may_delete %}
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                            data-cms-item-block-post="{{ delete_url }}"
+                            data-cms-item-block-token="{{ assignToken() }}"
+                            data-cms-item-block-confirm="{{ 'Delete the block of this %item%? Its content is lost.'|trans({'%item%': item_label}, 'theliacms') }}">
+                        <i class="bi bi-trash me-1" aria-hidden="true"></i>
+                        {{ 'Delete'|trans({}, 'theliacms') }}
+                    </button>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+<script>
+    (function () {
+        if (window.cmsItemBlockPostInstalled) {
+            return;
+        }
+        window.cmsItemBlockPostInstalled = true;
+        document.addEventListener('click', function (event) {
+            var button = event.target.closest('[data-cms-item-block-post]');
+            if (!button) {
+                return;
+            }
+            event.preventDefault();
+            var question = button.getAttribute('data-cms-item-block-confirm');
+            if (question && !window.confirm(question)) {
+                return;
+            }
+            var form = document.createElement('form');
+            form.method = 'post';
+            form.action = button.getAttribute('data-cms-item-block-post');
+            var token = document.createElement('input');
+            token.type = 'hidden';
+            token.name = '_token';
+            token.value = button.getAttribute('data-cms-item-block-token');
+            form.appendChild(token);
+            document.body.appendChild(form);
+            form.submit();
+        });
+    })();
+</script>

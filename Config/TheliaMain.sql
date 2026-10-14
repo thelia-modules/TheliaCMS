@@ -208,6 +208,30 @@ CREATE TABLE `cms_block_content`
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
+-- cms_item_block
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_item_block`;
+
+CREATE TABLE `cms_item_block`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `item_type` VARCHAR(20) NOT NULL,
+    `item_id` INTEGER NOT NULL,
+    `block_id` INTEGER NOT NULL,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_item_block_item` (`item_type`, `item_id`),
+    UNIQUE INDEX `unq_cms_item_block_block` (`block_id`),
+    CONSTRAINT `fk_cms_item_block_block`
+        FOREIGN KEY (`block_id`)
+        REFERENCES `cms_block` (`id`)
+        ON UPDATE RESTRICT
+        ON DELETE CASCADE
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+-- ---------------------------------------------------------------------
 -- cms_form
 -- ---------------------------------------------------------------------
 

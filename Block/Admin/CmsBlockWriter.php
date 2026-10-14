@@ -17,6 +17,7 @@ namespace TheliaCMS\Block\Admin;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Block\BlockUsageFinder;
+use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Builder\EmptyContentChecker;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
@@ -50,6 +51,7 @@ final readonly class CmsBlockWriter
         private PartialCache $partialCache,
         private CachePurger $httpCache,
         private BlockUsageFinder $usages,
+        private ItemBlockRepository $itemBlocks,
     ) {
     }
 
@@ -130,7 +132,7 @@ final readonly class CmsBlockWriter
             'CMS block #%d published in %s, used by %d page(s)',
             $block->getId(),
             $locale,
-            \count($this->usages->pagesUsing((int) $block->getId())),
+            $this->belongsToAnItem($block) ? 0 : \count($this->usages->pagesUsing((int) $block->getId())),
         ));
     }
 
@@ -153,6 +155,22 @@ final readonly class CmsBlockWriter
         $this->partialCache->invalidateBlocks();
         $this->purgePagesUsing($block);
         $this->activityLog->record('DELETE', (int) $block->getId(), \sprintf('CMS block #%d deleted', $block->getId()));
+    }
+
+    /**
+     * Hard delete, usage unchecked: for the block of a catalogue item, which
+     * goes with its item whatever a page may say. The contents, the titles
+     * and the link cascade with the row, so the code is free again.
+     */
+    public function discard(CmsBlock $block): void
+    {
+        $blockId = (int) $block->getId();
+        $this->purgePagesUsing($block);
+
+        $block->delete();
+
+        $this->partialCache->invalidateBlocks();
+        $this->activityLog->record('DELETE', $blockId, \sprintf('CMS block #%d discarded', $blockId));
     }
 
     private function contentFor(CmsBlock $block, string $locale): CmsBlockContent
@@ -179,7 +197,9 @@ final readonly class CmsBlockWriter
      */
     private function purgePagesUsing(CmsBlock $block): void
     {
-        if ($block->isNew()) {
+        // No CMS page shows the block of a catalogue item, and the scan reads
+        // every page of the site.
+        if ($block->isNew() || $this->belongsToAnItem($block)) {
             return;
         }
 
@@ -190,5 +210,10 @@ final readonly class CmsBlockWriter
         }
 
         $this->httpCache->purge($tags);
+    }
+
+    private function belongsToAnItem(CmsBlock $block): bool
+    {
+        return null !== $this->itemBlocks->linkOf($block);
     }
 }

@@ -21,6 +21,7 @@ use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Builder\PublishedContentSanitizer;
 use TheliaCMS\Form\FieldChoices;
 use TheliaCMS\Menu\MenuCache;
+use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsBlockContent;
 use TheliaCMS\Model\CmsBlockContentQuery;
@@ -76,6 +77,7 @@ final readonly class SiteImporter
         private PageTypeWriter $pageTypeWriter,
         private PublishedContentSanitizer $sanitizer,
         private PageTagWriter $tagWriter,
+        private ItemBlockRepository $itemBlocks,
     ) {
     }
 
@@ -407,6 +409,16 @@ final readonly class SiteImporter
             }
 
             $existing = CmsBlockQuery::create()->findOneByCode($code);
+
+            // The block of a catalogue item is never exported, so a file
+            // naming its code comes from another site: replacing it would
+            // hand a product's block to whatever that site had written.
+            if (null !== $existing && null !== $this->itemBlocks->linkOf($existing)) {
+                $report->skipped('blocks');
+                $report->warn(\sprintf('The block "%s" belongs to a catalogue item on this site and was left alone.', $code));
+
+                continue;
+            }
 
             if (null !== $existing && !$options->replace) {
                 $report->skipped('blocks');

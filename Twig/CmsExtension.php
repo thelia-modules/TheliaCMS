@@ -17,6 +17,9 @@ namespace TheliaCMS\Twig;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\Lang;
+use TheliaCMS\Block\Item\ItemType;
+use TheliaCMS\Block\Item\PublishedItemBlock;
+use TheliaCMS\Block\Item\PublishedItemBlockRepository;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
 use TheliaCMS\Page\PageCard;
@@ -42,6 +45,7 @@ final class CmsExtension extends AbstractExtension
         private readonly CmsSettings $settings,
         private readonly PublishedPageRepository $pages,
         private readonly LangService $langService,
+        private readonly PublishedItemBlockRepository $itemBlocks,
     ) {
     }
 
@@ -56,7 +60,25 @@ final class CmsExtension extends AbstractExtension
             // on every page of the site.
             new TwigFunction('cms_is_showcase', $this->settings->isShowcase(...)),
             new TwigFunction('cms_pages_tagged', $this->pagesTagged(...)),
+            new TwigFunction('cms_item_block', $this->itemBlock(...)),
         ];
+    }
+
+    /**
+     * The published block of a catalogue item — `cms_item_block('product',
+     * product.id)` — in the language being served unless told otherwise, or
+     * null when the item has none online in it. Data, not markup: where the
+     * theme puts it on the page of the item is the theme's business.
+     */
+    public function itemBlock(string $type, int $itemId, ?string $locale = null): ?PublishedItemBlock
+    {
+        $itemType = ItemType::tryFrom($type);
+
+        if (!$itemType instanceof ItemType) {
+            return null;
+        }
+
+        return $this->itemBlocks->find($itemType, $itemId, $locale ?? $this->currentLocale());
     }
 
     /**
