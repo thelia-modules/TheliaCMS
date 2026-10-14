@@ -294,10 +294,17 @@ in the language served:
 {% endif %}
 ```
 
-Item blocks are kept out of **CMS > Blocks** and of the site export. The block
-goes with its item through the deletion events of the core and of the Dealer
-module; a row deleted straight through Propel or the API dispatches none and
-keeps its block, which the card of a new item with that id would then show.
+The function takes the locale as a third argument when the page is not served
+in the current one. Publishing writes the block at once, but the module purges
+only the cache of its own pages: a product page kept by an HTTP cache shows the
+new block when that cache lets it go.
+
+Item blocks are kept out of **CMS > Blocks**, of the reusable blocks a page may
+embed and of the site export; a file naming the code of one is left alone by
+the import. The block goes with its item through the deletion events of the
+core and of the Dealer module; a row deleted straight through Propel or the API
+dispatches none and keeps its block, which the card of a new item with that id
+would then show.
 
 **Live content** is rendered by the server on every visit rather than stored in
 the page: the latest news, a menu, a reusable block, and the three

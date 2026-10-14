@@ -31,8 +31,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   HTML and CSS or null — or from PHP with `PublishedItemBlockRepository`. The
   dynamic blocks of a page are offered in it, the reusable block excepted.
   The block goes with its item when the item is deleted. The blocks of items
-  are kept out of **CMS > Blocks**, of the reusable blocks a page may embed,
-  and of the site export. Editing them takes the right to edit pages.
+  are kept out of **CMS > Blocks**, of the reusable blocks a page may embed
+  and of the site export, and an import leaves their codes alone. Editing
+  them takes the right to edit pages, on any item. The module purges the
+  cache of its own pages only: the page of the item follows its HTTP cache.
 
 ### Upgrading to 1.3.0
 
