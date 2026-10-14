@@ -106,7 +106,7 @@ class ItemBlockHook extends BaseHook
         $event->add([
             'id' => 'cms-item-block',
             'title' => $this->trans('Content block', [], TheliaCMS::DOMAIN_NAME),
-            'content' => $this->renderCard(ItemType::Dealer, $itemId, asTab: true),
+            'content' => $this->renderCard(ItemType::Dealer, $itemId),
         ]);
     }
 
@@ -118,7 +118,7 @@ class ItemBlockHook extends BaseHook
             return;
         }
 
-        $event->add($this->renderCard($type, $itemId, asTab: false));
+        $event->add($this->renderCard($type, $itemId));
     }
 
     private function maySee(ItemType $type): bool
@@ -127,7 +127,7 @@ class ItemBlockHook extends BaseHook
             && $this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::VIEW]);
     }
 
-    private function renderCard(ItemType $type, int $itemId, bool $asTab): string
+    private function renderCard(ItemType $type, int $itemId): string
     {
         $lang = $this->editLanguage();
         $block = $this->itemBlocks->blockFor($type, $itemId);
@@ -138,7 +138,6 @@ class ItemBlockHook extends BaseHook
             'block' => $block,
             'status' => $block instanceof CmsBlock ? $this->blocks->statusOf($block, $lang->getLocale()) : null,
             'edit_language_id' => $lang->getId(),
-            'as_tab' => $asTab,
             'may_write' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::UPDATE]),
             'may_delete' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::DELETE]),
             'edit_url' => $this->urls->generate('admin.cms.item_blocks.edit', ['type' => $type->value, 'itemId' => $itemId, EditLanguage::PARAMETER => $lang->getId()]),
