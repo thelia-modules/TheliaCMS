@@ -89,6 +89,8 @@ final class WriteRoutesTest extends AdminScreenTestCase
     private const array SAMPLE_PARAMETERS = [
         'direction' => 'up',
         'format' => 'csv',
+        // The item blocks routes take the kind of item; the id stays unknown.
+        'type' => 'product',
     ];
 
     public function testEveryWriteIsRefusedWithoutTheToken(): void
