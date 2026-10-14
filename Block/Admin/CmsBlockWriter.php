@@ -17,6 +17,7 @@ namespace TheliaCMS\Block\Admin;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Block\BlockUsageFinder;
+use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Builder\EmptyContentChecker;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
@@ -50,6 +51,7 @@ final readonly class CmsBlockWriter
         private PartialCache $partialCache,
         private CachePurger $httpCache,
         private BlockUsageFinder $usages,
+        private ItemBlockRepository $itemBlocks,
     ) {
     }
 
@@ -130,7 +132,7 @@ final readonly class CmsBlockWriter
             'CMS block #%d published in %s, used by %d page(s)',
             $block->getId(),
             $locale,
-            \count($this->usages->pagesUsing((int) $block->getId())),
+            $this->belongsToAnItem($block) ? 0 : \count($this->usages->pagesUsing((int) $block->getId())),
         ));
     }
 
@@ -195,7 +197,9 @@ final readonly class CmsBlockWriter
      */
     private function purgePagesUsing(CmsBlock $block): void
     {
-        if ($block->isNew()) {
+        // No CMS page shows the block of a catalogue item, and the scan reads
+        // every page of the site.
+        if ($block->isNew() || $this->belongsToAnItem($block)) {
             return;
         }
 
@@ -206,5 +210,10 @@ final readonly class CmsBlockWriter
         }
 
         $this->httpCache->purge($tags);
+    }
+
+    private function belongsToAnItem(CmsBlock $block): bool
+    {
+        return null !== $this->itemBlocks->linkOf($block);
     }
 }
