@@ -26,6 +26,21 @@ Surrogate-Key: cms-page-12 cms-menu cms-settings
 The two say the same thing under the two names proxies read: commas for
 Cloudflare and Akamai, spaces for Fastly and for the Varnish `xkey` module.
 
+## With the shared cache of Thelia
+
+From the Thelia release that brings the shared cache of the public pages, the
+shop setting `shared_cache_mode` takes over. While it is `announce` or
+`enabled`, the core decides whether a page of the module may be kept, removes
+the cookies and writes `Cache-Control` and its own tag header (`xkey` or
+`Surrogate-Key`, depending on `SHARED_CACHE_PURGER`), and the module only adds
+its tags to that header: `cms` and `cms-menu` on every page, `cms-page-12` on
+the page it renders. It writes neither `Cache-Tag` nor its own `Cache-Control`
+then, and `http_cache_ttl` is not read: the lifetime is `shared_cache_ttl`.
+
+Every purge of the module goes to the proxy the core is configured for, so no
+`CachePurgerInterface` has to be written for it. One configured anyway keeps
+receiving the same tags.
+
 ## Varnish
 
 The part that matters is the first block: on the addresses of the public site,

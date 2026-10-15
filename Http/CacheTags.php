@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Http;
 
+use TheliaCMS\Block\Item\ItemType;
+
 /**
  * The names a cached page is filed under, so a change can drop exactly the
  * pages it affects.
@@ -36,6 +38,15 @@ final readonly class CacheTags
     public static function block(int $blockId): string
     {
         return 'cms-block-'.$blockId;
+    }
+
+    /**
+     * The page of a catalogue item, under the name the shared cache of the core files
+     * it: `product-42`, `category-7`, `brand-3`.
+     */
+    public static function item(ItemType $type, int $itemId): string
+    {
+        return $type->value.'-'.$itemId;
     }
 
     /**
