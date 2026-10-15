@@ -39,12 +39,12 @@ final class CatalogueBlocksTest extends AdminScreenTestCase
     public function testTheProductSourceFindsByReferenceNameAndBarcodeAndOffersOnlyProductsOnline(): void
     {
         $online = $this->product('CMSBLK-ONLINE', 'Zucchini catalogue block', 1);
-        $online->getDefaultSaleElements()->setEanCode('3999999999991')->save();
+        $online->getDefaultSaleElements()->setEanCode('3999999999990')->save();
         $offline = $this->product('CMSBLK-OFFLINE', 'Zucchini catalogue block hidden', 0);
 
         self::assertSame([(int) $online->getId()], $this->ids('products', ['q' => 'CMSBLK-']), 'By the start of the reference, online only.');
         self::assertSame([(int) $online->getId()], $this->ids('products', ['q' => 'catalogue block']), 'By a part of the name, online only.');
-        self::assertSame([(int) $online->getId()], $this->ids('products', ['q' => '3999999999991']), 'By the barcode of a sale element.');
+        self::assertSame([(int) $online->getId()], $this->ids('products', ['q' => '3999999999990']), 'By the barcode of a sale element.');
         self::assertSame([], $this->ids('products', ['q' => 'C']), 'One character is not a search.');
         self::assertSame([], $this->ids('products', ['q' => '%%']), 'A wildcard is searched for, not obeyed.');
 
