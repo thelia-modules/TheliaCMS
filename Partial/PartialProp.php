@@ -25,6 +25,8 @@ final readonly class PartialProp
      * @param string|null           $source      endpoint feeding a Reference prop with its options
      * @param int|null              $min         lower bound of an Integer, or minimum length of a Text
      * @param int|null              $max         upper bound of an Integer, or maximum length of a Text
+     * @param bool                  $searchable  whether the editor searches the source of a Reference
+     *                                           rather than listing all of it
      */
     public function __construct(
         public string $name,
@@ -37,6 +39,7 @@ final readonly class PartialProp
         public ?int $min = null,
         public ?int $max = null,
         public ?string $help = null,
+        public bool $searchable = false,
     ) {
     }
 
@@ -63,9 +66,18 @@ final readonly class PartialProp
         return new self($name, PartialPropType::Choice, $label, $default, choices: $choices, help: $help);
     }
 
-    public static function reference(string $name, string $label, string $source, bool $required = true, ?string $help = null): self
+    /**
+     * A record picked from `$source`, which answers a list of `{id, name}`.
+     *
+     * By default the editor loads the whole list into a select, which suits a
+     * few dozen records. A source too long for that is `$searchable`: the
+     * editor sends what the author types as `?q=` and lists what comes back,
+     * and asks `?id=` for the name of the record already chosen. The source
+     * then answers both, still as a list.
+     */
+    public static function reference(string $name, string $label, string $source, bool $required = true, ?string $help = null, bool $searchable = false): self
     {
-        return new self($name, PartialPropType::Reference, $label, required: $required, source: $source, help: $help);
+        return new self($name, PartialPropType::Reference, $label, required: $required, source: $source, help: $help, searchable: $searchable);
     }
 
     /**
@@ -85,6 +97,7 @@ final readonly class PartialProp
             'min' => $this->min,
             'max' => $this->max,
             'help' => $this->help,
+            'searchable' => $this->searchable ?: null,
         ], static fn (mixed $value): bool => null !== $value && [] !== $value);
     }
 }

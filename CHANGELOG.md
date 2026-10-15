@@ -20,6 +20,18 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (1.4.0)
 
+- **Product** and **Category** blocks put one item of the catalogue on a
+  page, searched by the editor (a product by reference, name or barcode, a
+  category by name, shown with its parent) among the items online. The page
+  stores the id, the item is read on every visit and the block leaves the page
+  once the item goes offline. The module's cards show the picture, the name,
+  the taxed price of the default sale element and a link; a theme draws its own
+  through `cms/partials/product-card` and `cms/partials/category-card`.
+- A reference setting of a dynamic block can be `searchable`: the editor
+  shows a search box rather than a select holding the whole source, and the
+  source answers `?q=` with what matches and `?id=` with the record chosen.
+  Made for sources too long to list at once, such as the products of a
+  catalogue. See "Picking from a long list" in `docs/creating-a-block.md`.
 - A product, a category, a brand and, when the Dealer module is active, a
   store can each carry one content block: a free layout built with the page
   editor, the way a reusable block is, and shown by the theme on the page of

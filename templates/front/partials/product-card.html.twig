@@ -1,0 +1,28 @@
+{#
+    A product of the catalogue, as the module renders it when the theme ships
+    no `cms/partials/product-card.html.twig` of its own: picture, name, price
+    and a link to the product. No buy button: what a shop does with its cart
+    is the theme's business.
+
+    `product` is null when the product is no longer online, and the block then
+    renders nothing: the empty placeholder leaves the page. `product.price` is
+    null when the product has nothing to sell.
+#}
+{% if product %}
+    {% set heading_id = 'cms-product-card-' ~ random(100000) %}
+    <article class="cms-product-card" aria-labelledby="{{ heading_id }}">
+        {% if product.image %}
+            <img class="cms-product-card__image" src="{{ product.image }}" alt="" loading="lazy">
+        {% endif %}
+        <h3 class="cms-product-card__title" id="{{ heading_id }}">{{ product.title }}</h3>
+        {% if product.price %}
+            <p class="cms-product-card__price">
+                {{ product.price.price }}
+                {% if product.price.original_price %}
+                    <del class="cms-product-card__original-price">{{ product.price.original_price }}</del>
+                {% endif %}
+            </p>
+        {% endif %}
+        <a class="cms-product-card__link" href="{{ product.url }}">{{ labels.see_product }}<span class="cms-visually-hidden">: {{ product.title }}</span></a>
+    </article>
+{% endif %}

@@ -311,6 +311,24 @@ the page: the latest news, a menu, a reusable block, and the three
 click-to-load embeds below. A news list written six months ago is still today's
 news.
 
+### A product or a category of the catalogue
+
+The **Product** and **Category** blocks put one item of the catalogue on a
+page. The editor searches for it rather than scrolling a list: a product by the
+start of its reference, a part of its name or its barcode, a category by its
+name, each followed by its parent so two "Vegetables" can be told apart. Only
+items online are offered. The page stores the id; the name, the price and the
+address are read on every visit, and the block leaves the page on its own once
+the item goes offline.
+
+The module's own cards show the picture, the name, the price of the default
+sale element (taxed for the default country, in the default currency) and a
+link. A shop draws its own by shipping `cms/partials/product-card.html.twig` and
+`cms/partials/category-card.html.twig` in its theme: they receive `product`
+(`id`, `ref`, `title`, `url`, `image`, `price`) or `category` (`id`, `title`,
+`url`, `image`), null once the item is offline, and `labels`. A theme that sells
+renders its own product card there, buy button included.
+
 ### Embeds that load nothing until they are asked to
 
 A YouTube iframe dropped in a page calls Google on every visit, from every
