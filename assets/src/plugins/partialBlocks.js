@@ -3,6 +3,12 @@ import { TOKEN_HEADER, backOfficeToken } from "../backOfficeToken.js";
 const TYPE = "cms-partial";
 const NAME_ATTRIBUTE = "data-cms-partial";
 const PROPS_ATTRIBUTE = "data-props";
+const SEARCH_TRAIT = "cms-reference-search";
+
+/** Below this, a search would match half the source. */
+const SEARCH_MIN_LENGTH = 2;
+/** Typing pause before a search is sent: one request per word, not per key. */
+const SEARCH_DELAY = 250;
 
 const ICON =
     '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h16v3H4zm0 5h10v9H4zm12 0h4v4h-4zm0 5h4v4h-4z"/></svg>';
@@ -66,6 +72,8 @@ export default (editor, options = {}) => {
 
     const definitions = new Map(partials.map((partial) => [partial.name, partial]));
 
+    registerReferenceSearch(editor, labels);
+
     editor.Components.addType(TYPE, {
         isComponent: (element) =>
             element?.getAttribute?.(NAME_ATTRIBUTE) ? { type: TYPE, name: element.getAttribute(NAME_ATTRIBUTE) } : undefined,
@@ -87,7 +95,7 @@ export default (editor, options = {}) => {
 
                 this.set("name", name, { silent: true });
                 this.readStoredProps();
-                this.set("traits", traitsFor(definitions.get(name)));
+                this.set("traits", traitsFor(definitions.get(name), labels));
 
                 // Every setting is a model property rather than an attribute of
                 // its own: the sanitiser only lets `data-props` through, and one
@@ -269,7 +277,7 @@ export default (editor, options = {}) => {
  * per setting in the page, where the server expects them all inside
  * `data-props`.
  */
-function traitsFor(definition) {
+function traitsFor(definition, labels = {}) {
     if (!definition) {
         return [];
     }
@@ -293,9 +301,168 @@ function traitsFor(definition) {
                     options: Object.entries(prop.choices ?? {}).map(([value, name]) => ({ id: value, name })),
                 };
             case "reference":
-                return { ...base, type: "select-api", endpoint: prop.source, valueKey: "id", labelKey: "name" };
+                return prop.searchable
+                    ? { ...base, type: SEARCH_TRAIT, source: prop.source, labels }
+                    : { ...base, type: "select-api", endpoint: prop.source, valueKey: "id", labelKey: "name" };
             default:
                 return { ...base, type: "text" };
         }
     });
+}
+
+/**
+ * A reference whose source is too long for a select: the author types, the
+ * source answers what matches (`?q=`), the author picks one. The name of the
+ * record already chosen is asked for on its own (`?id=`), so a block opened
+ * again says what it shows. Both answers are a list of `{id, name}`, the shape
+ * of every reference source.
+ *
+ * The value is written straight on the component, as `changeProp` traits do:
+ * the search box itself is never the value, only the way to find it.
+ */
+function registerReferenceSearch(editor, labels) {
+    editor.TraitManager.addType(SEARCH_TRAIT, {
+        eventCapture: [],
+
+        createInput({ trait, component }) {
+            const name = trait.get("name");
+            const source = trait.get("source");
+            const texts = trait.get("labels") ?? labels;
+
+            const wrap = document.createElement("div");
+            wrap.className = "cms-reference-search";
+
+            const current = document.createElement("p");
+            current.className = "cms-reference-search__current";
+            current.setAttribute("aria-live", "polite");
+
+            const input = document.createElement("input");
+            input.type = "search";
+            input.className = "cms-reference-search__input";
+            input.autocomplete = "off";
+            input.placeholder = texts.searchPlaceholder ?? "Type to search";
+            input.setAttribute("aria-label", trait.get("label") ?? name);
+
+            const status = document.createElement("p");
+            status.className = "cms-reference-search__status";
+            status.setAttribute("aria-live", "polite");
+
+            const results = document.createElement("ul");
+            results.className = "cms-reference-search__results";
+
+            const showCurrent = () => {
+                const value = component.get(name);
+
+                if (value === undefined || value === null || value === "") {
+                    current.textContent = texts.searchNone ?? "Nothing chosen yet.";
+
+                    return;
+                }
+
+                fetchReferences(source, { id: value })
+                    .then((items) => {
+                        current.textContent = items[0]?.name ?? texts.searchMissing ?? "The record chosen is no longer available.";
+                    })
+                    .catch(() => {
+                        current.textContent = String(value);
+                    });
+            };
+
+            const pick = (item) => {
+                component.set(name, String(item.id));
+                current.textContent = item.name;
+                input.value = "";
+                results.replaceChildren();
+                status.textContent = "";
+            };
+
+            let timer = null;
+            let pending = null;
+
+            const search = (query) => {
+                pending?.abort();
+                pending = new AbortController();
+                status.textContent = texts.searching ?? "Searching…";
+
+                fetchReferences(source, { q: query }, pending.signal)
+                    .then((items) => {
+                        results.replaceChildren(
+                            ...items.map((item) => {
+                                const entry = document.createElement("li");
+                                const button = document.createElement("button");
+                                button.type = "button";
+                                button.className = "cms-reference-search__result";
+                                button.textContent = item.name;
+                                button.addEventListener("click", () => pick(item));
+                                entry.append(button);
+
+                                return entry;
+                            }),
+                        );
+                        status.textContent = items.length === 0 ? (texts.searchEmpty ?? "No result.") : "";
+                    })
+                    .catch((error) => {
+                        if (error.name !== "AbortError") {
+                            results.replaceChildren();
+                            status.textContent = texts.searchFailed ?? "The search failed. Try again.";
+                        }
+                    });
+            };
+
+            input.addEventListener("input", () => {
+                clearTimeout(timer);
+                const query = input.value.trim();
+
+                if (query.length < SEARCH_MIN_LENGTH) {
+                    pending?.abort();
+                    results.replaceChildren();
+                    status.textContent = "";
+
+                    return;
+                }
+
+                timer = setTimeout(() => search(query), SEARCH_DELAY);
+            });
+
+            // Enter in the box would otherwise reach the editor's keymaps.
+            input.addEventListener("keydown", (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    results.querySelector("button")?.click();
+                }
+            });
+
+            showCurrent();
+            wrap.append(current, input, status, results);
+
+            return wrap;
+        },
+
+        onEvent() {},
+
+        // The value lives on the component; nothing in the box mirrors it.
+        onUpdate() {},
+    });
+}
+
+function fetchReferences(source, params, signal) {
+    const url = new URL(source, window.location.origin);
+
+    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+
+    return fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" }, signal })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            return response.json();
+        })
+        .then((items) => {
+            if (!Array.isArray(items)) {
+                throw new Error("A reference source answers a list.");
+            }
+
+            return items;
+        });
 }

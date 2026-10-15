@@ -60,6 +60,26 @@ final class PartialRegistryTest extends TestCase
     }
 
     /**
+     * A source too long to load at once is searched by the editor: the flag
+     * reaches it on the searchable setting, and stays off the others so the
+     * select of an ordinary reference is left as it is.
+     */
+    public function testFlagsASearchableReferenceForTheEditor(): void
+    {
+        $registry = new PartialRegistry([
+            new FakePartial('product', [
+                PartialProp::reference('product', 'Product', '/sources/products', searchable: true),
+                PartialProp::reference('folder', 'Folder', '/sources/folders'),
+            ]),
+        ]);
+
+        $props = $registry->toEditor()[0]['props'];
+
+        self::assertTrue($props[0]['searchable']);
+        self::assertArrayNotHasKey('searchable', $props[1]);
+    }
+
+    /**
      * A page holding a block switched off under CMS > Settings still has to
      * preview it and edit its settings, so the block is described with the
      * others and only flagged.

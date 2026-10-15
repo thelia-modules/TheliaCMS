@@ -367,6 +367,7 @@ class TheliaCMS extends BaseModule
                 __DIR__.'/Page/PageTemplate.php',
                 __DIR__.'/Page/PageTypeCode.php',
                 __DIR__.'/Page/PublishedPage.php',
+                __DIR__.'/Partial/Catalogue/PickableItem.php',
                 __DIR__.'/Partial/PartialProp.php',
                 __DIR__.'/Settings/ElementStyle.php',
                 __DIR__.'/Settings/SiteTypography.php',

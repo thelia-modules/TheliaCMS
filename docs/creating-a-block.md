@@ -171,6 +171,37 @@ What you get for free, and what it costs you:
 - **The editor previews it** by calling the module, so what an author sees while
   setting the block up is what visitors will get.
 
+### Picking from a long list
+
+A reference setting is a select loaded with the whole of its source, which
+suits a few dozen menus or folders. A catalogue of thousands of products does
+not fit in one: declare the setting `searchable` and the editor shows a search
+box instead.
+
+```php
+PartialProp::reference(
+    'product',
+    $this->trans('Product'),
+    source: $this->urls->generate('my_module.sources.products'),
+    searchable: true,
+),
+```
+
+The source then answers two questions, both with the usual list of
+`{id, name}`:
+
+- `?q=<what the author typed>`: the records that match, sent from the second
+  character on and after a short pause in the typing. Keep the list short
+  (twenty is plenty) and the query cheap: it runs at every word.
+- `?id=<the record chosen>`: that record alone, so a block opened again says
+  what it shows. Answer it even when the record is no longer one the search
+  would offer (a product taken offline, say): the author learns why the block
+  shows nothing, rather than an empty box. An empty list says the record is
+  gone.
+
+The value stored in the page is still the id, so a setting can be made
+searchable later without touching the pages that hold it.
+
 ### Embedding a third party
 
 Do not put an iframe in a template. Use the facade partial, the way the video,

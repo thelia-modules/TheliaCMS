@@ -328,6 +328,79 @@ body:has(.cms-builder) {
     padding-inline-start: 1.25rem;
 }
 
+/* A reference searched rather than listed: what is chosen, the box, the
+   matches. The matches are buttons, reachable with Tab and Enter. */
+.cms-builder .gjs-trt-trait:has(.cms-reference-search) {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.cms-reference-search {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.cms-reference-search__current {
+    margin: 0;
+    color: #ffffff;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.cms-reference-search__input {
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #5b6478;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 0.8125rem;
+}
+
+.cms-reference-search__input:focus-visible {
+    outline: none;
+    border-color: var(--pb-accent);
+}
+
+.cms-reference-search__status {
+    margin: 0;
+    color: #c2cad9;
+    font-size: 0.75rem;
+}
+
+.cms-reference-search__status:empty {
+    display: none;
+}
+
+.cms-reference-search__results {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.cms-reference-search__result {
+    display: block;
+    width: 100%;
+    min-height: 24px;
+    padding: 0.35rem 0.5rem;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: #c2cad9;
+    font-size: 0.8125rem;
+    text-align: start;
+    cursor: pointer;
+}
+
+.cms-reference-search__result:hover,
+.cms-reference-search__result:focus-visible {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
 /* White on the old accent held 3.3:1; dark on the new one holds 7.9:1. */
 .cms-builder .pb-trait-button {
     background: var(--pb-accent);
