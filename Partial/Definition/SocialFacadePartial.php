@@ -129,7 +129,7 @@ final readonly class SocialFacadePartial implements PartialDefinitionInterface
     {
         $value = trim($value);
 
-        if (str_starts_with($value, 'https://') && preg_match('#^https://[A-Za-z0-9.-]+/[A-Za-z0-9._~:/?#\[\]@!$&\'()*+,;=%-]*$#', $value)) {
+        if (str_starts_with($value, 'https://') && preg_match('`^https://[A-Za-z0-9.-]+/[A-Za-z0-9._~:/?#\[\]@!$&\'()*+,;=%-]*$`', $value)) {
             return $value;
         }
 
