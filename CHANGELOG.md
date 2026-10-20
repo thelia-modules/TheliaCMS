@@ -7,6 +7,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-20
+
+The versions 1.1 to 1.4 were developed on the way but not tagged: this release carries all of them.
+
 ### Added (1.5.0)
 
 - On a Thelia core that brings the shared cache of the public pages
@@ -156,6 +160,35 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   nothing else: a page that already holds the block keeps it, previewed and
   editable in the editor, rendered on the front. The list travels with the
   site export as `disabled_blocks`.
+
+### Changed
+
+- The constructor of `PublishedPage` takes `string $pageType` where it took
+  `PageLayout $layout`. The module is the only one meant to build that object;
+  a hook reading `$layout` keeps working.
+- Saving the settings of a page drops it from the shared cache. Its type, its
+  title and its SEO fields are live as soon as they are saved, and a cached copy
+  kept showing the previous ones until it expired.
+
+### Deprecated
+
+- `CmsPageRenderer::THEME_TEMPLATE` and `MODULE_TEMPLATE`: the template of a
+  page now depends on its type, which `PageTemplateResolver` resolves. Both go
+  in 2.0.0.
+- `PublishedPage::$layout` and the `PageLayout` enum, replaced by
+  `PublishedPage::$pageType`. `layout` is still filled for the hooks written
+  against 1.x, from the type: `full-width` and `landing` read as before, any
+  other type as `Default`. Both go in 2.0.0.
+
+### Fixed
+
+- The media screen counted a page once per language using an image, so an
+  image on a page in French and English read "Used in 2 page(s)".
+
+## [1.0.0] - 2026-10-02
+
+### Added
+
 - A theme declares the canvas of the editor in `config/theliacms.yaml`: the
   stylesheets it loads, written the way its templates pass them to `asset()`,
   and the classes of `<html>`, `<body>` and of the container around the page
@@ -230,12 +263,6 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed
 
-- The constructor of `PublishedPage` takes `string $pageType` where it took
-  `PageLayout $layout`. The module is the only one meant to build that object;
-  a hook reading `$layout` keeps working.
-- Saving the settings of a page drops it from the shared cache. Its type, its
-  title and its SEO fields are live as soon as they are saved, and a cached copy
-  kept showing the previous ones until it expired.
 - Every write of the back office under `/admin/cms` requires the back-office
   token, in the `_token` field of the body or in the `X-CSRF-Token` header. A
   script of your own that posts to these routes now gets a 403 until it sends
@@ -251,20 +278,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - A site of fewer than forty pages opens whole, so nothing changes for a site that
   never needed folding.
 
-### Deprecated
-
-- `CmsPageRenderer::THEME_TEMPLATE` and `MODULE_TEMPLATE`: the template of a
-  page now depends on its type, which `PageTemplateResolver` resolves. Both go
-  in 2.0.0.
-- `PublishedPage::$layout` and the `PageLayout` enum, replaced by
-  `PublishedPage::$pageType`. `layout` is still filled for the hooks written
-  against 1.x, from the type: `full-width` and `landing` read as before, any
-  other type as `Default`. Both go in 2.0.0.
-
 ### Fixed
 
-- The media screen counted a page once per language using an image, so an
-  image on a page in French and English read "Used in 2 page(s)".
 - The page form no longer raises a Symfony deprecation each time it is built.
   Its canonical URL field left the default scheme unset; a canonical address
   typed without its scheme is now read as `https://`, as in SEOne.
@@ -580,4 +595,7 @@ the published pages.
 - The breadcrumb of a page filed under a draft one offered a link to that page,
   which answers 404, both to the reader and in the `BreadcrumbList`.
 
+[Unreleased]: https://github.com/thelia-modules/TheliaCMS/compare/1.5.0...HEAD
+[1.5.0]: https://github.com/thelia-modules/TheliaCMS/compare/1.0.0...1.5.0
+[1.0.0]: https://github.com/thelia-modules/TheliaCMS/compare/1.0.0-alpha.1...1.0.0
 [1.0.0-alpha.1]: https://github.com/thelia-modules/TheliaCMS/releases/tag/1.0.0-alpha.1
