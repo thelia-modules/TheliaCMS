@@ -30,9 +30,9 @@ use TheliaCMS\Content\DocumentRenderer;
 final readonly class PublishedContentSanitizer
 {
     /**
-     * Third-party embeds are served by the partial blocks, which render a
-     * click-to-load facade. An iframe written in a page is refused unless
-     * the author holds the custom code resource.
+     * An iframe calls a third party on every visit, before anyone has agreed
+     * to anything: one written in a page is refused unless the author holds
+     * the custom code resource.
      */
     private const array EMBED_ELEMENTS = ['iframe'];
 

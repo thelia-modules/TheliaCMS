@@ -43,7 +43,6 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $page = $this->pageWith([
             new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1><p>Un texte.</p>']),
             new Section('news', 'Partial:latest-contents', ['count' => 3, 'folder' => null, 'heading' => 'Actualités']),
-            new Section('social', 'Partial:social-facade', ['network' => 'instagram', 'post' => 'C1a2b3', 'summary' => '']),
         ]);
 
         $screen = $this->screen($this->url($page));
@@ -56,9 +55,6 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $news = $screen->filter('[data-testid="cms-section-edit-news"] form');
         self::assertSame('Actualités', $news->filter('input[name="cms_section_news[heading]"]')->attr('value'));
         self::assertSame('3', $news->filter('input[name="cms_section_news[count]"]')->attr('value'));
-
-        $social = $screen->filter('[data-testid="cms-section-edit-social"] form');
-        self::assertSame(1, $social->filter('select[name="cms_section_social[network]"] option[selected][value="instagram"]')->count(), 'A choice is a select on the shipped choices.');
     }
 
     public function testEditingASectionUpdatesTheDraftAndTheLedger(): void

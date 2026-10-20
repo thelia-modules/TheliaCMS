@@ -312,31 +312,21 @@ the stylesheet of the theme. The module ships no layout of its own.
 width by the stylesheet of the module.
 
 **Live content** is rendered by the server on every visit rather than stored in
-the page: the latest news, a menu, a form, and the two click-to-load embeds
-below. Each is a partial of the site, and every partial
-is a section of the catalogue under `Partial:<name>`, with the settings of the
-partial as its props. A news list written six months ago is still today's
+the page: the latest news, a menu, a form. Each is a partial of the site, and
+every partial is a section of the catalogue under `Partial:<name>`, with the
+settings of the partial as its props. A news list written six months ago is still today's
 news.
 
-### Products, categories and videos
+### Products, categories, videos, maps
 
-The module has no section of its own for a product, a category or a video:
-they are components of the theme, opened in its `config/theliacms.yaml`
-(Flexy's `Layouts:CrossSelling`, `Organisms:CategoryCard`,
-`Organisms:VideoPlayer`). A `@prop` naming `product`, `category` or a list of
-them is picked by search, in the generator as in the form that edits the
-section by hand: a product by the start of its reference, a part of its name
-or its barcode, a category by its name, only the ones online.
-
-### Embeds that load nothing until they are asked to
-
-An iframe pasted in a page calls a third party on every visit, from every
-visitor, before anyone has agreed to anything. The map and social partials
-(`Partial:map-facade`, `Partial:social-facade`) render a card, a button, and a
-sentence saying which company is about to receive something. The map or the
-post is fetched when the button is pressed, and not one second earlier.
-Without JavaScript the button is still a link to the platform. Maps come from
-OpenStreetMap.
+The module has no section of its own for a product, a category, a video, a
+map or a post of a social network: they are components of the theme, opened
+in its `config/theliacms.yaml` (Flexy's `Layouts:CrossSelling`,
+`Organisms:CategoryCard`, `Organisms:VideoPlayer`). A `@prop` naming
+`product`, `category` or a list of them is picked by search, in the generator
+as in the form that edits the section by hand: a product by the start of its
+reference, a part of its name or its barcode, a category by its name, only the
+ones online.
 
 Adding a component of your own takes one PHP class, or one line in the
 configuration of the theme:
@@ -920,10 +910,9 @@ template built on one site is a file that can be handed to another.
 Working today: the page tree with its bin and duplication, the content screen
 with the generator, its skills and its ledger, sections edited by hand,
 drafts, revisions and shared previews, the catalogue of sections made of the
-components of the theme, free text and live content including click-to-load
-embeds, the publication pipeline (sanitizer, responsive images, search
-indexing, heading check), publication and
-generation from the command line, the media library, menus, hierarchical URLs
+components of the theme, free text and live content, the publication
+pipeline (sanitizer, responsive images, search indexing, heading check),
+publication and generation from the command line, the media library, menus, hierarchical URLs
 with 301s on rename, forms and their answers, the front-office search,
 third-party snippets behind consent, the sitemap section, cache tags, the
 showcase dashboard, import and export, templates, showcase mode, maintenance,

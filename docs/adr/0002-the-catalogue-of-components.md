@@ -63,3 +63,8 @@ a page is built from the components of the theme, free text (`cms:richtext`)
 and live content. The catalogue keeps its three families, the first being the
 theme's. A module adds a component by implementing
 `SectionDefinitionInterface` or by writing a partial.
+
+The click-to-load embeds go as well (`Partial:map-facade`,
+`Partial:social-facade`, the shared `_facade` template and its script): the
+live content of the module is a form, a menu and the latest contents. A map
+or a post of a social network on a page is a component of the theme.

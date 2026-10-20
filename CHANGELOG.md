@@ -192,16 +192,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   A module adds a component by implementing `SectionDefinitionInterface`
   (see `docs/creating-a-component.md`); there is no `AbstractTemplateSection`
   and no `cms/sections/<slug>.html.twig` to take over.
+- The click-to-load embeds: `Partial:map-facade` and `Partial:social-facade`
+  (`MapFacadePartial`, `SocialFacadePartial`), the shared `_facade.html.twig`
+  and its script, and their styles. The live content of the module is a form,
+  a menu and the latest contents; a map or a social post on a page is a
+  component of the theme. An iframe written in a page is still refused unless
+  the author may write custom code.
 - The pipeline a page goes through before it is stored or published moves
   from `TheliaCMS\Builder` to `TheliaCMS\Content\Pipeline`:
   `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,
   `ImageRewriter`, `PublishedContentSanitizer`, `PageContentNormalizer`.
-
-### Fixed (2.0.0)
-
-- The social post partial kept a full address (a Facebook or LinkedIn post)
-  only on paper: the pattern that checked it was invalid, so the address was
-  stripped of its slashes and the post never loaded.
 
 ### Added (1.5.0)
 
