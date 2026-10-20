@@ -40,6 +40,11 @@
                 <a class="nav-link" href="{{ media_url }}">{{ media_label }}</a>
             </li>
         {% endif %}
+        {% if components_url %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ components_url }}" data-testid="bo-nav-cms-components">{{ components_label }}</a>
+            </li>
+        {% endif %}
         {% if skills_url %}
             <li class="nav-item">
                 <a class="nav-link" href="{{ skills_url }}" data-testid="bo-nav-cms-skills">{{ skills_label }}</a>

@@ -25,6 +25,10 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
  * is the same rule the partial registry applies. A provider may also put
  * names away (`SectionHidingInterface`): the theme that opens its own
  * component for something hides the module's.
+ *
+ * Two readings. `all()` is every component a stored page may name, what
+ * renders and validates a document. `offered()` leaves out what the site put
+ * away (SectionAvailability): what the generator reads and may write.
  */
 final class SectionCatalog
 {
@@ -44,6 +48,7 @@ final class SectionCatalog
         private readonly iterable $definitions,
         #[AutowireIterator(self::PROVIDER_TAG)]
         private readonly iterable $providers = [],
+        private readonly ?SectionAvailability $availability = null,
     ) {
     }
 
@@ -58,6 +63,31 @@ final class SectionCatalog
     public function names(): array
     {
         return array_keys($this->all());
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function offeredNames(): array
+    {
+        return array_keys($this->offered());
+    }
+
+    /**
+     * Read again at every call, unlike the catalogue itself: a component
+     * put away in the back office is left out from the next request on.
+     *
+     * @return array<string, SectionDefinitionInterface>
+     */
+    public function offered(): array
+    {
+        if (null === $this->availability) {
+            return $this->all();
+        }
+
+        $disabled = array_filter($this->availability->disabled(), $this->availability->canBeDisabled(...));
+
+        return array_diff_key($this->all(), array_flip($disabled));
     }
 
     /**

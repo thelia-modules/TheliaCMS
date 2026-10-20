@@ -52,10 +52,17 @@ final readonly class ReadSectionTool implements GeneratorToolInterface
 
     public function run(array $input, GenerationRequest $request): string
     {
-        $definition = $this->catalog->find(trim((string) ($input['component'] ?? '')));
+        $name = trim((string) ($input['component'] ?? ''));
+        $definition = $this->catalog->offered()[$name] ?? null;
+
+        // A component the site put away is still described when the document
+        // being revised uses it: the model has to write it back as it is.
+        if (null === $definition && \in_array($name, $request->keptComponents(), true)) {
+            $definition = $this->catalog->find($name);
+        }
 
         if (null === $definition) {
-            return 'The catalogue has no such component. The names are: '.implode(', ', $this->catalog->names()).'.';
+            return 'The catalogue has no such component. The names are: '.implode(', ', $this->catalog->offeredNames()).'.';
         }
 
         return $this->sheet->section($definition);

@@ -60,6 +60,8 @@ final readonly class CmsAdminGuard
         // The skills steer every page the generator writes: a setting of the
         // site by another name.
         'skills' => CmsResources::SETTINGS,
+        // So does putting a component away.
+        'components' => CmsResources::SETTINGS,
         'custom-code' => CmsResources::CUSTOM_CODE,
         // Pasting a script tag onto every page of the site is the custom-code
         // permission by any other name, so it is guarded as such.

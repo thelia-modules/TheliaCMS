@@ -20,9 +20,9 @@ use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\SectionDefinitionInterface;
 
 /**
- * The catalogue as the model reads it: every section with what it is for,
- * its props and one example. Written in the same order at every call, so
- * the prefix of the prompt stays the same and the cache holds.
+ * The catalogue as the model reads it: every section the site offers, with
+ * what it is for, its props and one example. Written in the same order at
+ * every call, so the prefix of the prompt stays the same and the cache holds.
  */
 final readonly class CatalogSheet
 {
@@ -35,7 +35,7 @@ final readonly class CatalogSheet
     {
         $lines = ["# The catalogue\n", 'The components a section may name, with their props. `*` marks a required prop.', ''];
 
-        foreach ($this->catalog->all() as $definition) {
+        foreach ($this->catalog->offered() as $definition) {
             $lines[] = $this->section($definition);
         }
 

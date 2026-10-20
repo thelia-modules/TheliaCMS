@@ -54,6 +54,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.0.0)
 
+- **CMS > Components** lists the components of the catalogue, where each
+  comes from and how many pages use it, and switches one off for the
+  generator. A component switched off is left out of what the generator reads
+  and may write, except on a page that already uses it; pages keep rendering
+  it. `SectionCatalog::offered()` is the catalogue the site offers,
+  `SectionCatalog::all()` stays everything a page may name.
 - `TheliaCMS\Content`: `Document`, `Section`, `SectionDefinitionInterface`
   (implementing it registers a component), `SectionProviderInterface`,
   `SectionCatalog`, `Prop` and `PropSchema` (typed props, checked on the way

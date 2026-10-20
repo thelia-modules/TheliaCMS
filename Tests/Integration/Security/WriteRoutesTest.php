@@ -46,6 +46,7 @@ final class WriteRoutesTest extends AdminScreenTestCase
      * answers GET and POST, the POST being the submission of its form.
      */
     private const array SCREENS = [
+        'admin.cms.components.list',
         'admin.cms.forms.create',
         'admin.cms.forms.edit',
         'admin.cms.forms.field_save',
@@ -175,6 +176,7 @@ final class WriteRoutesTest extends AdminScreenTestCase
             '/admin/cms/forms/'.$form->getId(),
             '/admin/cms/forms/'.$form->getId().'/submissions',
             '/admin/cms/media',
+            '/admin/cms/components',
             '/admin/cms/settings',
             '/admin/cms/settings/page-types',
             '/admin/cms/skills',

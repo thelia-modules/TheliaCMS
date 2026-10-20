@@ -38,6 +38,14 @@ A component of another module joins the catalogue by implementing
 registers it. Several at once, decided at runtime, go through
 `SectionProviderInterface`.
 
+Two readings of it. `all()` is every component a stored document may name:
+what renders and validates a page. `offered()` leaves out the components the
+site switched off under **CMS > Components** (`SectionAvailability`): what the
+generator reads and may write, and what the toolkit shows. A generation that
+revises or translates a page is also allowed the components that page already
+uses (`GenerationRequest::keptComponents()`), so a component switched off
+never forces a page to change.
+
 ## Props
 
 A component describes its props with `TheliaCMS\Content\Prop`, and the schema

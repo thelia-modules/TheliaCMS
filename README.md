@@ -335,6 +335,20 @@ your own is a partial, a class implementing `PartialDefinitionInterface`
 (`docs/examples/OpeningHoursPartial.php.example`), which joins the catalogue on
 its own.
 
+### Components offered to the generator
+
+**CMS > Components** lists the catalogue: every component with where it comes
+from (the module, a partial, the theme) and how many pages use it, drafts
+included, the bin left out. A component switched off there is no longer
+offered to the generator: it leaves the catalogue of the prompt, the schema
+the answer is held to, `read_section` and the toolkit. Nothing else changes:
+the pages using it keep rendering it, its sections stay editable by hand, and
+a revision or a translation of such a page may keep it. Free text cannot be
+switched off. The screen takes the settings right; the choice is stored in
+`module_config` under `disabled_sections`. Where the toolkit answers (debug
+mode, Flexy theme), a button opens it on the page that renders every
+component offered.
+
 ## Media
 
 **CMS > Media** stores images in [TheliaLibrary][library]. Alternative text is
@@ -695,7 +709,7 @@ profile under **Configuration > Administrators**.
 | `admin.cms.menu` | the menus and their entries |
 | `admin.cms.media` | the media library |
 | `admin.cms.custom-code` | `<iframe>` in published content, beyond the standard allow list |
-| `admin.cms.settings` | the settings screen: showcase mode, maintenance, the 404 page, the generator card, the skills |
+| `admin.cms.settings` | the settings screen: showcase mode, maintenance, the 404 page, the generator card, the skills, the components offered to the generator |
 | `admin.cms.form` | the forms and their answers |
 
 Every route under `/admin/cms` is guarded by the resource of its section, so a

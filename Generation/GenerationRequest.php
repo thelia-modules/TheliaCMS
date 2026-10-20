@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Generation;
 
 use TheliaCMS\Content\Document;
+use TheliaCMS\Content\Section;
 
 /**
  * One call to the generator: a target, a language, and either a brief for a
@@ -84,5 +85,21 @@ final readonly class GenerationRequest
         }
 
         return new self($target, $locale, self::KIND_TRANSLATION, new Brief(\sprintf('Translated from %s.', $sourceLocale)), $source, null, $sourceLocale);
+    }
+
+    /**
+     * The components the document worked on already uses. A revision or a
+     * translation answers with them kept, so the generator may name them even
+     * when the site no longer offers them for a new section.
+     *
+     * @return list<string>
+     */
+    public function keptComponents(): array
+    {
+        if (null === $this->current) {
+            return [];
+        }
+
+        return array_values(array_unique(array_map(static fn (Section $section): string => $section->component, $this->current->sections)));
     }
 }

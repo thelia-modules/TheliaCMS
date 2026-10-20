@@ -69,10 +69,22 @@ final readonly class DocumentSchema
     }
 
     /**
+     * @param list<string> $kept components of the catalogue the site no longer
+     *                           offers, allowed all the same because the
+     *                           document being revised or translated uses them
+     *
      * @return array<string, mixed>
      */
-    public function strict(): array
+    public function strict(array $kept = []): array
     {
+        $names = $this->catalog->offeredNames();
+
+        foreach ($kept as $name) {
+            if (!\in_array($name, $names, true) && null !== $this->catalog->find($name)) {
+                $names[] = $name;
+            }
+        }
+
         return [
             'type' => 'object',
             'properties' => (object) [
@@ -84,7 +96,7 @@ final readonly class DocumentSchema
                         'type' => 'object',
                         'properties' => (object) [
                             'id' => ['type' => 'string', 'description' => 'Unique in the page: lowercase letters, digits, hyphens and underscores, saying what the section is.'],
-                            'component' => ['type' => 'string', 'enum' => $this->catalog->names(), 'description' => 'The name of a component of the catalogue.'],
+                            'component' => ['type' => 'string', 'enum' => $names, 'description' => 'The name of a component of the catalogue.'],
                             'props' => ['type' => 'string', 'description' => 'The props of the component, as a JSON object written as a string, with the keys and the values the catalogue describes for this component.'],
                         ],
                         'required' => ['id', 'component', 'props'],

@@ -89,7 +89,7 @@ final class CmsExtension extends AbstractExtension
     }
 
     /**
-     * Every section a page may be made of, as the toolkit lists them: what
+     * Every section the site offers, as the toolkit lists them: what
      * to call it, what it is for, and whether it renders on its own or is
      * live content the server fills when the page is served.
      *
@@ -99,7 +99,7 @@ final class CmsExtension extends AbstractExtension
     {
         $catalogue = [];
 
-        foreach ($this->sections->all() as $definition) {
+        foreach ($this->sections->offered() as $definition) {
             $catalogue[] = [
                 'name' => $definition->name(),
                 'label' => $definition->label(),

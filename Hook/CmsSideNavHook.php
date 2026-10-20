@@ -94,8 +94,9 @@ class CmsSideNavHook extends BaseHook
             'menus_url' => $maySeeMenus ? $this->urls->generate('admin.cms.menus.list') : null,
             'forms_url' => $maySeeForms ? $this->urls->generate('admin.cms.forms.list') : null,
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
-            // The skills steer the generator: whoever may see the settings
-            // may read them.
+            // The components and the skills steer the generator: whoever may
+            // see the settings may read them.
+            'components_url' => $maySeeSettings ? $this->urls->generate('admin.cms.components.list') : null,
             'skills_url' => $maySeeSettings ? $this->urls->generate('admin.cms.skills.list') : null,
             'settings_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.edit') : null,
             'is_active' => $this->isOnACmsScreen(),
@@ -110,6 +111,7 @@ class CmsSideNavHook extends BaseHook
             'folders_label' => $this->trans('Folders', [], TheliaCMS::DOMAIN_NAME),
             'forms_label' => $this->trans('Forms', [], TheliaCMS::DOMAIN_NAME),
             'media_label' => $this->trans('Media', [], TheliaCMS::DOMAIN_NAME),
+            'components_label' => $this->trans('Components', [], TheliaCMS::DOMAIN_NAME),
             'skills_label' => $this->trans('Skills', [], TheliaCMS::DOMAIN_NAME),
             'settings_label' => $this->trans('Settings', [], TheliaCMS::DOMAIN_NAME),
         ]));

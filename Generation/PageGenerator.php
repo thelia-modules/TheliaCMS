@@ -70,7 +70,7 @@ final readonly class PageGenerator
         $prompt = $this->prompts->userMessage($request);
         $messages = [['role' => 'user', 'content' => $prompt]];
         $tools = $this->tools->definitions();
-        $format = ['type' => 'json_schema', 'schema' => $this->schema->strict()];
+        $format = ['type' => 'json_schema', 'schema' => $this->schema->strict($request->keptComponents())];
         $usage = new Usage();
         $turns = 0;
         $corrections = 0;
