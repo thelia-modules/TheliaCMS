@@ -244,16 +244,7 @@
     color: var(--cms-color-text);
   }
 
-  .cms-facade__poster {
-    display: block;
-    width: 100%;
-    height: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-  }
-
-  /* The label sits over the poster when there is one, and fills the card when
-     there is not. */
+  /* The label fills the card. */
   .cms-facade__label {
     position: absolute;
     inset: 0;
@@ -264,15 +255,10 @@
     gap: 0.75rem;
     padding: 1.5rem;
     text-align: center;
-    /* Solid by default: white on a translucent layer over the light card ends up
-       at 3.9:1, which is not a contrast ratio. Only a poster underneath makes the
-       translucent version safe, and even then it is dark enough to carry text. */
+    /* Solid: white on a translucent layer over the light card ends up at 3.9:1,
+       which is not a contrast ratio. */
     background: var(--cms-color-text);
     color: var(--cms-color-on-dark);
-  }
-
-  .cms-facade__action:has(.cms-facade__poster) .cms-facade__label {
-    background: rgb(40 40 40 / 65%);
   }
 
   .cms-facade__icon {

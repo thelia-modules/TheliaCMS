@@ -1,16 +1,16 @@
 {#
     The shared shape of a click-to-load embed.
 
-    Nothing here reaches the third party. The visitor sees a poster or a plain
-    card, a button, and one sentence saying what pressing it does. The frame is
+    Nothing here reaches the third party. The visitor sees a plain card, a
+    button, and one sentence saying what pressing it does. The frame is
     written into the page by the script below, on the click and only then.
 
     Without JavaScript the button is still a link to the platform, so the
     content stays reachable — which is the reason it is an `<a>` and not a
     `<button>`.
 
-    Parameters: embed_url, page_url, notice, action_label, title, poster_url,
-    summary, kind (a class suffix, and the icon that goes with it).
+    Parameters: embed_url, page_url, notice, action_label, title, summary,
+    kind (a class suffix, and the icon that goes with it).
 #}
 {% set facade_icons = {
     map: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7m0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5"/></svg>',
@@ -19,9 +19,6 @@
 <div class="cms-facade cms-facade--{{ kind }}" data-cms-facade data-cms-facade-src="{{ embed_url }}"
      data-cms-facade-title="{{ title|default(action_label) }}">
     <a class="cms-facade__action" href="{{ page_url|default(embed_url) }}" target="_blank" rel="noopener">
-        {% if poster_url %}
-            <img class="cms-facade__poster" src="{{ poster_url }}" alt="" loading="lazy" decoding="async">
-        {% endif %}
         <span class="cms-facade__label">
             <span class="cms-facade__icon" aria-hidden="true">{{ facade_icons[kind]|default('')|raw }}</span>
             <span class="cms-facade__text">
