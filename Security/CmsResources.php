@@ -32,11 +32,14 @@ final class CmsResources
     public const string SETTINGS = 'admin.cms.settings';
     public const string CUSTOM_CODE = 'admin.cms.custom-code';
 
+    /** Asking the generator to write: it costs money, so it is a right of its own. */
+    public const string GENERATE = 'admin.cms.generate';
+
     /**
      * @return list<string>
      */
     public static function all(): array
     {
-        return [self::PAGE, self::MENU, self::FORM, self::MEDIA, self::SETTINGS, self::CUSTOM_CODE];
+        return [self::PAGE, self::MENU, self::FORM, self::MEDIA, self::SETTINGS, self::CUSTOM_CODE, self::GENERATE];
     }
 }

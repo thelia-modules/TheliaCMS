@@ -114,6 +114,16 @@ final readonly class PropSchema
 
     private function json(Prop $prop, mixed $value): mixed
     {
+        // A generator constrained by a structured output writes such a value
+        // as a JSON string: read it back.
+        if (\is_string($value) && 1 === preg_match('/^\s*[\[{]/', $value)) {
+            try {
+                $value = json_decode($value, true, 32, \JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                throw InvalidDocumentException::because([\sprintf('"%s" is not valid JSON.', $prop->name)]);
+            }
+        }
+
         if (!\is_array($value) && !\is_scalar($value)) {
             throw InvalidDocumentException::because([\sprintf('"%s" must be a list, an object or a scalar.', $prop->name)]);
         }
@@ -244,6 +254,16 @@ final readonly class PropSchema
      */
     private function items(Prop $prop, mixed $value): array
     {
+        // A generator constrained by a structured output writes a list as a
+        // JSON string: read it back.
+        if (\is_string($value)) {
+            try {
+                $value = json_decode($value, true, 32, \JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                throw InvalidDocumentException::because([\sprintf('"%s" is not valid JSON.', $prop->name)]);
+            }
+        }
+
         if (!\is_array($value) || !array_is_list($value)) {
             throw InvalidDocumentException::because([\sprintf('"%s" must be a list.', $prop->name)]);
         }

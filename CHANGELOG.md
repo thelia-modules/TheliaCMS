@@ -68,6 +68,20 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - `cms_section(name, props)` renders a section from a template, with its
   sample props when none are given. The sections of the module are listed in
   the toolkit of the Flexy theme, under "CMS".
+- **The generator** (`TheliaCMS\Generation`): a page is written from a brief
+  by the Claude API, as a document constrained to the JSON schema of the
+  catalogue, validated and rendered by the site. The model reads the skills
+  and the catalogue (cached), may search the products, categories, pages and
+  images of the site, and sends an invalid document back once. Every call is
+  written to the ledger `cms_page_generation` with its tokens and an estimate
+  of its cost. The key is read from `ANTHROPIC_API_KEY`; the model, the effort
+  and the token limit are settings. Command `thelia_cms:generate`. See
+  `docs/generator.md`.
+- **Skills**: the instructions the generator reads, shipped as
+  `skills/<code>/SKILL.md` by the module (five) and the theme, sown into
+  `cms_skill` at the first read and edited there by the site.
+- The right `admin.cms.generate`, given to the seeded editor profile.
+- The module requires `anthropic-ai/sdk` and `nyholm/psr7`.
 
 ### Added (1.5.0)
 

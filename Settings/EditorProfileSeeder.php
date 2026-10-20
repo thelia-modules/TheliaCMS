@@ -66,6 +66,7 @@ final readonly class EditorProfileSeeder
         CmsResources::MENU,
         CmsResources::MEDIA,
         CmsResources::FORM,
+        CmsResources::GENERATE,
         // News are core contents and folders (decision D11).
         'admin.content',
         'admin.folder',

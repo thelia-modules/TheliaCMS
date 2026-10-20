@@ -109,6 +109,18 @@ final class PropSchemaTest extends TestCase
         }
     }
 
+    public function testAListWrittenAsAJsonStringIsReadBack(): void
+    {
+        $values = $this->schema->normalize(['title' => 'T', 'items' => '[{"label":"One","image":7}]']);
+
+        self::assertSame([['label' => 'One', 'image' => 7]], $values['items']);
+
+        $this->expectException(InvalidDocumentException::class);
+        $this->expectExceptionMessage('"items" is not valid JSON.');
+
+        $this->schema->normalize(['title' => 'T', 'items' => '[{"label":']);
+    }
+
     public function testProblemsInsideItemsNameTheItem(): void
     {
         try {
@@ -183,6 +195,7 @@ final class PropSchemaTest extends TestCase
 
         self::assertSame(['type' => 'string', 'maxLength' => 20], array_diff_key($properties['title'], ['description' => true]));
         self::assertSame(['light', 'dark'], $properties['tone']['enum']);
+        self::assertSame(['1', '2'], ((array) (new PropSchema([Prop::choice('level', 'Level', ['1' => 'h1', '2' => 'h2'], '1')]))->toJsonSchema()['properties'])['level']['enum'], 'A numeric choice stays a string in the schema.');
         self::assertSame(['integer', 'null'], $properties['picture']['type']);
         self::assertSame(1, $properties['items']['minItems']);
         self::assertSame(['label', 'image'], $properties['items']['items']['required']);

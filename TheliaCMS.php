@@ -37,6 +37,8 @@ use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
 use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Content\Section\SectionStories;
+use TheliaCMS\Generation\ClaudeClientProviderInterface;
+use TheliaCMS\Generation\EnvironmentClaudeClientProvider;
 use TheliaCMS\Http\SharedCache\CmsSharedCacheContributor;
 use TheliaCMS\Http\SharedCache\CoreSharedCache;
 use TheliaCMS\Install\LegalPagesSeeder;
@@ -378,6 +380,11 @@ class TheliaCMS extends BaseModule
                 __DIR__.'/Content/Partial/PartialSection.php',
                 __DIR__.'/Content/Theme/ThemeComponentSection.php',
                 __DIR__.'/Content/Theme/ThemeSections.php',
+                __DIR__.'/Generation/Brief.php',
+                __DIR__.'/Generation/GenerationRequest.php',
+                __DIR__.'/Generation/GenerationResult.php',
+                __DIR__.'/Generation/Usage.php',
+                __DIR__.'/Skill/Skill.php',
                 // Registered below, guarded: it implements an interface of the
                 // Flexy theme.
                 __DIR__.'/Content/Section/SectionStories.php',
@@ -416,6 +423,10 @@ class TheliaCMS extends BaseModule
         // Dynamic blocks are rendered through an interface so the substitution
         // of a page can be unit-tested without a theme behind it.
         $servicesConfigurator->alias(PartialFragmentRendererInterface::class, PartialFragmentRenderer::class);
+
+        // The generator talks to the Claude API through a provider, so the
+        // tests hand it one that answers from recorded responses.
+        $servicesConfigurator->alias(ClaudeClientProviderInterface::class, EnvironmentClaudeClientProvider::class);
 
         // SEOne is a soft dependency. Autodiscovering CmsPageSeoElement would
         // reflect a class implementing an interface that does not exist on a

@@ -193,3 +193,55 @@ SET @cms_statement := IF(
 PREPARE cms_prepared FROM @cms_statement;
 EXECUTE cms_prepared;
 DEALLOCATE PREPARE cms_prepared;
+
+-- cms_skill and cms_page_generation ----------------------------------------
+-- The skills the generator reads, and its ledger. Created here for a site
+-- coming from 1.x; TheliaMain.sql already declares them on a fresh install.
+
+CREATE TABLE IF NOT EXISTS `cms_skill`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(50) NOT NULL,
+    `name` VARCHAR(120) NOT NULL,
+    `description` VARCHAR(500),
+    `body` LONGTEXT,
+    `shipped_body` LONGTEXT,
+    `origin` VARCHAR(20) DEFAULT 'module' NOT NULL,
+    `position` INTEGER DEFAULT 0 NOT NULL,
+    `enabled` TINYINT DEFAULT 1 NOT NULL,
+    `always` TINYINT DEFAULT 0 NOT NULL,
+    `updated_by` INTEGER,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_skill_code` (`code`)
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `cms_page_generation`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `target_type` VARCHAR(20) DEFAULT 'page' NOT NULL,
+    `target_id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) NOT NULL,
+    `kind` VARCHAR(20) DEFAULT 'brief' NOT NULL,
+    `prompt` LONGTEXT,
+    `model` VARCHAR(60),
+    `request_id` VARCHAR(80),
+    `status` VARCHAR(20) DEFAULT 'done' NOT NULL,
+    `stop_reason` VARCHAR(30),
+    `stop_category` VARCHAR(60),
+    `input_tokens` INTEGER DEFAULT 0 NOT NULL,
+    `output_tokens` INTEGER DEFAULT 0 NOT NULL,
+    `cache_read_tokens` INTEGER DEFAULT 0 NOT NULL,
+    `cache_write_tokens` INTEGER DEFAULT 0 NOT NULL,
+    `turns` INTEGER DEFAULT 0 NOT NULL,
+    `cost_usd` DECIMAL(12,6),
+    `duration_ms` INTEGER DEFAULT 0 NOT NULL,
+    `error` TEXT,
+    `document` LONGTEXT,
+    `created_by` INTEGER,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_cms_page_generation_target` (`target_type`, `target_id`, `locale`)
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;

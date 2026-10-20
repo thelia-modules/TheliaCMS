@@ -120,14 +120,25 @@ final readonly class Prop
      */
     public function toJsonSchema(): array
     {
-        $description = trim($this->label.(null !== $this->help ? '. '.$this->help : ''));
+        $description = trim($this->label.(null !== $this->help ? '. '.rtrim($this->help, '.').'.' : '.'));
+
+        if (!$this->required) {
+            $description .= match ($this->type) {
+                PropType::Image, PropType::Reference => ' 0 when there is none.',
+                PropType::Text, PropType::Html, PropType::Url, PropType::Json => ' Empty when not needed.',
+                PropType::Items => ' An empty list when not needed.',
+                default => '',
+            };
+        }
 
         $schema = match ($this->type) {
             PropType::Text => ['type' => 'string', 'maxLength' => $this->max ?? 255],
             PropType::Html => ['type' => 'string'],
             PropType::Integer => ['type' => 'integer', 'minimum' => $this->min, 'maximum' => $this->max],
             PropType::Boolean => ['type' => 'boolean'],
-            PropType::Choice => ['type' => 'string', 'enum' => array_keys($this->choices)],
+            // Cast: PHP turns a numeric key such as '1' into an integer, and
+            // the API refuses an integer in an enum of strings.
+            PropType::Choice => ['type' => 'string', 'enum' => array_map(strval(...), array_keys($this->choices))],
             PropType::Image => ['type' => $this->required ? 'integer' : ['integer', 'null']],
             PropType::Url => ['type' => 'string', 'maxLength' => $this->max ?? 2048],
             PropType::Items => [

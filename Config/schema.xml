@@ -568,5 +568,70 @@
         <behavior name="timestampable"/>
     </table>
 
+    <!--
+        The skills the generator reads before writing a page: shipped as
+        files by the module and the theme (`skills/<code>/SKILL.md`), sown
+        here at the first read and edited here by the site. `shipped_body`
+        keeps the text of the file, so the site can put it back.
+    -->
+    <table name="cms_skill" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="code" required="true" size="50" type="VARCHAR"/>
+        <column name="name" required="true" size="120" type="VARCHAR"/>
+        <column name="description" size="500" type="VARCHAR"/>
+        <column name="body" type="CLOB"/>
+        <column name="shipped_body" type="CLOB"/>
+        <column defaultValue="module" name="origin" required="true" size="20" type="VARCHAR"/>
+        <column defaultValue="0" name="position" required="true" type="INTEGER"/>
+        <column defaultValue="1" name="enabled" required="true" type="TINYINT" size="4"/>
+        <column defaultValue="0" name="always" required="true" type="TINYINT" size="4"/>
+        <column name="updated_by" type="INTEGER"/>
+
+        <unique name="unq_cms_skill_code">
+            <unique-column name="code"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        One row per call to the generator: the brief, what came back, what it
+        cost. It is the history of a page an editor iterates on, and the
+        ledger the site reads its spend from. `target_type` and `target_id`
+        carry no foreign key: a generation for a page the site later deleted
+        is still a cost.
+    -->
+    <table name="cms_page_generation" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column defaultValue="page" name="target_type" required="true" size="20" type="VARCHAR"/>
+        <column name="target_id" required="true" type="INTEGER"/>
+        <column name="locale" required="true" size="5" type="VARCHAR"/>
+        <column defaultValue="brief" name="kind" required="true" size="20" type="VARCHAR"/>
+        <column name="prompt" type="CLOB"/>
+        <column name="model" size="60" type="VARCHAR"/>
+        <column name="request_id" size="80" type="VARCHAR"/>
+        <column defaultValue="done" name="status" required="true" size="20" type="VARCHAR"/>
+        <column name="stop_reason" size="30" type="VARCHAR"/>
+        <column name="stop_category" size="60" type="VARCHAR"/>
+        <column defaultValue="0" name="input_tokens" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="output_tokens" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="cache_read_tokens" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="cache_write_tokens" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="turns" required="true" type="INTEGER"/>
+        <column name="cost_usd" scale="6" size="12" type="DECIMAL"/>
+        <column defaultValue="0" name="duration_ms" required="true" type="INTEGER"/>
+        <column name="error" type="LONGVARCHAR"/>
+        <column name="document" type="CLOB"/>
+        <column name="created_by" type="INTEGER"/>
+
+        <index name="idx_cms_page_generation_target">
+            <index-column name="target_type"/>
+            <index-column name="target_id"/>
+            <index-column name="locale"/>
+        </index>
+
+        <behavior name="timestampable"/>
+    </table>
+
     <external-schema filename="local/config/schema.xml" referenceOnly="true"/>
 </database>

@@ -345,19 +345,44 @@ verts sur le module, `JOURNAL.md` à jour, rapport de fin de phase.
   écran de réglages inchangé (phase 4) ; `EditorBaseBlocks`/`BlockCatalog`
   toujours là pour le panneau GrapesJS (phase 5).
 
-### Phase 3 — Générateur
+### Phase 3 — Générateur (faite le 2026-10-20, évaluation en attente de clé)
 
-- SDK, `PageGenerator`, skills, outils, validation, log, coût, fallbacks,
-  gestion des refus et des erreurs.
-- Transport factice et fixtures enregistrées ; tests unitaires du prompt
-  (snapshot du system prompt, stabilité du préfixe caché) ; test d'intégration
-  du pipeline brief → document → html → publish.
-- Commande `thelia_cms:generate --page --locale --brief` (utile pour la recette
-  et pour les scripts).
-- Évaluation manuelle : 10 briefs réels (thème e-commerce), rubrique de 8
-  critères (une h1, sections pertinentes, aucun chiffre inventé, liens internes
-  valides, images de la médiathèque seulement, longueur, langue, accessibilité) ;
-  résultat consigné dans `JOURNAL.md` avec le coût mesuré par génération.
+- [x] `Content/DocumentSchema` : schéma complet (validation, docs) et schéma
+      strict réduit à l'enveloppe (`component` en enum, `props` en chaîne
+      JSON), seule forme que la grammaire de l'API compile avec vingt
+      composants (JOURNAL D-014).
+- [x] `Generation/` : `PageGenerator` (boucle manuelle, outils `auto` et
+      `strict`, format de sortie `json_schema`, une correction, refus,
+      `max_tokens`, erreurs API, 12 tours maximum), `PromptBuilder` (rôle,
+      skills, catalogue en cache ; contexte boutique et page ; brief, révision,
+      section), `CatalogSheet`, `ShopContext`, `GeneratorSettings`
+      (`generator_model`, `generator_effort`, `generator_max_tokens`),
+      `ClaudeClientProviderInterface` + `EnvironmentClaudeClientProvider`
+      (`ANTHROPIC_API_KEY`), `GenerationLog` + table `cms_page_generation`,
+      `Pricing`, six outils, commande `thelia_cms:generate`.
+- [x] Skills (D7) : cinq fichiers `skills/*/SKILL.md`, `SkillFiles`,
+      `SkillRepository` sur `cms_skill` (semis à la première lecture, édition,
+      restauration, désactivation), thème surchargeant par code.
+- [x] ACL `admin.cms.generate` (compilateur, profil éditeur).
+- [x] Tests : `FakeClaudeTransport` (PSR-18, réponses au format API),
+      `PageGeneratorTest` (brief avec outil, correction, double refus,
+      refus du modèle, coupure, révision ; contenu exact des requêtes :
+      `cache_control`, `output_config`, `tools strict`), `SkillRepositoryTest`,
+      `DocumentSchemaTest`, `SkillFilesTest`, `PricingTest`. Un test vu rouge
+      par sabotage (`CORRECTIONS = 0`).
+- [x] Docs : `docs/generator.md`, CHANGELOG ; `docs/chantier/ai-pages/eval/`
+      (10 briefs, rubrique, relevé).
+- [x] Vérification en ligne (clé posée par le dev dans `.env.local` en cours
+      de phase) : brief 01 généré en `--dry-run`, page complète de six
+      sections, 3 tours, 0,094 USD, 24 s, préfixe en cache (`eval/results.md`,
+      ligne 01 : 7/8, le lien `/contact` n'existe pas sur le site de dev).
+- [ ] **Évaluation manuelle à jouer** sur les briefs 02 à 10 (cible moyenne
+      ≥ 7/8, aucun brief < 5) : laissée au dev, chaque brief coûte de l'ordre
+      de 0,10 USD.
+- Écarts : fallbacks côté serveur non câblés (binding PHP non documenté) ; le
+  streaming arrive avec l'écran SSE (phase 4) ; le prompt pèse ~17 000 jetons
+  (catalogue de vingt sections), en cache une heure : à surveiller si le
+  thème ouvre beaucoup de composants.
 
 ### Phase 4 — Back-office
 

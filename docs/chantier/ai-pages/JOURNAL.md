@@ -123,6 +123,68 @@ sans classe n'en a aucune.
 `<div class="cms-richtext">`, ajouté à la liste de largeur de `blocks.css`.
 **Généralisable : non.**
 
+### D-011 [phase 3] Le SDK Anthropic PHP n'embarque aucune fabrique PSR-17
+
+**Symptôme.** Première exécution du générateur : `No PSR-17 url factory found`
+(`php-http/discovery`), alors que `composer require anthropic-ai/sdk` s'était
+installé sans se plaindre.
+**Cause.** Le SDK exige les paquets virtuels `psr/http-client-implementation`
+et `psr/http-factory-implementation` ; l'hôte les satisfaisait par
+`symfony/http-client` sans fournir de fabrique PSR-17 que la découverte sache
+trouver.
+**Résolution.** `nyholm/psr7 ^1.8` requis par le module et installé dans
+l'hôte.
+**Généralisable : oui.** Un module qui embarque le SDK Anthropic PHP déclare
+`nyholm/psr7` lui-même.
+
+### D-012 [phase 3] Une fonction fléchée capture les variables à sa définition
+
+**Symptôme.** Le registre enregistrait 0 jeton alors que le résultat en
+comptait 2 500.
+**Cause.** La closure d'écriture du registre, définie en début d'appel en
+`fn () =>`, capturait `$usage` par valeur à ce moment-là.
+**Résolution.** Closure classique avec `use (&$usage, &$turns, &$requestId)`.
+**Généralisable : oui.** Une closure qui lit un état accumulé après coup
+prend des références, jamais `fn`.
+
+### D-013 [phase 3] Les sorties structurées refusent les contraintes de longueur et de plage
+
+**Symptôme.** La doc de l'API (`tool-use-concepts.md:541-553`) exclut
+`minimum`, `maximum`, `minLength`, `maxLength`, `minItems`, `maxItems` ; le SDK
+PHP ne les retire pas lui-même, contrairement aux SDK Python et TypeScript.
+**Cause.** Limite du compilateur de grammaire des structured outputs.
+**Résolution.** D'abord un schéma complet épuré ; puis, en ligne (D-014), le
+seul schéma que l'API compile : l'enveloppe. `DocumentValidator` applique le
+schéma complet côté serveur.
+**Généralisable : oui.** Vérifié en ligne le 2026-10-20 : format `json_schema`
++ outils sur `claude-opus-5-5` passe, dès lors que le schéma est petit.
+
+### D-014 [phase 3] Les limites de la grammaire des structured outputs, mesurées en ligne
+
+**Symptôme.** Cinq refus 400 successifs sur le schéma de sortie, avec le
+catalogue complet (20 sections) : `Enum value 1 does not match declared type
+'string'` (un `const` sans `type`, puis une clé de choix `'1'` devenue entier
+PHP) ; `too many optional parameters (28) … limit 24` ; `Enum value '1' does
+not match declared type '['string','null']'` (un enum n'admet pas l'union
+avec null) ; `too many parameters with union types (28) … limit 16` ;
+`The compiled grammar is too large … reduce the number of strict tools`,
+encore après passage des outils en non strict et des listes d'items en chaîne
+JSON.
+**Cause.** Le compilateur de grammaire plafonne les propriétés optionnelles
+(24), les types union (16) et la taille totale ; un catalogue de vingt
+composants à props typées dépasse chacune de ces bornes.
+**Résolution.** `DocumentSchema::strict()` n'envoie que l'enveloppe :
+`sections[{id, component: enum, props: string JSON}]`. `PageGenerator`
+décode `props`, `DocumentValidator` applique le schéma complet, deux tours de
+correction. Outils non stricts (entrée : une chaîne). `Prop::toJsonSchema`
+convertit les clés de choix en chaînes. Première génération réelle réussie :
+brief 01, 3 tours, 1 696 jetons en entrée + 17 390 lus en cache, 2 021 en
+sortie, 0,094 USD, 24 s.
+**Généralisable : oui.** Avec un schéma de sortie variable (catalogue
+extensible par le thème), ne mettre dans la grammaire que l'enveloppe et
+valider côté serveur ; garder les outils non stricts tant qu'un format de
+sortie est demandé.
+
 ## Points ouverts
 
 - `cms_page_revision` n'a aucun lecteur en production : garder (avec le
