@@ -185,6 +185,60 @@ extensible par le thème), ne mettre dans la grammaire que l'enveloppe et
 valider côté serveur ; garder les outils non stricts tant qu'un format de
 sortie est demandé.
 
+### D-015 [phase 4] Le contenu d'une `StreamedResponse` n'est pas dans `getResponse()`
+
+**Symptôme.** Le test d'écran lisait un flux SSE vide alors que le statut et
+les en-têtes étaient justes.
+**Cause.** `StreamedResponse::getContent()` répond `false` ; le navigateur de
+test (`HttpKernelBrowser::doRequest`) capture ce que le callback écrit dans un
+tampon de sortie et le range dans la réponse interne.
+**Résolution.** Lire `$this->client->getInternalResponse()->getContent()`. Côté
+module, `GenerationStream::flush()` ne vide les tampons (`ob_end_flush`) que
+hors SAPI `cli` : sous PHPUnit, vider le tampon du navigateur de test perdrait
+le flux.
+**Généralisable : oui.** Un flux SSE se teste par la réponse interne du
+navigateur de test, et son `flush` est conditionné au SAPI.
+
+### D-016 [phase 4] Un service privé à consommateur unique ne se remplace pas dans le conteneur de test
+
+**Symptôme.** Risque de voir `TestContainer::set()` sans effet sur
+`ClaudeClientProviderInterface`, consommé par le seul `PageGenerator`.
+**Cause.** Symfony inline un service privé référencé une fois dans la fabrique
+de son consommateur ; `set()` écrit dans `privates` que personne ne lit.
+**Résolution.** Alias déclaré `->public()` dans `TheliaCMS::configureServices`
+(justifié : point d'extension d'un site). Deuxième piège : `set()` refuse un
+service déjà initialisé ; le test installe donc un fournisseur délégant une
+fois par kernel et change sa cible (`ContentScreenTest::$provider`).
+**Généralisable : oui.** Pour substituer un service en test d'écran : alias
+public et un seul `set()` par kernel.
+
+### D-017 [phase 4] Les assets d'un module sont copiés une fois dans `public/assets`
+
+**Symptôme.** La correction de contraste de `content-editor.css` n'était pas
+servie ; `?v=` vide (`assets_version` absent du contexte du template).
+**Cause.** `module_asset()` sert une copie publiée sous
+`public/assets/backOffice/default-twig/TheliaCMS/`, faite une fois ; la
+version d'asset est calculée par chaque contrôleur (`CmsMenuAdminController`
+le fait pour le menu).
+**Résolution.** `ContentScreen::assetsVersion()` (hash des mtime du JS et du
+CSS) ; copie manuelle des deux fichiers dans `public/assets/...` sur l'hôte de
+dev après modification.
+**Généralisable : oui.** Après avoir touché un asset de module : recopier dans
+`public/assets/backOffice/default-twig/<Module>/` (ou supprimer le dossier
+publié), et fournir `assets_version` au template.
+
+### D-018 [phase 4] `waitForURL` sur un motif déjà présent dans l'URL
+
+**Symptôme.** Le script de preuve a « vu » la réécriture de section finie
+instantanément : la capture 04 est celle de l'état précédent.
+**Cause.** `page.waitForURL(/done=\d+/)` matchait l'URL courante
+(`done=13`) avant que le POST en arrière-plan ne redirige vers `done=14`.
+**Résolution.** Le registre prouve la réécriture (ligne 14, `kind=section`,
+10,5 s) ; le script conservé dans `preuves/phase4/proof.js` attend désormais
+un changement d'URL, pas un motif (capture 04 non rejouée).
+**Généralisable : oui.** Attendre une URL différente de l'URL courante, jamais
+un motif que l'URL courante satisfait déjà.
+
 ## Points ouverts
 
 - `cms_page_revision` n'a aucun lecteur en production : garder (avec le

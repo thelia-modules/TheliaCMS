@@ -60,7 +60,7 @@
     <ul class="list-unstyled mb-3">
         {% for page in stats.recent_pages %}
             <li class="d-flex justify-content-between gap-2 small py-1 border-bottom">
-                <a href="{{ path('admin.cms.pages.builder', { id: page.id }) }}">{{ page.title }}</a>
+                <a href="{{ path('admin.cms.pages.content.edit', { id: page.id }) }}">{{ page.title }}</a>
                 <span class="text-muted">{{ page.updated_at ? page.updated_at|date('d/m/Y') : '' }}</span>
             </li>
         {% endfor %}

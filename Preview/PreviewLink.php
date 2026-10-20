@@ -32,6 +32,7 @@ final readonly class PreviewLink
     public const int LIFETIME_IN_SECONDS = 72 * 3600;
 
     private const string ROUTE = 'cms.page.preview';
+    private const string BLOCK_ROUTE = 'cms.block.preview';
 
     public function __construct(
         private UrlGeneratorInterface $urls,
@@ -52,7 +53,33 @@ final readonly class PreviewLink
         ], UrlGeneratorInterface::ABSOLUTE_URL);
     }
 
+    /**
+     * The draft of a block, shown in the default page template: a block has
+     * no address of its own, and its editor still has to see it in the theme.
+     */
+    public function urlForBlock(int $blockId, string $locale, ?\DateTimeImmutable $now = null): string
+    {
+        $expiresAt = ($now ?? new \DateTimeImmutable())->getTimestamp() + self::LIFETIME_IN_SECONDS;
+
+        return $this->urls->generate(self::BLOCK_ROUTE, [
+            'id' => $blockId,
+            'locale' => $locale,
+            'expires' => $expiresAt,
+            'signature' => $this->sign($blockId, $locale, $expiresAt, 'block'),
+        ], UrlGeneratorInterface::ABSOLUTE_URL);
+    }
+
     public function isValid(int $pageId, string $locale, int $expiresAt, string $signature, ?\DateTimeImmutable $now = null): bool
+    {
+        return $this->isValidFor('page', $pageId, $locale, $expiresAt, $signature, $now);
+    }
+
+    public function isValidForBlock(int $blockId, string $locale, int $expiresAt, string $signature, ?\DateTimeImmutable $now = null): bool
+    {
+        return $this->isValidFor('block', $blockId, $locale, $expiresAt, $signature, $now);
+    }
+
+    private function isValidFor(string $kind, int $id, string $locale, int $expiresAt, string $signature, ?\DateTimeImmutable $now): bool
     {
         if ($expiresAt < ($now ?? new \DateTimeImmutable())->getTimestamp()) {
             return false;
@@ -60,14 +87,18 @@ final readonly class PreviewLink
 
         // Constant-time: a plain comparison leaks the signature one byte at a
         // time to anyone willing to measure.
-        return hash_equals($this->sign($pageId, $locale, $expiresAt), $signature);
+        return hash_equals($this->sign($id, $locale, $expiresAt, $kind), $signature);
     }
 
-    private function sign(int $pageId, string $locale, int $expiresAt): string
+    /**
+     * A link signed for a page is no link to the block of the same id: the
+     * kind is part of what is signed.
+     */
+    private function sign(int $id, string $locale, int $expiresAt, string $kind = 'page'): string
     {
         return hash_hmac(
             'sha256',
-            implode('|', [$pageId, $locale, $expiresAt]),
+            implode('|', 'page' === $kind ? [$id, $locale, $expiresAt] : [$kind, $id, $locale, $expiresAt]),
             // Salted so this signature cannot be replayed anywhere else the
             // application secret is used.
             hash_hmac('sha256', 'thelia-cms.page-preview', $this->applicationSecret),

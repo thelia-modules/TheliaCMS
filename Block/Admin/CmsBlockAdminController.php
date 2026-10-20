@@ -92,7 +92,7 @@ final readonly class CmsBlockAdminController
             if ($this->saveBlock($form, $block, $lang)) {
                 // Straight to the builder: a block with no content is not
                 // something anyone wants to look at a second form for.
-                return new RedirectResponse($this->urls->generate('admin.cms.blocks.builder', [
+                return new RedirectResponse($this->urls->generate('admin.cms.blocks.content.edit', [
                     'id' => $block->getId(),
                     EditLanguage::PARAMETER => $lang->getId(),
                 ]));

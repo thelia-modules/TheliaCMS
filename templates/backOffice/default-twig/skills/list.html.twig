@@ -1,0 +1,93 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Skills'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-skills{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Skills'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.settings.edit') }}">
+                <i class="bi bi-sliders me-1" aria-hidden="true"></i>{{ 'Settings'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">
+        {{ 'A skill is a piece of instructions the generator reads before it writes a page. The module and the theme ship them; what you change here is kept when they are updated, and can be put back at any time.'|trans({}, 'theliacms') }}
+    </p>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'Position'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Name'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Description'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Origin'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Always read'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Enabled'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Text'|trans({}, 'theliacms') }}</th>
+                        <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for skill in skills %}
+                        <tr data-testid="cms-skill-row-{{ skill.code }}">
+                            <td data-testid="cms-skill-position-{{ skill.code }}">{{ skill.position }}</td>
+                            <td>
+                                <span class="fw-medium">{{ skill.name }}</span>
+                                <div class="text-muted small"><code>{{ skill.code }}</code></div>
+                            </td>
+                            <td class="text-muted small">{{ skill.description }}</td>
+                            <td data-testid="cms-skill-origin-{{ skill.code }}">
+                                {% if skill.origin == 'theme' %}
+                                    {{ 'Theme'|trans({}, 'theliacms') }}
+                                {% elseif skill.origin == 'site' %}
+                                    {{ 'This site'|trans({}, 'theliacms') }}
+                                {% else %}
+                                    {{ 'Module'|trans({}, 'theliacms') }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if skill.always %}
+                                    <i class="bi bi-check2" aria-hidden="true"></i>
+                                    <span class="visually-hidden">{{ 'Yes'|trans({}, 'theliacms') }}</span>
+                                {% else %}
+                                    <span class="text-muted">{{ 'On request'|trans({}, 'theliacms') }}</span>
+                                {% endif %}
+                            </td>
+                            <td data-testid="cms-skill-enabled-{{ skill.code }}" data-enabled="{{ skill.enabled ? '1' : '0' }}">
+                                {% if skill.enabled %}
+                                    <span class="badge text-bg-success">{{ 'Enabled'|trans({}, 'theliacms') }}</span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary">{{ 'Disabled'|trans({}, 'theliacms') }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if skill.isEdited %}
+                                    <span class="badge text-bg-warning" data-testid="cms-skill-edited-{{ skill.code }}">{{ 'Edited'|trans({}, 'theliacms') }}</span>
+                                {% elseif skill.shippedBody is not null %}
+                                    <span class="text-muted small">{{ 'As shipped'|trans({}, 'theliacms') }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.skills.edit', { code: skill.code }) }}" data-testid="cms-skill-edit-{{ skill.code }}">
+                                    {% if may_update %}
+                                        <i class="bi bi-pencil me-1" aria-hidden="true"></i>{{ 'Edit'|trans({}, 'theliacms') }}
+                                    {% else %}
+                                        <i class="bi bi-eye me-1" aria-hidden="true"></i>{{ 'Read'|trans({}, 'theliacms') }}
+                                    {% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-muted" data-testid="cms-skills-empty">{{ 'No skill is shipped.'|trans({}, 'theliacms') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

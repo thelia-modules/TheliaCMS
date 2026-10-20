@@ -12,7 +12,7 @@
                 {{ 'Back to blocks'|trans({}, 'theliacms') }}
             </a>
             {% if block is not null %}
-                <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.blocks.builder', { id: block.id, edit_language_id: edit_language_id }) }}">
+                <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.blocks.content.edit', { id: block.id, edit_language_id: edit_language_id }) }}">
                     {{ 'Edit content'|trans({}, 'theliacms') }}
                 </a>
             {% endif %}

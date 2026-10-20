@@ -1,0 +1,22 @@
+[
+  {
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": [
+      ".text-body-secondary.small",
+      "section[data-testid=\"cms-content-brief\"] > .text-muted.small",
+      "label[for=\"cms_brief_tone\"] > small",
+      "label[for=\"cms_brief_audience\"] > small",
+      ".sf-toolbar-icon > .sf-toolbar-status-green.sf-toolbar-status"
+    ]
+  },
+  {
+    "id": "link-name",
+    "impact": "serious",
+    "help": "Links must have discernible text",
+    "nodes": [
+      ".sf-toolbar-block-api_platform\\.data_collector\\.request > a"
+    ]
+  }
+]

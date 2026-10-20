@@ -51,8 +51,8 @@ final readonly class GenerationLog
         ?string $document = null,
     ): int {
         $row = (new CmsPageGeneration())
-            ->setTargetType('page')
-            ->setTargetId($request->page->getId())
+            ->setTargetType($request->target->type)
+            ->setTargetId($request->target->id)
             ->setLocale($request->locale)
             ->setKind($request->kind)
             ->setPrompt($prompt)
@@ -78,16 +78,16 @@ final readonly class GenerationLog
     }
 
     /**
-     * The calls made for a page in a language, the latest first.
+     * The calls made for a target in a language, the latest first.
      *
      * @return list<CmsPageGeneration>
      */
-    public function history(int $pageId, string $locale, int $limit = 50): array
+    public function history(GenerationTarget $target, string $locale, int $limit = 50): array
     {
         return array_values(iterator_to_array(
             CmsPageGenerationQuery::create()
-                ->filterByTargetType('page')
-                ->filterByTargetId($pageId)
+                ->filterByTargetType($target->type)
+                ->filterByTargetId($target->id)
                 ->filterByLocale($locale)
                 ->orderByCreatedAt(Criteria::DESC)
                 ->orderById(Criteria::DESC)
@@ -95,6 +95,21 @@ final readonly class GenerationLog
                 ->find(),
             false,
         ));
+    }
+
+    /**
+     * One row of the ledger, if it belongs to the target: a screen shows the
+     * outcome of the call it just made from its id, and an id of another
+     * page's call says nothing here.
+     */
+    public function find(int $id, GenerationTarget $target, string $locale): ?CmsPageGeneration
+    {
+        return CmsPageGenerationQuery::create()
+            ->filterById($id)
+            ->filterByTargetType($target->type)
+            ->filterByTargetId($target->id)
+            ->filterByLocale($locale)
+            ->findOne();
     }
 
     /**

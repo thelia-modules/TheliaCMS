@@ -121,6 +121,29 @@
             </div>
 
             <div class="col-12">
+                <div class="card" data-testid="cms-settings-generator">
+                    <div class="card-header">{{ 'Generator'|trans({}, 'theliacms') }}</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-lg-4">
+                                {{ form_row(form.generatorModel) }}
+                            </div>
+                            <div class="col-lg-4">
+                                {{ form_row(form.generatorEffort) }}
+                            </div>
+                            <div class="col-lg-4">
+                                {{ form_row(form.generatorMaxTokens) }}
+                            </div>
+                        </div>
+
+                        <p class="text-muted small mb-0">
+                            {{ 'The API key is never set here: it is read from the environment of the server, in the ANTHROPIC_API_KEY variable, where a secret belongs and where an export of the site does not carry it.'|trans({}, 'theliacms') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
                 <div class="card" data-testid="cms-settings-blocks">
                     <div class="card-header">{{ 'Blocks offered in the editor'|trans({}, 'theliacms') }}</div>
                     <div class="card-body">

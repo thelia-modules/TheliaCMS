@@ -76,6 +76,7 @@ final class GenerateCommand extends Command
 
         $briefText = is_file($briefOption) ? (string) file_get_contents($briefOption) : $briefOption;
         $brief = new Brief($briefText);
+        $target = GenerationTarget::page($page, $locale);
 
         if ($input->getOption('revise')) {
             $content = CmsPageContentQuery::create()->filterByPageId($pageId)->filterByLocale($locale)->findOne();
@@ -87,9 +88,9 @@ final class GenerateCommand extends Command
                 return Command::FAILURE;
             }
 
-            $request = GenerationRequest::revision($page, $locale, $current, $brief);
+            $request = GenerationRequest::revision($target, $locale, $current, $brief);
         } else {
-            $request = GenerationRequest::fromBrief($page, $locale, $brief);
+            $request = GenerationRequest::fromBrief($target, $locale, $brief);
         }
 
         try {

@@ -384,17 +384,51 @@ verts sur le module, `JOURNAL.md` à jour, rapport de fin de phase.
   (catalogue de vingt sections), en cache une heure : à surveiller si le
   thème ouvre beaucoup de composants.
 
-### Phase 4 — Back-office
+### Phase 4 — Back-office (faite le 2026-10-20)
 
-- Écran `/admin/cms/pages/{id}/content`, SSE, aperçu, itérations, régénération
-  de section, publication ; liens mis à jour (`PageListPresenter`, dashboard,
-  `_sample_text_warning`, `CmsTemplateAdminController`).
-- Droit `admin.cms.generate`, `EditorProfileSeeder`, `WriteRoutesTest`,
-  `WriteNeedsTheTokenTest`, `WritePermissionTest`.
-- Blocs réutilisables et d'item (D4) sur le même écran.
-- Écran **CMS > Skills** (D7).
-- Preuve : parcours enregistré au navigateur (créer une page, générer, itérer,
-  publier, voir le front), axe-core sur l'écran et sur la page publiée.
+- [x] `Generation/GenerationTarget` (page ou bloc, composants exclus) à la
+      place de `CmsPage` dans `GenerationRequest`, `GenerationLog` (type de
+      cible, `find()`), `PromptBuilder` (« # The block », pas de h1, 1 à 3
+      sections), `PageGenerator` (refus des composants exclus renvoyé en
+      correction, `GenerationObserverInterface` par tour, `logId` sur les
+      exceptions), `SearchPagesTool`, `GenerateCommand`.
+- [x] Écran `/admin/cms/pages/{id}/content` (`Generation/Admin/` :
+      `CmsPageContentController`, `ContentScreen`, `ContentSubject`,
+      `BriefType`, `ChangeType`, `GenerationRunner`, `GenerationStream`) :
+      brief, sections avec réécriture unitaire, modification globale,
+      historique du registre, publication, aperçu signé du brouillon en
+      iframe ; SSE (`StreamedResponse`, `Accept: text/event-stream`) avec
+      repli en POST + redirection ; résultat lu dans le registre via
+      `?done=<id>`. Assets `templates/backOffice/default-twig/assets/content-editor.{js,css}`.
+- [x] Même écran pour les blocs (`CmsBlockContentController`,
+      `/admin/cms/blocks/{id}/content`), aperçu signé `cms.block.preview`
+      (`CmsBlockPreviewController`, `PreviewLink::urlForBlock`).
+- [x] Écran **CMS > Skills** (`Skill/Admin/`, liste, édition, restauration,
+      garde `skills` → SETTINGS, entrée de navigation) ; carte « Generator »
+      des réglages (`GeneratorSettings::save`).
+- [x] Liens : dix liens `builder` repointés (liste, édition, dashboard,
+      avertissement, modèles, blocs, item, hook) ; les routes `builder`
+      restent pour la phase 5.
+- [x] Tests : `PageGeneratorTest` (cible bloc, observateur, exclusion),
+      `ContentScreenTest` (11), `BlockContentScreenTest` (2),
+      `SkillScreenTest` (6), `GeneratorSettingsScreenTest` (3),
+      `WritePermissionTest` (droit generate), `WriteRoutesTest` et
+      `ItemBlockScreenTest` mis à jour. Vus rouges par sabotage (exclusion,
+      observateur, droit generate, et chaque test de l'agent Skills).
+- [x] Preuve navigateur (`docs/chantier/ai-pages/preuves/phase4/`) : brief 01
+      sur une page créée au BO, progression SSE affichée, 6 sections, 3 tours,
+      21,5 s, 0,089 USD ; réécriture d'une section (1 tour, 10,5 s, 0,033 USD) ;
+      publication ; page lue sur le front avec une seule h1 ; axe-core 0
+      violation sur l'écran de contenu hors barre de debug Symfony, 0 sur le
+      front hors barre de debug.
+- [x] Docs : `docs/generator.md` (écran, skills en table), CHANGELOG, 64 clés
+      i18n en/fr pour l'écran + 43 pour Skills et réglages.
+- Écarts : le streaming est par tour (le SDK est appelé en synchrone ; un tour
+  long reste muet jusqu'à sa fin) ; axe signale des contrastes sur les écrans
+  Skills et Réglages qui viennent du thème `default-twig` (nav, aides de
+  libellé `.bo-form-label__help`, `.text-muted` des tableaux), présents sur les
+  écrans d'avant la phase ; `BuilderImageDeletionTest` et `WriteNeedsTheTokenTest`
+  lisent encore le jeton sur les écrans `builder` (à déplacer en phase 5).
 
 ### Phase 4 bis — Édition manuelle des textes (D3, Tiptap)
 

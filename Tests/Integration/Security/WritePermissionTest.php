@@ -48,4 +48,22 @@ final class WritePermissionTest extends AdminScreenTestCase
         self::assertNotNull($saved);
         self::assertSame('Before', $saved->setLocale($this->locale())->getTitle());
     }
+
+    public function testTheGeneratorIsRefusedToWhoeverMayOnlyChangePages(): void
+    {
+        $page = $this->createPage('Generate permission', published: false);
+
+        $this->logInAs((new FixtureFactory($this->getPropelConnection()))->restrictedAdmin([
+            CmsResources::PAGE => [AccessManager::VIEW, AccessManager::UPDATE],
+        ]));
+
+        $screen = $this->screen(\sprintf('/admin/cms/pages/%d/content', $page->getId()));
+        $token = $this->tokenOfTheScripts($screen);
+
+        foreach (['generate' => ['cms_brief' => ['text' => 'A page.']], 'revise' => ['cms_change' => ['text' => 'Shorter.']], 'section' => ['cms_change_content' => ['section' => 'content', 'text' => 'Shorter.']]] as $action => $fields) {
+            self::assertSame(403, $this->send('POST', \sprintf('/admin/cms/pages/%d/content/%s', $page->getId(), $action), ['_token' => $token, ...$fields]), $action.' is refused without the generate right.');
+        }
+
+        self::assertSame(0, \TheliaCMS\Model\CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->count(), 'Nothing was asked of the generator.');
+    }
 }

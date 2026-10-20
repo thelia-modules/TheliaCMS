@@ -1,0 +1,215 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{#
+    The content screen of a page or of a block: the brief and the generator on
+    the left, the draft as the theme shows it on the right.
+
+    It replaces the whole body of the layout, like the builder it succeeds: the
+    draft has to be seen at the width visitors will see it. The screen works
+    without its script — every action is a form that posts and comes back with
+    a message — and the script adds the progress of a generation as it runs.
+#}
+
+{% block title %}{{ 'Edit content'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}{{ subject.testId }}{% endblock %}
+
+{% block head_extra %}
+    <link rel="stylesheet" href="{{ module_asset('TheliaCMS', 'assets/content-editor.css') }}?v={{ assets_version }}">
+{% endblock %}
+
+{% block scripts_extra %}
+    <script src="{{ module_asset('TheliaCMS', 'assets/content-editor.js') }}?v={{ assets_version }}" defer></script>
+{% endblock %}
+
+{% block body %}
+    {% set is_page = subject.target.isPage %}
+    <div class="cms-content" data-cms-content
+         data-cms-content-labels="{{ {
+             working: 'Writing…'|trans({}, 'theliacms'),
+             failed: 'The request failed (%status%). Nothing was changed.'|trans({}, 'theliacms'),
+             network: 'The generator could not be reached. Check the connection and try again.'|trans({}, 'theliacms'),
+             leaving: 'A generation is running. Leaving the screen does not stop it, but you will not see it finish.'|trans({}, 'theliacms'),
+             close: 'Close'|trans({}, 'theliacms'),
+         }|json_encode }}">
+        <header class="cms-content__bar">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ subject.backUrl }}" data-testid="cms-content-back">
+                {{ subject.backLabel }}
+            </a>
+
+            <p class="cms-content__title">{{ subject.target.title|default('')|trim ?: 'Untitled page'|trans({}, 'theliacms') }}</p>
+            <span class="badge {{ subject.statusBadgeClass }}">{{ subject.statusLabel|trans({}, 'theliacms') }}</span>
+
+            {{ component('BoLanguageSwitcher', { currentLanguageId: subject.languageId }) }}
+
+            <div class="cms-content__actions">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ subject.draftPreviewUrl }}" target="_blank" rel="noopener"
+                   title="{{ 'Open the draft in a new tab. The link works for 72 hours and can be shared.'|trans({}, 'theliacms') }}"
+                   data-testid="cms-page-draft-preview-btn">
+                    <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ 'Preview the draft'|trans({}, 'theliacms') }}
+                </a>
+                {% if subject.previewUrl %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ subject.previewUrl }}" target="_blank" rel="noopener"
+                       title="{{ 'Preview the page'|trans({}, 'theliacms') }}" data-testid="cms-page-preview-btn">
+                        <i class="bi bi-eye" aria-hidden="true"></i> {{ 'Preview'|trans({}, 'theliacms') }}
+                    </a>
+                {% endif %}
+                {% if may_publish %}
+                    <form method="post" action="{{ subject.url('publish') }}" class="d-inline" data-testid="cms-content-publish">
+                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                        <button type="submit" class="btn btn-sm btn-success" title="{{ subject.publishHint }}"{% if subject.document is null %} disabled{% endif %}>
+                            {{ 'Publish'|trans({}, 'theliacms') }}
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </header>
+
+        {# This screen replaces the whole body block, so the flash messages of
+           the layout are rendered here, with the outcome of the last call. #}
+        {{ include('@TheliaCMSModule/backOffice/default-twig/_toasts.html.twig', { extra: outcome ? [outcome] : [] }) }}
+
+        <div class="cms-content__stage">
+            <aside class="cms-content__panel" aria-label="{{ 'Writing the content'|trans({}, 'theliacms') }}">
+                {% if generator_notice %}
+                    <div class="alert alert-warning small" role="status" data-testid="cms-content-notice">
+                        <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ generator_notice }}
+                    </div>
+                {% endif %}
+
+                {% if not may_generate %}
+                    <div class="alert alert-secondary small" role="status" data-testid="cms-content-no-right">
+                        {{ 'Your profile may read this screen and publish, not ask the generator to write.'|trans({}, 'theliacms') }}
+                    </div>
+                {% endif %}
+
+                <section class="cms-content__section" data-testid="cms-content-brief">
+                    <h2 class="cms-content__heading">
+                        {{ (subject.document is null ? 'Write it from a brief' : 'Write it again from a brief')|trans({}, 'theliacms') }}
+                    </h2>
+                    {% if subject.document is not null %}
+                        <p class="text-muted small">{{ 'A new brief replaces the whole draft. To keep it and change parts of it, use the sections below.'|trans({}, 'theliacms') }}</p>
+                    {% endif %}
+                    {% form_theme brief_form with bo_form_themes only %}
+                    {{ form_start(brief_form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' } }) }}
+                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                        {{ form_row(brief_form.text) }}
+                        <div class="row g-2">
+                            <div class="col-6">{{ form_row(brief_form.tone) }}</div>
+                            <div class="col-6">{{ form_row(brief_form.audience) }}</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" data-testid="cms-content-generate"{% if not may_generate or generator_notice %} disabled{% endif %}>
+                            <i class="bi bi-stars" aria-hidden="true"></i> {{ 'Write the draft'|trans({}, 'theliacms') }}
+                        </button>
+                    {{ form_end(brief_form) }}
+                </section>
+
+                {% if sections is not empty %}
+                    <section class="cms-content__section" data-testid="cms-content-sections">
+                        <h2 class="cms-content__heading">{{ 'The sections of the draft'|trans({}, 'theliacms') }}</h2>
+                        <ol class="cms-content__sections">
+                            {% for section in sections %}
+                                <li class="cms-content__item" data-section="{{ section.id }}">
+                                    <div class="cms-content__item-head">
+                                        <span class="cms-content__item-label">{{ section.label }}</span>
+                                        <code class="cms-content__item-component">{{ section.component }}</code>
+                                    </div>
+                                    {% if section.excerpt %}
+                                        <p class="cms-content__item-excerpt">{{ section.excerpt }}</p>
+                                    {% endif %}
+                                    {% if may_generate %}
+                                        <details class="cms-content__rewrite">
+                                            <summary>{{ 'Rewrite this section'|trans({}, 'theliacms') }}</summary>
+                                            {% form_theme section.form with bo_form_themes only %}
+                                            {{ form_start(section.form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' } }) }}
+                                                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                                {{ form_widget(section.form.section) }}
+                                                {{ form_row(section.form.text, { label: false }) }}
+                                                <button type="submit" class="btn btn-sm btn-outline-primary"{% if generator_notice %} disabled{% endif %}>
+                                                    {{ 'Rewrite'|trans({}, 'theliacms') }}
+                                                </button>
+                                            {{ form_end(section.form) }}
+                                        </details>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    </section>
+
+                    {% if may_generate %}
+                        <section class="cms-content__section" data-testid="cms-content-change">
+                            <h2 class="cms-content__heading">{{ 'Ask for a change'|trans({}, 'theliacms') }}</h2>
+                            <p class="text-muted small">{{ 'On the whole draft: the sections the change does not concern are kept as they are.'|trans({}, 'theliacms') }}</p>
+                            {% form_theme change_form with bo_form_themes only %}
+                            {{ form_start(change_form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' } }) }}
+                                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                {{ form_row(change_form.text, { label: false }) }}
+                                <button type="submit" class="btn btn-outline-primary" data-testid="cms-content-revise"{% if generator_notice %} disabled{% endif %}>
+                                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i> {{ 'Apply the change'|trans({}, 'theliacms') }}
+                                </button>
+                            {{ form_end(change_form) }}
+                        </section>
+                    {% endif %}
+                {% endif %}
+
+                <section class="cms-content__section" data-testid="cms-content-history">
+                    <h2 class="cms-content__heading">{{ 'History'|trans({}, 'theliacms') }}</h2>
+                    {% if history is empty %}
+                        <p class="text-muted small mb-0">{{ 'Nothing was asked of the generator for this language yet.'|trans({}, 'theliacms') }}</p>
+                    {% else %}
+                        <table class="table table-sm cms-content__history">
+                            <caption class="visually-hidden">{{ 'The calls made to the generator, the latest first.'|trans({}, 'theliacms') }}</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">{{ 'Date'|trans({}, 'theliacms') }}</th>
+                                    <th scope="col">{{ 'Request'|trans({}, 'theliacms') }}</th>
+                                    <th scope="col">{{ 'Outcome'|trans({}, 'theliacms') }}</th>
+                                    <th scope="col" class="text-end">{{ 'Cost'|trans({}, 'theliacms') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in history %}
+                                    <tr>
+                                        <td><time datetime="{{ row.date|date('c') }}">{{ row.date|date('d/m/Y H:i') }}</time></td>
+                                        <td>{{ row.kind }}</td>
+                                        <td>
+                                            <span class="badge {{ row.status_class }}">{{ row.status }}</span>
+                                            <span class="text-muted">{{ '%turns% turn(s), %duration% s'|trans({ '%turns%': row.turns, '%duration%': row.duration }, 'theliacms') }}</span>
+                                            {% if row.error %}
+                                                <details class="small"><summary>{{ 'Details'|trans({}, 'theliacms') }}</summary><p class="mb-0">{{ row.error }}</p></details>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end text-nowrap">{{ row.cost }} USD</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+                    <p class="text-muted small mb-0">{{ 'Model: %model%'|trans({ '%model%': model }, 'theliacms') }}</p>
+                </section>
+            </aside>
+
+            <div class="cms-content__preview">
+                {% if subject.document is not null %}
+                    <iframe class="cms-content__frame" src="{{ subject.draftPreviewUrl }}"
+                            title="{{ 'The draft, as the theme shows it'|trans({}, 'theliacms') }}"
+                            data-testid="cms-content-frame"></iframe>
+                {% else %}
+                    <div class="cms-content__empty" data-testid="cms-content-empty">
+                        <p class="cms-content__empty-title">{{ (is_page ? 'This page has no content yet' : 'This block has nothing in it yet')|trans({}, 'theliacms') }}</p>
+                        <p class="cms-content__empty-hint">{{ 'Say what it should hold in the brief on the left, and the generator writes a first draft from the components of the theme. Nothing goes online until you publish it.'|trans({}, 'theliacms') }}</p>
+                    </div>
+                {% endif %}
+
+                <div class="cms-content__progress" hidden data-cms-progress>
+                    <div class="cms-content__progress-box" role="status" aria-live="polite">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                            <strong data-cms-progress-title>{{ 'Writing…'|trans({}, 'theliacms') }}</strong>
+                        </div>
+                        <ol class="cms-content__steps" data-cms-progress-steps></ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

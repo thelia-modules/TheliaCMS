@@ -20,11 +20,13 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Http\PageCachePolicy;
 use TheliaCMS\Page\TrashRetention;
 use TheliaCMS\Settings\IpAllowlist;
@@ -85,6 +87,27 @@ final class CmsSettingsType extends AbstractType
                 'required' => false,
                 'attr' => ['rows' => 4, 'placeholder' => "203.0.113.42\n2001:db8::/32"],
                 'help' => 'One IP address or range per line. Yours is shown below.',
+            ])
+            ->add('generatorModel', TextType::class, [
+                'label' => 'Model',
+                'attr' => ['placeholder' => GeneratorSettings::DEFAULT_MODEL],
+                'help' => 'The name of the model, as the API knows it.',
+            ])
+            ->add('generatorEffort', ChoiceType::class, [
+                'label' => 'Reasoning effort',
+                'choices' => [
+                    'Low: fast, for a short page' => 'low',
+                    'Medium' => 'medium',
+                    'High: the default' => 'high',
+                    'Very high' => 'xhigh',
+                    'Maximum: slow, for a demanding brief' => 'max',
+                ],
+                'help' => 'How long the model thinks before it writes. More effort costs more and takes longer.',
+            ])
+            ->add('generatorMaxTokens', IntegerType::class, [
+                'label' => 'Longest answer, in tokens',
+                'attr' => ['min' => GeneratorSettings::MIN_MAX_TOKENS],
+                'help' => 'An answer cut at this length loses the end of the page. A long page needs about four tokens a word.',
             ]);
 
         // One list of ticks per group of the panel. Ticked means offered: the

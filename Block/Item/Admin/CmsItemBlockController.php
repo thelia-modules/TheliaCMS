@@ -68,7 +68,7 @@ final readonly class CmsItemBlockController
 
         $block = $this->writer->blockFor($itemType, $itemId, $lang->getLocale());
 
-        return new RedirectResponse($this->urls->generate('admin.cms.blocks.builder', [
+        return new RedirectResponse($this->urls->generate('admin.cms.blocks.content.edit', [
             'id' => $block->getId(),
             EditLanguage::PARAMETER => $lang->getId(),
         ]));

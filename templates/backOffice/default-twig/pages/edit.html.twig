@@ -17,7 +17,7 @@
 
         {% block actions %}
             {% if not is_new %}
-                <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.pages.builder', { id: page.id, edit_language_id: edit_language_id }) }}">
+                <a class="btn btn-sm btn-primary" href="{{ path('admin.cms.pages.content.edit', { id: page.id, edit_language_id: edit_language_id }) }}">
                     <i class="bi bi-pencil-square" aria-hidden="true"></i> {{ 'Edit content'|trans({}, 'theliacms') }}
                 </a>
             {% endif %}

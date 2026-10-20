@@ -20,6 +20,9 @@ namespace TheliaCMS\Generation;
  */
 class GenerationException extends \RuntimeException
 {
+    /** The row of the ledger that recorded the failure, when there is one. */
+    public ?int $logId = null;
+
     final private function __construct(string $message, ?\Throwable $previous = null)
     {
         parent::__construct($message, 0, $previous);

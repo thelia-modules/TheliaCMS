@@ -383,6 +383,9 @@ class TheliaCMS extends BaseModule
                 __DIR__.'/Generation/Brief.php',
                 __DIR__.'/Generation/GenerationRequest.php',
                 __DIR__.'/Generation/GenerationResult.php',
+                __DIR__.'/Generation/GenerationTarget.php',
+                __DIR__.'/Generation/Admin/ContentSubject.php',
+                __DIR__.'/Generation/Admin/GenerationOutcome.php',
                 __DIR__.'/Generation/Usage.php',
                 __DIR__.'/Skill/Skill.php',
                 // Registered below, guarded: it implements an interface of the
@@ -425,8 +428,10 @@ class TheliaCMS extends BaseModule
         $servicesConfigurator->alias(PartialFragmentRendererInterface::class, PartialFragmentRenderer::class);
 
         // The generator talks to the Claude API through a provider, so the
-        // tests hand it one that answers from recorded responses.
-        $servicesConfigurator->alias(ClaudeClientProviderInterface::class, EnvironmentClaudeClientProvider::class);
+        // tests hand it one that answers from recorded responses. Public: a
+        // private service with one consumer is inlined into it, and the
+        // screen tests could not put their fake in its place.
+        $servicesConfigurator->alias(ClaudeClientProviderInterface::class, EnvironmentClaudeClientProvider::class)->public();
 
         // SEOne is a soft dependency. Autodiscovering CmsPageSeoElement would
         // reflect a class implementing an interface that does not exist on a

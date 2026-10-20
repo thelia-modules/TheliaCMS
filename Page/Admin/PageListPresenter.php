@@ -141,7 +141,7 @@ final readonly class PageListPresenter
                 'tag' => $tagNames[(int) $row->page->getTagId()] ?? null,
                 'toggle_url' => $row->hasChildren() ? $this->filterBar->toggleUrl($filters, $languageId, $id) : null,
                 'edit_url' => $this->route('admin.cms.pages.edit', $id, $languageId),
-                'builder_url' => $this->route('admin.cms.pages.builder', $id, $languageId),
+                'builder_url' => $this->route('admin.cms.pages.content.edit', $id, $languageId),
                 // The actions that come back to this screen carry the state of it
                 // in their address, so acting on a row does not fold the tree the
                 // editor just opened or drop the search they are working from.

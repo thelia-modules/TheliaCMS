@@ -77,9 +77,27 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   of its cost. The key is read from `ANTHROPIC_API_KEY`; the model, the effort
   and the token limit are settings. Command `thelia_cms:generate`. See
   `docs/generator.md`.
+- **The content screen** (`/admin/cms/pages/{id}/content`, and
+  `/admin/cms/blocks/{id}/content` for a reusable block or the block of a
+  catalogue item): the brief on the left, the draft on the right as the theme
+  shows it; a form to rewrite each section alone, one to ask a change on the
+  whole draft, the history of the calls with their cost, and the publish
+  button. The forms post in the background and the progress of the call is
+  streamed as server-sent events; without the script, every action still
+  posts and comes back with a message. "Edit content" everywhere in the back
+  office now leads here rather than to the visual editor.
+- `GenerationTarget`: the generator writes for a page or for a block, told
+  for what it is; a block may not hold `Partial:cms-block`.
+  `GenerationObserverInterface` reports each turn to whoever listens.
+- The draft of a block is previewed in the default page template through a
+  signed link (`cms.block.preview`), as the draft of a page is.
 - **Skills**: the instructions the generator reads, shipped as
   `skills/<code>/SKILL.md` by the module (five) and the theme, sown into
-  `cms_skill` at the first read and edited there by the site.
+  `cms_skill` at the first read and edited there by the site, under
+  **CMS > Skills** (the settings right): rewrite, switch off, reorder, put
+  the shipped text back.
+- The **Generator** card of CMS > Settings: the model, the effort and the
+  token limit.
 - The right `admin.cms.generate`, given to the seeded editor profile.
 - The module requires `anthropic-ai/sdk` and `nyholm/psr7`.
 

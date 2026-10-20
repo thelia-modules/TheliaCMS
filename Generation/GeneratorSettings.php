@@ -32,6 +32,9 @@ final readonly class GeneratorSettings
     public const string DEFAULT_EFFORT = 'high';
     public const int DEFAULT_MAX_TOKENS = 16000;
 
+    /** Below this, no page fits in the answer. */
+    public const int MIN_MAX_TOKENS = 1024;
+
     public const array EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 
     public function model(): string
@@ -52,6 +55,20 @@ final readonly class GeneratorSettings
     {
         $maxTokens = (int) TheliaCMS::getConfigValue(self::MAX_TOKENS, (string) self::DEFAULT_MAX_TOKENS);
 
-        return $maxTokens >= 1024 ? $maxTokens : self::DEFAULT_MAX_TOKENS;
+        return $maxTokens >= self::MIN_MAX_TOKENS ? $maxTokens : self::DEFAULT_MAX_TOKENS;
+    }
+
+    /**
+     * Writes the three settings, each brought back to its default when what
+     * arrives makes no sense: an empty model, an effort the API does not know,
+     * a length too short for a page.
+     */
+    public function save(string $model, string $effort, int $maxTokens): void
+    {
+        $model = trim($model);
+
+        TheliaCMS::setConfigValue(self::MODEL, '' === $model ? self::DEFAULT_MODEL : $model);
+        TheliaCMS::setConfigValue(self::EFFORT, \in_array($effort, self::EFFORTS, true) ? $effort : self::DEFAULT_EFFORT);
+        TheliaCMS::setConfigValue(self::MAX_TOKENS, (string) ($maxTokens >= self::MIN_MAX_TOKENS ? $maxTokens : self::DEFAULT_MAX_TOKENS));
     }
 }

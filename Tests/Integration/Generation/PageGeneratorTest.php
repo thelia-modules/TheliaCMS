@@ -20,14 +20,17 @@ use TheliaCMS\Content\DocumentValidator;
 use TheliaCMS\Generation\Brief;
 use TheliaCMS\Generation\GenerationException;
 use TheliaCMS\Generation\GenerationLog;
+use TheliaCMS\Generation\GenerationObserverInterface;
 use TheliaCMS\Generation\GenerationRefusedException;
 use TheliaCMS\Generation\GenerationRequest;
+use TheliaCMS\Generation\GenerationTarget;
 use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\InvalidGenerationException;
 use TheliaCMS\Generation\PageGenerator;
 use TheliaCMS\Generation\Pricing;
 use TheliaCMS\Generation\PromptBuilder;
 use TheliaCMS\Generation\Tool\GeneratorTools;
+use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
@@ -68,7 +71,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
                 ], \JSON_THROW_ON_ERROR)),
             ], 'end_turn', ['input_tokens' => 1300, 'cache_read_input_tokens' => 1000, 'output_tokens' => 400]));
 
-        $result = $this->generator()->generate(GenerationRequest::fromBrief($page, $locale, new Brief('Une page qui présente nos services de conseil, avec un lien vers les tarifs.', tone: 'direct')));
+        $result = $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Une page qui présente nos services de conseil, avec un lien vers les tarifs.', tone: 'direct')));
 
         self::assertSame(['hero', 'faq'], array_map(static fn ($section) => $section->id, $result->document->sections));
         self::assertSame('1', $result->document->sections[0]->props['heading_level'], 'The document comes back normalised by the validator.');
@@ -125,7 +128,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
             ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text('{"version":1,"sections":[{"id":"hero","component":"Cms:Nope","props":{}}]}')]))
             ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text("```json\n".$valid."\n```")]));
 
-        $result = $this->generator()->generate(GenerationRequest::fromBrief($page, $this->locale(), new Brief('Bonjour')));
+        $result = $this->generator()->generate(GenerationRequest::fromBrief($this->target($page), $this->locale(), new Brief('Bonjour')));
 
         self::assertSame('Bonjour', $result->document->sections[0]->props['title']);
         self::assertStringContainsString('"Cms:Nope", which is not a component', $this->api->requests[1]['messages'][2]['content'], 'The problems are sent back for correction.');
@@ -139,7 +142,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         $this->api->answer($broken)->answer($broken)->answer($broken);
 
         try {
-            $this->generator()->generate(GenerationRequest::fromBrief($page, $this->locale(), new Brief('Bonjour')));
+            $this->generator()->generate(GenerationRequest::fromBrief($this->target($page), $this->locale(), new Brief('Bonjour')));
             self::fail('The generation should have failed.');
         } catch (InvalidGenerationException $exception) {
             self::assertCount(1, $exception->problems);
@@ -155,7 +158,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         $this->api->answer(FakeClaudeTransport::message([], 'refusal', [], ['type' => 'refusal', 'category' => 'general_harms', 'explanation' => 'Not this.']));
 
         try {
-            $this->generator()->generate(GenerationRequest::fromBrief($page, $this->locale(), new Brief('Something')));
+            $this->generator()->generate(GenerationRequest::fromBrief($this->target($page), $this->locale(), new Brief('Something')));
             self::fail('The generation should have been refused.');
         } catch (GenerationRefusedException $exception) {
             self::assertSame('general_harms', $exception->category);
@@ -175,7 +178,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         $this->expectExceptionMessage('cut at');
 
         try {
-            $this->generator()->generate(GenerationRequest::fromBrief($page, $this->locale(), new Brief('Long')));
+            $this->generator()->generate(GenerationRequest::fromBrief($this->target($page), $this->locale(), new Brief('Long')));
         } finally {
             self::assertSame(GenerationLog::STATUS_FAILED, $this->lastStatus($page));
         }
@@ -191,12 +194,63 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
 
         $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(json_encode(['version' => 1, 'sections' => [['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Après</h1>']]]], \JSON_THROW_ON_ERROR))]));
 
-        $result = $this->generator()->generate(GenerationRequest::revision($page, $this->locale(), $current, new Brief('Change the heading to Après.')));
+        $result = $this->generator()->generate(GenerationRequest::revision($this->target($page), $this->locale(), $current, new Brief('Change the heading to Après.')));
 
         self::assertSame('<h1>Après</h1>', $result->document->sections[0]->props['html']);
         self::assertStringContainsString('# The document the page holds today', $this->api->requests[0]['messages'][0]['content']);
         self::assertStringContainsString('<h1>Avant</h1>', $this->api->requests[0]['messages'][0]['content']);
         self::assertSame('revision', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getKind());
+    }
+
+    public function testABlockIsToldWhatItIsAndMayNotHoldABlock(): void
+    {
+        $block = (new CmsBlock())->setCode('generated-block');
+        $block->setLocale($this->locale())->setTitle('Réassurance');
+        $block->save();
+        $locale = $this->locale();
+
+        $withABlock = json_encode(['version' => 1, 'sections' => [['id' => 'inner', 'component' => 'Partial:cms-block', 'props' => ['block' => (int) $block->getId()]]]], \JSON_THROW_ON_ERROR);
+        $valid = json_encode(['version' => 1, 'sections' => [['id' => 'figures', 'component' => 'Cms:Figures', 'props' => ['title' => 'En chiffres', 'items' => [['value' => '48 h', 'label' => 'Livraison']]]]]], \JSON_THROW_ON_ERROR);
+
+        $this->api
+            ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text($withABlock)]))
+            ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text($valid)]));
+
+        $observer = new class implements GenerationObserverInterface {
+            /** @var list<string> */
+            public array $events = [];
+
+            public function onTurn(int $turn, array $tools): void
+            {
+                $this->events[] = \sprintf('turn %d: %s', $turn, implode(',', $tools) ?: 'answer');
+            }
+
+            public function onCorrection(int $round, array $problems): void
+            {
+                $this->events[] = \sprintf('correction %d', $round);
+            }
+        };
+
+        $result = $this->generator()->generate(
+            GenerationRequest::fromBrief(GenerationTarget::block($block, $locale), $locale, new Brief('Trois chiffres qui rassurent.')),
+            $observer,
+        );
+
+        self::assertSame('Cms:Figures', $result->document->sections[0]->component);
+        self::assertSame(['turn 1: answer', 'correction 1', 'turn 2: answer'], $observer->events, 'The observer is told of every turn and of the correction.');
+
+        $prompt = $this->api->requests[0]['messages'][0]['content'];
+        self::assertStringContainsString('# The block', $prompt);
+        self::assertStringContainsString('Name: Réassurance', $prompt);
+        self::assertStringContainsString('Never use these components here: `Partial:cms-block`', $prompt);
+        self::assertStringNotContainsString('# The page', $prompt);
+        self::assertStringContainsString('"Partial:cms-block", which cannot be used in a block', $this->api->requests[1]['messages'][2]['content'], 'The block inside the block is sent back as a problem.');
+
+        $row = CmsPageGenerationQuery::create()->filterByTargetType('block')->filterByTargetId($block->getId())->findOne();
+        self::assertNotNull($row, 'The ledger names the block as the target.');
+        self::assertSame($result->logId, (int) $row->getId());
+        self::assertSame($row->getId(), $this->getService(GenerationLog::class)->find((int) $row->getId(), GenerationTarget::block($block, $locale), $locale)?->getId());
+        self::assertNull($this->getService(GenerationLog::class)->find((int) $row->getId(), GenerationTarget::page($this->createPage('Other'), $locale), $locale), 'A row is found for its own target only.');
     }
 
     private function generator(): PageGenerator
@@ -212,6 +266,11 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
             $this->getService(Pricing::class),
             new NullLogger(),
         );
+    }
+
+    private function target(\TheliaCMS\Model\CmsPage $page): GenerationTarget
+    {
+        return GenerationTarget::page($page, $this->locale());
     }
 
     private function lastStatus(\TheliaCMS\Model\CmsPage $page): ?string

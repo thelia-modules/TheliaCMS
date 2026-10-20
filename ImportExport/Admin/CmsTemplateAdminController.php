@@ -134,7 +134,7 @@ final readonly class CmsTemplateAdminController
 
         // Straight into the editor: starting from a template is the first half
         // of writing a page, not the end of a task.
-        return new RedirectResponse($this->urls->generate('admin.cms.pages.builder', [
+        return new RedirectResponse($this->urls->generate('admin.cms.pages.content.edit', [
             'id' => $page->getId(),
             EditLanguage::PARAMETER => $lang->getId(),
         ]));

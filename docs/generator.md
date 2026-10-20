@@ -12,9 +12,9 @@ usual pipeline.
   Never in a setting: a setting travels with an export, a key must not. Without
   it the generator says so (`GenerationUnavailableException`) and nothing is
   called.
-- Three settings, under CMS > Settings, each with a default: `generator_model`
-  (`claude-opus-5-5`), `generator_effort` (`high`; `low`, `medium`, `xhigh`
-  and `max` exist), `generator_max_tokens` (16000).
+- Three settings, in the **Generator** card of CMS > Settings, each with a
+  default: `generator_model` (`claude-opus-5-5`), `generator_effort` (`high`;
+  `low`, `medium`, `xhigh` and `max` exist), `generator_max_tokens` (16000).
 - The right `admin.cms.generate`, given to the editor profile the module
   seeds: asking the generator to write costs money.
 
@@ -59,6 +59,12 @@ search engines read. The module ships five under `skills/<code>/SKILL.md`
 theme may ship its own under `skills/` with the same layout, and a theme skill
 with the code of a module skill replaces it.
 
+The files are a seed: the first read sows them into `cms_skill`, and the
+site edits them there, under **CMS > Skills** (the settings right). A skill
+can be rewritten, switched off, reordered, and put back to the shipped text;
+a shipped file that changes updates the stored text unless the site rewrote
+it. The generator reads the table, never the files.
+
 ```markdown
 ---
 name: copywriting
@@ -78,6 +84,37 @@ read sows the files, and a site edits a skill under CMS > Skills — its text,
 whether it is on, its order — with "restore the shipped text" to come back.
 A file that changes afterwards updates the shipped text kept next to the
 site's, and the text itself only where the site never rewrote it.
+
+## The screen
+
+CMS > Pages > a page > **Edit content** (`/admin/cms/pages/{id}/content`),
+and the same for a reusable block or the block of a catalogue item
+(`/admin/cms/blocks/{id}/content`). The brief on the left, the draft on the
+right as the theme shows it, through the signed preview link of the draft.
+
+- **Write it from a brief**: what the page should say, its tone and audience.
+  The answer replaces the whole draft.
+- **The sections of the draft**: each one quoted by its title, with a form to
+  rewrite that section alone; the others are kept as they are, ids included.
+- **Ask for a change**: a change on the whole draft, same rule.
+- **History**: the calls of the ledger for this page and language, with their
+  outcome, turns, duration and cost.
+- **Publish**: the usual pipeline, with the heading check.
+
+Every action is a form that posts and comes back with a message, so the
+screen works without its script. With it, the forms post in the background
+and the progress of the call is shown as it runs: the answer is a stream of
+server-sent events (`start`, `turn`, `correction`, `done`, `error`), written
+by `Generation\Admin\GenerationStream` as the generator reports each turn to
+its `GenerationObserverInterface`. Either way the screen is reloaded with
+`?done=<id>` and shows the outcome from that row of the ledger: a stream can
+leave no flash message behind, and the ledger says more.
+
+Opening the screen takes the page right; asking the generator takes
+`admin.cms.generate`; publishing takes the right to change pages. A block is
+told to the generator for what it is — no main heading, one to three
+sections — and may not hold `Partial:cms-block`: a block inside a block would
+never stop rendering.
 
 ## The ledger
 

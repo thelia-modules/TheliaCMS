@@ -26,6 +26,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Builder\BlockCatalog;
 use TheliaCMS\Builder\EditorBaseBlocks;
+use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Http\CachePurger;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Menu\Admin\MenuTargetChoices;
@@ -64,6 +65,7 @@ final readonly class CmsSettingsController
         private BlockCatalog $catalog,
         private PartialRegistry $partials,
         private EditorBaseBlocks $baseBlocks,
+        private GeneratorSettings $generator,
     ) {
     }
 
@@ -82,6 +84,9 @@ final readonly class CmsSettingsController
             'maintenanceAllowlist' => implode("\n", $this->settings->maintenanceAllowlist()),
             'trashRetentionDays' => $this->settings->trashRetentionDays(),
             'httpCacheTtl' => $this->settings->httpCacheTtl(),
+            'generatorModel' => $this->generator->model(),
+            'generatorEffort' => $this->generator->effort(),
+            'generatorMaxTokens' => $this->generator->maxTokens(),
             'enabledBlocks' => array_map(static fn (array $group): array => self::enabledAmong($group['choices'], $disabled), $offered),
         ], [
             'page_choices' => $this->choices->pages($lang->getLocale()),
@@ -108,7 +113,7 @@ final readonly class CmsSettingsController
     }
 
     /**
-     * @param array<string, mixed>                                                    $data
+     * @param array<string, mixed>                                                $data
      * @param array<string, array{label: string, choices: array<string, string>}> $offered
      */
     private function save(Request $request, array $data, array $offered): RedirectResponse
@@ -129,6 +134,12 @@ final readonly class CmsSettingsController
             trashRetentionDays: null === $data['trashRetentionDays'] ? null : (int) $data['trashRetentionDays'],
             httpCacheTtl: null === $data['httpCacheTtl'] ? null : (int) $data['httpCacheTtl'],
             disabledBlocks: $disabledBlocks,
+        );
+
+        $this->generator->save(
+            model: (string) $data['generatorModel'],
+            effort: (string) $data['generatorEffort'],
+            maxTokens: (int) $data['generatorMaxTokens'],
         );
 
         // A showcase site is handed to someone who is not an administrator of

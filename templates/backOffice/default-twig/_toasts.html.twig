@@ -1,9 +1,12 @@
 {#
-    Flash messages of the builder screens, shown as notices over the canvas.
+    Flash messages of the full-window screens, shown as notices over the stage.
 
-    The builder replaces the whole body of the layout, so the messages of the
-    theme are not rendered on these screens — and a banner at the top of the
-    page would push the canvas down every time something is saved.
+    These screens replace the whole body of the layout, so the messages of the
+    theme are not rendered on them — and a banner at the top of the page would
+    push the stage down every time something is saved.
+
+    `extra` carries messages that are not flashes: the outcome of a call a
+    screen reads from its own records. Each is `{type, message, details}`.
 
     Accessibility: a warning or a confirmation is announced politely and
     dismisses itself; an error is announced assertively and stays until it is
@@ -18,25 +21,36 @@
     info: 'bi-info-circle-fill',
 } %}
 
-{% set flashes = app.flashes %}
+{% set notices = [] %}
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        {% set notices = notices|merge([{ type: type, message: message, details: [] }]) %}
+    {% endfor %}
+{% endfor %}
+{% for notice in extra|default([]) %}
+    {% set notices = notices|merge([notice]) %}
+{% endfor %}
 
-{% if flashes is not empty %}
+{% if notices is not empty %}
     <div class="cms-toasts">
-        {% for type, messages in flashes %}
-            {% for message in messages %}
-                <div class="cms-toast cms-toast--{{ type }}"
-                     data-controller="cms-toast"
-                     data-cms-toast-permanent-value="{{ type == 'danger' ? 'true' : 'false' }}"
-                     role="{{ type == 'danger' ? 'alert' : 'status' }}"
-                     data-testid="cms-builder-flash-{{ type }}">
-                    <i class="bi {{ toast_icons[type]|default('bi-info-circle-fill') }} cms-toast__icon" aria-hidden="true"></i>
-                    <p class="cms-toast__message">{{ message }}</p>
-                    <button type="button" class="cms-toast__close" data-action="cms-toast#close"
-                            aria-label="{{ 'Close'|trans({}, 'theliacms') }}">
-                        <i class="bi bi-x-lg" aria-hidden="true"></i>
-                    </button>
+        {% for notice in notices %}
+            <div class="cms-toast cms-toast--{{ notice.type }}"
+                 data-controller="cms-toast"
+                 data-cms-toast-permanent-value="{{ notice.type == 'danger' ? 'true' : 'false' }}"
+                 role="{{ notice.type == 'danger' ? 'alert' : 'status' }}"
+                 data-testid="cms-builder-flash-{{ notice.type }}">
+                <i class="bi {{ toast_icons[notice.type]|default('bi-info-circle-fill') }} cms-toast__icon" aria-hidden="true"></i>
+                <div class="cms-toast__message">
+                    <p class="mb-0">{{ notice.message }}</p>
+                    {% for detail in notice.details|default([])|filter(detail => detail is not empty) %}
+                        <p class="mb-0 small text-muted">{{ detail }}</p>
+                    {% endfor %}
                 </div>
-            {% endfor %}
+                <button type="button" class="cms-toast__close" data-action="cms-toast#close"
+                        aria-label="{{ 'Close'|trans({}, 'theliacms') }}">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+            </div>
         {% endfor %}
     </div>
 {% endif %}

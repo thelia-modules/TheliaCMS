@@ -24,7 +24,7 @@
         <ul class="mb-0">
             {% for page in sample_text_pages.pages %}
                 <li>
-                    <a class="alert-link" href="{{ path('admin.cms.pages.builder', { id: page.id, edit_language_id: page.language_id }) }}">{{- page.title -}}</a>
+                    <a class="alert-link" href="{{ path('admin.cms.pages.content.edit', { id: page.id, edit_language_id: page.language_id }) }}">{{- page.title -}}</a>
                     <span>({{ page.language }})</span>
                 </li>
             {% endfor %}

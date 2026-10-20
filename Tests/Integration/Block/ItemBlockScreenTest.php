@@ -15,7 +15,6 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Block;
 
 use Symfony\Component\DomCrawler\Crawler;
-use Thelia\Model\Category;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Block\Item\ItemType;
@@ -51,9 +50,9 @@ final class ItemBlockScreenTest extends AdminScreenTestCase
         $block = $this->itemBlocks()->blockFor(ItemType::Category, $categoryId);
         self::assertNotNull($block);
         $blockId = (int) $block->getId();
-        self::assertStringContainsString(\sprintf('/admin/cms/blocks/%d/builder', $blockId), (string) $this->client->getResponse()->headers->get('Location'));
+        self::assertStringContainsString(\sprintf('/admin/cms/blocks/%d/content', $blockId), (string) $this->client->getResponse()->headers->get('Location'));
 
-        $this->screen(\sprintf('/admin/cms/blocks/%d/builder', $blockId));
+        $this->screen(\sprintf('/admin/cms/blocks/%d/content', $blockId));
 
         self::assertSame(302, $this->send('POST', $edit, ['_token' => $token]), 'The second demand opens the same block.');
         self::assertSame($blockId, (int) $this->itemBlocks()->blockFor(ItemType::Category, $categoryId)?->getId());

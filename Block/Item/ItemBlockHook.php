@@ -142,7 +142,7 @@ class ItemBlockHook extends BaseHook
             'may_delete' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::DELETE]),
             'edit_url' => $this->urls->generate('admin.cms.item_blocks.edit', ['type' => $type->value, 'itemId' => $itemId, EditLanguage::PARAMETER => $lang->getId()]),
             'delete_url' => $this->urls->generate('admin.cms.item_blocks.delete', ['type' => $type->value, 'itemId' => $itemId]),
-            'builder_url' => $block instanceof CmsBlock ? $this->urls->generate('admin.cms.blocks.builder', ['id' => $block->getId(), EditLanguage::PARAMETER => $lang->getId()]) : null,
+            'builder_url' => $block instanceof CmsBlock ? $this->urls->generate('admin.cms.blocks.content.edit', ['id' => $block->getId(), EditLanguage::PARAMETER => $lang->getId()]) : null,
         ]);
     }
 

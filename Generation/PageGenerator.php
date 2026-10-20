@@ -57,9 +57,11 @@ final readonly class PageGenerator
     }
 
     /**
+     * @param GenerationObserverInterface|null $observer told of every turn, for a screen that shows the progress
+     *
      * @throws GenerationException when no document could be produced, after it was logged
      */
-    public function generate(GenerationRequest $request): GenerationResult
+    public function generate(GenerationRequest $request, ?GenerationObserverInterface $observer = null): GenerationResult
     {
         $started = hrtime(true);
         $client = $this->clients->client();
@@ -128,22 +130,26 @@ final readonly class PageGenerator
                 }
 
                 if ('tool_use' === $message->stopReason) {
+                    $observer?->onTurn($turns, self::toolsCalled($message));
                     $messages[] = ['role' => 'assistant', 'content' => $message->content];
                     $messages[] = ['role' => 'user', 'content' => $this->toolResults($message, $request)];
 
                     continue;
                 }
 
+                $observer?->onTurn($turns, []);
                 $text = $this->textOf($message);
 
                 try {
                     $document = $this->validator->validate(self::documentFrom($text));
+                    self::refuseExcluded($document, $request->target);
                 } catch (InvalidDocumentException $exception) {
                     if (++$corrections > self::CORRECTIONS) {
                         throw InvalidGenerationException::withProblems($exception->problems);
                     }
 
                     $this->logger->info('TheliaCMS: the generated document was refused once and sent back: {problems}', ['problems' => implode(' ', $exception->problems)]);
+                    $observer?->onCorrection($corrections, $exception->problems);
                     $messages[] = ['role' => 'assistant', 'content' => $message->content];
                     $messages[] = ['role' => 'user', 'content' => PromptBuilder::correction($exception->problems)];
 
@@ -156,17 +162,54 @@ final readonly class PageGenerator
                 return new GenerationResult($document, $model, $requestId, $usage, $this->pricing->cost($model, $usage), $durationMs, $turns, $logId);
             }
         } catch (GenerationRefusedException $exception) {
-            $record(GenerationLog::STATUS_REFUSED, $message ?? null, $exception->getMessage());
+            $exception->logId = $record(GenerationLog::STATUS_REFUSED, $message ?? null, $exception->getMessage());
 
             throw $exception;
         } catch (InvalidGenerationException $exception) {
-            $record(GenerationLog::STATUS_INVALID, $message ?? null, $exception->getMessage());
+            $exception->logId = $record(GenerationLog::STATUS_INVALID, $message ?? null, $exception->getMessage());
 
             throw $exception;
         } catch (GenerationException $exception) {
-            $record(GenerationLog::STATUS_FAILED, $message ?? null, $exception->getMessage());
+            $exception->logId = $record(GenerationLog::STATUS_FAILED, $message ?? null, $exception->getMessage());
 
             throw $exception;
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function toolsCalled(Message $message): array
+    {
+        $names = [];
+
+        foreach ($message->content as $block) {
+            if ($block instanceof ToolUseBlock) {
+                $names[] = $block->name;
+            }
+        }
+
+        return $names;
+    }
+
+    /**
+     * A component the target rules out is refused the way the validator
+     * refuses one that does not exist: sent back, with the reason.
+     *
+     * @throws InvalidDocumentException
+     */
+    private static function refuseExcluded(Document $document, GenerationTarget $target): void
+    {
+        $problems = [];
+
+        foreach ($document->sections as $section) {
+            if (\in_array($section->component, $target->excludedComponents, true)) {
+                $problems[] = \sprintf('Section "%s" names "%s", which cannot be used in a %s.', $section->id, $section->component, $target->type);
+            }
+        }
+
+        if ([] !== $problems) {
+            throw InvalidDocumentException::because($problems);
         }
     }
 

@@ -1,0 +1,330 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Generation\Admin;
+
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+use Thelia\Core\Security\AccessManager;
+use Thelia\Core\Security\SecurityContext;
+use Thelia\Model\Lang;
+use TheliaCMS\Builder\HeadingChecker;
+use TheliaCMS\Content\Document;
+use TheliaCMS\Generation\Brief;
+use TheliaCMS\Generation\GenerationRequest;
+use TheliaCMS\Generation\GenerationTarget;
+use TheliaCMS\Model\CmsPage;
+use TheliaCMS\Model\CmsPageContentQuery;
+use TheliaCMS\Page\Admin\CmsPageAdminRepository;
+use TheliaCMS\Page\Admin\CmsPageWriter;
+use TheliaCMS\Page\Admin\EditLanguage;
+use TheliaCMS\Page\Admin\EmptyPageContentException;
+use TheliaCMS\Page\Admin\HeadingStructureException;
+use TheliaCMS\Page\Admin\PlaceholderPageContentException;
+use TheliaCMS\Preview\PreviewLink;
+use TheliaCMS\Security\CmsResources;
+use TheliaCMS\TheliaCMS;
+
+/**
+ * The content of a page: written by the generator from a brief, changed by
+ * asking, read in the theme, published.
+ *
+ * Opening the screen takes the page right; asking the generator takes the
+ * generate right, which costs money; publishing takes the right to change
+ * pages, as everywhere else.
+ */
+#[Route('/admin/cms/pages/{id}/content', name: 'admin.cms.pages.content.', requirements: ['id' => '\d+'])]
+final readonly class CmsPageContentController
+{
+    public function __construct(
+        private FormFactoryInterface $forms,
+        private UrlGeneratorInterface $urls,
+        private SecurityContext $securityContext,
+        private TranslatorInterface $translator,
+        private CmsPageAdminRepository $pages,
+        private CmsPageWriter $writer,
+        private EditLanguage $languages,
+        private HeadingChecker $headings,
+        private PreviewLink $previewLinks,
+        private ContentScreen $screen,
+        private GenerationRunner $runner,
+    ) {
+    }
+
+    #[Route('', name: 'edit', methods: ['GET'])]
+    public function edit(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+
+        return new Response($this->screen->render($request, $this->subject($page, $lang)));
+    }
+
+    #[Route('/generate', name: 'generate', methods: ['POST'])]
+    public function generate(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayGenerate();
+
+        $form = $this->forms->create(BriefType::class);
+        $form->handleRequest($request);
+
+        if (!$form->isSubmitted() || !$form->isValid()) {
+            return $this->backWithErrors($request, $form, $page, $lang);
+        }
+
+        $data = $form->getData();
+        $brief = new Brief((string) $data['text'], self::blankToNull($data['tone'] ?? null), self::blankToNull($data['audience'] ?? null));
+
+        return $this->run($request, $page, $lang, GenerationRequest::fromBrief($this->target($page, $lang), $lang->getLocale(), $brief));
+    }
+
+    #[Route('/revise', name: 'revise', methods: ['POST'])]
+    public function revise(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayGenerate();
+
+        $form = $this->forms->create(ChangeType::class);
+        $form->handleRequest($request);
+
+        if (!$form->isSubmitted() || !$form->isValid()) {
+            return $this->backWithErrors($request, $form, $page, $lang);
+        }
+
+        $current = $this->documentOrFail($request, $page, $lang);
+
+        if (!$current instanceof Document) {
+            return $this->back($page, $lang);
+        }
+
+        return $this->run($request, $page, $lang, GenerationRequest::revision($this->target($page, $lang), $lang->getLocale(), $current, new Brief((string) $form->getData()['text'])));
+    }
+
+    #[Route('/section', name: 'section', methods: ['POST'])]
+    public function section(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayGenerate();
+
+        // The forms of the sections are named after their section, so that
+        // two of them on one screen never share a field id.
+        $form = $this->forms->createNamed(ContentScreen::postedSectionForm($request), ChangeType::class, null, ['section' => true]);
+        $form->handleRequest($request);
+
+        if (!$form->isSubmitted() || !$form->isValid()) {
+            return $this->backWithErrors($request, $form, $page, $lang);
+        }
+
+        $current = $this->documentOrFail($request, $page, $lang);
+
+        if (!$current instanceof Document) {
+            return $this->back($page, $lang);
+        }
+
+        $data = $form->getData();
+
+        try {
+            $generation = GenerationRequest::section($this->target($page, $lang), $lang->getLocale(), $current, (string) $data['section'], new Brief((string) $data['text']));
+        } catch (\InvalidArgumentException) {
+            $this->flash($request, 'danger', $this->translate('This section is no longer in the page: reload the screen.'));
+
+            return $this->back($page, $lang);
+        }
+
+        return $this->run($request, $page, $lang, $generation);
+    }
+
+    #[Route('/publish', name: 'publish', methods: ['POST'])]
+    public function publish(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayPublish();
+
+        try {
+            $this->writer->publish($page, $lang->getLocale());
+        } catch (HeadingStructureException $exception) {
+            foreach ($exception->problems as $problem) {
+                $this->flash($request, 'danger', $problem);
+            }
+
+            $this->flash($request, 'danger', $this->translate('The page was not published: fix the heading structure first.'));
+
+            return $this->back($page, $lang);
+        } catch (EmptyPageContentException) {
+            $this->flash($request, 'danger', $this->translate('This page has no content yet: write it from a brief before publishing it.'));
+
+            return $this->back($page, $lang);
+        } catch (PlaceholderPageContentException) {
+            $this->flash($request, 'danger', $this->translate('This page still holds the sample text it was created with: write your own before publishing it.'));
+
+            return $this->back($page, $lang);
+        }
+
+        // In `warn` mode the page went online and its author is told what to
+        // fix; the writer refused it in `block` mode above.
+        foreach ($this->headings->check($this->draftHtmlOf($page, $lang->getLocale())) as $problem) {
+            $this->flash($request, 'warning', $problem);
+        }
+
+        $this->flash($request, 'success', $this->translate('The page is online.'));
+
+        return $this->back($page, $lang);
+    }
+
+    private function run(Request $request, CmsPage $page, Lang $lang, GenerationRequest $generation): Response
+    {
+        $locale = $lang->getLocale();
+
+        return $this->runner->respond(
+            $request,
+            $generation,
+            fn (Document $document) => $this->writer->saveContent($page, $locale, $document),
+            $this->screenUrl($page, $lang),
+        );
+    }
+
+    private function subject(CmsPage $page, Lang $lang): ContentSubject
+    {
+        $locale = $lang->getLocale();
+        $page->setLocale($locale);
+        $status = $this->pages->statusOf($page, $locale);
+        $parameters = ['id' => $page->getId(), EditLanguage::PARAMETER => $lang->getId()];
+
+        return new ContentSubject(
+            target: $this->target($page, $lang),
+            locale: $locale,
+            languageId: (int) $lang->getId(),
+            statusLabel: $status->label(),
+            statusBadgeClass: $status->badgeClass(),
+            backUrl: $this->urls->generate('admin.cms.pages.edit', $parameters),
+            backLabel: $this->translate('Back to settings'),
+            draftPreviewUrl: $this->previewLinks->urlFor((int) $page->getId(), $locale),
+            previewUrl: $page->getUrl($locale) ?: null,
+            document: $this->documentOf($page, $locale),
+            publishHint: $this->translate('Publishing puts the draft online at the address of the page.'),
+            routes: [
+                'screen' => $this->screenUrl($page, $lang),
+                'generate' => $this->urls->generate('admin.cms.pages.content.generate', $parameters),
+                'revise' => $this->urls->generate('admin.cms.pages.content.revise', $parameters),
+                'section' => $this->urls->generate('admin.cms.pages.content.section', $parameters),
+                'publish' => $this->urls->generate('admin.cms.pages.content.publish', $parameters),
+            ],
+            testId: 'cms-page-content',
+        );
+    }
+
+    private function target(CmsPage $page, Lang $lang): GenerationTarget
+    {
+        return GenerationTarget::page($page, $lang->getLocale());
+    }
+
+    private function documentOf(CmsPage $page, string $locale): ?Document
+    {
+        return Document::fromJson(CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($locale)->findOne()?->getDraftDocument());
+    }
+
+    private function documentOrFail(Request $request, CmsPage $page, Lang $lang): ?Document
+    {
+        $document = $this->documentOf($page, $lang->getLocale());
+
+        if (!$document instanceof Document) {
+            $this->flash($request, 'danger', $this->translate('This page holds nothing to change yet: write it from a brief first.'));
+        }
+
+        return $document;
+    }
+
+    private function draftHtmlOf(CmsPage $page, string $locale): ?string
+    {
+        return CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($locale)->findOne()?->getDraftHtml();
+    }
+
+    private function backWithErrors(Request $request, FormInterface $form, CmsPage $page, Lang $lang): RedirectResponse
+    {
+        foreach ($form->getErrors(true) as $error) {
+            $this->flash($request, 'danger', (string) $error->getMessage());
+        }
+
+        if (!$form->isSubmitted()) {
+            $this->flash($request, 'danger', $this->translate('Nothing was sent.'));
+        }
+
+        return $this->back($page, $lang);
+    }
+
+    private function back(CmsPage $page, Lang $lang): RedirectResponse
+    {
+        return new RedirectResponse($this->screenUrl($page, $lang));
+    }
+
+    private function screenUrl(CmsPage $page, Lang $lang): string
+    {
+        return $this->urls->generate('admin.cms.pages.content.edit', ['id' => $page->getId(), EditLanguage::PARAMETER => $lang->getId()]);
+    }
+
+    private function livePageOrFail(int $id): CmsPage
+    {
+        $page = $this->pages->findLive($id);
+
+        if (!$page instanceof CmsPage) {
+            throw new NotFoundHttpException();
+        }
+
+        return $page;
+    }
+
+    private function denyUnlessMayGenerate(): void
+    {
+        if (!$this->securityContext->isGranted(['ADMIN'], [CmsResources::GENERATE], [], [AccessManager::UPDATE])) {
+            throw new AccessDeniedHttpException($this->translate('You are not allowed to use the generator.'));
+        }
+    }
+
+    private function denyUnlessMayPublish(): void
+    {
+        if (!$this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::UPDATE])) {
+            throw new AccessDeniedHttpException($this->translate('You are not allowed to change CMS pages.'));
+        }
+    }
+
+    private static function blankToNull(?string $value): ?string
+    {
+        return null === $value || '' === trim($value) ? null : trim($value);
+    }
+
+    private function flash(Request $request, string $type, string $message): void
+    {
+        if ($request->hasSession()) {
+            $request->getSession()->getFlashBag()->add($type, $message);
+        }
+    }
+
+    private function translate(string $message): string
+    {
+        return $this->translator->trans($message, [], TheliaCMS::DOMAIN_NAME);
+    }
+}

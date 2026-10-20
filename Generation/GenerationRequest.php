@@ -15,11 +15,10 @@ declare(strict_types=1);
 namespace TheliaCMS\Generation;
 
 use TheliaCMS\Content\Document;
-use TheliaCMS\Model\CmsPage;
 
 /**
- * One call to the generator: a page, a language, and either a brief for a
- * new document, a change asked on the document the page holds, or one
+ * One call to the generator: a target, a language, and either a brief for a
+ * new document, a change asked on the document the target holds, or one
  * section of it to write again.
  */
 final readonly class GenerationRequest
@@ -29,7 +28,7 @@ final readonly class GenerationRequest
     public const string KIND_SECTION = 'section';
 
     private function __construct(
-        public CmsPage $page,
+        public GenerationTarget $target,
         public string $locale,
         public string $kind,
         public Brief $brief,
@@ -38,17 +37,17 @@ final readonly class GenerationRequest
     ) {
     }
 
-    public static function fromBrief(CmsPage $page, string $locale, Brief $brief): self
+    public static function fromBrief(GenerationTarget $target, string $locale, Brief $brief): self
     {
-        return new self($page, $locale, self::KIND_BRIEF, $brief);
+        return new self($target, $locale, self::KIND_BRIEF, $brief);
     }
 
     /**
      * A change on the whole document: "make the hero shorter", "add a FAQ".
      */
-    public static function revision(CmsPage $page, string $locale, Document $current, Brief $change): self
+    public static function revision(GenerationTarget $target, string $locale, Document $current, Brief $change): self
     {
-        return new self($page, $locale, self::KIND_REVISION, $change, $current);
+        return new self($target, $locale, self::KIND_REVISION, $change, $current);
     }
 
     /**
@@ -56,12 +55,12 @@ final readonly class GenerationRequest
      *
      * @throws \InvalidArgumentException when the document has no such section
      */
-    public static function section(CmsPage $page, string $locale, Document $current, string $sectionId, Brief $change): self
+    public static function section(GenerationTarget $target, string $locale, Document $current, string $sectionId, Brief $change): self
     {
         if (null === $current->section($sectionId)) {
-            throw new \InvalidArgumentException(\sprintf('The page has no section "%s".', $sectionId));
+            throw new \InvalidArgumentException(\sprintf('The document has no section "%s".', $sectionId));
         }
 
-        return new self($page, $locale, self::KIND_SECTION, $change, $current, $sectionId);
+        return new self($target, $locale, self::KIND_SECTION, $change, $current, $sectionId);
     }
 }

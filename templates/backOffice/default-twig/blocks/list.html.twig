@@ -44,7 +44,7 @@
                             {% set block = row.block %}
                             <tr data-testid="cms-block-row-{{ block.id }}">
                                 <td>
-                                    <a href="{{ path('admin.cms.blocks.builder', { id: block.id, edit_language_id: edit_language_id }) }}">
+                                    <a href="{{ path('admin.cms.blocks.content.edit', { id: block.id, edit_language_id: edit_language_id }) }}">
                                         {{ block.title|default('#' ~ block.id) }}
                                     </a>
                                 </td>
@@ -59,7 +59,7 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-1">
-                                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.blocks.builder', { id: block.id, edit_language_id: edit_language_id }) }}">
+                                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.blocks.content.edit', { id: block.id, edit_language_id: edit_language_id }) }}">
                                             {{ 'Edit content'|trans({}, 'theliacms') }}
                                         </a>
                                         <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.blocks.edit', { id: block.id, edit_language_id: edit_language_id }) }}">
