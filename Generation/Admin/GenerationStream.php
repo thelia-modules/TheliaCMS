@@ -26,6 +26,8 @@ use TheliaCMS\Generation\GenerationObserverInterface;
  */
 final class GenerationStream implements GenerationObserverInterface
 {
+    private int $announced = 0;
+
     /**
      * @param \Closure(string, array<string, string>): string $translate
      */
@@ -41,6 +43,7 @@ final class GenerationStream implements GenerationObserverInterface
 
     public function onTurn(int $turn, array $tools): void
     {
+        $this->announced = 0;
         $this->emit('turn', [
             'turn' => $turn,
             'tools' => $tools,
@@ -48,6 +51,20 @@ final class GenerationStream implements GenerationObserverInterface
                 ? ($this->translate)('The model answered: the site is checking the document.', [])
                 : ($this->translate)('The model is looking through the site (%tools%).', ['%tools%' => implode(', ', $tools)]),
         ]);
+    }
+
+    /**
+     * Told at every delta; written every few hundred characters, which is
+     * what a reader can follow and what a proxy forwards without choking.
+     */
+    public function onText(int $characters): void
+    {
+        if ($characters - $this->announced < 300) {
+            return;
+        }
+
+        $this->announced = $characters;
+        $this->emit('delta', ['characters' => $characters, 'message' => ($this->translate)('The model is writing: %characters% characters so far.', ['%characters%' => (string) $characters])]);
     }
 
     public function onCorrection(int $round, array $problems): void

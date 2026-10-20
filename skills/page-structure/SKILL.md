@@ -37,6 +37,14 @@ if the brief gives an address and the catalogue offers one.
 matter, one picture when the library has one, no call to action unless the
 brief asks.
 
+## When the brief gives little
+
+A brief of one line, or a brief that asks for things the site does not have
+(products the search does not find, images the library does not hold), gives
+a short page: say only what the brief said, in as few sections as it takes,
+and leave out what you would have to make up. A section that says nothing —
+"ask us your question", "discover our world" — is worse than no section.
+
 ## Length
 
 - A hero: a heading of eight words at most, one or two lines under it.

@@ -238,9 +238,16 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
             /** @var list<string> */
             public array $events = [];
 
+            public int $characters = 0;
+
             public function onTurn(int $turn, array $tools): void
             {
                 $this->events[] = \sprintf('turn %d: %s', $turn, implode(',', $tools) ?: 'answer');
+            }
+
+            public function onText(int $characters): void
+            {
+                $this->characters = $characters;
             }
 
             public function onCorrection(int $round, array $problems): void
@@ -256,6 +263,8 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
 
         self::assertSame('Cms:Figures', $result->document->sections[0]->component);
         self::assertSame(['turn 1: answer', 'correction 1', 'turn 2: answer'], $observer->events, 'The observer is told of every turn and of the correction.');
+        self::assertSame(mb_strlen($valid), $observer->characters, 'The observer is told of the text as it is streamed.');
+        self::assertTrue($this->api->requests[0]['stream'] ?? false, 'The answer is read as a stream.');
 
         $prompt = $this->api->requests[0]['messages'][0]['content'];
         self::assertStringContainsString('# The block', $prompt);

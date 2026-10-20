@@ -28,6 +28,11 @@ interface GenerationObserverInterface
     public function onTurn(int $turn, array $tools): void;
 
     /**
+     * The model is writing: so many characters of its answer have arrived.
+     */
+    public function onText(int $characters): void;
+
+    /**
      * The document was refused by the site and sent back for correction.
      *
      * @param list<string> $problems

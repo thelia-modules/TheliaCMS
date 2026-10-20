@@ -63,6 +63,13 @@ directly (`composer.json` of the module says which) and no longer
 - A closure that reads a counter accumulated after its definition takes the
   variable by reference (`use (&$usage)`), never as an arrow function, which
   captures the value at definition.
+- The answer is read as a stream (`messages->createStream()`, put back
+  together by `Generation\StreamedMessage`). The stream opens a text block
+  before a tool call and may leave it empty: such a block is dropped, or the
+  API refuses the conversation on the next turn ("text content blocks must be
+  non-empty"). An answer constrained to a schema is streamed in a burst at the
+  end of the turn, measured on 2026-10-20: 4.3 s of silence, then every delta
+  within a second.
 - The grammar of structured outputs has limits the documentation does not
   spell out: a `const` needs a `type`, an enum holds strings only (a numeric
   PHP array key becomes an integer), at most 24 optional properties and 16

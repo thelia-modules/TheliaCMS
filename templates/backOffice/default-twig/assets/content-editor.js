@@ -190,6 +190,17 @@
             return readEvents(response, function (name, event) {
                 if (name === "start" || name === "turn") {
                     addStep(event.message, false);
+                } else if (name === "delta") {
+                    // The same step, updated: one line that counts up rather
+                    // than a list that scrolls.
+                    var last = steps.lastElementChild;
+
+                    if (last && last.hasAttribute("data-cms-delta")) {
+                        last.textContent = event.message;
+                    } else {
+                        addStep(event.message, false);
+                        steps.lastElementChild.setAttribute("data-cms-delta", "");
+                    }
                 } else if (name === "correction") {
                     addStep(event.message, true);
                 } else if (name === "done") {

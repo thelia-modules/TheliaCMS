@@ -104,9 +104,11 @@ right as the theme shows it, through the signed preview link of the draft.
 Every action is a form that posts and comes back with a message, so the
 screen works without its script. With it, the forms post in the background
 and the progress of the call is shown as it runs: the answer is a stream of
-server-sent events (`start`, `turn`, `correction`, `done`, `error`), written
-by `Generation\Admin\GenerationStream` as the generator reports each turn to
-its `GenerationObserverInterface`. Either way the screen is reloaded with
+server-sent events (`start`, `turn`, `delta`, `correction`, `done`, `error`),
+written by `Generation\Admin\GenerationStream` as the generator reports each
+turn, and every few hundred characters of the answer, to its
+`GenerationObserverInterface`: the generator reads the answer of the API as a
+stream (`Generation\StreamedMessage` puts the message back together). Either way the screen is reloaded with
 `?done=<id>` and shows the outcome from that row of the ledger: a stream can
 leave no flash message behind, and the ledger says more.
 
@@ -156,4 +158,4 @@ Nothing in the test suites reaches the API: the generator takes its client
 from `ClaudeClientProviderInterface`, and the integration tests hand it a
 transport that answers from recorded responses (`Tests/Integration/Generation/FakeClaudeTransport.php`).
 The quality of what the real model writes is measured by hand, against a
-rubric: `docs/chantier/ai-pages/eval/`.
+rubric: `docs/evaluation/`.

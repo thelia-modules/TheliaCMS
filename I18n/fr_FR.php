@@ -918,4 +918,5 @@ return [
     'This section uses a component the site no longer has.' => 'Cette section utilise un composant que le site n’a plus.',
     'The form could not be read.' => 'Le formulaire n’a pas pu être lu.',
     'By hand' => 'À la main',
+    'The model is writing: %characters% characters so far.' => 'Le modèle écrit : %characters% caractères pour l’instant.',
 ];

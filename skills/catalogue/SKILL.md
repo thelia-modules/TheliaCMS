@@ -39,8 +39,12 @@ anything else is refused.
 - `image` props take the id of an image found with `search_media`, or `null`
   when the library has none that fits. Never a path, never an id you did not
   get from the tool.
-- `url` props take a path of the site (`/contact`, the `url` of a page found
-  with `search_pages`) or an absolute `https://` address given in the brief.
+- `url` props take the `url` of a page found with `search_pages`, a
+  `tel:` or `mailto:` address the brief gives, or an absolute `https://`
+  address the brief gives. Never a path you did not get from a tool, however
+  likely it looks: a button to a page the site does not have is a dead end.
+  When no page fits, leave the button out (`cta_label` and `cta_url` empty, no
+  `Cms:Cta`).
 - Every section has an `id`: short, lowercase, unique in the page, saying
   what the section is (`hero`, `faq`, `figures`).
 

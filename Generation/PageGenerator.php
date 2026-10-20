@@ -102,8 +102,12 @@ final readonly class PageGenerator
                     throw GenerationException::because(\sprintf('The model made more than %d turns without answering with a document.', self::MAX_TURNS));
                 }
 
+                // Read as a stream: the screen shows the text as it is
+                // written, and a long answer no longer looks like a hang.
+                $streamed = new StreamedMessage(null === $observer ? null : static fn (int $characters) => $observer->onText($characters));
+
                 try {
-                    $message = $client->messages->create(
+                    $stream = $client->messages->createStream(
                         maxTokens: $this->settings->maxTokens(),
                         messages: $messages,
                         model: $model,
@@ -112,6 +116,12 @@ final readonly class PageGenerator
                         toolChoice: ['type' => 'auto'],
                         tools: $tools,
                     );
+
+                    foreach ($stream as $event) {
+                        $streamed->absorb($event);
+                    }
+
+                    $message = $streamed->message();
                 } catch (APIStatusException $exception) {
                     throw GenerationException::because(\sprintf('The Claude API answered %s: %s', $exception->type?->value ?? 'an error', $exception->getMessage()), $exception);
                 } catch (APIConnectionException $exception) {

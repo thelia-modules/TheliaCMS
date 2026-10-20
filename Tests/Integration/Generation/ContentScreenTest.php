@@ -146,7 +146,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         // browser of the test captured; the response itself holds none.
         $events = self::events((string) $this->client->getInternalResponse()->getContent());
 
-        self::assertSame(['start', 'turn', 'turn', 'done'], array_column($events, 'event'));
+        self::assertSame(['start', 'turn', 'turn', 'done'], array_values(array_filter(array_column($events, 'event'), static fn (string $name): bool => 'delta' !== $name)), 'The deltas of the text aside, every step is announced.');
         self::assertSame(['search_pages'], $events[1]['data']['tools'], 'The tools of a turn are named.');
         self::assertMatchesRegularExpression('#/content\?.*done=\d+$#', $events[3]['data']['redirect'], 'The last event says where to go.');
         self::assertStringContainsString('<p>Done.</p>', (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml(), 'The draft was saved before the last event.');

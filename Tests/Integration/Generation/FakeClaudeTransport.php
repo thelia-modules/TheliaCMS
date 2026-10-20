@@ -85,7 +85,8 @@ final class FakeClaudeTransport implements ClientInterface, ClaudeClientProvider
 
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
-        $this->requests[] = json_decode((string) $request->getBody(), true, 512, \JSON_THROW_ON_ERROR);
+        $sent = json_decode((string) $request->getBody(), true, 512, \JSON_THROW_ON_ERROR);
+        $this->requests[] = $sent;
 
         $body = array_shift($this->queue);
 
@@ -93,7 +94,52 @@ final class FakeClaudeTransport implements ClientInterface, ClaudeClientProvider
             return new Response(500, ['Content-Type' => 'application/json'], json_encode(['type' => 'error', 'error' => ['type' => 'api_error', 'message' => 'The fake transport has no answer left.']], \JSON_THROW_ON_ERROR));
         }
 
+        // A request made as a stream is answered as the API answers it: the
+        // message cut into events, the text and the tool inputs as deltas.
+        if (true === ($sent['stream'] ?? false)) {
+            return new Response(200, ['Content-Type' => 'text/event-stream'], self::events($body));
+        }
+
         return new Response(200, ['Content-Type' => 'application/json'], json_encode($body, \JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @param array<string, mixed> $message the wire form of a message
+     */
+    private static function events(array $message): string
+    {
+        $usage = $message['usage'];
+        $events = [['message_start', ['message' => ['content' => [], 'stop_reason' => null, 'stop_sequence' => null, 'stop_details' => null, 'usage' => ['output_tokens' => 0] + $usage] + $message]]];
+
+        foreach ($message['content'] as $index => $block) {
+            if ('tool_use' === $block['type']) {
+                $events[] = ['content_block_start', ['index' => $index, 'content_block' => ['type' => 'tool_use', 'id' => $block['id'], 'name' => $block['name'], 'input' => []]]];
+                $json = json_encode($block['input'], \JSON_THROW_ON_ERROR);
+
+                foreach (str_split($json, 12) as $piece) {
+                    $events[] = ['content_block_delta', ['index' => $index, 'delta' => ['type' => 'input_json_delta', 'partial_json' => $piece]]];
+                }
+            } else {
+                $events[] = ['content_block_start', ['index' => $index, 'content_block' => ['type' => 'text', 'text' => '']]];
+
+                foreach (mb_str_split((string) $block['text'], 40) as $piece) {
+                    $events[] = ['content_block_delta', ['index' => $index, 'delta' => ['type' => 'text_delta', 'text' => $piece]]];
+                }
+            }
+
+            $events[] = ['content_block_stop', ['index' => $index]];
+        }
+
+        $events[] = ['message_delta', ['delta' => ['stop_reason' => $message['stop_reason'], 'stop_sequence' => null, 'stop_details' => $message['stop_details'] ?? null], 'usage' => ['output_tokens' => $usage['output_tokens'], 'input_tokens' => $usage['input_tokens'], 'cache_read_input_tokens' => $usage['cache_read_input_tokens'], 'cache_creation_input_tokens' => $usage['cache_creation_input_tokens']]]];
+        $events[] = ['message_stop', []];
+
+        $stream = '';
+
+        foreach ($events as [$type, $data]) {
+            $stream .= 'event: '.$type."\ndata: ".json_encode(['type' => $type] + $data, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE)."\n\n";
+        }
+
+        return $stream;
     }
 
     public function client(): Client

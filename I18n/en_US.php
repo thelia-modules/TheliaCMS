@@ -918,4 +918,5 @@ return [
     'This section uses a component the site no longer has.' => 'This section uses a component the site no longer has.',
     'The form could not be read.' => 'The form could not be read.',
     'By hand' => 'By hand',
+    'The model is writing: %characters% characters so far.' => 'The model is writing: %characters% characters so far.',
 ];
