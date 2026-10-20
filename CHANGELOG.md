@@ -54,6 +54,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.0.0)
 
+- **Add a section** under the preview of the content screen: a component the
+  site offers is added at the end of the draft with its example props, then
+  edited by hand. A page with no content yet can be started that way, without
+  the generator.
 - The sections of a draft are **reordered by hand** on the content screen,
   dragged by their handle or moved one place up or down with the arrows, with
   the right to change pages. The move is

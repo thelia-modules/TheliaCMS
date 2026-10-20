@@ -22,6 +22,9 @@
 
     var labels = JSON.parse(first.getAttribute("data-cms-content-labels") || "{}");
     var running = false;
+    // Set when a section is added: the preview drawn next is scrolled to the
+    // last section, the one just added, rather than left at the top.
+    var revealLast = false;
 
     /* ---- Notices --------------------------------------------------- */
 
@@ -381,8 +384,19 @@
             });
         }
 
+        function revealLastSection() {
+            var inner = previewDocument();
+            var sections = inner ? inner.querySelectorAll("[data-cms-section]") : [];
+
+            if (revealLast && sections.length) {
+                revealLast = false;
+                sections[sections.length - 1].scrollIntoView({ block: "start" });
+            }
+        }
+
         if (frame) {
             frame.addEventListener("load", markPreview);
+            frame.addEventListener("load", revealLastSection);
             markPreview();
         }
 
@@ -519,7 +533,7 @@
         // A section saved by hand comes back with the screen the server
         // redirects to, drawn in place like the end of a generation. When
         // the answer cannot be read, the form is sent the plain way.
-        root.querySelectorAll("form[data-cms-section-form], form[data-cms-remove], form[data-cms-move]").forEach(function (form) {
+        root.querySelectorAll("form[data-cms-section-form], form[data-cms-remove], form[data-cms-move], form[data-cms-add]").forEach(function (form) {
             form.addEventListener("submit", function (event) {
                 if (form.hasAttribute("data-cms-remove") && !window.confirm(labels.remove)) {
                     event.preventDefault();
@@ -539,6 +553,14 @@
 
                 event.preventDefault();
                 var button = form.querySelector("button[type=submit]");
+
+                // The panel listing the components belongs to no section: left
+                // open, the swap would read it as a panel to open again
+                // everywhere outside the sections.
+                if (form.hasAttribute("data-cms-add")) {
+                    form.closest("details").open = false;
+                    revealLast = true;
+                }
 
                 if (button) {
                     button.disabled = true;

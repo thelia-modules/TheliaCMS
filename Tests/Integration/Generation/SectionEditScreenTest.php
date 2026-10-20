@@ -24,7 +24,9 @@ use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
+use TheliaCMS\Content\SectionAvailability;
 use TheliaCMS\Page\Admin\CmsPageWriter;
+use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
 
@@ -182,6 +184,74 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $screen = $this->screen($this->url($page));
         self::assertSame(0, $screen->filter('[data-cms-reorder]')->count());
         self::assertSame(0, $screen->filter('[data-cms-grip]')->count());
+    }
+
+    public function testASectionIsAddedAtTheEndWithItsExampleProps(): void
+    {
+        $page = $this->pageWith([new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1>'])]);
+
+        $screen = $this->screen($this->url($page));
+        self::assertSame(1, $screen->filter('[data-testid="cms-content-add"]')->count(), 'The preview offers to add a section.');
+        self::assertSame(1, $screen->filter('[data-testid="cms-content-add-Partial:cms-form"]')->count());
+
+        $form = $screen->filter('[data-testid="cms-content-add-cms:richtext"]')->form();
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+        $document = Document::fromJson($content?->getDraftDocument());
+
+        self::assertSame(['intro', 'richtext'], array_map(static fn (Section $section): string => $section->id, $document?->sections ?? []));
+        self::assertStringContainsString('<h2>', (string) $document?->section('richtext')?->props['html'], 'The section holds the example of its component.');
+        self::assertStringContainsString('data-cms-section="richtext"', (string) $content?->getDraftHtml(), 'The draft is rendered again with it.');
+
+        $row = CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->orderById(\Propel\Runtime\ActiveQuery\Criteria::DESC)->findOne();
+        self::assertSame('manual', $row?->getKind());
+        self::assertStringContainsString('added by hand', (string) $row?->getPrompt());
+
+        self::assertSame(1, $this->screen($this->url($page))->filter('[data-testid="cms-builder-flash-success"]')->count());
+    }
+
+    public function testEveryComponentOfferedCanBeAddedFromItsExample(): void
+    {
+        $page = $this->pageWith([new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1>'])]);
+        $screen = $this->screen($this->url($page));
+        $names = $this->getService(SectionCatalog::class)->offeredNames();
+
+        foreach ($names as $name) {
+            $form = $screen->filter(\sprintf('[data-testid="cms-content-add-%s"]', $name))->form();
+            self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()), $name);
+        }
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+        $added = array_map(static fn (Section $section): string => $section->component, Document::fromJson($content?->getDraftDocument())?->sections ?? []);
+
+        self::assertSame(['cms:richtext', ...$names], $added, 'The example of every component is a section the site accepts.');
+    }
+
+    public function testAPageHoldingNothingStartsItsDraftWithTheAddedSection(): void
+    {
+        $page = new CmsPage();
+        $page->setParent(0)->setPosition(0)->setVisible(1)->setPageType('default');
+        $this->getService(CmsPageWriter::class)->saveDraft($page, $this->locale(), new PageDraft(title: 'Empty page'));
+        $this->renderedOnce();
+
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-content-add-cms:richtext"]')->form();
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+        self::assertSame(['richtext'], array_map(static fn (Section $section): string => $section->id, Document::fromJson($content?->getDraftDocument())?->sections ?? []));
+    }
+
+    public function testAComponentTheSiteNoLongerOffersIsNotAdded(): void
+    {
+        $page = $this->pageWith([new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1>'])]);
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-content-add-Partial:cms-form"]')->form();
+
+        $this->getService(SectionAvailability::class)->setOffered('Partial:cms-form', false);
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+        self::assertSame(1, $this->screen($this->url($page))->filter('[data-testid="cms-builder-flash-danger"]')->count());
+        self::assertSame(0, $this->client->getCrawler()->filter('[data-testid="cms-content-add-Partial:cms-form"]')->count(), 'The list no longer offers it.');
     }
 
     public function testMovingASectionThatIsNoLongerThereIsRefused(): void

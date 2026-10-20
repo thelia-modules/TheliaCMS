@@ -281,6 +281,32 @@
                     </div>
                 {% endif %}
 
+                {# At the end of the preview, where a new section lands: one form per
+                   component the site offers, posted in the background like the other
+                   changes by hand. #}
+                {% if addable is not empty %}
+                    <details class="cms-content__add" data-testid="cms-content-add">
+                        <summary class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ 'Add a section'|trans({}, 'theliacms') }}
+                        </summary>
+                        <p class="cms-content__add-hint">{{ 'The section is added at the end of the draft with example text, which you then edit by hand.'|trans({}, 'theliacms') }}</p>
+                        <ul class="cms-content__add-list">
+                            {% for component in addable %}
+                                <li>
+                                    <form method="post" action="{{ subject.url('add') }}" data-cms-add data-testid="cms-content-add-{{ component.name }}">
+                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                        <input type="hidden" name="component" value="{{ component.name }}">
+                                        <button type="submit" class="cms-content__add-choice">
+                                            <span class="cms-content__add-label">{{ component.label }} <code>{{ component.name }}</code></span>
+                                            <span class="cms-content__add-description">{{ component.description }}</span>
+                                        </button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </details>
+                {% endif %}
+
                 <div class="cms-content__progress" hidden data-cms-progress>
                     <div class="cms-content__progress-box" role="status" aria-live="polite">
                         <div class="d-flex align-items-center gap-2 mb-2">

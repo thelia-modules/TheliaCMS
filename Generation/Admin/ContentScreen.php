@@ -78,6 +78,7 @@ final readonly class ContentScreen
             'generator_notice' => $mayGenerate ? $this->notice() : null,
             'model' => $this->settings->model(),
             'toolkit_url' => $this->toolkit->url(),
+            'addable' => $mayPublish ? $this->addable() : [],
             'assets_version' => self::assetsVersion(),
         ]);
     }
@@ -113,6 +114,23 @@ final readonly class ContentScreen
                 'sources' => array_column($subject->translationSources, 'locale', 'label'),
             ])
             ->createView();
+    }
+
+    /**
+     * The components a section may be added from by hand: the ones the site
+     * offers, as the generator sees them.
+     *
+     * @return list<array{name: string, label: string, description: string}>
+     */
+    private function addable(): array
+    {
+        $components = [];
+
+        foreach ($this->catalog->offered() as $name => $definition) {
+            $components[] = ['name' => $name, 'label' => $definition->label(), 'description' => $definition->description()];
+        }
+
+        return $components;
     }
 
     /**

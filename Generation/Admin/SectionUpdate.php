@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\InvalidDocumentException;
+use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\TheliaCMS;
@@ -152,6 +153,38 @@ final readonly class SectionUpdate
         $this->log->recordManual($subject->target, $subject->locale, $document->toJson(), $dropped
             ? \sprintf('Section "%s" moved to rank %d by hand.', $section->id, (int) $position + 1)
             : \sprintf('Section "%s" moved %s by hand.', $section->id, $direction));
+
+        return [];
+    }
+
+    /**
+     * A component of the catalogue added by hand at the end of the draft,
+     * filled with its sample props: the section shows at once in the preview,
+     * and its text is then edited like any other. A page holding nothing yet
+     * starts its draft with it. Only a component the site offers is added.
+     *
+     * @return list<string> what went wrong, empty when the draft is saved
+     */
+    public function add(Request $request, ContentSubject $subject, ?Document $current, \Closure $save): array
+    {
+        $name = (string) $request->request->get('component', '');
+        $definition = $this->catalog->offered()[$name] ?? null;
+
+        if (null === $definition) {
+            return [$this->translator->trans('This component is not offered on this site: reload the screen.', [], TheliaCMS::DOMAIN_NAME)];
+        }
+
+        $current ??= new Document([]);
+
+        try {
+            $section = new Section($current->freeSectionId($name), $name, $definition->normalizeProps($definition->sample()));
+            $document = $current->withSectionAppended($section);
+            $save($document);
+        } catch (InvalidDocumentException $exception) {
+            return $exception->problems;
+        }
+
+        $this->log->recordManual($subject->target, $subject->locale, $document->toJson(), \sprintf('Section "%s" added by hand (%s).', $section->id, $name));
 
         return [];
     }

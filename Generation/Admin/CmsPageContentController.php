@@ -232,6 +232,37 @@ final readonly class CmsPageContentController
     }
 
     /**
+     * A section added by hand at the end of the draft: like a change by hand,
+     * it takes the right to change pages. A page holding nothing yet starts
+     * its draft with it.
+     */
+    #[Route('/add', name: 'add', methods: ['POST'])]
+    public function add(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayPublish();
+
+        $locale = $lang->getLocale();
+        $problems = $this->sectionUpdate->add(
+            $request,
+            $this->subject($page, $lang),
+            $this->documentOf($page, $locale),
+            fn (Document $document) => $this->writer->saveContent($page, $locale, $document),
+        );
+
+        if ([] === $problems) {
+            $this->flash($request, 'success', $this->translate('The section is added at the end of the draft, with example text: edit it by hand.'));
+        }
+
+        foreach ($problems as $problem) {
+            $this->flash($request, 'danger', $problem);
+        }
+
+        return $this->back($page, $lang);
+    }
+
+    /**
      * A section moved one place up or down by hand: like a change by hand, it
      * takes the right to change pages.
      */
@@ -377,6 +408,7 @@ final readonly class CmsPageContentController
                 'update' => $this->urls->generate('admin.cms.pages.content.update', $parameters),
                 'remove' => $this->urls->generate('admin.cms.pages.content.remove', $parameters),
                 'move' => $this->urls->generate('admin.cms.pages.content.move', $parameters),
+                'add' => $this->urls->generate('admin.cms.pages.content.add', $parameters),
                 'translate' => $this->urls->generate('admin.cms.pages.content.translate', $parameters),
                 'publish' => $this->urls->generate('admin.cms.pages.content.publish', $parameters),
             ],

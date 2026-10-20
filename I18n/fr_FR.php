@@ -829,4 +829,8 @@ return [
     'Move section %rank% down' => 'Descendre la section %rank%',
     'The order of the sections is saved in the draft.' => 'L’ordre des sections est enregistré dans le brouillon.',
     'Drag to move this section' => 'Glisser pour déplacer cette section',
+    'Add a section' => 'Ajouter une section',
+    'The section is added at the end of the draft with example text, which you then edit by hand.' => 'La section est ajoutée à la fin du brouillon avec un texte d’exemple, que vous modifiez ensuite à la main.',
+    'The section is added at the end of the draft, with example text: edit it by hand.' => 'La section est ajoutée à la fin du brouillon, avec un texte d’exemple : modifiez-la à la main.',
+    'This component is not offered on this site: reload the screen.' => 'Ce composant n’est pas proposé sur ce site : rechargez l’écran.',
 ];

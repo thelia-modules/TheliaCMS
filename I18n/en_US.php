@@ -829,4 +829,8 @@ return [
     'Move section %rank% down' => 'Move section %rank% down',
     'The order of the sections is saved in the draft.' => 'The order of the sections is saved in the draft.',
     'Drag to move this section' => 'Drag to move this section',
+    'Add a section' => 'Add a section',
+    'The section is added at the end of the draft with example text, which you then edit by hand.' => 'The section is added at the end of the draft with example text, which you then edit by hand.',
+    'The section is added at the end of the draft, with example text: edit it by hand.' => 'The section is added at the end of the draft, with example text: edit it by hand.',
+    'This component is not offered on this site: reload the screen.' => 'This component is not offered on this site: reload the screen.',
 ];

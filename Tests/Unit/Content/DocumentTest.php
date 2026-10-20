@@ -87,6 +87,25 @@ final class DocumentTest extends TestCase
         self::assertSame($document, $document->withSectionAt('gone', 0));
     }
 
+    public function testAnAddedSectionIsGivenAnIdNoOtherHolds(): void
+    {
+        $document = new Document([
+            new Section('crossselling', 'Layouts:CrossSelling:Base', []),
+            new Section('richtext', RichTextSection::NAME, []),
+            new Section('richtext-2', RichTextSection::NAME, []),
+        ]);
+
+        self::assertSame('crossselling-2', $document->freeSectionId('Layouts:CrossSelling:Base'));
+        self::assertSame('richtext-3', $document->freeSectionId(RichTextSection::NAME));
+        self::assertSame('cms-form', $document->freeSectionId('Partial:cms-form'));
+        self::assertSame('subheader-alt', $document->freeSectionId('Layouts:Subheader:Alt'), 'A variant other than Base says something.');
+        self::assertSame('section', (new Document([]))->freeSectionId(':::'));
+
+        $added = $document->withSectionAppended(new Section('cms-form', 'Partial:cms-form', []));
+        self::assertSame('cms-form', $added->sections[3]->id);
+        self::assertCount(3, $document->sections, 'The document added to is left as it is.');
+    }
+
     public function testAnEmptyColumnIsNoDocument(): void
     {
         self::assertNull(Document::fromJson(null));

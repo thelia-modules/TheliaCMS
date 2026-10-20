@@ -121,6 +121,40 @@ final readonly class Document
         return null;
     }
 
+    public function withSectionAppended(Section $section): self
+    {
+        return new self([...$this->sections, $section]);
+    }
+
+    /**
+     * An id no section of the document holds yet, read from the component:
+     * `Layouts:CrossSelling:Base` gives `crossselling`, then `crossselling-2`.
+     * The family in front and the `Base` variant behind say nothing of what
+     * the section is.
+     */
+    public function freeSectionId(string $component): string
+    {
+        $segments = explode(':', $component);
+
+        if (\count($segments) > 1) {
+            array_shift($segments);
+        }
+
+        if (\count($segments) > 1 && 'base' === strtolower((string) end($segments))) {
+            array_pop($segments);
+        }
+
+        $base = trim(strtolower((string) preg_replace('/[^a-z0-9]+/i', '-', implode('-', $segments))), '-');
+        $base = '' === $base ? 'section' : $base;
+        $id = $base;
+
+        for ($suffix = 2; null !== $this->section($id); ++$suffix) {
+            $id = $base.'-'.$suffix;
+        }
+
+        return $id;
+    }
+
     public function withoutSection(string $id): self
     {
         return new self(array_values(array_filter($this->sections, static fn (Section $section): bool => $section->id !== $id)));
