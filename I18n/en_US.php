@@ -823,4 +823,10 @@ return [
     '"%label%" is no longer offered to the generator. The pages that use it are left as they are.' => '"%label%" is no longer offered to the generator. The pages that use it are left as they are.',
     'See how they render in the toolkit' => 'See how they render in the toolkit',
     'See' => 'See',
+    'Move this section up' => 'Move this section up',
+    'Move this section down' => 'Move this section down',
+    'Move section %rank% up' => 'Move section %rank% up',
+    'Move section %rank% down' => 'Move section %rank% down',
+    'The order of the sections is saved in the draft.' => 'The order of the sections is saved in the draft.',
+    'Drag to move this section' => 'Drag to move this section',
 ];

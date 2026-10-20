@@ -232,6 +232,42 @@ final readonly class CmsPageContentController
     }
 
     /**
+     * A section moved one place up or down by hand: like a change by hand, it
+     * takes the right to change pages.
+     */
+    #[Route('/move', name: 'move', methods: ['POST'])]
+    public function move(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayPublish();
+
+        $current = $this->documentOrFail($request, $page, $lang);
+
+        if (!$current instanceof Document) {
+            return $this->back($page, $lang);
+        }
+
+        $locale = $lang->getLocale();
+        $problems = $this->sectionUpdate->move(
+            $request,
+            $this->subject($page, $lang),
+            $current,
+            fn (Document $document) => $this->writer->saveContent($page, $locale, $document),
+        );
+
+        if ([] === $problems) {
+            $this->flash($request, 'success', $this->translate('The order of the sections is saved in the draft.'));
+        }
+
+        foreach ($problems as $problem) {
+            $this->flash($request, 'danger', $problem);
+        }
+
+        return $this->back($page, $lang);
+    }
+
+    /**
      * This language written from the draft of another: the generator keeps
      * the sections and writes their texts for the new reader.
      */
@@ -340,6 +376,7 @@ final readonly class CmsPageContentController
                 'section' => $this->urls->generate('admin.cms.pages.content.section', $parameters),
                 'update' => $this->urls->generate('admin.cms.pages.content.update', $parameters),
                 'remove' => $this->urls->generate('admin.cms.pages.content.remove', $parameters),
+                'move' => $this->urls->generate('admin.cms.pages.content.move', $parameters),
                 'translate' => $this->urls->generate('admin.cms.pages.content.translate', $parameters),
                 'publish' => $this->urls->generate('admin.cms.pages.content.publish', $parameters),
             ],

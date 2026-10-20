@@ -118,10 +118,17 @@
                 {% if sections is not empty %}
                     <section class="cms-content__section" data-testid="cms-content-sections">
                         <h2 class="cms-content__heading">{{ 'The sections of the draft'|trans({}, 'theliacms') }}</h2>
-                        <ol class="cms-content__sections">
+                        {% set reorderable = may_publish and sections|length > 1 %}
+                        {# Dragged by its handle, dropped elsewhere in the list: the script
+                           posts the new rank to the address the arrows post to. The token
+                           travels in the body, never in a URL. #}
+                        <ol class="cms-content__sections"{% if reorderable %} data-cms-reorder="{{ subject.url('move') }}" data-cms-reorder-token="{{ assignToken() }}"{% endif %}>
                             {% for section in sections %}
                                 <li class="cms-content__item" data-section="{{ section.id }}" data-cms-section-item>
                                     <div class="cms-content__item-head">
+                                        {% if reorderable %}
+                                            <span class="cms-content__item-grip" data-cms-grip title="{{ 'Drag to move this section'|trans({}, 'theliacms') }}" aria-hidden="true"><i class="bi bi-grip-vertical"></i></span>
+                                        {% endif %}
                                         <button type="button" class="cms-content__item-locate" data-cms-locate
                                                 title="{{ 'Show this section in the preview'|trans({}, 'theliacms') }}"
                                                 aria-label="{{ 'Show section %rank% in the preview'|trans({ '%rank%': section.rank }, 'theliacms') }}">
@@ -130,13 +137,36 @@
                                         </button>
                                         <code class="cms-content__item-component">{{ section.component }}</code>
                                         {% if may_publish %}
-                                            <form method="post" action="{{ subject.url('remove') }}" class="cms-content__item-remove-form" data-cms-remove data-testid="cms-section-remove-{{ section.id }}">
-                                                <input type="hidden" name="_token" value="{{ assignToken() }}">
-                                                <input type="hidden" name="section" value="{{ section.id }}">
-                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="{{ 'Remove this section'|trans({}, 'theliacms') }}" aria-label="{{ 'Remove section %rank%'|trans({ '%rank%': section.rank }, 'theliacms') }}">
-                                                    <i class="bi bi-trash" aria-hidden="true"></i>
-                                                </button>
-                                            </form>
+                                            <div class="cms-content__item-actions">
+                                                {# The first section has nowhere to go up to, the last nowhere down to. #}
+                                                {% if not loop.first %}
+                                                    <form method="post" action="{{ subject.url('move') }}" class="cms-content__item-move-form" data-cms-move data-testid="cms-section-move-up-{{ section.id }}">
+                                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                                        <input type="hidden" name="section" value="{{ section.id }}">
+                                                        <input type="hidden" name="direction" value="up">
+                                                        <button type="submit" class="btn btn-sm btn-link text-secondary p-0" title="{{ 'Move this section up'|trans({}, 'theliacms') }}" aria-label="{{ 'Move section %rank% up'|trans({ '%rank%': section.rank }, 'theliacms') }}">
+                                                            <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                                {% if not loop.last %}
+                                                    <form method="post" action="{{ subject.url('move') }}" class="cms-content__item-move-form" data-cms-move data-testid="cms-section-move-down-{{ section.id }}">
+                                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                                        <input type="hidden" name="section" value="{{ section.id }}">
+                                                        <input type="hidden" name="direction" value="down">
+                                                        <button type="submit" class="btn btn-sm btn-link text-secondary p-0" title="{{ 'Move this section down'|trans({}, 'theliacms') }}" aria-label="{{ 'Move section %rank% down'|trans({ '%rank%': section.rank }, 'theliacms') }}">
+                                                            <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                                <form method="post" action="{{ subject.url('remove') }}" class="cms-content__item-remove-form" data-cms-remove data-testid="cms-section-remove-{{ section.id }}">
+                                                    <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                                    <input type="hidden" name="section" value="{{ section.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="{{ 'Remove this section'|trans({}, 'theliacms') }}" aria-label="{{ 'Remove section %rank%'|trans({ '%rank%': section.rank }, 'theliacms') }}">
+                                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         {% endif %}
                                     </div>
                                     {% if section.excerpt %}

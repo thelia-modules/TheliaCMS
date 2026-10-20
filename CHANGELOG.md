@@ -54,6 +54,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.0.0)
 
+- The sections of a draft are **reordered by hand** on the content screen,
+  dragged by their handle or moved one place up or down with the arrows, with
+  the right to change pages. The move is
+  saved in the draft and written to the ledger like any change by hand.
 - **CMS > Components** lists the components of the catalogue, where each
   comes from and how many pages use it, and switches one off for the
   generator. A component switched off is left out of what the generator reads

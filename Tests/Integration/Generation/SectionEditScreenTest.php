@@ -119,6 +119,86 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         self::assertSame(1, $this->screen($this->url($page))->filter('[data-testid="cms-builder-flash-danger"]')->count());
     }
 
+    public function testASectionIsMovedByHandAndTheLedgerSaysSo(): void
+    {
+        $page = $this->pageWith([
+            new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1><p>Un texte.</p>']),
+            new Section('services', 'cms:richtext', ['html' => '<h2>Services</h2><p>Ce que nous faisons.</p>']),
+            new Section('faq', 'cms:richtext', ['html' => '<h2>Questions</h2><p>Combien ? Sur devis.</p>']),
+        ]);
+
+        $screen = $this->screen($this->url($page));
+        self::assertSame(0, $screen->filter('[data-testid="cms-section-move-up-intro"]')->count(), 'The first section has nowhere to go up to.');
+        self::assertSame(0, $screen->filter('[data-testid="cms-section-move-down-faq"]')->count(), 'The last section has nowhere to go down to.');
+        self::assertSame(1, $screen->filter('[data-testid="cms-section-move-down-intro"]')->count());
+
+        $form = $screen->filter('[data-testid="cms-section-move-up-faq"]')->form();
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+        $document = Document::fromJson($content?->getDraftDocument());
+
+        self::assertSame(['intro', 'faq', 'services'], array_map(static fn (Section $section): string => $section->id, $document?->sections ?? []));
+        $html = (string) $content?->getDraftHtml();
+        self::assertLessThan(strpos($html, 'Services'), strpos($html, 'Combien ?'), 'The draft is rendered again in the new order.');
+        self::assertNull($content?->getPublishedHtml(), 'What is online does not move until the draft is published.');
+
+        $row = CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->orderById(\Propel\Runtime\ActiveQuery\Criteria::DESC)->findOne();
+        self::assertSame('manual', $row?->getKind());
+        self::assertStringContainsString('moved up', (string) $row?->getPrompt());
+
+        $screen = $this->screen($this->url($page));
+        self::assertSame(1, $screen->filter('[data-testid="cms-builder-flash-success"]')->count());
+        self::assertSame(['intro', 'faq', 'services'], $screen->filter('[data-testid="cms-content-sections"] li[data-section]')->each(static fn (Crawler $item): string => (string) $item->attr('data-section')));
+    }
+
+    public function testASectionIsDroppedAtARank(): void
+    {
+        $page = $this->pageWith([
+            new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1>']),
+            new Section('services', 'cms:richtext', ['html' => '<h2>Services</h2>']),
+            new Section('faq', 'cms:richtext', ['html' => '<h2>Questions</h2>']),
+        ]);
+
+        $screen = $this->screen($this->url($page));
+        $list = $screen->filter('[data-testid="cms-content-sections"] ol[data-cms-reorder]');
+        self::assertSame(1, $list->count(), 'The list says where a dropped section is posted.');
+        self::assertSame(3, $list->filter('[data-cms-grip]')->count(), 'Each section has a handle.');
+
+        $action = (string) $list->attr('data-cms-reorder');
+        self::assertSame(302, $this->send('POST', $action, ['_token' => (string) $list->attr('data-cms-reorder-token'), 'section' => 'intro', 'position' => '2']));
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+        self::assertSame(['services', 'faq', 'intro'], array_map(static fn (Section $section): string => $section->id, Document::fromJson($content?->getDraftDocument())?->sections ?? []));
+
+        $row = CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->orderById(\Propel\Runtime\ActiveQuery\Criteria::DESC)->findOne();
+        self::assertStringContainsString('moved to rank 3', (string) $row?->getPrompt());
+    }
+
+    public function testASingleSectionHasNothingToDrag(): void
+    {
+        $page = $this->pageWith([new Section('intro', 'cms:richtext', ['html' => '<h1>Seule</h1>'])]);
+
+        $screen = $this->screen($this->url($page));
+        self::assertSame(0, $screen->filter('[data-cms-reorder]')->count());
+        self::assertSame(0, $screen->filter('[data-cms-grip]')->count());
+    }
+
+    public function testMovingASectionThatIsNoLongerThereIsRefused(): void
+    {
+        $page = $this->pageWith([
+            new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1>']),
+            new Section('faq', 'cms:richtext', ['html' => '<h2>Questions</h2>']),
+        ]);
+
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-move-up-faq"]')->form();
+        $values = $form->getPhpValues();
+        $values['section'] = 'gone';
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $values));
+        self::assertSame(1, $this->screen($this->url($page))->filter('[data-testid="cms-builder-flash-danger"]')->count());
+    }
+
     public function testRowsOfAListAreAddedAndRemoved(): void
     {
         if (null === $this->getService(SectionCatalog::class)->find(self::LIST_COMPONENT)) {

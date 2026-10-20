@@ -117,6 +117,45 @@ final readonly class SectionUpdate
         return [];
     }
 
+    /**
+     * A section moved by hand: one place up or down (`direction`), or
+     * dropped at a rank counted from 0 (`position`).
+     *
+     * @return list<string> what went wrong, empty when the draft is saved
+     */
+    public function move(Request $request, ContentSubject $subject, Document $current, \Closure $save): array
+    {
+        $sectionId = (string) $request->request->get('section', '');
+        $section = '' === $sectionId ? null : $current->section($sectionId);
+        $direction = (string) $request->request->get('direction', '');
+        $position = $request->request->get('position');
+        $dropped = \is_string($position) && ctype_digit($position);
+
+        if (null === $section || (!$dropped && !\in_array($direction, ['up', 'down'], true))) {
+            return [$this->translator->trans('This section is no longer in the document: reload the screen.', [], TheliaCMS::DOMAIN_NAME)];
+        }
+
+        $document = $dropped
+            ? $current->withSectionAt($section->id, (int) $position)
+            : $current->withSectionMoved($section->id, 'up' === $direction ? -1 : 1);
+
+        if ($document === $current) {
+            return [];
+        }
+
+        try {
+            $save($document);
+        } catch (InvalidDocumentException $exception) {
+            return $exception->problems;
+        }
+
+        $this->log->recordManual($subject->target, $subject->locale, $document->toJson(), $dropped
+            ? \sprintf('Section "%s" moved to rank %d by hand.', $section->id, (int) $position + 1)
+            : \sprintf('Section "%s" moved %s by hand.', $section->id, $direction));
+
+        return [];
+    }
+
     private static function postedSection(Request $request): ?string
     {
         foreach ($request->request->all() as $name => $fields) {

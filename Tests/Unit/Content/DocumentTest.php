@@ -54,6 +54,39 @@ final class DocumentTest extends TestCase
         self::assertSame(Document::VERSION, $read->toArray()['version']);
     }
 
+    public function testASectionMovesOnePlaceAndStopsAtEitherEnd(): void
+    {
+        $document = new Document([
+            new Section('a', RichTextSection::NAME, []),
+            new Section('b', RichTextSection::NAME, []),
+            new Section('c', RichTextSection::NAME, []),
+        ]);
+        $ids = static fn (Document $moved): array => array_map(static fn (Section $section): string => $section->id, $moved->sections);
+
+        self::assertSame(['a', 'c', 'b'], $ids($document->withSectionMoved('c', -1)));
+        self::assertSame(['b', 'a', 'c'], $ids($document->withSectionMoved('a', 1)));
+        self::assertSame($document, $document->withSectionMoved('a', -1), 'The first section stays first.');
+        self::assertSame($document, $document->withSectionMoved('c', 1), 'The last section stays last.');
+        self::assertSame($document, $document->withSectionMoved('gone', 1));
+    }
+
+    public function testASectionDroppedAtARankTakesItAndTheOthersCloseUp(): void
+    {
+        $document = new Document([
+            new Section('a', RichTextSection::NAME, []),
+            new Section('b', RichTextSection::NAME, []),
+            new Section('c', RichTextSection::NAME, []),
+            new Section('d', RichTextSection::NAME, []),
+        ]);
+        $ids = static fn (Document $moved): array => array_map(static fn (Section $section): string => $section->id, $moved->sections);
+
+        self::assertSame(['b', 'c', 'a', 'd'], $ids($document->withSectionAt('a', 2)));
+        self::assertSame(['d', 'a', 'b', 'c'], $ids($document->withSectionAt('d', 0)));
+        self::assertSame(['a', 'c', 'd', 'b'], $ids($document->withSectionAt('b', 99)), 'Past the end is last.');
+        self::assertSame($document, $document->withSectionAt('c', 2), 'Dropped where it was.');
+        self::assertSame($document, $document->withSectionAt('gone', 0));
+    }
+
     public function testAnEmptyColumnIsNoDocument(): void
     {
         self::assertNull(Document::fromJson(null));

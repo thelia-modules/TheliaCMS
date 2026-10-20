@@ -71,6 +71,56 @@ final readonly class Document
         return new self($sections);
     }
 
+    /**
+     * The section moved by one place, up (-1) or down (1). At the top or at
+     * the bottom already, the document is returned as it is.
+     */
+    public function withSectionMoved(string $id, int $direction): self
+    {
+        $index = $this->indexOf($id);
+
+        if (null === $index) {
+            return $this;
+        }
+
+        $target = $index + ($direction < 0 ? -1 : 1);
+
+        return isset($this->sections[$target]) ? $this->withSectionAt($id, $target) : $this;
+    }
+
+    /**
+     * The section taken out and put back at a rank counted from 0, the
+     * others closing up around it: what dropping it there gives. A rank past
+     * the end puts it last; a section the document does not hold, or one
+     * already there, leaves the document as it is.
+     */
+    public function withSectionAt(string $id, int $position): self
+    {
+        $index = $this->indexOf($id);
+        $position = max(0, min($position, \count($this->sections) - 1));
+
+        if (null === $index || $index === $position) {
+            return $this;
+        }
+
+        $sections = $this->sections;
+        [$moved] = array_splice($sections, $index, 1);
+        array_splice($sections, $position, 0, [$moved]);
+
+        return new self($sections);
+    }
+
+    private function indexOf(string $id): ?int
+    {
+        foreach ($this->sections as $index => $section) {
+            if ($section->id === $id) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
     public function withoutSection(string $id): self
     {
         return new self(array_values(array_filter($this->sections, static fn (Section $section): bool => $section->id !== $id)));

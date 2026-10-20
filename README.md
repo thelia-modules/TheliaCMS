@@ -217,7 +217,10 @@ suggested, not required) and in a plain textarea otherwise. What comes back
 goes through the same validator as a generated document and is stored the same
 way, so the next request to the generator starts from the corrected text. A
 word corrected by hand costs nothing and takes the right to change pages, not
-the generate right.
+the generate right. The same right reorders the sections, dragged by their
+handle or moved one place up or down with the arrows (the way from the
+keyboard), and removes them; what is online changes when the draft is
+published.
 
 Every action on the screen is a form that posts and comes back with a message,
 so it works without its script. With it, the forms post in the background and

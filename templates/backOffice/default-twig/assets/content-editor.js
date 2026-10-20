@@ -415,12 +415,111 @@
             }
         });
 
+        /* ---- Reordering by drag and drop -------------------------------- */
+
+        // A section is dragged by its handle only: the whole item draggable
+        // would steal the selection of its text and the clicks of its forms.
+        // It moves in the list while it is dragged, and its new rank is
+        // posted when it is dropped; the arrows stay the way to do it from
+        // the keyboard.
+        root.querySelectorAll("[data-cms-reorder]").forEach(function (list) {
+            var dragged = null;
+            var from = -1;
+
+            function items() {
+                return Array.prototype.slice.call(list.querySelectorAll(":scope > [data-cms-section-item]"));
+            }
+
+            list.querySelectorAll("[data-cms-grip]").forEach(function (grip) {
+                var item = grip.closest("[data-cms-section-item]");
+
+                grip.addEventListener("pointerdown", function () { item.draggable = true; });
+                grip.addEventListener("pointerup", function () { item.draggable = false; });
+            });
+
+            list.addEventListener("dragstart", function (event) {
+                var item = event.target.closest && event.target.closest("[data-cms-section-item]");
+
+                if (!item || !item.draggable || running) {
+                    event.preventDefault();
+
+                    return;
+                }
+
+                dragged = item;
+                from = items().indexOf(item);
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", item.getAttribute("data-section"));
+                item.classList.add("cms-content__item--dragged");
+            });
+
+            list.addEventListener("dragover", function (event) {
+                if (!dragged) {
+                    return;
+                }
+
+                event.preventDefault();
+                var over = event.target.closest && event.target.closest("[data-cms-section-item]");
+
+                if (!over || over === dragged) {
+                    return;
+                }
+
+                var box = over.getBoundingClientRect();
+                list.insertBefore(dragged, event.clientY < box.top + box.height / 2 ? over : over.nextSibling);
+            });
+
+            list.addEventListener("drop", function (event) {
+                if (dragged) {
+                    event.preventDefault();
+                }
+            });
+
+            list.addEventListener("dragend", function () {
+                if (!dragged) {
+                    return;
+                }
+
+                var item = dragged;
+                var to = items().indexOf(item);
+                dragged = null;
+                item.draggable = false;
+                item.classList.remove("cms-content__item--dragged");
+
+                if (to === from) {
+                    return;
+                }
+
+                var body = new FormData();
+                body.append("_token", list.getAttribute("data-cms-reorder-token"));
+                body.append("section", item.getAttribute("data-section"));
+                body.append("position", String(to));
+                running = true;
+
+                fetch(list.getAttribute("data-cms-reorder"), {
+                    method: "POST",
+                    body: body,
+                    credentials: "same-origin",
+                    redirect: "follow",
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                }).then(function (response) {
+                    if (!response.ok) {
+                        throw new Error(String(response.status));
+                    }
+
+                    return response.text();
+                }).then(swap).catch(function () {
+                    window.location.reload();
+                });
+            });
+        });
+
         /* ---- Editing by hand ------------------------------------------- */
 
         // A section saved by hand comes back with the screen the server
         // redirects to, drawn in place like the end of a generation. When
         // the answer cannot be read, the form is sent the plain way.
-        root.querySelectorAll("form[data-cms-section-form], form[data-cms-remove]").forEach(function (form) {
+        root.querySelectorAll("form[data-cms-section-form], form[data-cms-remove], form[data-cms-move]").forEach(function (form) {
             form.addEventListener("submit", function (event) {
                 if (form.hasAttribute("data-cms-remove") && !window.confirm(labels.remove)) {
                     event.preventDefault();

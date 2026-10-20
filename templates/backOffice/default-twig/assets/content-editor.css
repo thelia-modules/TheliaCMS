@@ -140,8 +140,27 @@ body:has(.cms-content) {
     font-size: 0.875rem;
 }
 
-.cms-content__item-remove-form {
+.cms-content__item-grip {
+    flex: 0 0 auto;
+    color: #5c636a;
+    cursor: grab;
+    touch-action: none;
+}
+
+.cms-content__item--dragged {
+    opacity: 0.5;
+    border-style: dashed;
+}
+
+.cms-content__item-actions {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.75rem;
     margin-left: auto;
+}
+
+.cms-content__item-move-form,
+.cms-content__item-remove-form {
     line-height: 1;
 }
 
