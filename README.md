@@ -799,7 +799,9 @@ only needs a class to tell the types apart.
 
 A theme opens its own Twig components to pages by naming them under
 `sections.components` in `config/theliacms.yaml`; their props are read off the
-template, and nothing is opened until the theme says so. A module adds a
+template, and nothing is opened until the theme says so. A component whose
+defaults render nothing gets the props it is shown with under
+`sections.examples`, which is what a section added by hand starts from. A module adds a
 component of its own with one class implementing `SectionDefinitionInterface`.
 The catalogue and the shape of a document: [docs/sections.md](docs/sections.md);
 adding a component, step by step, and what the generator does with it:

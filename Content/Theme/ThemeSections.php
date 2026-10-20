@@ -29,9 +29,19 @@ use Symfony\Component\Yaml\Yaml;
  *             - Organisms:ArticleCard:Base
  *         hidden:
  *             - Partial:cms-form
+ *         examples:
+ *             Organisms:VideoPlayer:Base:
+ *                 provider: youtube
+ *                 embedUrl: https://www.youtube-nocookie.com/embed/…
  *
  * `hidden` names the sections of the module the theme puts away, because it
  * opens a component of its own for the same thing.
+ *
+ * `examples` gives a component the props it is shown with, written as the
+ * component names them: what the toolkit draws and the generator is shown,
+ * and what a section added by hand starts from. The defaults of its props
+ * fill the rest; a component whose defaults render nothing (a video player
+ * with no video) needs one.
  *
  * Nothing is opened by default: a component of a shop — a cart line, a
  * checkout step — makes no sense on a page, and the theme is the one that
@@ -43,12 +53,14 @@ final readonly class ThemeSections
     public const string FILE_NAME = 'config/theliacms.yaml';
 
     /**
-     * @param list<string> $components
-     * @param list<string> $hidden
+     * @param list<string>                        $components
+     * @param list<string>                        $hidden
+     * @param array<string, array<string, mixed>> $examples props as the component names them, by component
      */
     public function __construct(
         public array $components = [],
         public array $hidden = [],
+        public array $examples = [],
     ) {
     }
 
@@ -63,7 +75,7 @@ final readonly class ThemeSections
             $declared = self::readFrom($directory);
 
             if (null !== $declared) {
-                return new self($declared['components'], $declared['hidden']);
+                return new self($declared['components'], $declared['hidden'], $declared['examples']);
             }
         }
 
@@ -71,7 +83,7 @@ final readonly class ThemeSections
     }
 
     /**
-     * @return array{components: list<string>, hidden: list<string>}|null null when the theme declares nothing
+     * @return array{components: list<string>, hidden: list<string>, examples: array<string, array<string, mixed>>}|null null when the theme declares nothing
      */
     private static function readFrom(string $themeDirectory): ?array
     {
@@ -100,7 +112,32 @@ final readonly class ThemeSections
         return [
             'components' => self::names($sections['components'] ?? [], 'sections.components', $file),
             'hidden' => self::names($sections['hidden'] ?? [], 'sections.hidden', $file),
+            'examples' => self::examples($sections['examples'] ?? [], $file),
         ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private static function examples(mixed $examples, string $file): array
+    {
+        if (null === $examples) {
+            return [];
+        }
+
+        if (!\is_array($examples) || ([] !== $examples && array_is_list($examples))) {
+            throw new \InvalidArgumentException(\sprintf('The "sections.examples" key of %s must map a component name to its props.', $file));
+        }
+
+        self::names(array_keys($examples), 'sections.examples', $file);
+
+        foreach ($examples as $name => $props) {
+            if (!\is_array($props) || ([] !== $props && array_is_list($props))) {
+                throw new \InvalidArgumentException(\sprintf('The example of "%s" in %s must map prop names to values.', $name, $file));
+            }
+        }
+
+        return $examples;
     }
 
     /**

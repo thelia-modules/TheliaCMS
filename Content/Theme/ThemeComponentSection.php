@@ -32,6 +32,7 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
     /**
      * @param array<string, string> $twigNames the name of each prop as the component spells it, by the name the schema uses
      * @param list<string>          $idLists   the props that hold several records, handed to the component as a list of ids
+     * @param array<string, mixed>  $example   props the theme shows the component with, by the name the schema uses
      */
     public function __construct(
         private string $component,
@@ -40,6 +41,7 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
         private array $twigNames,
         private ComponentRendererInterface $renderer,
         private array $idLists = [],
+        private array $example = [],
     ) {
     }
 
@@ -84,7 +86,9 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
             };
         }
 
-        return $sample;
+        // What the theme declares wins over the defaults; a name the
+        // component does not take is left out.
+        return [...$sample, ...array_intersect_key($this->example, $sample)];
     }
 
     public function normalizeProps(array $props): array

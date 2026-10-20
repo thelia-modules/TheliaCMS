@@ -31,6 +31,24 @@ sections:
         - Partial:cms-form
 ```
 
+A component is shown — in the toolkit, to the generator, and in a section
+added by hand on the content screen — with its example: the defaults of its
+props, the first rows of a list of products. A component whose defaults
+render nothing, such as a video player with no video, gets props of its own
+under `sections.examples`, written the way the component names them; the
+defaults fill the rest, and a name the component does not take is ignored:
+
+```yaml
+sections:
+    components:
+        - Organisms:VideoPlayer:Base
+    examples:
+        Organisms:VideoPlayer:Base:
+            alt: Big Buck Bunny, a short film of the Blender Foundation
+            provider: youtube
+            embedUrl: https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ
+```
+
 Nothing is opened until the theme says so. A name is two or more segments of
 letters, digits and underscores joined by `:`, and is looked up as
 `@Flexy/<segments>.html.twig` with the segments as directories, so

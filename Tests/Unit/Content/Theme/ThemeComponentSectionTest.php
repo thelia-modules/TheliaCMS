@@ -47,4 +47,21 @@ final class ThemeComponentSectionTest extends TestCase
         self::assertSame(['Layouts:CrossSelling:Base', ['title' => 'Picked', 'productIds' => [22, 17]]], $received, 'The ids, in order, under the name the component spells; no id is no row.');
         self::assertSame([['id' => 1], ['id' => 2]], $section->sample()['product_ids'], 'The example shows the shape of a row.');
     }
+
+    public function testTheExampleOfTheThemeWinsOverTheDefaults(): void
+    {
+        $schema = new PropSchema([
+            Prop::text('alt', 'alt', 'Default text'),
+            Prop::text('embed_url', 'embed_url'),
+            Prop::text('provider', 'provider'),
+        ]);
+        $example = ['embed_url' => 'https://www.youtube-nocookie.com/embed/abc', 'provider' => 'youtube', 'unknown' => 'dropped'];
+        $section = new ThemeComponentSection('Organisms:VideoPlayer:Base', '', $schema, [], $this->createStub(ComponentRendererInterface::class), [], $example);
+
+        self::assertSame(
+            ['alt' => 'Default text', 'embed_url' => 'https://www.youtube-nocookie.com/embed/abc', 'provider' => 'youtube'],
+            $section->sample(),
+            'The theme fills what it gives, the defaults the rest, and a prop the component does not take is left out.',
+        );
+    }
 }

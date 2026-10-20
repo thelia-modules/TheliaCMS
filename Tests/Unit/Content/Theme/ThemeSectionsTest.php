@@ -44,4 +44,25 @@ final class ThemeSectionsTest extends TestCase
             @rmdir($directory);
         }
     }
+
+    public function testATHemeGivesAComponentTheExampleItIsShownWith(): void
+    {
+        $directory = sys_get_temp_dir().'/theliacms-theme-'.bin2hex(random_bytes(4));
+        mkdir($directory.'/config', 0o777, true);
+
+        try {
+            file_put_contents($directory.'/config/theliacms.yaml', "sections:\n    components:\n        - Organisms:VideoPlayer:Base\n    examples:\n        Organisms:VideoPlayer:Base:\n            provider: youtube\n            embedUrl: https://www.youtube-nocookie.com/embed/abc\n");
+            $declared = ThemeSections::declaredIn([$directory]);
+
+            self::assertSame(['Organisms:VideoPlayer:Base' => ['provider' => 'youtube', 'embedUrl' => 'https://www.youtube-nocookie.com/embed/abc']], $declared->examples);
+
+            file_put_contents($directory.'/config/theliacms.yaml', "sections:\n    components: []\n    examples:\n        - Organisms:VideoPlayer:Base\n");
+            $this->expectException(\InvalidArgumentException::class);
+            ThemeSections::declaredIn([$directory]);
+        } finally {
+            @unlink($directory.'/config/theliacms.yaml');
+            @rmdir($directory.'/config');
+            @rmdir($directory);
+        }
+    }
 }

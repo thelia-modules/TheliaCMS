@@ -54,6 +54,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.0.0)
 
+- A theme gives a component the props it is shown with under
+  `sections.examples` of `config/theliacms.yaml`: the toolkit, the generator
+  and a section added by hand start from them. For a component whose defaults
+  render nothing, such as Flexy's `Organisms:VideoPlayer:Base`.
 - Hovering a section in the preview of the content screen shows **Edit**,
   which opens the form of that section in the list.
 - **Add a section** in the preview of the content screen, after the last

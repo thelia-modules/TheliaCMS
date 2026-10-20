@@ -42,7 +42,9 @@ final readonly class ThemeComponentSections implements SectionProviderInterface,
 
     public function sections(): iterable
     {
-        foreach ($this->declaration()->components as $component) {
+        $declaration = $this->declaration();
+
+        foreach ($declaration->components as $component) {
             try {
                 $read = $this->reader->read($component);
             } catch (\InvalidArgumentException $exception) {
@@ -57,7 +59,7 @@ final readonly class ThemeComponentSections implements SectionProviderInterface,
                 $twigNames[$prop->name] = self::twigName($prop->name);
             }
 
-            yield new ThemeComponentSection($component, $read['description'], $read['schema'], $twigNames, $this->renderer, $read['id_lists']);
+            yield new ThemeComponentSection($component, $read['description'], $read['schema'], $twigNames, $this->renderer, $read['id_lists'], self::example($declaration->examples[$component] ?? []));
         }
     }
 
@@ -78,6 +80,25 @@ final readonly class ThemeComponentSections implements SectionProviderInterface,
             static fn (TemplateDefinition $template): string => $template->getAbsolutePath(),
             [$theme, ...array_values($theme->getParentList() ?? [])],
         ));
+    }
+
+    /**
+     * The example of the theme, read with the names the props of a document
+     * use: the theme writes `embedUrl` as the component does.
+     *
+     * @param array<string, mixed> $props
+     *
+     * @return array<string, mixed>
+     */
+    private static function example(array $props): array
+    {
+        $example = [];
+
+        foreach ($props as $name => $value) {
+            $example[ComponentPropsReader::propName((string) $name)] = $value;
+        }
+
+        return $example;
     }
 
     /**
