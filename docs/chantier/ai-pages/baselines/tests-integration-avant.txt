@@ -1,0 +1,16 @@
+PHPUnit 11.5.57 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.3.30
+Configuration: /var/www/html/local/modules/TheliaCMS/phpunit.integration.xml.dist
+
+...............................................................  63 / 263 ( 23%)
+............................................................... 126 / 263 ( 47%)
+............................................................... 189 / 263 ( 71%)
+..........................................S.................... 252 / 263 ( 95%)
+...........                                                     263 / 263 (100%)
+
+Time: 00:22.511, Memory: 192.00 MB
+
+OK, but some tests were skipped!
+Tests: 263, Assertions: 1075, Skipped: 1.
+exit 0

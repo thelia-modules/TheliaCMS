@@ -9,7 +9,8 @@
         "thelia/installer": "~1.6",
         "openstudio/page-builder-bundle": "^0.2.1",
         "symfony/html-sanitizer": "^7.4",
-        "thelia/thelia-library-module": "^2.0"
+        "thelia/thelia-library-module": "^2.0",
+        "anthropic-ai/sdk": "^0.59"
     },
     "suggest": {
         "thelia/seone-module": "Publishes the SEO metadata, canonical and hreflang tags of CMS pages.",

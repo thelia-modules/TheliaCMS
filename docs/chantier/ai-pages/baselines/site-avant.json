@@ -1,0 +1,532 @@
+{
+    "format": "thelia-cms",
+    "version": 1,
+    "generated_at": "2026-10-20T11:54:24+02:00",
+    "module_version": "1.5.0",
+    "locales": [
+        "fr_FR",
+        "en_US",
+        "es_ES",
+        "it_IT"
+    ],
+    "pages": [
+        {
+            "uid": "page-1",
+            "parent": null,
+            "position": 1,
+            "visible": true,
+            "page_type": "default",
+            "tag": null,
+            "image_id": null,
+            "publish_at": null,
+            "unpublish_at": null,
+            "translations": {
+                "fr_FR": {
+                    "title": "Mentions légales",
+                    "slug": "mentions-legales",
+                    "chapo": null,
+                    "description": null,
+                    "meta_title": null,
+                    "meta_description": null,
+                    "og_title": null,
+                    "og_description": null,
+                    "og_image_id": null,
+                    "twitter_card": null,
+                    "canonical": null,
+                    "noindex": false,
+                    "nofollow": false
+                },
+                "en_US": {
+                    "title": "Legal notice",
+                    "slug": "legal-notice",
+                    "chapo": null,
+                    "description": null,
+                    "meta_title": null,
+                    "meta_description": null,
+                    "og_title": null,
+                    "og_description": null,
+                    "og_image_id": null,
+                    "twitter_card": null,
+                    "canonical": null,
+                    "noindex": false,
+                    "nofollow": false
+                }
+            },
+            "contents": {
+                "en_US": {
+                    "project_data": null,
+                    "draft_html": "<h1>Legal notice</h1><p>Replace this placeholder with your own legal notice before publishing the page.</p><h2>Publisher</h2><p></p><h2>Hosting provider</h2><p></p><h2>Publication director</h2><p></p><h2>Contact</h2><p></p>",
+                    "draft_css": null,
+                    "published_html": null,
+                    "published_css": null,
+                    "published_at": null,
+                    "updated_at": "2026-10-20T11:22:44+02:00"
+                },
+                "fr_FR": {
+                    "project_data": null,
+                    "draft_html": "<h1>Mentions légales</h1><p>Remplacez ce texte d’exemple par vos mentions légales avant de publier la page.</p><h2>Éditeur du site</h2><p></p><h2>Hébergeur</h2><p></p><h2>Directeur de la publication</h2><p></p><h2>Contact</h2><p></p>",
+                    "draft_css": null,
+                    "published_html": null,
+                    "published_css": null,
+                    "published_at": null,
+                    "updated_at": "2026-10-20T11:22:44+02:00"
+                }
+            }
+        },
+        {
+            "uid": "page-2",
+            "parent": null,
+            "position": 2,
+            "visible": true,
+            "page_type": "default",
+            "tag": null,
+            "image_id": null,
+            "publish_at": null,
+            "unpublish_at": null,
+            "translations": {
+                "fr_FR": {
+                    "title": "Politique de confidentialité",
+                    "slug": "politique-de-confidentialite",
+                    "chapo": null,
+                    "description": null,
+                    "meta_title": null,
+                    "meta_description": null,
+                    "og_title": null,
+                    "og_description": null,
+                    "og_image_id": null,
+                    "twitter_card": null,
+                    "canonical": null,
+                    "noindex": false,
+                    "nofollow": false
+                },
+                "en_US": {
+                    "title": "Privacy policy",
+                    "slug": "privacy-policy",
+                    "chapo": null,
+                    "description": null,
+                    "meta_title": null,
+                    "meta_description": null,
+                    "og_title": null,
+                    "og_description": null,
+                    "og_image_id": null,
+                    "twitter_card": null,
+                    "canonical": null,
+                    "noindex": false,
+                    "nofollow": false
+                }
+            },
+            "contents": {
+                "en_US": {
+                    "project_data": null,
+                    "draft_html": "<h1>Privacy policy</h1><p>Replace this placeholder with your own privacy policy before publishing the page.</p><h2>Data we collect</h2><p></p><h2>Why we collect it</h2><p></p><h2>How long we keep it</h2><p></p><h2>Your rights</h2><p></p><h2>Contact our data protection officer</h2><p></p>",
+                    "draft_css": null,
+                    "published_html": null,
+                    "published_css": null,
+                    "published_at": null,
+                    "updated_at": "2026-10-20T11:22:44+02:00"
+                },
+                "fr_FR": {
+                    "project_data": null,
+                    "draft_html": "<h1>Politique de confidentialité</h1><p>Remplacez ce texte d’exemple par votre politique de confidentialité avant de publier la page.</p><h2>Données collectées</h2><p></p><h2>Finalités du traitement</h2><p></p><h2>Durée de conservation</h2><p></p><h2>Vos droits</h2><p></p><h2>Contacter le délégué à la protection des données</h2><p></p>",
+                    "draft_css": null,
+                    "published_html": null,
+                    "published_css": null,
+                    "published_at": null,
+                    "updated_at": "2026-10-20T11:22:44+02:00"
+                }
+            }
+        },
+        {
+            "uid": "page-3",
+            "parent": null,
+            "position": 3,
+            "visible": true,
+            "page_type": "default",
+            "tag": null,
+            "image_id": null,
+            "publish_at": null,
+            "unpublish_at": null,
+            "translations": {
+                "fr_FR": {
+                    "title": "Cookies",
+                    "slug": "cookies-2",
+                    "chapo": null,
+                    "description": null,
+                    "meta_title": null,
+                    "meta_description": null,
+                    "og_title": null,
+                    "og_description": null,
+                    "og_image_id": null,
+                    "twitter_card": null,
+                    "canonical": null,
+                    "noindex": false,
+                    "nofollow": false
+                },
+                "en_US": {
+                    "title": "Cookies",
+                    "slug": "cookies",
+                    "chapo": null,
+                    "description": null,
+                    "meta_title": null,
+                    "meta_description": null,
+                    "og_title": null,
+                    "og_description": null,
+                    "og_image_id": null,
+                    "twitter_card": null,
+                    "canonical": null,
+                    "noindex": false,
+                    "nofollow": false
+                }
+            },
+            "contents": {
+                "en_US": {
+                    "project_data": null,
+                    "draft_html": "<h1>Cookies</h1><p>List here every cookie and every storage your site sets, its purpose and its lifetime.</p><h2>Strictly necessary</h2><p></p><h2>Audience measurement</h2><p></p><h2>Advertising</h2><p></p><h2>Changing your choices</h2><p></p>",
+                    "draft_css": null,
+                    "published_html": null,
+                    "published_css": null,
+                    "published_at": null,
+                    "updated_at": "2026-10-20T11:22:44+02:00"
+                },
+                "fr_FR": {
+                    "project_data": null,
+                    "draft_html": "<h1>Cookies</h1><p>Recensez ici chaque cookie et chaque stockage posé par votre site, sa finalité et sa durée.</p><h2>Strictement nécessaires</h2><p></p><h2>Mesure d’audience</h2><p></p><h2>Publicité</h2><p></p><h2>Modifier vos choix</h2><p></p>",
+                    "draft_css": null,
+                    "published_html": null,
+                    "published_css": null,
+                    "published_at": null,
+                    "updated_at": "2026-10-20T11:22:44+02:00"
+                }
+            }
+        },
+        {
+            "uid": "page-4",
+            "parent": null,
+            "position": 4,
+            "visible": true,
+            "page_type": "default",
+            "tag": null,
+            "image_id": null,
+            "publish_at": null,
+            "unpublish_at": null,
+            "translations": {
+                "fr_FR": {
+                    "title": "Déclaration d’accessibilité",
+                    "slug": "declaration-d-accessibilite",
+                    "chapo": null,
+                    "description": null,
+                    "meta_title": null,
+                    "meta_description": null,
+                    "og_title": null,
+                    "og_description": null,
+                    "og_image_id": null,
+                    "twitter_card": null,
+                    "canonical": null,
+                    "noindex": false,
+                    "nofollow": false
+                },
+                "en_US": {
+                    "title": "Accessibility statement",
+                    "slug": "accessibility-statement",
+                    "chapo": null,
+                    "description": null,
+                    "meta_title": null,
+                    "meta_description": null,
+                    "og_title": null,
+                    "og_description": null,
+                    "og_image_id": null,
+                    "twitter_card": null,
+                    "canonical": null,
+                    "noindex": false,
+                    "nofollow": false
+                }
+            },
+            "contents": {
+                "en_US": {
+                    "project_data": null,
+                    "draft_html": "<h1>Accessibility statement</h1><p>Never claim a conformance level you have not had audited. Until an audit is done, state that the site has not been assessed.</p><h2>Conformance status</h2><p></p><h2>Test results</h2><p></p><h2>Content not accessible</h2><p></p><h2>Feedback and contact</h2><p></p><h2>Enforcement procedure</h2><p></p>",
+                    "draft_css": null,
+                    "published_html": null,
+                    "published_css": null,
+                    "published_at": null,
+                    "updated_at": "2026-10-20T11:22:44+02:00"
+                },
+                "fr_FR": {
+                    "project_data": null,
+                    "draft_html": "<h1>Déclaration d’accessibilité</h1><p>N’annoncez jamais un niveau de conformité qui n’a pas été audité. Tant qu’aucun audit n’a eu lieu, indiquez que le site n’a pas été évalué.</p><h2>État de conformité</h2><p></p><h2>Résultats des tests</h2><p></p><h2>Contenus non accessibles</h2><p></p><h2>Retour d’information et contact</h2><p></p><h2>Voie de recours</h2><p></p>",
+                    "draft_css": null,
+                    "published_html": null,
+                    "published_css": null,
+                    "published_at": null,
+                    "updated_at": "2026-10-20T11:22:44+02:00"
+                }
+            }
+        }
+    ],
+    "blocks": [],
+    "menus": [
+        {
+            "code": "main",
+            "translations": {
+                "fr_FR": {
+                    "title": "Menu principal"
+                },
+                "en_US": {
+                    "title": "Main menu"
+                },
+                "es_ES": {
+                    "title": "Main menu"
+                },
+                "it_IT": {
+                    "title": "Main menu"
+                }
+            },
+            "items": []
+        },
+        {
+            "code": "footer",
+            "translations": {
+                "fr_FR": {
+                    "title": "Menu du pied de page"
+                },
+                "en_US": {
+                    "title": "Footer menu"
+                },
+                "es_ES": {
+                    "title": "Footer menu"
+                },
+                "it_IT": {
+                    "title": "Footer menu"
+                }
+            },
+            "items": []
+        }
+    ],
+    "forms": [
+        {
+            "code": "contact",
+            "active": true,
+            "recipients": null,
+            "store_submissions": true,
+            "retention_days": 365,
+            "send_receipt": false,
+            "lead_event": true,
+            "privacy_policy_page": null,
+            "translations": {
+                "fr_FR": {
+                    "title": "Nous contacter",
+                    "description": null,
+                    "submit_label": "Envoyer",
+                    "success_message": "Merci, votre message est parti. Nous vous répondons rapidement.",
+                    "legal_notice": "Les informations envoyées ici servent uniquement à répondre à votre demande. Elles sont conservées le temps nécessaire pour cela et ne sont transmises à personne. Vous pouvez demander à les consulter, à les corriger ou à les supprimer.",
+                    "receipt_subject": null,
+                    "receipt_body": null
+                },
+                "en_US": {
+                    "title": "Contact us",
+                    "description": null,
+                    "submit_label": "Send",
+                    "success_message": "Thank you, your message has been sent. We will get back to you shortly.",
+                    "legal_notice": "What you send here is used only to answer your request. It is kept for as long as that takes and passed on to nobody. You can ask to see it, to correct it or to have it deleted.",
+                    "receipt_subject": null,
+                    "receipt_body": null
+                },
+                "es_ES": {
+                    "title": "Contact us",
+                    "description": null,
+                    "submit_label": "Send",
+                    "success_message": "Thank you, your message has been sent. We will get back to you shortly.",
+                    "legal_notice": "What you send here is used only to answer your request. It is kept for as long as that takes and passed on to nobody. You can ask to see it, to correct it or to have it deleted.",
+                    "receipt_subject": null,
+                    "receipt_body": null
+                },
+                "it_IT": {
+                    "title": "Contact us",
+                    "description": null,
+                    "submit_label": "Send",
+                    "success_message": "Thank you, your message has been sent. We will get back to you shortly.",
+                    "legal_notice": "What you send here is used only to answer your request. It is kept for as long as that takes and passed on to nobody. You can ask to see it, to correct it or to have it deleted.",
+                    "receipt_subject": null,
+                    "receipt_body": null
+                }
+            },
+            "fields": [
+                {
+                    "name": "name",
+                    "type": "text",
+                    "position": 1,
+                    "required": true,
+                    "options": null,
+                    "translations": {
+                        "fr_FR": {
+                            "label": "Votre nom",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "en_US": {
+                            "label": "Your name",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "es_ES": {
+                            "label": "Your name",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "it_IT": {
+                            "label": "Your name",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        }
+                    }
+                },
+                {
+                    "name": "email",
+                    "type": "email",
+                    "position": 2,
+                    "required": true,
+                    "options": null,
+                    "translations": {
+                        "fr_FR": {
+                            "label": "Votre adresse e-mail",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "en_US": {
+                            "label": "Your email address",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "es_ES": {
+                            "label": "Your email address",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "it_IT": {
+                            "label": "Your email address",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        }
+                    }
+                },
+                {
+                    "name": "phone",
+                    "type": "phone",
+                    "position": 3,
+                    "required": false,
+                    "options": null,
+                    "translations": {
+                        "fr_FR": {
+                            "label": "Votre numéro de téléphone",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "en_US": {
+                            "label": "Your phone number",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "es_ES": {
+                            "label": "Your phone number",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "it_IT": {
+                            "label": "Your phone number",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        }
+                    }
+                },
+                {
+                    "name": "message",
+                    "type": "textarea",
+                    "position": 4,
+                    "required": true,
+                    "options": null,
+                    "translations": {
+                        "fr_FR": {
+                            "label": "Votre message",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "en_US": {
+                            "label": "Your message",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "es_ES": {
+                            "label": "Your message",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "it_IT": {
+                            "label": "Your message",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        }
+                    }
+                },
+                {
+                    "name": "consent",
+                    "type": "consent",
+                    "position": 5,
+                    "required": true,
+                    "options": null,
+                    "translations": {
+                        "fr_FR": {
+                            "label": "J’accepte d’être recontacté au sujet de ma demande.",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "en_US": {
+                            "label": "I agree to be contacted about my request.",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "es_ES": {
+                            "label": "I agree to be contacted about my request.",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        },
+                        "it_IT": {
+                            "label": "I agree to be contacted about my request.",
+                            "placeholder": null,
+                            "help": null,
+                            "choices": null
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "settings": {
+        "site_mode": "commerce",
+        "home_page": null,
+        "404_page": null,
+        "maintenance_page": null,
+        "trash_retention_days": 30,
+        "http_cache_ttl": 0,
+        "disabled_blocks": []
+    },
+    "media": []
+}
