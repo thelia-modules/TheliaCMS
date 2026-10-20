@@ -79,7 +79,7 @@ final class PublishPipelineTest extends CmsIntegrationTestCase
 
         self::assertNotNull($document);
         self::assertSame(RichTextSection::NAME, $document->sections[0]->component);
-        self::assertStringContainsString('<div class="cms-page-content"><div class="cms-richtext"><h1>Titre</h1><p>Texte</p></div></div>', (string) $content->getPublishedHtml());
+        self::assertStringContainsString('<div class="cms-page-content"><div data-cms-section="content" class="cms-richtext"><h1>Titre</h1><p>Texte</p></div></div>', (string) $content->getPublishedHtml());
 
         $revision = CmsPageRevisionQuery::create()->filterByPageId($page->getId())->findOne();
 

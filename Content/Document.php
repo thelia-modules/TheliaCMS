@@ -71,6 +71,11 @@ final readonly class Document
         return new self($sections);
     }
 
+    public function withoutSection(string $id): self
+    {
+        return new self(array_values(array_filter($this->sections, static fn (Section $section): bool => $section->id !== $id)));
+    }
+
     /**
      * @return array{version: int, sections: list<array{id: string, component: string, props: array<string, mixed>}>}
      */

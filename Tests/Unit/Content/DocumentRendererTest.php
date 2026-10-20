@@ -39,9 +39,17 @@ final class DocumentRendererTest extends TestCase
         ]);
 
         self::assertSame(
-            '<div class="cms-page-content"><h1 lang="fr_FR">Nos services</h1>'."\n".'<div class="cms-richtext"><p>Texte</p></div></div>',
+            '<div class="cms-page-content"><h1 data-cms-section="title" lang="fr_FR">Nos services</h1>'."\n".'<div data-cms-section="intro" class="cms-richtext"><p>Texte</p></div></div>',
             $this->renderer->render($document, 'fr_FR'),
+            'The first element of every section is told which section it renders, so a screen can point at it.',
         );
+    }
+
+    public function testAFragmentWithoutAnElementIsLeftAsItIs(): void
+    {
+        $document = new Document([new Section('blank', RichTextSection::NAME, ['html' => '   '])]);
+
+        self::assertSame('<div class="cms-page-content"></div>', $this->renderer->render($document, 'fr_FR'), 'An empty section has nothing to carry the anchor.');
     }
 
     public function testAnEmptyDocumentRendersAnEmptyContainer(): void

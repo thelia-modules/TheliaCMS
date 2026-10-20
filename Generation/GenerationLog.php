@@ -59,6 +59,7 @@ final readonly class GenerationLog
             ->setLocale($request->locale)
             ->setKind($request->kind)
             ->setPrompt($prompt)
+            ->setBrief(self::briefJson($request->brief))
             ->setModel($model)
             ->setRequestId($requestId)
             ->setStatus($status)
@@ -104,6 +105,31 @@ final readonly class GenerationLog
     }
 
     /**
+     * The brief the target was last written from in a language, as the
+     * editor typed it: the screen puts it back in the form, so a page is
+     * written again from its own brief rather than from a blank.
+     */
+    public function latestBrief(GenerationTarget $target, string $locale): ?Brief
+    {
+        $row = CmsPageGenerationQuery::create()
+            ->filterByTargetType($target->type)
+            ->filterByTargetId($target->id)
+            ->filterByLocale($locale)
+            ->filterByKind(GenerationRequest::KIND_BRIEF)
+            ->orderByCreatedAt(Criteria::DESC)
+            ->orderById(Criteria::DESC)
+            ->findOne();
+
+        $brief = null === $row?->getBrief() ? null : json_decode((string) $row->getBrief(), true);
+
+        if (!\is_array($brief) || !\is_string($brief['text'] ?? null) || '' === trim($brief['text'])) {
+            return null;
+        }
+
+        return new Brief($brief['text'], \is_string($brief['tone'] ?? null) ? $brief['tone'] : null, \is_string($brief['audience'] ?? null) ? $brief['audience'] : null);
+    }
+
+    /**
      * The calls made for a target in a language, the latest first.
      *
      * @return list<CmsPageGeneration>
@@ -136,6 +162,11 @@ final readonly class GenerationLog
             ->filterByTargetId($target->id)
             ->filterByLocale($locale)
             ->findOne();
+    }
+
+    private static function briefJson(Brief $brief): string
+    {
+        return json_encode(['text' => $brief->text, 'tone' => $brief->tone, 'audience' => $brief->audience], \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR);
     }
 
     /**

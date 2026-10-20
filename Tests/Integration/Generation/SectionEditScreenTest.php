@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Generation;
 
+use Symfony\Component\DomCrawler\Crawler;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Model\Lang;
 use Thelia\Test\FixtureFactory;
@@ -88,6 +89,38 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $screen = $this->screen($this->url($page));
         self::assertSame(1, $screen->filter('[data-testid="cms-builder-flash-success"]')->count());
         self::assertStringContainsString('Après', $screen->filter('[data-testid="cms-content-sections"] li[data-section="hero"]')->text());
+    }
+
+    public function testASectionIsRemovedByHandAndTheLedgerSaysSo(): void
+    {
+        $page = $this->pageWith([
+            new Section('hero', 'Cms:Hero', ['title' => 'Avant', 'heading_level' => '1', 'text' => 'Un texte.']),
+            new Section('faq', 'Cms:Questions', ['title' => 'Questions', 'items' => [['question' => 'Combien ?', 'answer' => '<p>Sur devis.</p>']]]),
+        ]);
+
+        $screen = $this->screen($this->url($page));
+        self::assertSame(['1', '2'], $screen->filter('[data-testid="cms-content-sections"] .cms-content__item-rank')->each(static fn (Crawler $rank): string => trim($rank->text())), 'The sections are numbered, as they are in the preview.');
+        $form = $screen->filter('[data-testid="cms-section-remove-faq"]')->form();
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+        $document = Document::fromJson($content?->getDraftDocument());
+
+        self::assertSame(['hero'], array_map(static fn (Section $section): string => $section->id, $document?->sections ?? []));
+        self::assertStringNotContainsString('Combien ?', (string) $content?->getDraftHtml(), 'The draft is rendered again without it.');
+        self::assertStringContainsString('data-cms-section="hero"', (string) $content?->getDraftHtml(), 'The rendered section carries its id, for the preview to point at it.');
+
+        $row = CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->orderById(\Propel\Runtime\ActiveQuery\Criteria::DESC)->findOne();
+        self::assertSame('manual', $row?->getKind());
+        self::assertStringContainsString('removed', (string) $row?->getPrompt());
+
+        $screen = $this->screen($this->url($page));
+        self::assertSame(1, $screen->filter('[data-testid="cms-builder-flash-success"]')->count());
+        self::assertSame(1, $screen->filter('[data-testid="cms-content-sections"] li[data-section]')->count());
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()), 'Removing it again is refused, not an error.');
+        self::assertSame(1, $this->screen($this->url($page))->filter('[data-testid="cms-builder-flash-danger"]')->count());
     }
 
     public function testRowsOfAListAreAddedAndRemoved(): void

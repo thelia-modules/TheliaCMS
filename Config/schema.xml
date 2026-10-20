@@ -608,6 +608,7 @@
         <column name="locale" required="true" size="5" type="VARCHAR"/>
         <column defaultValue="brief" name="kind" required="true" size="20" type="VARCHAR"/>
         <column name="prompt" type="CLOB"/>
+        <column name="brief" type="CLOB"/>
         <column name="model" size="60" type="VARCHAR"/>
         <column name="request_id" size="80" type="VARCHAR"/>
         <column defaultValue="done" name="status" required="true" size="20" type="VARCHAR"/>

@@ -114,7 +114,9 @@ final readonly class PromptBuilder
         }
 
         if (null !== $request->current) {
-            $lines[] = '# The document the page holds today';
+            $lines[] = GenerationRequest::KIND_TRANSLATION === $request->kind
+                ? \sprintf('# The document the page holds in %s (`%s`)', $this->shop->describe((string) $request->sourceLocale)['language'], (string) $request->sourceLocale)
+                : '# The document the page holds today';
             $lines[] = '';
             $lines[] = '```json';
             $lines[] = $request->current->toJson();
@@ -124,6 +126,7 @@ final readonly class PromptBuilder
 
         $lines[] = match ($request->kind) {
             GenerationRequest::KIND_BRIEF => "# The brief\n\nWrite the whole page from this brief:\n\n".$request->brief->text,
+            GenerationRequest::KIND_TRANSLATION => \sprintf("# The task\n\nWrite this document in %s (`%s`): the same sections in the same order with the same ids and components, every text written for a reader of that language rather than word for word, and every image, reference, address and figure kept as it is. Change nothing else.", $shop['language'], $shop['locale']),
             GenerationRequest::KIND_REVISION => "# The change asked\n\nAnswer with the whole document again, changed as asked and nothing else: keep every section the change does not concern exactly as it is, ids included.\n\n".$request->brief->text,
             GenerationRequest::KIND_SECTION => \sprintf("# The change asked\n\nWrite the section `%s` again as asked, and answer with the whole document: every other section exactly as it is, ids included.\n\n%s", $request->sectionId, $request->brief->text),
             default => $request->brief->text,

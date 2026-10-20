@@ -68,6 +68,7 @@ final readonly class CmsBlockContentController
         private ContentScreen $screen,
         private GenerationRunner $runner,
         private SectionUpdate $sectionUpdate,
+        private TranslationSources $translationSources,
     ) {
     }
 
@@ -192,6 +193,75 @@ final readonly class CmsBlockContentController
         return $this->back($block, $lang);
     }
 
+    /**
+     * A section taken out by hand: like a change by hand, it takes the right
+     * to change pages.
+     */
+    #[Route('/remove', name: 'remove', methods: ['POST'])]
+    public function remove(Request $request, int $id): Response
+    {
+        $block = $this->liveBlockOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayPublish();
+
+        $current = $this->documentOrFail($request, $block, $lang);
+
+        if (!$current instanceof Document) {
+            return $this->back($block, $lang);
+        }
+
+        $locale = $lang->getLocale();
+        $problems = $this->sectionUpdate->remove(
+            $request,
+            $this->subject($block, $lang),
+            $current,
+            fn (Document $document) => $this->writer->saveContent($block, $locale, $document),
+        );
+
+        if ([] === $problems) {
+            $this->flash($request, 'success', $this->translate('The section is removed from the draft.'));
+        }
+
+        foreach ($problems as $problem) {
+            $this->flash($request, 'danger', $problem);
+        }
+
+        return $this->back($block, $lang);
+    }
+
+    /**
+     * This language written from the draft of another: the generator keeps
+     * the sections and writes their texts for the new reader.
+     */
+    #[Route('/translate', name: 'translate', methods: ['POST'])]
+    public function writeFromAnotherLanguage(Request $request, int $id): Response
+    {
+        $block = $this->liveBlockOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayGenerate();
+
+        $sources = $this->translationSources->forBlock((int) $block->getId(), $lang->getLocale());
+        $form = $this->forms->create(TranslateType::class, null, ['sources' => array_column($sources, 'locale', 'label')]);
+        $form->handleRequest($request);
+
+        if (!$form->isSubmitted() || !$form->isValid()) {
+            return $this->backWithErrors($request, $form, $block, $lang);
+        }
+
+        $sourceLocale = (string) $form->getData()['source'];
+        $source = $this->translationSources->blockDocument((int) $block->getId(), $sourceLocale);
+
+        try {
+            $generation = GenerationRequest::translation($this->target($block, $lang), $lang->getLocale(), $source ?? new Document([]), $sourceLocale);
+        } catch (\InvalidArgumentException) {
+            $this->flash($request, 'danger', $this->translate('That language holds nothing to write from any more: reload the screen.'));
+
+            return $this->back($block, $lang);
+        }
+
+        return $this->run($request, $block, $lang, $generation);
+    }
+
     #[Route('/publish', name: 'publish', methods: ['POST'])]
     public function publish(Request $request, int $id): Response
     {
@@ -251,9 +321,12 @@ final readonly class CmsBlockContentController
                 'revise' => $this->urls->generate('admin.cms.blocks.content.revise', $parameters),
                 'section' => $this->urls->generate('admin.cms.blocks.content.section', $parameters),
                 'update' => $this->urls->generate('admin.cms.blocks.content.update', $parameters),
+                'remove' => $this->urls->generate('admin.cms.blocks.content.remove', $parameters),
+                'translate' => $this->urls->generate('admin.cms.blocks.content.translate', $parameters),
                 'publish' => $this->urls->generate('admin.cms.blocks.content.publish', $parameters),
             ],
             testId: 'cms-block-content',
+            translationSources: $this->translationSources->forBlock((int) $block->getId(), $locale),
         );
     }
 

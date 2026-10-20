@@ -33,6 +33,13 @@ directly (`composer.json` of the module says which) and no longer
 
 ## Writing tests
 
+- Under DDEV, the web container exports `DATABASE_NAME=db`, which wins over
+  `.env.test` when the test caches are built: the integration tests then
+  connect to the development database and their guard stops them. Build and
+  run them with the variable unset (`env -u DATABASE_NAME vendor/bin/phpunit
+  -c local/modules/TheliaCMS/phpunit.integration.xml.dist`), after removing
+  `var/propel/test` and `var/cache/test` if they were built with it.
+
 - A test that runs outside a transaction (`ALTER TABLE`, `TRUNCATE`) cleans in
   `tearDown()` what it inserted; a run interrupted halfway otherwise leaves
   rows behind for the next one.

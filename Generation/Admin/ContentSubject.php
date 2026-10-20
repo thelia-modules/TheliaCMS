@@ -25,7 +25,8 @@ use TheliaCMS\Generation\GenerationTarget;
 final readonly class ContentSubject
 {
     /**
-     * @param array<string, string> $routes the screen, generate, revise, section and publish routes, with their parameters
+     * @param array<string, string>                      $routes             the screen, generate, revise, section, update, remove, translate and publish routes, with their parameters
+     * @param list<array{locale: string, label: string}> $translationSources the languages the target holds a draft in, to write this one from
      */
     public function __construct(
         public GenerationTarget $target,
@@ -41,7 +42,17 @@ final readonly class ContentSubject
         public string $publishHint,
         public array $routes,
         public string $testId,
+        public array $translationSources = [],
     ) {
+    }
+
+    /**
+     * Whether there is something to show: a document with at least one
+     * section. A document emptied by hand is as blank as none.
+     */
+    public function hasContent(): bool
+    {
+        return $this->document instanceof Document && !$this->document->isEmpty();
     }
 
     public function url(string $action): string

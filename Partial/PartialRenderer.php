@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Partial;
 
 use Psr\Log\LoggerInterface;
+use TheliaCMS\Content\DocumentRenderer;
 
 /**
  * Replaces the placeholders a page stores with what the server renders for them.
@@ -158,8 +159,20 @@ final readonly class PartialRenderer
             return;
         }
 
+        $section = $placeholder->getAttribute(DocumentRenderer::SECTION_ATTRIBUTE);
+
         foreach (iterator_to_array($rendered->childNodes) as $child) {
-            $parent->insertBefore($document->importNode($child, true), $placeholder);
+            $imported = $document->importNode($child, true);
+
+            // The placeholder goes with the section it was marked as: the
+            // first element rendered carries the mark instead, so the content
+            // screen can still point at the section in the preview.
+            if ('' !== $section && $imported instanceof \DOMElement) {
+                $imported->setAttribute(DocumentRenderer::SECTION_ATTRIBUTE, $section);
+                $section = '';
+            }
+
+            $parent->insertBefore($imported, $placeholder);
         }
 
         $parent->removeChild($placeholder);

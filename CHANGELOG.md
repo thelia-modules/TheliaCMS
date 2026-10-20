@@ -82,17 +82,19 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   catalogue item): the brief on the left, the draft on the right as the theme
   shows it; a form to rewrite each section alone, one to ask a change on the
   whole draft, the history of the calls with their cost, and the publish
-  button. The forms post in the background and the progress of the call is
-  streamed as server-sent events; without the script, every action still
-  posts and comes back with a message. "Edit content" everywhere in the back
-  office now leads here rather than to the visual editor.
+  button. The forms post in the background, the progress of the call is
+  streamed as server-sent events, and the screen is drawn again in place
+  when the call ends, without a reload; without the script, every action
+  still posts and comes back with a message. "Edit content" everywhere in
+  the back office now leads here rather than to the visual editor.
 - On the content screen, every section is also **edited by hand**: a form
   read from the schema of its component, the `html` props in the editor of
   the Tiptap module when it is there (`thelia/tiptap-module`, suggested),
   lists as rows added and removed, images from the media library, references
   from their picker. Stored through the writer like a generated document and
   written to the ledger as a `manual` row, so the next request starts from
-  the corrected text. Costs nothing, takes the right to change pages.
+  the corrected text. Costs nothing, takes the right to change pages. Saved
+  in the background, the screen drawn again in place with the panel open.
 - `GenerationTarget`: the generator writes for a page or for a block, told
   for what it is; a block may not hold `Partial:cms-block`.
   `GenerationObserverInterface` reports each turn to whoever listens.
@@ -114,6 +116,23 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   answers as they are written.
 - The tool `search_forms`, so a contact page finds the form of the site
   rather than guessing its id.
+- `Partial:product-strip` and `Partial:category-strip`: two to twelve
+  products, or categories, in one row, in the order they were picked, under
+  a heading. A partial declares such a list with
+  `PartialProp::references()`, which the hand-edit form shows as rows with a
+  picker and the model fills with the ids of `search_products`; the
+  `catalogue` and `page-structure` skills now send several products there
+  rather than into one card each. A theme draws the rows with
+  `cms/partials/product-strip.html.twig` and `category-strip.html.twig`.
+- On the content screen: the brief the page was last written from is back
+  in its form (the ledger keeps it, column `brief` of `cms_page_generation`);
+  every section has a number, a button that scrolls the preview to it and a
+  button that removes it; the preview and the list point at each other. A
+  page that holds a draft in another language and nothing in this one offers
+  to be written from that draft (`GenerationRequest::translation`, kind
+  `translation` in the ledger) rather than announcing an empty page. The
+  renderer marks the first element of every section with
+  `data-cms-section="<id>"`.
 - `docs/adr/`: the eight decisions behind the generation of pages;
   `docs/evaluation/`: ten briefs, a rubric and the scores of the shipped
   skills (7.1 / 8 on 2026-10-20).

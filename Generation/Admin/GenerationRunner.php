@@ -28,8 +28,9 @@ use TheliaCMS\TheliaCMS;
 /**
  * Runs a generation for a screen and answers it: as a stream of events when
  * the script of the screen asked for one, as a redirect otherwise, so the
- * screen works without the script. Either way the screen is reloaded with
- * the id of the ledger row, and shows the outcome from there.
+ * screen works without the script. Either way the screen is read again with
+ * the id of the ledger row, and shows the outcome from there: the script
+ * puts that screen in place of the one on show, the browser goes there.
  */
 final readonly class GenerationRunner
 {

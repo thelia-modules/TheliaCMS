@@ -14,9 +14,11 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Generation;
 
+use Propel\Runtime\ActiveQuery\Criteria;
 use Symfony\Component\DomCrawler\Crawler;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Model\Lang;
+use Thelia\Model\LangQuery;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -107,6 +109,40 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertStringContainsString('Nos services', $screen->filter('[data-testid="cms-content-sections"] li[data-section]')->first()->text(), 'A section is quoted by its title.');
         self::assertSame(1, $screen->filter('[data-testid="cms-content-history"] tbody tr')->count(), 'The history lists the call.');
         self::assertSame(2, $screen->filter('form[data-cms-generate] input[name$="[section]"]')->count(), 'Every section has its rewrite form.');
+        self::assertSame('Une page qui présente nos services de conseil.', $screen->filter('[data-testid="cms-content-brief"] textarea')->text(), 'The brief is back in its form, to be corrected rather than typed again.');
+        self::assertSame('direct', $screen->filter('[data-testid="cms-content-brief"] input[name="cms_brief[tone]"]')->attr('value'));
+        self::assertSame('{"text":"Une page qui présente nos services de conseil.","tone":"direct","audience":null}', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getBrief());
+    }
+
+    public function testALanguageWithoutContentIsWrittenFromAnotherOne(): void
+    {
+        $page = $this->createPage('Nos services', published: false);
+        $source = Lang::getDefaultLanguage();
+        $target = LangQuery::create()->filterByActive(1)->filterById($source->getId(), Criteria::NOT_EQUAL)->orderById()->findOne();
+        self::assertNotNull($target, 'The shop of the tests has a second active language.');
+        $url = \sprintf('/admin/cms/pages/%d/content?edit_language_id=%d', $page->getId(), $target->getId());
+        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Translated</h1><p>Written for the test.</p>']]]))]));
+
+        $screen = $this->screen($url);
+
+        self::assertSame(0, $screen->filter('[data-testid="cms-content-empty"]')->count(), 'A page written in another language is not announced as blank.');
+        self::assertSame(1, $screen->filter('[data-testid="cms-content-translate"]')->count());
+        self::assertSame($source->getLocale(), $screen->filter('[data-testid="cms-content-translate"] option[selected]')->attr('value'), 'The first language of the shop that holds a draft is picked.');
+        self::assertStringContainsString((string) $source->getTitle(), $screen->filter('[data-testid="cms-content-translate-btn"]')->text());
+
+        $form = $screen->filter('[data-testid="cms-content-translate"] form')->form();
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $prompt = $this->api->requests[0]['messages'][0]['content'];
+        self::assertStringContainsString(\sprintf('The document the page holds in %s (`%s`)', $source->getTitle(), $source->getLocale()), $prompt);
+        self::assertStringContainsString('<h1>Nos services</h1><p>Written for the test.</p>', $prompt, 'The draft of the other language is what the model writes from.');
+        self::assertStringContainsString(\sprintf('Write this document in %s (`%s`)', $target->getTitle(), $target->getLocale()), $prompt);
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($target->getLocale())->findOne();
+        self::assertStringContainsString('Translated', (string) $content?->getDraftHtml(), 'The new draft is stored on the row of its language.');
+        self::assertStringContainsString('Nos services', (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($source->getLocale())->findOne()?->getDraftHtml(), 'The source draft is untouched.');
+        self::assertSame('translation', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->filterByLocale($target->getLocale())->findOne()?->getKind());
+        self::assertSame(0, $this->screen($url)->filter('[data-testid="cms-content-translate"]')->count(), 'Once written, the offer is gone.');
     }
 
     public function testTheOutcomeOfAnotherPageIsNotShown(): void

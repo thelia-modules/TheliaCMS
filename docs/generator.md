@@ -93,10 +93,25 @@ and the same for a reusable block or the block of a catalogue item
 right as the theme shows it, through the signed preview link of the draft.
 
 - **Write it from a brief**: what the page should say, its tone and audience.
-  The answer replaces the whole draft.
-- **The sections of the draft**: each one quoted by its title, with a form to
-  rewrite that section alone; the others are kept as they are, ids included.
+  The answer replaces the whole draft. The form holds the brief the page was
+  last written from in this language (kept in the ledger, column `brief`),
+  so a page is written again from its own brief, corrected.
+- **The sections of the draft**: each one numbered and quoted by its title,
+  with a form to rewrite that section alone; the others are kept as they
+  are, ids included. A section is also removed by hand, after confirmation.
+  The number of a section is shown on it in the preview when the pointer is
+  on its row, and the row is lit when the pointer is on the section; the
+  label of a row scrolls the preview to the section. The renderer puts
+  `data-cms-section="<id>"` on the first element of every section for that
+  (`Content\DocumentRenderer::SECTION_ATTRIBUTE`, kept by the sanitizer).
 - **Ask for a change**: a change on the whole draft, same rule.
+- **Written from another language**: when the page holds nothing in the
+  language on screen and a draft in another, the stage offers to write this
+  language from it (`GenerationRequest::translation`): the same sections,
+  components, ids, images and references, the texts written for the new
+  reader rather than word for word. One language is picked by default, in
+  the order of the shop; a select lets the editor choose when there are
+  several. The brief form stays at hand for a page written on its own.
 - **History**: the calls of the ledger for this page and language, with their
   outcome, turns, duration and cost.
 - **Publish**: the usual pipeline, with the heading check.
@@ -108,8 +123,11 @@ server-sent events (`start`, `turn`, `delta`, `correction`, `done`, `error`),
 written by `Generation\Admin\GenerationStream` as the generator reports each
 turn, and every few hundred characters of the answer, to its
 `GenerationObserverInterface`: the generator reads the answer of the API as a
-stream (`Generation\StreamedMessage` puts the message back together). Either way the screen is reloaded with
-`?done=<id>` and shows the outcome from that row of the ledger: a stream can
+stream (`Generation\StreamedMessage` puts the message back together). When
+the call ends, the script fetches the screen at `?done=<id>` and puts it in
+place of the one on show, so the address bar, the scroll and the open panels
+stay as they were; without the script, the browser is sent to that address.
+Either way the outcome is read from that row of the ledger: a stream can
 leave no flash message behind, and the ledger says more.
 
 Each section also opens a form to **edit it by hand**, read from the schema
@@ -122,6 +140,9 @@ through the same validator as a generated document, is stored through the
 writer, and is written to the ledger as a `manual` row with no cost, so the
 next request starts from the corrected text. A word corrected by hand costs
 no generation, and takes the right to change pages, not the generate right.
+With the script, the form posts in the background and the screen it comes
+back with is put in place, the panel still open, as at the end of a
+generation.
 
 Opening the screen takes the page right; asking the generator takes
 `admin.cms.generate`; publishing takes the right to change pages. A block is

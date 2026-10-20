@@ -552,6 +552,7 @@ CREATE TABLE `cms_page_generation`
     `locale` VARCHAR(5) NOT NULL,
     `kind` VARCHAR(20) DEFAULT 'brief' NOT NULL,
     `prompt` LONGTEXT,
+    `brief` LONGTEXT,
     `model` VARCHAR(60),
     `request_id` VARCHAR(80),
     `status` VARCHAR(20) DEFAULT 'done' NOT NULL,

@@ -66,8 +66,9 @@ final readonly class ContentScreen
 
         return $this->twig->render(self::TEMPLATE, [
             'subject' => $subject,
-            'brief_form' => $this->forms->create(BriefType::class, null, ['action' => $subject->url('generate')])->createView(),
+            'brief_form' => $this->forms->create(BriefType::class, $this->lastBrief($subject), ['action' => $subject->url('generate')])->createView(),
             'change_form' => $this->forms->create(ChangeType::class, null, ['action' => $subject->url('revise')])->createView(),
+            'translate_form' => $this->translateForm($subject),
             'sections' => null === $document ? [] : $this->sections($document, $subject, $mayPublish),
             'history' => array_map($this->row(...), $this->log->history($subject->target, $subject->locale, 20)),
             'outcome' => $this->outcome($request, $subject),
@@ -77,6 +78,39 @@ final readonly class ContentScreen
             'model' => $this->settings->model(),
             'assets_version' => self::assetsVersion(),
         ]);
+    }
+
+    /**
+     * The brief the target was last written from, back in its form: a page
+     * is written again from its own brief, corrected, rather than from a
+     * blank.
+     *
+     * @return array{text: string, tone: string|null, audience: string|null}|null
+     */
+    private function lastBrief(ContentSubject $subject): ?array
+    {
+        $brief = $this->log->latestBrief($subject->target, $subject->locale);
+
+        return null === $brief ? null : ['text' => $brief->text, 'tone' => $brief->tone, 'audience' => $brief->audience];
+    }
+
+    /**
+     * The form that writes this language from another, offered when the
+     * target holds nothing here and a draft elsewhere. The first language
+     * in the order of the shop is picked by default.
+     */
+    private function translateForm(ContentSubject $subject): ?FormView
+    {
+        if ($subject->hasContent() || [] === $subject->translationSources) {
+            return null;
+        }
+
+        return $this->forms
+            ->create(TranslateType::class, ['source' => $subject->translationSources[0]['locale']], [
+                'action' => $subject->url('translate'),
+                'sources' => array_column($subject->translationSources, 'locale', 'label'),
+            ])
+            ->createView();
     }
 
     /**
@@ -93,17 +127,18 @@ final readonly class ContentScreen
     /**
      * @param bool $mayEdit whether the form to change the props by hand is offered
      *
-     * @return list<array{id: string, component: string, label: string, excerpt: string, form: FormView, edit: FormView|null}>
+     * @return list<array{id: string, rank: int, component: string, label: string, excerpt: string, form: FormView, edit: FormView|null}>
      */
     private function sections(Document $document, ContentSubject $subject, bool $mayEdit): array
     {
         $sections = [];
 
-        foreach ($document->sections as $section) {
+        foreach ($document->sections as $index => $section) {
             $definition = $this->catalog->find($section->component);
 
             $sections[] = [
                 'id' => $section->id,
+                'rank' => $index + 1,
                 'component' => $section->component,
                 'label' => $definition?->label() ?? $section->component,
                 'excerpt' => self::excerpt($section),
@@ -266,6 +301,7 @@ final readonly class ContentScreen
             GenerationRequest::KIND_BRIEF => 'Brief',
             GenerationRequest::KIND_REVISION => 'Change',
             GenerationRequest::KIND_SECTION => 'Section',
+            GenerationRequest::KIND_TRANSLATION => 'Translation',
             GenerationLog::KIND_MANUAL => 'By hand',
             default => $kind,
         }, [], TheliaCMS::DOMAIN_NAME);

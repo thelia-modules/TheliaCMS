@@ -68,6 +68,7 @@ final readonly class CmsPageContentController
         private ContentScreen $screen,
         private GenerationRunner $runner,
         private SectionUpdate $sectionUpdate,
+        private TranslationSources $translationSources,
     ) {
     }
 
@@ -194,6 +195,75 @@ final readonly class CmsPageContentController
         return $this->back($page, $lang);
     }
 
+    /**
+     * A section taken out by hand: like a change by hand, it takes the right
+     * to change pages.
+     */
+    #[Route('/remove', name: 'remove', methods: ['POST'])]
+    public function remove(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayPublish();
+
+        $current = $this->documentOrFail($request, $page, $lang);
+
+        if (!$current instanceof Document) {
+            return $this->back($page, $lang);
+        }
+
+        $locale = $lang->getLocale();
+        $problems = $this->sectionUpdate->remove(
+            $request,
+            $this->subject($page, $lang),
+            $current,
+            fn (Document $document) => $this->writer->saveContent($page, $locale, $document),
+        );
+
+        if ([] === $problems) {
+            $this->flash($request, 'success', $this->translate('The section is removed from the draft.'));
+        }
+
+        foreach ($problems as $problem) {
+            $this->flash($request, 'danger', $problem);
+        }
+
+        return $this->back($page, $lang);
+    }
+
+    /**
+     * This language written from the draft of another: the generator keeps
+     * the sections and writes their texts for the new reader.
+     */
+    #[Route('/translate', name: 'translate', methods: ['POST'])]
+    public function writeFromAnotherLanguage(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayGenerate();
+
+        $sources = $this->translationSources->forPage((int) $page->getId(), $lang->getLocale());
+        $form = $this->forms->create(TranslateType::class, null, ['sources' => array_column($sources, 'locale', 'label')]);
+        $form->handleRequest($request);
+
+        if (!$form->isSubmitted() || !$form->isValid()) {
+            return $this->backWithErrors($request, $form, $page, $lang);
+        }
+
+        $sourceLocale = (string) $form->getData()['source'];
+        $source = $this->translationSources->pageDocument((int) $page->getId(), $sourceLocale);
+
+        try {
+            $generation = GenerationRequest::translation($this->target($page, $lang), $lang->getLocale(), $source ?? new Document([]), $sourceLocale);
+        } catch (\InvalidArgumentException) {
+            $this->flash($request, 'danger', $this->translate('That language holds nothing to write from any more: reload the screen.'));
+
+            return $this->back($page, $lang);
+        }
+
+        return $this->run($request, $page, $lang, $generation);
+    }
+
     #[Route('/publish', name: 'publish', methods: ['POST'])]
     public function publish(Request $request, int $id): Response
     {
@@ -269,9 +339,12 @@ final readonly class CmsPageContentController
                 'revise' => $this->urls->generate('admin.cms.pages.content.revise', $parameters),
                 'section' => $this->urls->generate('admin.cms.pages.content.section', $parameters),
                 'update' => $this->urls->generate('admin.cms.pages.content.update', $parameters),
+                'remove' => $this->urls->generate('admin.cms.pages.content.remove', $parameters),
+                'translate' => $this->urls->generate('admin.cms.pages.content.translate', $parameters),
                 'publish' => $this->urls->generate('admin.cms.pages.content.publish', $parameters),
             ],
             testId: 'cms-page-content',
+            translationSources: $this->translationSources->forPage((int) $page->getId(), $locale),
         );
     }
 

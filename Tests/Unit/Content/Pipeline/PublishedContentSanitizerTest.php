@@ -116,6 +116,8 @@ final class PublishedContentSanitizerTest extends TestCase
         $sanitized = (string) $this->sanitizer->html($html);
 
         self::assertStringContainsString('data-cms-partial="cms-form"', $sanitized);
+        self::assertStringContainsString('data-cms-section="hero"', $this->sanitizer->html('<section data-cms-section="hero" data-other="x"><p>Hi</p></section>'), 'The anchor of a section survives the filter; any other data attribute does not.');
+        self::assertStringNotContainsString('data-other', $this->sanitizer->html('<section data-cms-section="hero" data-other="x"><p>Hi</p></section>'));
         self::assertStringContainsString('data-props', $sanitized);
     }
 

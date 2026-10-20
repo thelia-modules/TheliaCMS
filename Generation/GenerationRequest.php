@@ -18,14 +18,16 @@ use TheliaCMS\Content\Document;
 
 /**
  * One call to the generator: a target, a language, and either a brief for a
- * new document, a change asked on the document the target holds, or one
- * section of it to write again.
+ * new document, a change asked on the document the target holds, one
+ * section of it to write again, or the document of another language to
+ * write in this one.
  */
 final readonly class GenerationRequest
 {
     public const string KIND_BRIEF = 'brief';
     public const string KIND_REVISION = 'revision';
     public const string KIND_SECTION = 'section';
+    public const string KIND_TRANSLATION = 'translation';
 
     private function __construct(
         public GenerationTarget $target,
@@ -34,6 +36,7 @@ final readonly class GenerationRequest
         public Brief $brief,
         public ?Document $current = null,
         public ?string $sectionId = null,
+        public ?string $sourceLocale = null,
     ) {
     }
 
@@ -62,5 +65,24 @@ final readonly class GenerationRequest
         }
 
         return new self($target, $locale, self::KIND_SECTION, $change, $current, $sectionId);
+    }
+
+    /**
+     * The document the target holds in another language, written in this
+     * one: same sections, same components, same images and references.
+     *
+     * @throws \InvalidArgumentException when the source is the language asked for, or holds nothing
+     */
+    public static function translation(GenerationTarget $target, string $locale, Document $source, string $sourceLocale): self
+    {
+        if ($sourceLocale === $locale) {
+            throw new \InvalidArgumentException('A document is translated from another language than its own.');
+        }
+
+        if ($source->isEmpty()) {
+            throw new \InvalidArgumentException(\sprintf('The document in %s holds nothing to translate.', $sourceLocale));
+        }
+
+        return new self($target, $locale, self::KIND_TRANSLATION, new Brief(\sprintf('Translated from %s.', $sourceLocale)), $source, null, $sourceLocale);
     }
 }

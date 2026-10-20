@@ -16,6 +16,7 @@ namespace TheliaCMS\Content\Pipeline;
 
 use Symfony\Component\HtmlSanitizer\HtmlSanitizer;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
+use TheliaCMS\Content\DocumentRenderer;
 
 /**
  * Filters what is about to go online.
@@ -109,6 +110,9 @@ final readonly class PublishedContentSanitizer
             // against its registry and the props against a schema.
             ->allowAttribute('data-cms-partial', '*')
             ->allowAttribute('data-props', '*')
+            // The section an element renders, which the content screen
+            // reads to point at it in the preview.
+            ->allowAttribute(DocumentRenderer::SECTION_ATTRIBUTE, '*')
             // `open` is what an author toggles on a question that should start
             // expanded; without it a `<details>` always comes back closed.
             ->allowAttribute('open', ['details'])

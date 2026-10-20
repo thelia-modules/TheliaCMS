@@ -23,9 +23,10 @@ use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\TheliaCMS;
 
 /**
- * A section changed by hand: the form of its props, read back into the
- * document, stored through the writer like a generated one, and written to
- * the ledger as a manual change so the next request starts from it.
+ * A section changed or removed by hand: the form of its props read back into
+ * the document, or the section taken out of it, stored through the writer
+ * like a generated document, and written to the ledger as a manual change so
+ * the next request starts from it.
  */
 final readonly class SectionUpdate
 {
@@ -83,6 +84,35 @@ final readonly class SectionUpdate
         }
 
         $this->log->recordManual($subject->target, $subject->locale, $document->toJson(), \sprintf('Section "%s" edited by hand.', $section->id));
+
+        return [];
+    }
+
+    /**
+     * A section taken out of the document, the others kept in their order.
+     *
+     * @param \Closure(Document): void $save
+     *
+     * @return list<string> the problems, empty when the section was removed
+     */
+    public function remove(Request $request, ContentSubject $subject, Document $current, \Closure $save): array
+    {
+        $sectionId = (string) $request->request->get('section', '');
+        $section = '' === $sectionId ? null : $current->section($sectionId);
+
+        if (null === $section) {
+            return [$this->translator->trans('This section is no longer in the document: reload the screen.', [], TheliaCMS::DOMAIN_NAME)];
+        }
+
+        $document = $current->withoutSection($section->id);
+
+        try {
+            $save($document);
+        } catch (InvalidDocumentException $exception) {
+            return $exception->problems;
+        }
+
+        $this->log->recordManual($subject->target, $subject->locale, $document->toJson(), \sprintf('Section "%s" removed by hand.', $section->id));
 
         return [];
     }

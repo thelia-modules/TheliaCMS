@@ -59,6 +59,19 @@ final class PartialRendererTest extends TestCase
         self::assertStringNotContainsString('data-cms-partial', (string) $html);
     }
 
+    public function testTheSectionMarkOfAPlaceholderMovesToWhatIsRendered(): void
+    {
+        $renderer = $this->renderer([new FakePartial('cms-menu')]);
+
+        $html = $renderer->substitute(
+            '<div data-cms-section="menu" data-cms-partial="cms-menu" data-props="{}"></div>',
+            'fr_FR',
+        );
+
+        self::assertStringContainsString('<nav data-cms-section="menu">cms-menu</nav>', (string) $html, 'The content screen points at a dynamic section through the mark of its first element.');
+        self::assertStringNotContainsString('data-cms-partial', (string) $html);
+    }
+
     public function testHandsTheStoredSettingsToTheDefinition(): void
     {
         $partial = new FakePartial('news', [PartialProp::integer('count', 'How many', 3, 1, 12)]);

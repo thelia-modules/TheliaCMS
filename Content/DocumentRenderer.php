@@ -27,6 +27,9 @@ final readonly class DocumentRenderer
     /** Class of the container, the one `blocks.css` and the site styles target. */
     public const string CONTAINER_CLASS = 'cms-page-content';
 
+    /** Attribute of the first element of a section, carrying the id of the section. */
+    public const string SECTION_ATTRIBUTE = 'data-cms-section';
+
     public function __construct(
         private SectionCatalog $catalog,
     ) {
@@ -46,9 +49,27 @@ final readonly class DocumentRenderer
                 throw UnknownSectionException::for($section);
             }
 
-            $fragments[] = $definition->render($section->props, $locale);
+            $fragments[] = self::anchored($definition->render($section->props, $locale), $section->id);
         }
 
         return \sprintf('<div class="%s">%s</div>', self::CONTAINER_CLASS, implode("\n", $fragments));
+    }
+
+    /**
+     * The first element of the fragment is told which section it renders,
+     * so the content screen can point at a section in the preview. A
+     * fragment that opens with no element — empty, text alone — is left as
+     * it is.
+     */
+    private static function anchored(string $fragment, string $sectionId): string
+    {
+        $anchored = preg_replace(
+            '/^(\s*(?:<!--.*?-->\s*)*<[a-z][a-z0-9-]*)(?=[\s\/>])/is',
+            '$1 '.self::SECTION_ATTRIBUTE.'="'.htmlspecialchars($sectionId, \ENT_QUOTES | \ENT_HTML5).'"',
+            $fragment,
+            1,
+        );
+
+        return $anchored ?? $fragment;
     }
 }

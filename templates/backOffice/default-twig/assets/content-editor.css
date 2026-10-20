@@ -90,16 +90,59 @@ body:has(.cms-content) {
     background: #fff;
 }
 
+.cms-content__item.is-hover,
+.cms-content__item:hover,
+.cms-content__item:focus-within {
+    border-color: var(--bs-primary, #0d6efd);
+    box-shadow: 0 0 0 1px var(--bs-primary, #0d6efd);
+}
+
 .cms-content__item-head {
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
     gap: 0.5rem;
+}
+
+.cms-content__item-locate {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.cms-content__item-locate:hover .cms-content__item-label,
+.cms-content__item-locate:focus-visible .cms-content__item-label {
+    text-decoration: underline;
+}
+
+.cms-content__item-rank {
+    flex: 0 0 auto;
+    min-width: 1.5rem;
+    padding: 0 0.4rem;
+    border-radius: 1rem;
+    background: var(--bs-primary, #0d6efd);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.5rem;
+    text-align: center;
 }
 
 .cms-content__item-label {
     font-weight: 600;
     font-size: 0.875rem;
+}
+
+.cms-content__item-remove-form {
+    margin-left: auto;
+    line-height: 1;
 }
 
 .cms-content__item-component {
@@ -158,6 +201,10 @@ body:has(.cms-content) {
     font-weight: 600;
     margin: 0 0 0.25rem;
     color: #212529;
+}
+
+.cms-content__translate {
+    margin-top: 1rem;
 }
 
 .cms-content__empty-hint {
