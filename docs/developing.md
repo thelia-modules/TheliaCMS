@@ -47,6 +47,10 @@ directly (`composer.json` of the module says which) and no longer
 - A test that runs outside a transaction (`ALTER TABLE`, `TRUNCATE`) cleans in
   `tearDown()` what it inserted; a run interrupted halfway otherwise leaves
   rows behind for the next one.
+- A test that uploads a file writes it where the site keeps its library
+  (`local/library/images/`), the test database being separate but not the
+  disk: remove what it left behind, or the directory shows files no row
+  names.
 - A test is seen red once, by breaking the code it covers, before it is kept.
   For a template, that means `touch` and `var/cache/test` removed before and
   after the sabotage (see above).

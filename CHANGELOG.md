@@ -127,6 +127,17 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - An `image` prop holds the id of a library image or the `https://` address
   of a picture kept elsewhere; the hand-edit form previews the picture,
   replaces it by a file that joins the media library, or takes an address.
+- **The components of the theme come first.** A `@prop` of a theme
+  component may name what the site holds — `image`, `product`, `category`,
+  `folder`, `form`, `menu`, `block`, or a list such as `product[]` — and the
+  parameters the PHP class of the component takes (`productIds`) are read
+  when they are documented; the component receives ids, as a template of the
+  theme would pass them. The theme puts the module's sections it replaces
+  away under `sections.hidden` of `config/theliacms.yaml`, and the
+  `catalogue` skill sends the model to a component of the theme before a
+  block of the module. With that, Flexy's `Layouts:CrossSelling`,
+  `Organisms:VideoPlayer`, `Organisms:CategoryCard` and the like are used on
+  a page as they are, without a theme template over a partial of the module.
 - The toolkit of the Flexy theme gets a page with every section of the
   catalogue (`/toolkit/cms-all-sections`, `cms_catalogue()` in Twig), and
   the content screen links to it in debug, so a brief names what it wants.

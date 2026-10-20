@@ -27,6 +27,11 @@ use Symfony\Component\Yaml\Yaml;
  *         components:
  *             - Molecules:Reinsurance:Base
  *             - Organisms:ArticleCard:Base
+ *         hidden:
+ *             - Partial:product-strip
+ *
+ * `hidden` names the sections of the module the theme puts away, because it
+ * opens a component of its own for the same thing.
  *
  * Nothing is opened by default: a component of a shop — a cart line, a
  * checkout step — makes no sense on a page, and the theme is the one that
@@ -39,9 +44,11 @@ final readonly class ThemeSections
 
     /**
      * @param list<string> $components
+     * @param list<string> $hidden
      */
     public function __construct(
         public array $components = [],
+        public array $hidden = [],
     ) {
     }
 
@@ -53,10 +60,10 @@ final readonly class ThemeSections
     public static function declaredIn(array $themeDirectories): self
     {
         foreach ($themeDirectories as $directory) {
-            $components = self::readFrom($directory);
+            $declared = self::readFrom($directory);
 
-            if (null !== $components) {
-                return new self($components);
+            if (null !== $declared) {
+                return new self($declared['components'], $declared['hidden']);
             }
         }
 
@@ -64,7 +71,7 @@ final readonly class ThemeSections
     }
 
     /**
-     * @return list<string>|null null when the theme declares nothing
+     * @return array{components: list<string>, hidden: list<string>}|null null when the theme declares nothing
      */
     private static function readFrom(string $themeDirectory): ?array
     {
@@ -90,22 +97,31 @@ final readonly class ThemeSections
             throw new \InvalidArgumentException(\sprintf('The "sections" key of %s must hold a "components" list.', $file));
         }
 
-        $components = $sections['components'] ?? [];
+        return [
+            'components' => self::names($sections['components'] ?? [], 'sections.components', $file),
+            'hidden' => self::names($sections['hidden'] ?? [], 'sections.hidden', $file),
+        ];
+    }
 
-        if (null === $components) {
+    /**
+     * @return list<string>
+     */
+    private static function names(mixed $names, string $key, string $file): array
+    {
+        if (null === $names) {
             return [];
         }
 
-        if (!\is_array($components) || !array_is_list($components)) {
-            throw new \InvalidArgumentException(\sprintf('The "sections.components" key of %s must be a list of component names.', $file));
+        if (!\is_array($names) || !array_is_list($names)) {
+            throw new \InvalidArgumentException(\sprintf('The "%s" key of %s must be a list of component names.', $key, $file));
         }
 
-        foreach ($components as $component) {
-            if (!\is_string($component) || 1 !== preg_match('/^[A-Za-z0-9_]+(:[A-Za-z0-9_]+)+$/', $component)) {
-                throw new \InvalidArgumentException(\sprintf('"%s" in %s is not a component name such as Molecules:Button:Base.', \is_scalar($component) ? (string) $component : \gettype($component), $file));
+        foreach ($names as $name) {
+            if (!\is_string($name) || 1 !== preg_match('/^[A-Za-z0-9_]+(:[A-Za-z0-9_-]+)+$/', $name)) {
+                throw new \InvalidArgumentException(\sprintf('"%s" in %s is not a component name such as Molecules:Button:Base.', \is_scalar($name) ? (string) $name : \gettype($name), $file));
             }
         }
 
-        return array_values(array_unique($components));
+        return array_values(array_unique($names));
     }
 }

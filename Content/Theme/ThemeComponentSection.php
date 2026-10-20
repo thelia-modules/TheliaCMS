@@ -31,6 +31,7 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
 {
     /**
      * @param array<string, string> $twigNames the name of each prop as the component spells it, by the name the schema uses
+     * @param list<string>          $idLists   the props that hold several records, handed to the component as a list of ids
      */
     public function __construct(
         private string $component,
@@ -38,6 +39,7 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
         private PropSchema $schema,
         private array $twigNames,
         private ComponentRendererInterface $renderer,
+        private array $idLists = [],
     ) {
     }
 
@@ -75,6 +77,9 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
             $sample[$prop->name] = match ($prop->type) {
                 PropType::Text => '' !== (string) $prop->default ? $prop->default : ($prop->required ? ucfirst(str_replace('_', ' ', $prop->name)) : ''),
                 PropType::Url => '' !== (string) $prop->default ? $prop->default : '#',
+                PropType::Image => null,
+                PropType::Reference => $prop->required ? 1 : null,
+                PropType::Items => \in_array($prop->name, $this->idLists, true) ? [['id' => 1], ['id' => 2]] : [],
                 default => $prop->default,
             };
         }
@@ -96,6 +101,12 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
             // may be an expression the reader could not evaluate.
             if ('' === $value || null === $value) {
                 continue;
+            }
+
+            // Several records are stored as rows of ids, which the hand-edit
+            // form and the model both write; the component wants the ids.
+            if (\in_array($name, $this->idLists, true) && \is_array($value)) {
+                $value = array_values(array_filter(array_map(static fn (mixed $row): int => (int) (\is_array($row) ? ($row['id'] ?? 0) : $row), $value)));
             }
 
             $forComponent[$this->twigNames[$name] ?? $name] = $value;

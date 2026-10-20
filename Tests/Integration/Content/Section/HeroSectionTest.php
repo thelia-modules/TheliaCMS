@@ -39,8 +39,8 @@ final class HeroSectionTest extends CmsIntegrationTestCase
         self::assertArrayHasKey(HeroSection::NAME, $byName);
         self::assertFalse($byName[HeroSection::NAME]['live']);
         self::assertNotSame('', $byName[HeroSection::NAME]['description']);
-        self::assertArrayHasKey('Partial:product-strip', $byName);
-        self::assertTrue($byName['Partial:product-strip']['live'], 'Live content is named, not drawn.');
+        self::assertArrayHasKey('Partial:cms-form', $byName);
+        self::assertTrue($byName['Partial:cms-form']['live'], 'Live content is named, not drawn.');
     }
 
     public function testTheSampleRendersTheMarkupOfTheFormerBlock(): void

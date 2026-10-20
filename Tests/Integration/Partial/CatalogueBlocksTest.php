@@ -14,9 +14,11 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Partial;
 
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Model\Category;
 use Thelia\Model\Product;
 use Thelia\Test\FixtureFactory;
+use TheliaCMS\Content\Partial\PartialSection;
 use TheliaCMS\Generation\CatalogSheet;
 use TheliaCMS\Partial\Definition\CategoryCardPartial;
 use TheliaCMS\Partial\Definition\CategoryStripPartial;
@@ -117,8 +119,9 @@ final class CatalogueBlocksTest extends AdminScreenTestCase
 
         self::assertSame([(int) $third->getId(), (int) $second->getId()], $partial->context(['products' => $ids, 'heading' => null], 'en_US')['product_ids'], 'An offline product leaves the row without a hole.');
 
-        $sheet = $this->getService(CatalogSheet::class)->text();
-        self::assertStringContainsString('## `Partial:product-strip`', $sheet, 'The strip is in the catalogue the model reads.');
+        // Read as the model would, whether or not the theme puts the strip away for a component of its own.
+        $sheet = $this->getService(CatalogSheet::class)->section(new PartialSection($partial, $this->getService(TranslatorInterface::class)));
+        self::assertStringContainsString('## `Partial:product-strip`', $sheet, 'The strip has its sheet in the catalogue.');
         self::assertStringContainsString('`products`* (list of 2 to 12 items)', $sheet);
         self::assertStringContainsString('`product`* (id from the search tools)', $sheet);
         self::assertStringContainsString('"products":[{"product":1},{"product":2}]', $sheet, 'The example shows the shape of a row.');
@@ -155,7 +158,7 @@ final class CatalogueBlocksTest extends AdminScreenTestCase
         $second->setVisible(0)->save();
 
         self::assertSame([(int) $first->getId()], array_column($partial->context(['categories' => $ids, 'heading' => null], 'en_US')['categories'], 'id'));
-        self::assertStringContainsString('## `Partial:category-strip`', $this->getService(CatalogSheet::class)->text());
+        self::assertStringContainsString('## `Partial:category-strip`', $this->getService(CatalogSheet::class)->section(new PartialSection($partial, $this->getService(TranslatorInterface::class))));
     }
 
     /**

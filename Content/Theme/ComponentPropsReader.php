@@ -14,8 +14,10 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Content\Theme;
 
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use TheliaCMS\Content\Prop;
 use TheliaCMS\Content\PropSchema;
+use TheliaCMS\Content\PropType;
 use Twig\Environment;
 
 /**
@@ -25,15 +27,40 @@ use Twig\Environment;
  * a comment per prop at the top of the template, `{# @prop name type what it
  * is for #}`, and the `{% props name = default, … %}` tag that declares them.
  * The comment gives the type and the meaning, the tag the default; a prop
- * declared without a default and not documented as nullable is required.
+ * declared without a default and not documented as nullable is required. A
+ * prop documented but not declared in the tag is one the PHP class of the
+ * component takes (`mount()`), and is optional.
+ *
+ * Besides the scalar types, a prop may name what the site holds: `image` for
+ * a picture of the media library, `product`, `category`, `folder`, `form`,
+ * `menu` or `block` for one record picked by its id, and `product[]` or
+ * `category[]` for several, in the order they were picked. The component
+ * receives the ids, as it would from a template of the theme.
  *
  * Read at every call rather than cached: the theme is edited while the site
  * runs, and the schema has to follow the template.
  */
 final readonly class ComponentPropsReader
 {
+    /** The records a prop may name, and the picker that lists each. */
+    private const array SOURCES = [
+        'product' => 'admin.cms.partials.sources.products',
+        'category' => 'admin.cms.partials.sources.categories',
+        'folder' => 'admin.cms.partials.sources.folders',
+        'form' => 'admin.cms.partials.sources.forms',
+        'menu' => 'admin.cms.partials.sources.menus',
+        'block' => 'admin.cms.partials.sources.blocks',
+    ];
+
+    /** The records too many to list in a select: the editor searches them. */
+    private const array SEARCHED = ['product', 'category'];
+
+    /** How many records a list of them may hold. */
+    private const int MAX_IDS = 12;
+
     public function __construct(
         private Environment $twig,
+        private UrlGeneratorInterface $urls,
     ) {
     }
 
@@ -49,7 +76,7 @@ final readonly class ComponentPropsReader
     }
 
     /**
-     * @return array{description: string, schema: PropSchema, documented: bool}
+     * @return array{description: string, schema: PropSchema, documented: bool, id_lists: list<string>}
      *
      * @throws \InvalidArgumentException when the theme chain has no such component
      */
@@ -61,20 +88,46 @@ final readonly class ComponentPropsReader
             throw new \InvalidArgumentException(\sprintf('The theme has no component "%s".', $component));
         }
 
-        $source = $this->twig->getLoader()->getSourceContext($template)->getCode();
+        return $this->readSource($this->twig->getLoader()->getSourceContext($template)->getCode());
+    }
+
+    /**
+     * The same, off the source of a template.
+     *
+     * @return array{description: string, schema: PropSchema, documented: bool, id_lists: list<string>}
+     */
+    public function readSource(string $source): array
+    {
         $documented = self::documentedProps($source);
         $declared = self::declaredProps($source);
         $props = [];
+        $idLists = [];
 
         foreach ($declared as $name => $declaration) {
             $doc = $documented[$name] ?? ['type' => 'string', 'description' => ''];
-            $props[] = self::prop($name, $doc['type'], $doc['description'], $declaration['default'], $declaration['hasDefault']);
+            $props[] = $this->prop($name, $doc['type'], $doc['description'], $declaration['default'], $declaration['hasDefault']);
+        }
+
+        // Documented and not declared: a parameter the class of the component
+        // takes. The template cannot say whether it has a default, so it is
+        // left optional.
+        foreach ($documented as $name => $doc) {
+            if (!isset($declared[$name])) {
+                $props[] = $this->prop($name, $doc['type'], $doc['description'], null, true);
+            }
+        }
+
+        foreach ($props as $prop) {
+            if (PropType::Items === $prop->type && self::isIdList($documented[$prop->name]['type'] ?? '')) {
+                $idLists[] = $prop->name;
+            }
         }
 
         return [
             'description' => self::description($source),
             'schema' => new PropSchema($props),
             'documented' => [] !== $documented,
+            'id_lists' => $idLists,
         ];
     }
 
@@ -221,12 +274,28 @@ final readonly class ComponentPropsReader
         return null;
     }
 
-    private static function prop(string $name, string $type, string $description, mixed $default, bool $hasDefault): Prop
+    private function prop(string $name, string $type, string $description, mixed $default, bool $hasDefault): Prop
     {
         $nullable = str_contains($type, 'null') || null === $default && $hasDefault;
         $required = !$hasDefault && !$nullable;
         $kinds = array_map(trim(...), explode('|', $type));
         $choices = [];
+
+        if (self::isIdList($type)) {
+            $record = self::recordOf($type);
+
+            return Prop::items($name, $name, [$this->reference('id', $record, true, null)], 0, self::MAX_IDS, $description);
+        }
+
+        if (\in_array('image', $kinds, true)) {
+            return Prop::image($name, $name, $required, $description);
+        }
+
+        foreach ($kinds as $kind) {
+            if (isset(self::SOURCES[$kind])) {
+                return $this->reference($name, $kind, $required, $description);
+            }
+        }
 
         foreach ($kinds as $kind) {
             if (1 === preg_match('/^["\'](.+)["\']$/', $kind, $match)) {
@@ -251,5 +320,43 @@ final readonly class ComponentPropsReader
         }
 
         return Prop::text($name, $name, \is_scalar($default) ? (string) $default : '', $required, 500, $description);
+    }
+
+    private function reference(string $name, string $record, bool $required, ?string $description): Prop
+    {
+        return Prop::reference(
+            $name,
+            'id' === $name ? ucfirst($record) : $name,
+            $record,
+            $required,
+            $description,
+            $this->urls->generate(self::SOURCES[$record]),
+            \in_array($record, self::SEARCHED, true),
+        );
+    }
+
+    /**
+     * `product[]`, `list<category>`, `array<product>`: several records.
+     */
+    private static function isIdList(string $type): bool
+    {
+        return null !== self::recordOf($type);
+    }
+
+    private static function recordOf(string $type): ?string
+    {
+        foreach (explode('|', $type) as $kind) {
+            $kind = trim($kind);
+
+            if (1 === preg_match('/^(?:(\w+)\[\]|(?:list|array)<(\w+)>)$/', $kind, $match)) {
+                $record = '' !== ($match[1] ?? '') ? $match[1] : $match[2];
+
+                if (isset(self::SOURCES[$record])) {
+                    return $record;
+                }
+            }
+        }
+
+        return null;
     }
 }

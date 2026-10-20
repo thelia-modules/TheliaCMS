@@ -22,7 +22,9 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
  * The definitions registered one by one come first, then what the providers
  * bring. The first definition claiming a name wins: a module that ships a
  * component under a name this module already uses does not replace it, which
- * is the same rule the partial registry applies.
+ * is the same rule the partial registry applies. A provider may also put
+ * names away (`SectionHidingInterface`): the theme that opens its own
+ * component for something hides the module's.
  */
 final class SectionCatalog
 {
@@ -68,6 +70,7 @@ final class SectionCatalog
         }
 
         $byName = [];
+        $hidden = [];
 
         foreach ($this->definitions as $definition) {
             $byName[$definition->name()] ??= $definition;
@@ -76,6 +79,19 @@ final class SectionCatalog
         foreach ($this->providers as $provider) {
             foreach ($provider->sections() as $definition) {
                 $byName[$definition->name()] ??= $definition;
+            }
+
+            if ($provider instanceof SectionHidingInterface) {
+                $hidden = [...$hidden, ...$provider->hidden()];
+            }
+        }
+
+        // What a provider puts away goes, unless it is what the provider
+        // itself brought: a theme hides the module's row of products, never
+        // its own component.
+        foreach ($hidden as $name) {
+            if (isset($byName[$name]) && !$byName[$name] instanceof Theme\ThemeComponentSection) {
+                unset($byName[$name]);
             }
         }
 

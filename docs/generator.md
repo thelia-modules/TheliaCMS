@@ -92,6 +92,10 @@ and the same for a reusable block or the block of a catalogue item
 (`/admin/cms/blocks/{id}/content`). The brief on the left, the draft on the
 right as the theme shows it, through the signed preview link of the draft.
 
+- The catalogue the generator writes from is the theme's first: the
+  components the theme opens in `config/theliacms.yaml` (with the sections of
+  the module the theme puts away under `hidden`), then the sections and the
+  partials of the module (`docs/creating-a-component.md`).
 - **See every section the generator can use**: a link, shown in debug with
   the Flexy theme, to the page the module hangs in the toolkit
   (`/toolkit/cms-all-sections`): every section with its sample, live content

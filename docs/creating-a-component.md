@@ -19,6 +19,21 @@ sections:
         - Organisms:ArticleCard:Base
 ```
 
+A theme that opens a component of its own for something the module also
+does puts the module's section away under `sections.hidden`, so the
+generator is never asked to choose between the two:
+
+```yaml
+sections:
+    components:
+        - Layouts:CrossSelling:Base
+        - Organisms:VideoPlayer:Base
+    hidden:
+        - Partial:product-strip
+        - Partial:product-card
+        - Partial:video-facade
+```
+
 Nothing is opened until the theme says so. A name is two or more segments of
 letters, digits and underscores joined by `:`, and is looked up as
 `@Flexy/<segments>.html.twig` with the segments as directories, so
@@ -43,6 +58,17 @@ from two places:
   quoted alternatives (`'primary'|'secondary'`) a choice, and anything else a
   line of text, 500 characters at most. A type naming `null` makes the prop
   optional.
+- a prop may name what the site holds: `image` is a picture of the media
+  library (its id, or the `https://` address of a picture kept elsewhere);
+  `product`, `category`, `folder`, `form`, `menu` or `block` is one record,
+  picked by its id with the same pickers the partials use (the generator
+  finds the id with its search tools); `product[]`, `category[]`, or
+  `list<folder>`, is several of them, two to twelve, stored as rows of ids in
+  the order they were picked and handed to the component as a list of ids,
+  the way a template of the theme would pass them.
+- a prop documented and not declared in the `{% props %}` tag is one the PHP
+  class of the component takes in `mount()` (`productIds` of a product strip,
+  for instance): it is read as optional, under the name the comment gives.
 
 A prop declared without a default and not documented as nullable is required.
 A component with no `@prop` comment at all still works: every declared prop

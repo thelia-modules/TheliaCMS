@@ -20,6 +20,7 @@ use TheliaCMS\Content\Partial\PartialSection;
 use TheliaCMS\Content\PropType;
 use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionCatalog;
+use TheliaCMS\Content\Theme\ThemeComponentSections;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 
@@ -36,7 +37,9 @@ final class PartialSectionTest extends CmsIntegrationTestCase
 
         self::assertContains('Partial:cms-block', $names);
         self::assertContains('Partial:cms-form', $names);
-        self::assertContains('Partial:product-card', $names);
+        // Unless the theme puts it away for a component of its own.
+        $hidden = $this->getService(ThemeComponentSections::class)->hidden();
+        self::assertSame(\in_array('Partial:product-card', $hidden, true), !\in_array('Partial:product-card', $names, true));
     }
 
     public function testThePropsOfAPartialBecomeTheSchemaOfTheSection(): void

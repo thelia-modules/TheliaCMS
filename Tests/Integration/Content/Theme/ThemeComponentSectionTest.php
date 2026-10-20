@@ -16,6 +16,7 @@ namespace TheliaCMS\Tests\Integration\Content\Theme;
 
 use Symfony\UX\TwigComponent\ComponentRendererInterface;
 use TheliaCMS\Content\PropType;
+use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\Theme\ComponentPropsReader;
 use TheliaCMS\Content\Theme\ThemeComponentSection;
 use TheliaCMS\Content\Theme\ThemeComponentSections;
@@ -115,11 +116,23 @@ final class ThemeComponentSectionTest extends CmsIntegrationTestCase
 
     public function testTheProviderFollowsTheDeclarationOfTheActiveTheme(): void
     {
-        // Flexy declares nothing: nothing is opened, and the catalogue holds
-        // only the sections of the module and the partials.
+        // Whatever the theme declares — nothing, or its own components — is
+        // what the provider opens, one section per component that reads,
+        // and what it puts away is left out of the catalogue.
         $provider = $this->getService(ThemeComponentSections::class);
+        $declaration = $provider->declaration();
+        $opened = array_map(static fn ($section): string => $section->name(), iterator_to_array($provider->sections(), false));
 
-        self::assertSame([], $provider->declaration()->components);
-        self::assertSame([], iterator_to_array($provider->sections(), false));
+        self::assertSame($declaration->components, $opened, 'Every declared component is a section, in order.');
+
+        $names = $this->getService(SectionCatalog::class)->names();
+
+        foreach ($declaration->components as $component) {
+            self::assertContains($component, $names);
+        }
+
+        foreach ($declaration->hidden as $hidden) {
+            self::assertNotContains($hidden, $names, 'A section the theme puts away is not offered.');
+        }
     }
 }

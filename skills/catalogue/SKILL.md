@@ -14,6 +14,12 @@ anything else is refused.
 
 ## Choosing sections
 
+- **A component of the theme comes first.** The catalogue may hold
+  components the theme opened (their names start with `Layouts:`,
+  `Organisms:` or `Molecules:`): they are the site's own blocks, drawn as the
+  rest of the site is. When one of them does what a `Cms:` or `Partial:`
+  section does, use the component of the theme.
+
 - Open with one section that carries the main heading of the page: `Cms:Hero`
   with `heading_level` 1, or a `cms:richtext` starting with an `<h1>`. Never
   two of them.
@@ -26,12 +32,12 @@ anything else is refused.
 - Live content (`Partial:*`) shows what the site holds today — a form, the
   latest news, a product — and takes the id of that item. Use the search tools
   to find the id; never guess one.
-- Several products go in **one** `Partial:product-strip`: a row of cards, the
-  ids from `search_products` in `products`, a heading that says what they
-  have in common. Never a `Partial:product-card` per product stacked one
-  under the other; `Partial:product-card` is for one product on its own,
-  next to the text that talks about it. The same for categories:
-  `Partial:category-strip` for several, `Partial:category-card` for one.
+- Several products go in **one** row: the component of the theme made for
+  a row of products when the catalogue has one, else `Partial:product-strip`;
+  the ids from `search_products`, a heading that says what they have in
+  common. Never one card per product stacked one under the other; a single
+  card is for one product on its own, next to the text that talks about it.
+  The same for categories.
 
 ## Props
 

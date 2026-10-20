@@ -18,6 +18,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\UX\TwigComponent\ComponentRendererInterface;
 use Thelia\Core\Template\TemplateDefinition;
 use Thelia\Core\Template\TemplateHelperInterface;
+use TheliaCMS\Content\SectionHidingInterface;
 use TheliaCMS\Content\SectionProviderInterface;
 
 /**
@@ -29,7 +30,7 @@ use TheliaCMS\Content\SectionProviderInterface;
  * A declared component the theme chain does not ship is logged and skipped
  * rather than fatal: a page must keep rendering while a theme is reworked.
  */
-final readonly class ThemeComponentSections implements SectionProviderInterface
+final readonly class ThemeComponentSections implements SectionProviderInterface, SectionHidingInterface
 {
     public function __construct(
         private TemplateHelperInterface $templates,
@@ -56,8 +57,17 @@ final readonly class ThemeComponentSections implements SectionProviderInterface
                 $twigNames[$prop->name] = self::twigName($prop->name);
             }
 
-            yield new ThemeComponentSection($component, $read['description'], $read['schema'], $twigNames, $this->renderer);
+            yield new ThemeComponentSection($component, $read['description'], $read['schema'], $twigNames, $this->renderer, $read['id_lists']);
         }
+    }
+
+    /**
+     * The sections of the module the theme puts away, because it opens a
+     * component of its own for the same thing.
+     */
+    public function hidden(): array
+    {
+        return $this->declaration()->hidden;
     }
 
     public function declaration(): ThemeSections
