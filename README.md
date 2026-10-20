@@ -767,10 +767,7 @@ site, a template added to the theme shows at the next expiry of
 `http_cache_ttl`: see [docs/shared-cache.md](docs/shared-cache.md).
 
 The type travels with the site export. An import of a site creates the types
-the site lacks (a type no page has is not exported). A page started from a
-saved template whose type the site no longer has gets the default type:
-starting a page needs the right to write pages, not the right to change the
-settings.
+the site lacks (a type no page has is not exported).
 
 The fallback template puts `cms-page--{type}` on the `<body>`, for a theme that
 only needs a class to tell the types apart.
@@ -809,8 +806,8 @@ hooked on `cmspage.*` as `page.tag`. From PHP, the same list comes from
 {% endfor %}
 ```
 
-The tag follows a page when it is duplicated and travels with the site export
-and with saved templates; an import creates the tags the site lacks. The update
+The tag follows a page when it is duplicated and travels with the site export;
+an import creates the tags the site lacks. The update
 to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
 
 ### Twig functions
@@ -893,18 +890,6 @@ a starter kit never switches a running site into showcase mode by surprise. The
 whole thing runs in one transaction, so a file that turns out to be broken
 halfway through leaves the site as it was.
 
-### Templates
-
-The Templates screen keeps a page aside as a starting point for others: pick a
-page, name the template, and it appears in the list for anybody who writes
-pages. Starting from one asks for a title and where the page goes, then opens
-the content screen on a hidden draft, so a template can be tried without
-anything showing up on the site.
-
-A template stores the export document of the page it was made from, so what the
-export command writes and what a template holds are the same thing, and a
-template built on one site is a file that can be handed to another.
-
 ## Scope
 
 Working today: the page tree with its bin and duplication, the content screen
@@ -915,7 +900,7 @@ pipeline (sanitizer, responsive images, search indexing, heading check),
 publication and generation from the command line, the media library, menus, hierarchical URLs
 with 301s on rename, forms and their answers, the front-office search,
 third-party snippets behind consent, the sitemap section, cache tags, the
-showcase dashboard, import and export, templates, showcase mode, maintenance,
+showcase dashboard, import and export, showcase mode, maintenance,
 the editable 404, the ACL, and the activity log.
 
 ## Tests

@@ -16,12 +16,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   A theme that called `cms_item_block()` removes the call. An export taken
   before the update keeps the blocks; a 2.0.0 module imports the rest of the
   file and warns that the blocks were left out.
+- **Saved page templates are gone.** The **CMS > Templates** screen, the
+  `cms_page_template` table (dropped by the update to 2.0.0) and the code that
+  saved a page as a template and started a page from one. A page is started
+  from a brief, or duplicated from another page.
 - **The content of a 1.x site is not carried over.** The content of a page
   is now a document — an ordered list of sections, each a component
   of the catalogue with its props — rendered to HTML on save and on publish.
   The markup the former editor stored has no document to be read back from, so
   the update to 2.0.0 puts every page back to draft, without content,
-  and removes their revisions, search entries and saved page templates. Pages
+  and removes their revisions and search entries. Pages
   keep their tree, addresses, SEO, tags and types. **Export the site before
   updating** (`php Thelia thelia_cms:export`): the file keeps the HTML, and a
   2.0.0 module imports everything in it but the contents.
@@ -202,6 +206,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   the module is a form; the latest news or a menu on a page is a component of
   the theme. `cms_menu()`, the footer menu hook and the menus themselves are
   untouched.
+- Saved page templates: `ImportExport\Admin\CmsTemplateAdminController`,
+  `PageTemplateWriter`, `SaveAsTemplateType`, `PageFromTemplateType`, the
+  models `CmsPageTemplate*`, `SiteExporter::exportPage()` and
+  `SiteImporter::importPageFrom()`. `Page\PageTemplateResolver`, which picks
+  the Twig template of a page by its type, is unrelated and stays.
 - The pipeline a page goes through before it is stored or published moves
   from `TheliaCMS\Builder` to `TheliaCMS\Content\Pipeline`:
   `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,

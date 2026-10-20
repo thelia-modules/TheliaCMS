@@ -16,7 +16,6 @@ namespace TheliaCMS\Tests\Integration\Page;
 
 use TheliaCMS\ImportExport\ImportOptions;
 use TheliaCMS\ImportExport\SiteDocument;
-use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\ImportExport\SiteImporter;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
@@ -101,7 +100,7 @@ final class PageSummaryTest extends CmsIntegrationTestCase
     {
         $locale = $this->locale();
         $page = $this->createPage('Page importée');
-        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        $document = $this->exportedPage($page);
         $document['pages'][0]['translations'][$locale]['chapo'] = '<p>Le résumé.</p><script>alert(1)</script>';
         $document['pages'][0]['translations'][$locale]['description'] = ['<script>alert(1)</script>'];
 

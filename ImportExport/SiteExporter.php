@@ -79,40 +79,19 @@ final readonly class SiteExporter
     }
 
     /**
-     * One page on its own, in the same envelope as a full export.
-     *
-     * This is what a template stores, and it is deliberately the same shape:
-     * the file a template is made of can be handed to the import command, and
-     * an exported page can be turned into a template.
-     *
-     * @return array<string, mixed>
-     */
-    public function exportPage(CmsPage $page): array
-    {
-        $locales = $this->locales();
-        $document = $this->pageDocument($page, $locales, withTree: false);
-
-        return [
-            ...ExportFormat::header($this->moduleVersion(), $locales, new \DateTimeImmutable()),
-            'pages' => [$document],
-            'media' => $this->mediaDocument($this->mediaOf($document)),
-        ];
-    }
-
-    /**
      * The document of a single page.
      *
      * @param list<string> $locales
      *
      * @return array<string, mixed>
      */
-    public function pageDocument(CmsPage $page, array $locales, bool $withTree = true): array
+    public function pageDocument(CmsPage $page, array $locales): array
     {
         $parent = (int) $page->getParent();
 
         $document = [
             'uid' => self::pageUid((int) $page->getId()),
-            'parent' => $withTree && $parent > 0 ? self::pageUid($parent) : null,
+            'parent' => $parent > 0 ? self::pageUid($parent) : null,
             'position' => (int) $page->getPosition(),
             'visible' => 1 === $page->getVisible(),
             'page_type' => (string) $page->getPageType(),

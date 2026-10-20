@@ -19,8 +19,11 @@ use Thelia\Core\Template\TemplateDefinition;
 use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\ConfigQuery;
+use Thelia\Model\LangQuery;
 use Thelia\Test\IntegrationTestCase;
 use TheliaCMS\Content\Document;
+use TheliaCMS\ImportExport\ExportFormat;
+use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\PageDraft;
@@ -144,6 +147,22 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
         }
 
         ConfigQuery::write('active-front-template', $installed[0]->getName());
+    }
+
+    /**
+     * The export file of one page, in every active language: what a test of
+     * the import changes before reading it back.
+     *
+     * @return array<string, mixed>
+     */
+    protected function exportedPage(CmsPage $page): array
+    {
+        $locales = array_map(strval(...), LangQuery::create()->filterByActive(1)->select(['Locale'])->find()->getData());
+
+        return [
+            ...ExportFormat::header('test', $locales, new \DateTimeImmutable()),
+            'pages' => [$this->getService(SiteExporter::class)->pageDocument($page, $locales)],
+        ];
     }
 
     protected function writer(): CmsPageWriter

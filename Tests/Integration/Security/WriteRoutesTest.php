@@ -77,7 +77,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.skills.list',
         'admin.cms.tags.edit',
         'admin.cms.tags.list',
-        'admin.cms.templates.list',
     ];
 
     /** Placeholder values that match no record, so a refused write had nothing to touch. */
@@ -176,7 +175,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
             '/admin/cms/forms/'.$form->getId(),
             '/admin/cms/forms/'.$form->getId().'/submissions',
             '/admin/cms/media',
-            '/admin/cms/templates',
             '/admin/cms/settings',
             '/admin/cms/settings/page-types',
             '/admin/cms/skills',

@@ -27,3 +27,6 @@ The update also drops the tables of the blocks (`cms_block`,
 `cms_block_i18n`, `cms_block_content`, `cms_item_block`): blocks are no
 longer part of the module. An export taken before the update keeps them; a
 2.0.0 module imports the rest of that file and says it left the blocks out.
+
+It drops `cms_page_template` as well: saved page templates are no longer
+part of the module, rather than emptied as the decision above says.

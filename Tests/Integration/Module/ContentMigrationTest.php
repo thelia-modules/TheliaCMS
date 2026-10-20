@@ -21,7 +21,8 @@ use TheliaCMS\TheliaCMS;
 /**
  * A site on 1.5.0 moving to documents: the columns of the former editor go,
  * the document columns come, the pages stay and their content does not, the
- * tables of the blocks go, and the update can be played twice.
+ * tables of the blocks and of the saved templates go, and the update can be
+ * played twice.
  *
  * Runs outside a transaction: an ALTER TABLE commits on its own, so a rollback
  * would undo nothing and the test would prove nothing. The tables are put back
@@ -35,10 +36,8 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
     protected function tearDown(): void
     {
         // Whatever the test did, leave the tables in the 2.0.0 shape: playing
-        // the update once more is exactly what does that. The template the
-        // test inserted is removed here too, not left to the code under test.
+        // the update once more is exactly what does that.
         (new TheliaCMS())->update('1.5.0', '2.0.0', $this->getPropelConnection());
-        $this->getPropelConnection()->exec("DELETE FROM cms_page_template WHERE code LIKE 'test-%'");
 
         parent::tearDown();
     }
@@ -66,7 +65,7 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
         self::assertFalse($this->columnExists('cms_page_content', 'draft_css'));
         self::assertFalse($this->columnExists('cms_page_content', 'published_css'));
 
-        foreach (['cms_block', 'cms_block_i18n', 'cms_block_content', 'cms_item_block'] as $table) {
+        foreach (['cms_block', 'cms_block_i18n', 'cms_block_content', 'cms_item_block', 'cms_page_template'] as $table) {
             self::assertFalse($this->tableExists($table), $table.' goes with the blocks.');
         }
 
@@ -87,7 +86,6 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
 
         self::assertSame(0, $this->rowCount(\sprintf('cms_page_revision WHERE page_id = %d', $pageId)));
         self::assertSame(0, $this->rowCount(\sprintf('cms_page_search WHERE page_id = %d', $pageId)));
-        self::assertSame(0, $this->rowCount('cms_page_template'), 'A template saved by 1.x holds markup no document can be read from.');
     }
 
     public function testAFreshInstallIsLeftAlone(): void
@@ -110,10 +108,10 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
 
         $connection->exec('ALTER TABLE cms_page_content DROP COLUMN draft_document, DROP COLUMN published_document, ADD COLUMN draft_project_data LONGTEXT AFTER locale, ADD COLUMN draft_css LONGTEXT AFTER draft_html, ADD COLUMN published_css LONGTEXT AFTER published_html');
 
-        // The tables of the blocks as 1.5.0 had them, with a block of a
-        // product in them.
+        // The tables of the blocks and of the saved templates as 1.5.0 had
+        // them, with a block of a product in them.
         $updates = \dirname(__DIR__, 3).'/Config/update/';
-        (new Database($connection))->insertSql(null, [$updates.'0.3.0.sql', $updates.'1.4.0.sql']);
+        (new Database($connection))->insertSql(null, [$updates.'0.3.0.sql', $updates.'0.6.0.sql', $updates.'1.4.0.sql']);
         $connection->exec("INSERT INTO cms_block (code, created_at, updated_at) VALUES ('product-1', NOW(), NOW())");
         $connection->exec("INSERT INTO cms_block_content (block_id, locale, draft_html) VALUES (LAST_INSERT_ID(), 'fr_FR', '<p>Bloc</p>')");
         $connection->exec("INSERT INTO cms_item_block (item_type, item_id, block_id, created_at, updated_at) SELECT 'product', 1, id, NOW(), NOW() FROM cms_block WHERE code = 'product-1'");

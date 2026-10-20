@@ -90,7 +90,6 @@ class CmsSideNavHook extends BaseHook
         // by CmsAdminGuard, which says why.
         $event->add($this->twig->render('@TheliaCMSModule/backOffice/default-twig/side-nav.html.twig', [
             'pages_url' => $maySeePages ? $this->urls->generate('admin.cms.pages.list') : null,
-            'templates_url' => $maySeePages ? $this->urls->generate('admin.cms.templates.list') : null,
             'tags_url' => $maySeePages ? $this->urls->generate('admin.cms.tags.list') : null,
             'menus_url' => $maySeeMenus ? $this->urls->generate('admin.cms.menus.list') : null,
             'forms_url' => $maySeeForms ? $this->urls->generate('admin.cms.forms.list') : null,
@@ -106,7 +105,6 @@ class CmsSideNavHook extends BaseHook
             'is_first' => $this->settings->isShowcase(),
             'section_label' => $this->trans('CMS', [], TheliaCMS::DOMAIN_NAME),
             'pages_label' => $this->trans('Pages', [], TheliaCMS::DOMAIN_NAME),
-            'templates_label' => $this->trans('Templates', [], TheliaCMS::DOMAIN_NAME),
             'tags_label' => $this->trans('Tags', [], TheliaCMS::DOMAIN_NAME),
             'menus_label' => $this->trans('Menus', [], TheliaCMS::DOMAIN_NAME),
             'folders_label' => $this->trans('Folders', [], TheliaCMS::DOMAIN_NAME),

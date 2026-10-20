@@ -20,7 +20,6 @@ use TheliaCMS\Http\CachePurgerInterface;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\ImportExport\ImportOptions;
 use TheliaCMS\ImportExport\SiteDocument;
-use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\ImportExport\SiteImporter;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
@@ -244,42 +243,17 @@ final class PageTypeTest extends CmsIntegrationTestCase
         self::assertCount(1, $report->warnings());
     }
 
-    /**
-     * Starting a page needs the right to write pages, not the right to change
-     * the settings: a template cannot bring back a type the site dropped.
-     */
-    public function testAPageStartedFromATemplateWhoseTypeIsGoneGetsTheDefaultType(): void
-    {
-        $page = $this->createPage('Modèle de recette');
-        $document = $this->exportedWithType($page, pageType: 'type-dropped-since');
-
-        $created = $this->getService(SiteImporter::class)->importPageFrom(SiteDocument::fromArray($document), 0, 'Nouvelle recette', $this->locale());
-
-        self::assertSame(PageTypeCode::DEFAULT, $created->getPageType());
-        self::assertFalse($this->types()->exists('type-dropped-since'));
-    }
-
     public function testAnImportedTypeThatIsNotAStringIsTheDefaultType(): void
     {
         $page = $this->createPage('Gratin de pâtes');
         $page->setPageType('landing')->save();
-        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        $document = $this->exportedPage($page);
         $document['pages'][0]['page_type'] = ['recipe'];
 
         $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
 
         self::assertSame(PageTypeCode::DEFAULT, $this->reloaded($page)->getPageType());
         self::assertCount(1, $report->warnings());
-    }
-
-    public function testAPageStartedFromATemplateSavedBeforePageTypesGetsItsLayout(): void
-    {
-        $page = $this->createPage('Modèle de recette');
-        $document = $this->exportedWithType($page, legacyLayout: 'full-width');
-
-        $created = $this->getService(SiteImporter::class)->importPageFrom(SiteDocument::fromArray($document), 0, 'Nouvelle recette', $this->locale());
-
-        self::assertSame('full-width', $created->getPageType());
     }
 
     /**
@@ -290,7 +264,7 @@ final class PageTypeTest extends CmsIntegrationTestCase
      */
     private function exportedWithType(CmsPage $page, ?string $pageType = null, ?string $legacyLayout = null): array
     {
-        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        $document = $this->exportedPage($page);
 
         if (null !== $legacyLayout) {
             unset($document['pages'][0]['page_type']);

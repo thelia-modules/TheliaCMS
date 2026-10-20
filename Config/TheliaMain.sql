@@ -260,27 +260,6 @@ CREATE TABLE `cms_script`
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
--- cms_page_template
--- ---------------------------------------------------------------------
-
-DROP TABLE IF EXISTS `cms_page_template`;
-
-CREATE TABLE `cms_page_template`
-(
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `code` VARCHAR(50) NOT NULL,
-    `title` VARCHAR(255) NOT NULL,
-    `description` VARCHAR(500),
-    `payload` LONGTEXT NOT NULL,
-    `created_by` INTEGER,
-    `updated_by` INTEGER,
-    `created_at` TIMESTAMP NULL,
-    `updated_at` TIMESTAMP NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE INDEX `unq_cms_page_template_code` (`code`)
-) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
-
--- ---------------------------------------------------------------------
 -- cms_page_i18n
 -- ---------------------------------------------------------------------
 
