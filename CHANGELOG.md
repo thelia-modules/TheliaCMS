@@ -194,10 +194,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   and no `cms/sections/<slug>.html.twig` to take over.
 - The click-to-load embeds: `Partial:map-facade` and `Partial:social-facade`
   (`MapFacadePartial`, `SocialFacadePartial`), the shared `_facade.html.twig`
-  and its script, and their styles. The live content of the module is a form,
-  a menu and the latest contents; a map or a social post on a page is a
+  and its script, and their styles. A map or a social post on a page is a
   component of the theme. An iframe written in a page is still refused unless
   the author may write custom code.
+- `Partial:latest-contents` and `Partial:cms-menu` (`LatestContentsPartial`,
+  `MenuPartial`), with their templates and their styles. The live content of
+  the module is a form; the latest news or a menu on a page is a component of
+  the theme. `cms_menu()`, the footer menu hook and the menus themselves are
+  untouched.
 - The pipeline a page goes through before it is stored or published moves
   from `TheliaCMS\Builder` to `TheliaCMS\Content\Pipeline`:
   `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,

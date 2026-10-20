@@ -42,7 +42,7 @@ final class SectionEditScreenTest extends AdminScreenTestCase
     {
         $page = $this->pageWith([
             new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1><p>Un texte.</p>']),
-            new Section('news', 'Partial:latest-contents', ['count' => 3, 'folder' => null, 'heading' => 'Actualités']),
+            new Section('contact', 'Partial:cms-form', ['form' => 1]),
         ]);
 
         $screen = $this->screen($this->url($page));
@@ -52,16 +52,15 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         self::assertSame(1, $intro->filter('input[name="_token"]')->count());
         self::assertSame(1, $intro->filter('textarea[name="cms_section_intro[html]"].wysiwyg')->count(), 'A html prop is a textarea the editor module upgrades.');
 
-        $news = $screen->filter('[data-testid="cms-section-edit-news"] form');
-        self::assertSame('Actualités', $news->filter('input[name="cms_section_news[heading]"]')->attr('value'));
-        self::assertSame('3', $news->filter('input[name="cms_section_news[count]"]')->attr('value'));
+        $contact = $screen->filter('[data-testid="cms-section-edit-contact"] form');
+        self::assertSame(1, $contact->filter('[name="cms_section_contact[form]"]')->count(), 'A reference is picked in its own field.');
     }
 
     public function testEditingASectionUpdatesTheDraftAndTheLedger(): void
     {
         $page = $this->pageWith([
             new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1><p>Un texte.</p>']),
-            new Section('news', 'Partial:latest-contents', ['count' => 3, 'folder' => null, 'heading' => 'Actualités']),
+            new Section('contact', 'Partial:cms-form', ['form' => 1]),
         ]);
 
         $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-intro"] form')->form();
@@ -73,7 +72,7 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $document = Document::fromJson($content?->getDraftDocument());
 
         self::assertSame('<h1>Après</h1><p>Un texte <strong>corrigé</strong>.</p>', $document?->section('intro')?->props['html']);
-        self::assertSame('Actualités', $document?->section('news')?->props['heading'], 'The other sections are kept as they are.');
+        self::assertSame(1, $document?->section('contact')?->props['form'], 'The other sections are kept as they are.');
         self::assertStringContainsString('Après', (string) $content?->getDraftHtml(), 'The draft is rendered again.');
         self::assertNull($content?->getPublishedHtml());
 
@@ -160,20 +159,21 @@ final class SectionEditScreenTest extends AdminScreenTestCase
     public function testTheSchemaStillRefusesWhatItRefusesToTheModel(): void
     {
         $page = $this->pageWith([
-            new Section('news', 'Partial:latest-contents', ['count' => 3, 'folder' => null, 'heading' => 'Actualités']),
+            new Section('contact', 'Partial:cms-form', ['form' => 1]),
         ]);
 
-        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-news"] form')->form();
-        $form['cms_section_news[count]'] = '99';
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-contact"] form')->form();
+        $values = $form->getPhpValues();
+        $values['cms_section_contact']['form'] = '';
 
-        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+        self::assertSame(302, $this->send('POST', $form->getUri(), $values));
 
         $document = Document::fromJson(CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftDocument());
-        self::assertSame(3, $document?->section('news')?->props['count'], 'Nothing was changed.');
+        self::assertSame(1, $document?->section('contact')?->props['form'], 'Nothing was changed.');
         self::assertSame(0, CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->count(), 'Nothing was written to the ledger.');
 
         $screen = $this->screen($this->url($page));
-        self::assertStringContainsString('count', $screen->filter('[data-testid="cms-builder-flash-danger"]')->text());
+        self::assertStringContainsString('form', $screen->filter('[data-testid="cms-builder-flash-danger"]')->text());
     }
 
     public function testASectionNoLongerThereIsRefused(): void

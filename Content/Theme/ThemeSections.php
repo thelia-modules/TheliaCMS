@@ -28,7 +28,7 @@ use Symfony\Component\Yaml\Yaml;
  *             - Molecules:Reinsurance:Base
  *             - Organisms:ArticleCard:Base
  *         hidden:
- *             - Partial:latest-contents
+ *             - Partial:cms-form
  *
  * `hidden` names the sections of the module the theme puts away, because it
  * opens a component of its own for the same thing.

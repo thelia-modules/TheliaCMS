@@ -26,9 +26,9 @@ generator is never asked to choose between the two:
 ```yaml
 sections:
     components:
-        - Organisms:ArticleCard:Base
+        - Organisms:ContactForm:Base
     hidden:
-        - Partial:latest-contents
+        - Partial:cms-form
 ```
 
 Nothing is opened until the theme says so. A name is two or more segments of

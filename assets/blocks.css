@@ -147,45 +147,12 @@
     text-underline-offset: 0.2em;
   }
 
-  /* Dynamic partials -------------------------------------------------------- */
+  /* The footer menu ---------------------------------------------------------- */
 
-  .cms-latest-contents__list,
   .cms-menu__list {
     list-style: none;
     margin: 0;
     padding: 0;
-  }
-
-  .cms-latest-contents__list {
-    display: grid;
-    gap: 1.5rem;
-  }
-
-  @media (min-width: 48rem) {
-    .cms-latest-contents__list {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-
-  .cms-latest-contents__title {
-    font-size: 1.25rem;
-    margin: 0 0 0.25rem;
-  }
-
-  .cms-latest-contents__title a {
-    color: var(--cms-color-text);
-    text-decoration: none;
-  }
-
-  .cms-latest-contents__title a:hover,
-  .cms-latest-contents__title a:focus-visible {
-    text-decoration: underline;
-  }
-
-  .cms-latest-contents__date {
-    margin: 0 0 0.5rem;
-    font-size: 0.875rem;
-    color: var(--cms-color-text-subtle);
   }
 
   .cms-menu__link {
@@ -196,8 +163,7 @@
   }
 
   .cms-menu__link:hover,
-  .cms-menu__link:focus-visible,
-  .cms-menu__item.is-current > .cms-menu__link {
+  .cms-menu__link:focus-visible {
     color: var(--cms-color-text);
     text-decoration: underline;
   }

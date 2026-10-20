@@ -29,8 +29,8 @@ anything else is refused.
   content; never bend a component to say something it is not made for.
 - When the page asks the visitor to do something, close with that request: a
   component of the theme made for it, or a short free text ending on the link.
-- Live content (`Partial:*`) shows what the site holds today — a form, the
-  latest news, a product — and takes the id of that item. Use the search tools
+- Live content (`Partial:*`) shows what the site holds today — a form, for
+  instance — and takes the id of that item. Use the search tools
   to find the id; never guess one.
 - Several products go in **one** row: the component of the theme made for
   a row of products, when the catalogue has one; the ids from

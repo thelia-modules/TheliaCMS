@@ -20,7 +20,7 @@ use TheliaCMS\Content\DocumentRenderer;
 /**
  * Replaces the placeholders a page stores with what the server renders for them.
  *
- * A page holds `<div data-cms-partial="latest-contents" data-props='{"count":3}'></div>`
+ * A page holds `<div data-cms-partial="cms-form" data-props='{"form":3}'></div>`
  * and nothing else — no markup, no template path. The name is resolved against
  * the registry, the props against the definition, and only then is a template
  * rendered: a page can therefore never name a file, and an unknown block

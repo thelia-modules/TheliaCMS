@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Content\Partial;
 
+use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\Partial\PartialSection;
@@ -22,7 +23,9 @@ use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\Theme\ThemeComponentSections;
 use TheliaCMS\Model\CmsPageContentQuery;
+use TheliaCMS\Partial\PartialProp;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\Tests\Unit\Partial\FakePartial;
 
 /**
  * The partials of the site reach a document as sections: the page stores the
@@ -38,14 +41,16 @@ final class PartialSectionTest extends CmsIntegrationTestCase
         self::assertContains('Partial:cms-form', $names);
         // Unless the theme puts it away for a component of its own.
         $hidden = $this->getService(ThemeComponentSections::class)->hidden();
-        self::assertSame(\in_array('Partial:cms-menu', $hidden, true), !\in_array('Partial:cms-menu', $names, true));
+        self::assertSame(\in_array('Partial:cms-form', $hidden, true), !\in_array('Partial:cms-form', $names, true));
     }
 
     public function testThePropsOfAPartialBecomeTheSchemaOfTheSection(): void
     {
-        $section = $this->getService(SectionCatalog::class)->find('Partial:latest-contents');
-
-        self::assertInstanceOf(PartialSection::class, $section);
+        $section = new PartialSection(new FakePartial('news', [
+            PartialProp::integer('count', 'How many', default: 3, min: 1, max: 12),
+            PartialProp::reference('folder', 'Folder', source: '/admin/cms/partials/sources/folders', required: false),
+            PartialProp::text('heading', 'Heading', required: false),
+        ]), $this->getService(TranslatorInterface::class));
 
         $props = [];
 
@@ -57,7 +62,6 @@ final class PartialSectionTest extends CmsIntegrationTestCase
         self::assertSame(3, $props['count']->default);
         self::assertSame(PropType::Reference, $props['folder']->type);
         self::assertFalse($props['folder']->required);
-        self::assertStringStartsWith('folder.', (string) $props['folder']->help);
         self::assertSame(PropType::Text, $props['heading']->type);
         self::assertStringContainsString('Live content', $section->description());
     }

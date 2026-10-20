@@ -312,10 +312,10 @@ the stylesheet of the theme. The module ships no layout of its own.
 width by the stylesheet of the module.
 
 **Live content** is rendered by the server on every visit rather than stored in
-the page: the latest news, a menu, a form. Each is a partial of the site, and
-every partial is a section of the catalogue under `Partial:<name>`, with the
-settings of the partial as its props. A news list written six months ago is still today's
-news.
+the page: the module ships one, a form of the site (`Partial:cms-form`). Every
+partial of the site, the ones other modules register included, is a section
+of the catalogue under `Partial:<name>`, with the settings of the partial as
+its props.
 
 ### Products, categories, videos, maps
 

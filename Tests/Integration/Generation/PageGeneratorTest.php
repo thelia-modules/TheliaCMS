@@ -65,15 +65,15 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
                     'version' => 1,
                     'sections' => [
                         ['id' => 'hero', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Nos services</h1><p>Ce que nous faisons. <a href="'.$linked->getUrl($locale).'">Voir les tarifs</a></p>']],
-                        ['id' => 'news', 'component' => 'Partial:latest-contents', 'props' => ['count' => '4', 'heading' => 'Actualités']],
+                        ['id' => 'contact', 'component' => 'Partial:cms-form', 'props' => ['form' => '4']],
                     ],
                 ], \JSON_THROW_ON_ERROR)),
             ], 'end_turn', ['input_tokens' => 1300, 'cache_read_input_tokens' => 1000, 'output_tokens' => 400]));
 
         $result = $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Une page qui présente nos services de conseil, avec un lien vers les tarifs.', tone: 'direct')));
 
-        self::assertSame(['hero', 'news'], array_map(static fn ($section) => $section->id, $result->document->sections));
-        self::assertSame(4, $result->document->sections[1]->props['count'], 'The document comes back normalised by the validator.');
+        self::assertSame(['hero', 'contact'], array_map(static fn ($section) => $section->id, $result->document->sections));
+        self::assertSame(4, $result->document->sections[1]->props['form'], 'The document comes back normalised by the validator.');
         self::assertSame(2, $result->turns);
         self::assertSame(2500, $result->usage->inputTokens);
         self::assertSame(1000, $result->usage->cacheReadTokens);

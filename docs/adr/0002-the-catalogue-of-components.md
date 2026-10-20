@@ -68,3 +68,10 @@ The click-to-load embeds go as well (`Partial:map-facade`,
 `Partial:social-facade`, the shared `_facade` template and its script): the
 live content of the module is a form, a menu and the latest contents. A map
 or a post of a social network on a page is a component of the theme.
+
+`Partial:latest-contents` and `Partial:cms-menu` go too: the live content of
+the module is a form (`Partial:cms-form`). The latest news or a menu on a
+page is a component of the theme; a `@prop` naming a `folder` or a `menu`
+still picks one. The footer menu written into the hook of a theme that does
+not render one (`footer_menu_hook`) and `cms_menu()` are not partials and
+stay.

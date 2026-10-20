@@ -18,7 +18,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * A block whose content is produced by the server every time the page is
- * served: the latest news, a menu, a form, a click-to-load embed.
+ * served: a form of the site, the latest news, a menu.
  *
  * A page stores nothing but the name of the partial and its settings; the
  * markup is never in the database, so what visitors get follows the site
@@ -44,7 +44,7 @@ interface PartialDefinitionInterface
     /**
      * Template the active front-office theme may ship to take the rendering
      * over, relative to its root and without the extension — for instance
-     * `cms/partials/latest-contents`.
+     * `cms/partials/form`.
      */
     public function themeTemplate(): string;
 

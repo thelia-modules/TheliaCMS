@@ -78,7 +78,7 @@ final readonly class CmsPartialController
     }
 
     /**
-     * Folders an editor may point a news block at.
+     * Folders an editor may pick for a component of the theme.
      */
     #[Route('/admin/cms/partials/sources/folders', name: 'admin.cms.partials.sources.folders', methods: ['GET'])]
     public function folders(Request $request): Response
@@ -97,7 +97,7 @@ final readonly class CmsPartialController
     }
 
     /**
-     * Menus an editor may drop into a page.
+     * Menus an editor may pick for a component of the theme.
      */
     #[Route('/admin/cms/partials/sources/menus', name: 'admin.cms.partials.sources.menus', methods: ['GET'])]
     public function menus(Request $request): Response

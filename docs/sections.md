@@ -11,7 +11,7 @@ produced when the page is saved and again when it is published.
   "sections": [
     {"id": "head", "component": "Layouts:Subheader:Base", "props": {"title": "Des studios photo à louer"}},
     {"id": "intro", "component": "cms:richtext", "props": {"html": "<p>Trois plateaux, à l’heure ou à la journée.</p>"}},
-    {"id": "news", "component": "Partial:latest-contents", "props": {"count": 3, "heading": "Actualités"}}
+    {"id": "contact", "component": "Partial:cms-form", "props": {"form": 1}}
   ]
 }
 ```
