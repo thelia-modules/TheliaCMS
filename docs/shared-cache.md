@@ -138,7 +138,7 @@ addresses, which Fastly does in `vcl_recv` exactly as above.
 
 The module works out which tags are stale: the page just published, the page
 whose settings were just saved (its type, its SEO fields), the pages drawing a
-menu that changed, the pages using a reusable block that was edited.
+menu that changed.
 It hands them to every service tagged `thelia_cms.cache_purger`, and ships none
 of its own. What a purge means depends on the proxy, on its address, on its
 authentication and on whether it invalidates by key or by ban, and a wrong guess

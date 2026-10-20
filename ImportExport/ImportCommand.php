@@ -38,7 +38,7 @@ final class ImportCommand extends Command
     {
         $this
             ->addArgument('file', InputArgument::REQUIRED, 'The export file to read.')
-            ->addOption('replace', null, InputOption::VALUE_NONE, 'Overwrites the pages, blocks, menus and forms already here instead of leaving them alone.')
+            ->addOption('replace', null, InputOption::VALUE_NONE, 'Overwrites the pages, menus and forms already here instead of leaving them alone.')
             ->addOption('with-settings', null, InputOption::VALUE_NONE, 'Applies the settings of the file: site mode, home page, 404 page, retention, cache.');
     }
 

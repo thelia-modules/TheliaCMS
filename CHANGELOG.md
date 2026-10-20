@@ -9,16 +9,23 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed (2.0.0)
 
-- **The content of a 1.x site is not carried over.** The content of a page or
-  of a block is now a document — an ordered list of sections, each a component
+- **Blocks are gone.** The reusable blocks (**CMS > Blocks**) and the blocks
+  of catalogue items (the "Content block" card of a product, a category, a
+  brand or a store) are removed, with their tables: the update to 2.0.0 drops
+  `cms_block`, `cms_block_i18n`, `cms_block_content` and `cms_item_block`.
+  A theme that called `cms_item_block()` removes the call. An export taken
+  before the update keeps the blocks; a 2.0.0 module imports the rest of the
+  file and warns that the blocks were left out.
+- **The content of a 1.x site is not carried over.** The content of a page
+  is now a document — an ordered list of sections, each a component
   of the catalogue with its props — rendered to HTML on save and on publish.
   The markup the former editor stored has no document to be read back from, so
-  the update to 2.0.0 puts every page and block back to draft, without content,
+  the update to 2.0.0 puts every page back to draft, without content,
   and removes their revisions, search entries and saved page templates. Pages
   keep their tree, addresses, SEO, tags and types. **Export the site before
   updating** (`php Thelia thelia_cms:export`): the file keeps the HTML, and a
   2.0.0 module imports everything in it but the contents.
-- `cms_page_content` and `cms_block_content` carry `draft_document` and
+- `cms_page_content` carries `draft_document` and
   `published_document` and lose `draft_project_data`, `draft_css` and
   `published_css`; `cms_page_revision` carries `document` and loses
   `project_data` and `css`. A page has no stylesheet of its own any more: its
@@ -26,18 +33,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   site.
 - The export format is version 2: contents are `draft_document`, `draft_html`,
   `published_document`, `published_html`. A version 1 file still imports its
-  pages, blocks, menus, forms, settings and media, with a warning that the
-  contents were left out.
+  pages, menus, forms, settings and media, with a warning that the contents
+  were left out.
 - `TheliaCMS\Page\PublishedPage` loses `css` and the `layout` deprecated in
-  1.2.0; `TheliaCMS\Block\Item\PublishedItemBlock` and the object
-  `cms_item_block()` answers lose `css`. A theme that printed
-  `cms_page.css` or `block.css` removes the line.
+  1.2.0. A theme that printed `cms_page.css` removes the line.
 - The heading check (`heading_check_mode`) runs wherever a page goes online —
   the editor, the settings screen, `thelia_cms:publish` — and no longer in the
   editor alone. In `block` mode the writer refuses the page with
   `HeadingStructureException`; in `warn` mode the editor still shows the
   problems after publishing.
-- `CmsPageWriter::saveContent()` and `CmsBlockWriter::saveContent()` take a
+- `CmsPageWriter::saveContent()` takes a
   `TheliaCMS\Content\Document`; `BuilderContent` is gone. A document whose
   sections name no component of the catalogue, or carry props a component
   refuses, is rejected with `InvalidDocumentException` listing every problem.
@@ -77,9 +82,7 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   of its cost. The key is read from `ANTHROPIC_API_KEY`; the model, the effort
   and the token limit are settings. Command `thelia_cms:generate`. See
   `docs/generator.md`.
-- **The content screen** (`/admin/cms/pages/{id}/content`, and
-  `/admin/cms/blocks/{id}/content` for a reusable block or the block of a
-  catalogue item): the brief on the left, the draft on the right as the theme
+- **The content screen** (`/admin/cms/pages/{id}/content`): the brief on the left, the draft on the right as the theme
   shows it; a form to rewrite each section alone, one to ask a change on the
   whole draft, the history of the calls with their cost, and the publish
   button. The forms post in the background, the progress of the call is
@@ -95,11 +98,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   written to the ledger as a `manual` row, so the next request starts from
   the corrected text. Costs nothing, takes the right to change pages. Saved
   in the background, the screen drawn again in place with the panel open.
-- `GenerationTarget`: the generator writes for a page or for a block, told
-  for what it is; a block may not hold `Partial:cms-block`.
+- `GenerationTarget`: what the generator writes for, a page.
   `GenerationObserverInterface` reports each turn to whoever listens.
-- The draft of a block is previewed in the default page template through a
-  signed link (`cms.block.preview`), as the draft of a page is.
 - **Skills**: the instructions the generator reads, shipped as
   `skills/<code>/SKILL.md` by the module (five) and the theme, sown into
   `cms_skill` at the first read and edited there by the site, under
@@ -116,20 +116,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   answers as they are written.
 - The tool `search_forms`, so a contact page finds the form of the site
   rather than guessing its id.
-- `Partial:product-strip` and `Partial:category-strip`: two to twelve
-  products, or categories, in one row, in the order they were picked, under
-  a heading. A partial declares such a list with
-  `PartialProp::references()`, which the hand-edit form shows as rows with a
-  picker and the model fills with the ids of `search_products`; the
-  `catalogue` and `page-structure` skills now send several products there
-  rather than into one card each. A theme draws the rows with
-  `cms/partials/product-strip.html.twig` and `category-strip.html.twig`.
 - An `image` prop holds the id of a library image or the `https://` address
   of a picture kept elsewhere; the hand-edit form previews the picture,
   replaces it by a file that joins the media library, or takes an address.
 - **The components of the theme come first.** A `@prop` of a theme
   component may name what the site holds — `image`, `product`, `category`,
-  `folder`, `form`, `menu`, `block`, or a list such as `product[]` — and the
+  `folder`, `form`, `menu`, or a list such as `product[]` — and the
   parameters the PHP class of the component takes (`productIds`) are read
   when they are documented; the component receives ids, as a template of the
   theme would pass them. The theme puts the module's sections it replaces
@@ -142,8 +134,6 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   catalogue (`/toolkit/cms-all-sections`, `cms_catalogue()` in Twig), and
   the content screen links to it in debug, so a brief names what it wants.
   Every CMS story of the toolkit now loads the stylesheet of the sections.
-- The video partial hands its theme template `provider_code` next to the
-  name of the platform, for a player that is told which one it plays.
 - On the content screen: the brief the page was last written from is back
   in its form (the ledger keeps it, column `brief` of `cms_page_generation`);
   every section has a number, a button that scrolls the preview to it and a
@@ -186,10 +176,31 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   of the site is still served (`SiteStyles::typography()`).
 - The webmaster guide (`docs/guide/`, PDF and screenshots): it described the
   editor of 1.x. A guide for the content screen is to come.
+- **Blocks**: `TheliaCMS\Block` (screens, writers, repositories, the hook of
+  the "Content block" card, the purge on deletion of an item), the models
+  `CmsBlock*` and `CmsItemBlock*`, `Generation\Admin\CmsBlockContentController`,
+  `Preview\CmsBlockPreviewController` and `PreviewLink::urlForBlock()`, the
+  Twig function `cms_item_block()`, the source `admin.cms.partials.sources.blocks`
+  and the `block` type of a `@prop`, `GenerationTarget::block()` and the
+  components a target excludes, `CacheTags::block()` and `::item()`,
+  `PartialCache::invalidateBlocks()`, the blocks of the export format.
+- The partials a component of the theme replaces: `Partial:cms-block`,
+  `Partial:product-card`, `Partial:product-strip`, `Partial:category-card`,
+  `Partial:category-strip` and `Partial:video-facade`, with their templates,
+  their styles in `blocks.css`, `Partial\Catalogue\ProductSummary`,
+  `ProductCardPrice`, `CategorySummary`, `CatalogueImage` and the image
+  source `admin.cms.partials.sources.images`. A product, a category or a
+  video on a page is a component of the theme (`sections.components`).
 - The pipeline a page goes through before it is stored or published moves
   from `TheliaCMS\Builder` to `TheliaCMS\Content\Pipeline`:
   `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,
   `ImageRewriter`, `PublishedContentSanitizer`, `PageContentNormalizer`.
+
+### Fixed (2.0.0)
+
+- The social post partial kept a full address (a Facebook or LinkedIn post)
+  only on paper: the pattern that checked it was invalid, so the address was
+  stripped of its slashes and the post never loaded.
 
 ### Added (1.5.0)
 

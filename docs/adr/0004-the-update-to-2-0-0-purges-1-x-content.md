@@ -20,3 +20,10 @@ and go back to draft.
   them first: `thelia_cms:export` keeps the HTML, and the procedure of an
   update must run it. The CHANGELOG says so in its first entry.
 - A version 1 export still imports everything but the contents.
+
+## Amendment of 2026-10-20
+
+The update also drops the tables of the blocks (`cms_block`,
+`cms_block_i18n`, `cms_block_content`, `cms_item_block`): blocks are no
+longer part of the module. An export taken before the update keeps them; a
+2.0.0 module imports the rest of that file and says it left the blocks out.

@@ -152,7 +152,6 @@ final readonly class PageGenerator
 
                 try {
                     $document = $this->validator->validate(self::documentFrom($text));
-                    self::refuseExcluded($document, $request->target);
                 } catch (InvalidDocumentException $exception) {
                     if (++$corrections > self::CORRECTIONS) {
                         throw InvalidGenerationException::withProblems($exception->problems);
@@ -200,27 +199,6 @@ final readonly class PageGenerator
         }
 
         return $names;
-    }
-
-    /**
-     * A component the target rules out is refused the way the validator
-     * refuses one that does not exist: sent back, with the reason.
-     *
-     * @throws InvalidDocumentException
-     */
-    private static function refuseExcluded(Document $document, GenerationTarget $target): void
-    {
-        $problems = [];
-
-        foreach ($document->sections as $section) {
-            if (\in_array($section->component, $target->excludedComponents, true)) {
-                $problems[] = \sprintf('Section "%s" names "%s", which cannot be used in a %s.', $section->id, $section->component, $target->type);
-            }
-        }
-
-        if ([] !== $problems) {
-            throw InvalidDocumentException::because($problems);
-        }
     }
 
     /**

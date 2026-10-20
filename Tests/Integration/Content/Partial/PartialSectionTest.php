@@ -35,11 +35,10 @@ final class PartialSectionTest extends CmsIntegrationTestCase
     {
         $names = $this->getService(SectionCatalog::class)->names();
 
-        self::assertContains('Partial:cms-block', $names);
         self::assertContains('Partial:cms-form', $names);
         // Unless the theme puts it away for a component of its own.
         $hidden = $this->getService(ThemeComponentSections::class)->hidden();
-        self::assertSame(\in_array('Partial:product-card', $hidden, true), !\in_array('Partial:product-card', $names, true));
+        self::assertSame(\in_array('Partial:cms-menu', $hidden, true), !\in_array('Partial:cms-menu', $names, true));
     }
 
     public function testThePropsOfAPartialBecomeTheSchemaOfTheSection(): void
@@ -65,22 +64,22 @@ final class PartialSectionTest extends CmsIntegrationTestCase
 
     public function testASectionRendersThePlaceholderThePageServesThrough(): void
     {
-        $section = $this->getService(SectionCatalog::class)->find('Partial:cms-block');
+        $section = $this->getService(SectionCatalog::class)->find('Partial:cms-form');
 
         self::assertNotNull($section);
 
-        $html = $section->render($section->normalizeProps(['block' => 7]), $this->locale());
+        $html = $section->render($section->normalizeProps(['form' => 7]), $this->locale());
 
-        self::assertSame('<div data-cms-partial="cms-block" data-props="{&quot;block&quot;:7}"></div>', $html);
+        self::assertSame('<div data-cms-partial="cms-form" data-props="{&quot;form&quot;:7}"></div>', $html);
     }
 
     public function testAPartialNeedsItsRequiredReference(): void
     {
-        $section = $this->getService(SectionCatalog::class)->find('Partial:cms-block');
+        $section = $this->getService(SectionCatalog::class)->find('Partial:cms-form');
 
         self::assertNotNull($section);
         $this->expectException(InvalidDocumentException::class);
-        $this->expectExceptionMessage('"block" is required.');
+        $this->expectExceptionMessage('"form" is required.');
 
         $section->normalizeProps([]);
     }

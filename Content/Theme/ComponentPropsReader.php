@@ -32,8 +32,8 @@ use Twig\Environment;
  * component takes (`mount()`), and is optional.
  *
  * Besides the scalar types, a prop may name what the site holds: `image` for
- * a picture of the media library, `product`, `category`, `folder`, `form`,
- * `menu` or `block` for one record picked by its id, and `product[]` or
+ * a picture of the media library, `product`, `category`, `folder`, `form` or
+ * `menu` for one record picked by its id, and `product[]` or
  * `category[]` for several, in the order they were picked. The component
  * receives the ids, as it would from a template of the theme.
  *
@@ -49,7 +49,6 @@ final readonly class ComponentPropsReader
         'folder' => 'admin.cms.partials.sources.folders',
         'form' => 'admin.cms.partials.sources.forms',
         'menu' => 'admin.cms.partials.sources.menus',
-        'block' => 'admin.cms.partials.sources.blocks',
     ];
 
     /** The records too many to list in a select: the editor searches them. */

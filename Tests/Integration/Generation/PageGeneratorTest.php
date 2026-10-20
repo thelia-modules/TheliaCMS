@@ -30,7 +30,6 @@ use TheliaCMS\Generation\PageGenerator;
 use TheliaCMS\Generation\Pricing;
 use TheliaCMS\Generation\PromptBuilder;
 use TheliaCMS\Generation\Tool\GeneratorTools;
-use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
@@ -220,18 +219,16 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         self::assertSame('revision', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getKind());
     }
 
-    public function testABlockIsToldWhatItIsAndMayNotHoldABlock(): void
+    public function testTheObserverIsToldOfEveryTurnAndOfTheCorrectionAndTheLedgerNamesThePage(): void
     {
-        $block = (new CmsBlock())->setCode('generated-block');
-        $block->setLocale($this->locale())->setTitle('Réassurance');
-        $block->save();
+        $page = $this->createPage('Réassurance', published: false);
         $locale = $this->locale();
 
-        $withABlock = json_encode(['version' => 1, 'sections' => [['id' => 'inner', 'component' => 'Partial:cms-block', 'props' => ['block' => (int) $block->getId()]]]], \JSON_THROW_ON_ERROR);
+        $unknown = json_encode(['version' => 1, 'sections' => [['id' => 'inner', 'component' => 'Cms:Nothing', 'props' => []]]], \JSON_THROW_ON_ERROR);
         $valid = json_encode(['version' => 1, 'sections' => [['id' => 'figures', 'component' => 'Cms:Figures', 'props' => ['title' => 'En chiffres', 'items' => [['value' => '48 h', 'label' => 'Livraison']]]]]], \JSON_THROW_ON_ERROR);
 
         $this->api
-            ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text($withABlock)]))
+            ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text($unknown)]))
             ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text($valid)]));
 
         $observer = new class implements GenerationObserverInterface {
@@ -257,7 +254,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         };
 
         $result = $this->generator()->generate(
-            GenerationRequest::fromBrief(GenerationTarget::block($block, $locale), $locale, new Brief('Trois chiffres qui rassurent.')),
+            GenerationRequest::fromBrief($this->target($page), $locale, new Brief('Trois chiffres qui rassurent.')),
             $observer,
         );
 
@@ -266,17 +263,12 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         self::assertSame(mb_strlen($valid), $observer->characters, 'The observer is told of the text as it is streamed.');
         self::assertTrue($this->api->requests[0]['stream'] ?? false, 'The answer is read as a stream.');
 
-        $prompt = $this->api->requests[0]['messages'][0]['content'];
-        self::assertStringContainsString('# The block', $prompt);
-        self::assertStringContainsString('Name: Réassurance', $prompt);
-        self::assertStringContainsString('Never use these components here: `Partial:cms-block`', $prompt);
-        self::assertStringNotContainsString('# The page', $prompt);
-        self::assertStringContainsString('"Partial:cms-block", which cannot be used in a block', $this->api->requests[1]['messages'][2]['content'], 'The block inside the block is sent back as a problem.');
+        self::assertStringContainsString('Cms:Nothing', $this->api->requests[1]['messages'][2]['content'], 'The unknown component is sent back as a problem.');
 
-        $row = CmsPageGenerationQuery::create()->filterByTargetType('block')->filterByTargetId($block->getId())->findOne();
-        self::assertNotNull($row, 'The ledger names the block as the target.');
+        $row = CmsPageGenerationQuery::create()->filterByTargetType(GenerationTarget::TYPE_PAGE)->filterByTargetId($page->getId())->findOne();
+        self::assertNotNull($row, 'The ledger names the page as the target.');
         self::assertSame($result->logId, (int) $row->getId());
-        self::assertSame($row->getId(), $this->getService(GenerationLog::class)->find((int) $row->getId(), GenerationTarget::block($block, $locale), $locale)?->getId());
+        self::assertSame($row->getId(), $this->getService(GenerationLog::class)->find((int) $row->getId(), $this->target($page), $locale)?->getId());
         self::assertNull($this->getService(GenerationLog::class)->find((int) $row->getId(), GenerationTarget::page($this->createPage('Other'), $locale), $locale), 'A row is found for its own target only.');
     }
 

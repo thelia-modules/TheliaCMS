@@ -24,9 +24,8 @@ both required by the theme:
   flagged as home is served on `/`.
 - **TheliaBlocks** (`thelia/thelia-blocks-module`) attaches groups of blocks to
   the shop's own items: products, categories, brands, contents and folders.
-  TheliaCMS gives products, categories, brands and stores a content block of
-  its own (see [Blocks](#blocks)), so a theme built on it needs no
-  TheliaBlocks.
+  TheliaCMS attaches nothing to them: content on the page of a product stays
+  the business of TheliaBlocks or of the theme.
 
 TheliaCMS runs alongside them, with its own tables, screens and addresses. It
 never reads what Page and TheliaBlocks store, and they ignore it in return. The
@@ -304,7 +303,7 @@ content of the site, and the components the theme opens to pages in its
 `cms_section('Cms:Hero', {...})`. How to write one, and how a document is
 shaped: [docs/sections.md](docs/sections.md).
 
-## Blocks
+## The catalogue
 
 A document is made of three families of components.
 
@@ -319,93 +318,32 @@ right after the theme is reworked. Next to them, `cms:richtext` holds a piece
 of free markup, and the components the theme opens in its
 `config/theliacms.yaml` render with the markup of the theme.
 
-**Reusable blocks** (**CMS > Blocks**) are written once and placed on as many
-pages as you like: the banner that appears on twenty pages is edited in one
-place. A page holds a reference rather than a copy (the `Partial:cms-block`
-section), so publishing the block updates every page showing it. A block still
-used by a page cannot be deleted, and the settings screen lists where it
-appears. A block is written on the same content screen as a page
-(`/admin/cms/blocks/{id}/content`), from a brief or by hand; the generator is
-told it writes a block, with no main heading and one to three sections, and a
-block may not hold another block.
-
-**Item blocks** belong to a product, a category, a brand or, when the Dealer
-module is active, a store: one block per item, written on the same screen and
-published per language like a reusable block. The "Content block" card on the
-screen of the item creates it, opens it and deletes it; its content screen
-leads back to the item, and the block goes when the item is deleted. The theme shows it
-where it likes with `cms_item_block('product', product.id)`, which answers an
-object carrying the published `html`, or null when nothing is online in the
-language served:
-
-```twig
-{% set block = cms_item_block('product', product.id) %}
-{% if block %}
-    {{ block.html|raw }}
-{% endif %}
-```
-
-The function takes the locale as a third argument when the page is not served
-in the current one. Publishing writes the block at once, but the module purges
-only the cache of its own pages: a product page kept by an HTTP cache shows the
-new block when that cache lets it go.
-
-Item blocks are kept out of **CMS > Blocks**, of the reusable blocks a page may
-embed and of the site export; a file naming the code of one is left alone by
-the import. The block goes with its item through the deletion events of the
-core and of the Dealer module; a row deleted straight through Propel or the API
-dispatches none and keeps its block, which the card of a new item with that id
-would then show.
-
 **Live content** is rendered by the server on every visit rather than stored in
-the page: the latest news, a menu, a form, a reusable block, and the three
-click-to-load embeds below. Each is a partial of the site, and every partial
+the page: the latest news, a menu, a form, and the two click-to-load embeds
+below. Each is a partial of the site, and every partial
 is a section of the catalogue under `Partial:<name>`, with the settings of the
 partial as its props. A news list written six months ago is still today's
 news.
 
-### A product or a category of the catalogue
+### Products, categories and videos
 
-The `Partial:product-card` and `Partial:category-card` sections put one item
-of the catalogue on a page; `Partial:product-strip` and
-`Partial:category-strip` put two to twelve of them side by side in one row,
-in the order they were picked, under a heading. The generator finds it with its search tools: a
-product by the start of its reference, a part of its name or its barcode, a
-category by its name; the form that edits the section by hand picks it the same
-way, each result followed by its parent so two "Vegetables" can be told apart.
-Only items online are offered. The page stores the id; the name, the price and
-the address are read on every visit, and the section leaves the page on its own
-once the item goes offline.
-
-The module's own cards show the picture, the name, the price of the default
-sale element (taxed for the default country, in the default currency) and a
-link. A shop draws its own by shipping `cms/partials/product-card.html.twig` and
-`cms/partials/category-card.html.twig` in its theme: they receive `product`
-(`id`, `ref`, `title`, `url`, `image`, `price`) or `category` (`id`, `title`,
-`url`, `image`), null once the item is offline, and `labels`. A theme that sells
-renders its own product card there, buy button included. The rows are drawn
-by `cms/partials/product-strip.html.twig` and
-`cms/partials/category-strip.html.twig`, which receive `heading` and
-`products` or `categories` (the same keys, the ones online only, in order);
-the product row also receives `product_ids`, for a theme whose strip
-component reads the products itself.
+The module has no section of its own for a product, a category or a video:
+they are components of the theme, opened in its `config/theliacms.yaml`
+(Flexy's `Layouts:CrossSelling`, `Organisms:CategoryCard`,
+`Organisms:VideoPlayer`). A `@prop` naming `product`, `category` or a list of
+them is picked by search, in the generator as in the form that edits the
+section by hand: a product by the start of its reference, a part of its name
+or its barcode, a category by its name, only the ones online.
 
 ### Embeds that load nothing until they are asked to
 
-A YouTube iframe pasted in a page calls Google on every visit, from every
-visitor, before anyone has agreed to anything. The video, map and social
-partials (`Partial:video-facade`, `Partial:map-facade`,
-`Partial:social-facade`) render a poster or a card, a button, and a sentence
-saying which company is about to receive something. The player, the map or the
-post is fetched when the button is pressed, and not one second earlier. Without
-JavaScript the button is still a link to the platform.
-
-Videos come from YouTube, Vimeo or Dailymotion and are addressed by identifier,
-never by a URL typed into an iframe. Maps come from OpenStreetMap. The poster of
-a video is served by your own media library. A theme that draws the video with
-its own player ships `cms/partials/video-facade.html.twig`, which receives the
-platform as `provider` (its name) and `provider_code` (`youtube`, `vimeo`,
-`dailymotion`), `embed_url`, `page_url`, `title` and `poster_url`.
+An iframe pasted in a page calls a third party on every visit, from every
+visitor, before anyone has agreed to anything. The map and social partials
+(`Partial:map-facade`, `Partial:social-facade`) render a card, a button, and a
+sentence saying which company is about to receive something. The map or the
+post is fetched when the button is pressed, and not one second earlier.
+Without JavaScript the button is still a link to the platform. Maps come from
+OpenStreetMap.
 
 Adding a component of your own takes one PHP class, or one line in the
 configuration of the theme:
@@ -547,10 +485,8 @@ the pages.
 Every rendered page carries a `Cache-Tag` header (and `Surrogate-Key`, which is
 the same list under the name Fastly and Cloudflare read) naming what went into
 it: the page itself, the menus it draws and the site settings. Publishing a page
-drops that page from the cache, saving a menu drops the pages that draw it, and
-editing a reusable block drops the pages it appears on, found by looking through
-the published HTML rather than from a table somebody has to remember to write
-to.
+drops that page from the cache, and saving a menu drops the pages that draw
+it.
 
 Purging is done by whatever sits in front of the site. The module ships no
 implementation, because what a purge means depends on the proxy and guessing
@@ -955,7 +891,7 @@ php Thelia thelia_cms:import site.json [--replace] [--with-settings]
 ```
 
 The file holds the page tree, the content of every language, the menus, the
-forms and their fields, the reusable blocks and the settings. It is a starter
+forms and their fields and the settings. It is a starter
 kit you build once and start the next project from, and it is a copy of the
 content to keep somewhere other than the database.
 
@@ -993,8 +929,7 @@ template built on one site is a file that can be handed to another.
 Working today: the page tree with its bin and duplication, the content screen
 with the generator, its skills and its ledger, sections edited by hand,
 drafts, revisions and shared previews, the catalogue of sections with the
-components of the theme, reusable blocks and item blocks, live content
-including click-to-load embeds, the publication pipeline (sanitizer,
+components of the theme, live content including click-to-load embeds, the publication pipeline (sanitizer,
 responsive images, search indexing, heading check), publication and
 generation from the command line, the media library, menus, hierarchical URLs
 with 301s on rename, forms and their answers, the front-office search,

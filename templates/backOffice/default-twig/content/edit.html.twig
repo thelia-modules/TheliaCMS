@@ -1,7 +1,7 @@
 {% extends '@BackOfficeDefaultTwig/base.html.twig' %}
 
 {#
-    The content screen of a page or of a block: the brief and the generator on
+    The content screen of a page: the brief and the generator on
     the left, the draft as the theme shows it on the right.
 
     It replaces the whole body of the layout, like the builder it succeeds: the
@@ -25,7 +25,6 @@
 {% endblock %}
 
 {% block body %}
-    {% set is_page = subject.target.isPage %}
     <div class="cms-content" data-cms-content
          data-cms-content-labels="{{ {
              working: 'Writing…'|trans({}, 'theliacms'),
@@ -228,7 +227,7 @@
                             data-testid="cms-content-frame" data-cms-frame></iframe>
                 {% elseif translate_form is not null %}
                     <div class="cms-content__empty" data-testid="cms-content-translate">
-                        <p class="cms-content__empty-title">{{ (is_page ? 'This page is written in %languages%, not in this language yet' : 'This block is written in %languages%, not in this language yet')|trans({ '%languages%': subject.translationSources|map(source => source.label)|join(', ') }, 'theliacms') }}</p>
+                        <p class="cms-content__empty-title">{{ 'This page is written in %languages%, not in this language yet'|trans({ '%languages%': subject.translationSources|map(source => source.label)|join(', ') }, 'theliacms') }}</p>
                         <p class="cms-content__empty-hint">{{ 'The generator can write this language from one of them: the same sections, their texts written for the new reader. Or write it from a brief of its own on the left.'|trans({}, 'theliacms') }}</p>
                         {% form_theme translate_form with bo_form_themes only %}
                         {{ form_start(translate_form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate', class: 'cms-content__translate' } }) }}
@@ -247,7 +246,7 @@
                     </div>
                 {% else %}
                     <div class="cms-content__empty" data-testid="cms-content-empty">
-                        <p class="cms-content__empty-title">{{ (is_page ? 'This page has no content yet' : 'This block has nothing in it yet')|trans({}, 'theliacms') }}</p>
+                        <p class="cms-content__empty-title">{{ 'This page has no content yet'|trans({}, 'theliacms') }}</p>
                         <p class="cms-content__empty-hint">{{ 'Say what it should hold in the brief on the left, and the generator writes a first draft from the components of the theme. Nothing goes online until you publish it.'|trans({}, 'theliacms') }}</p>
                     </div>
                 {% endif %}

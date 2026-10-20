@@ -26,12 +26,9 @@ generator is never asked to choose between the two:
 ```yaml
 sections:
     components:
-        - Layouts:CrossSelling:Base
-        - Organisms:VideoPlayer:Base
+        - Organisms:ArticleCard:Base
     hidden:
-        - Partial:product-strip
-        - Partial:product-card
-        - Partial:video-facade
+        - Partial:latest-contents
 ```
 
 Nothing is opened until the theme says so. A name is two or more segments of
@@ -60,7 +57,7 @@ from two places:
   optional.
 - a prop may name what the site holds: `image` is a picture of the media
   library (its id, or the `https://` address of a picture kept elsewhere);
-  `product`, `category`, `folder`, `form`, `menu` or `block` is one record,
+  `product`, `category`, `folder`, `form` or `menu` is one record,
   picked by its id with the same pickers the partials use (the generator
   finds the id with its search tools); `product[]`, `category[]`, or
   `list<folder>`, is several of them, two to twelve, stored as rows of ids in

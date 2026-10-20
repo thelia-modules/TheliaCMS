@@ -13,7 +13,6 @@
     summary, kind (a class suffix, and the icon that goes with it).
 #}
 {% set facade_icons = {
-    video: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>',
     map: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7m0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5"/></svg>',
     social: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2M7 9h10v2H7zm0 4h7v2H7z"/></svg>',
 } %}
@@ -24,7 +23,7 @@
             <img class="cms-facade__poster" src="{{ poster_url }}" alt="" loading="lazy" decoding="async">
         {% endif %}
         <span class="cms-facade__label">
-            <span class="cms-facade__icon" aria-hidden="true">{{ facade_icons[kind]|default(facade_icons.video)|raw }}</span>
+            <span class="cms-facade__icon" aria-hidden="true">{{ facade_icons[kind]|default('')|raw }}</span>
             <span class="cms-facade__text">
                 {% if title %}<strong class="cms-facade__title">{{ title }}</strong>{% endif %}
                 {% if summary %}<span class="cms-facade__summary">{{ summary }}</span>{% endif %}

@@ -33,10 +33,10 @@ anything else is refused.
   latest news, a product — and takes the id of that item. Use the search tools
   to find the id; never guess one.
 - Several products go in **one** row: the component of the theme made for
-  a row of products when the catalogue has one, else `Partial:product-strip`;
-  the ids from `search_products`, a heading that says what they have in
-  common. Never one card per product stacked one under the other; a single
-  card is for one product on its own, next to the text that talks about it.
+  a row of products, when the catalogue has one; the ids from
+  `search_products`, a heading that says what they have in common. Never
+  one card per product stacked one under the other; a single card is for one
+  product on its own, next to the text that talks about it.
   The same for categories.
 
 ## Props

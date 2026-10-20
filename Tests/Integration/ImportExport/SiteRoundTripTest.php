@@ -237,6 +237,38 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
         self::assertNull($rows[0]['draft_document']);
     }
 
+    /**
+     * A file written before the blocks were removed: the rest comes in, and
+     * the report says the blocks were left out.
+     */
+    public function testTheBlocksOfAnEarlierFileAreLeftOutAndSaidSo(): void
+    {
+        $locale = $this->locale();
+        $document = SiteDocument::fromArray([
+            'format' => 'thelia-cms',
+            'version' => 2,
+            'module_version' => '2.0.0',
+            'locales' => [$locale],
+            'pages' => [[
+                'uid' => 'page-1',
+                'parent' => null,
+                'position' => 0,
+                'visible' => true,
+                'page_type' => 'default',
+                'translations' => [$locale => ['title' => 'Page à côté des blocs', 'slug' => 'page-a-cote-des-blocs']],
+            ]],
+            'blocks' => [
+                ['code' => 'reassurance', 'translations' => [$locale => ['title' => 'Réassurance']], 'contents' => []],
+                ['code' => 'horaires', 'translations' => [$locale => ['title' => 'Horaires']], 'contents' => []],
+            ],
+        ]);
+
+        $report = $this->getService(SiteImporter::class)->import($document, new ImportOptions());
+
+        self::assertSame(['This file holds 2 block(s), which this version of the module no longer has: they were left out.'], $report->warnings());
+        self::assertCount(1, $this->query("SELECT id FROM cms_page_i18n WHERE title = 'Page à côté des blocs'"), 'The page is imported.');
+    }
+
     private function emptyTheSite(): void
     {
         $connection = $this->getPropelConnection();

@@ -14,13 +14,14 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Module;
 
+use Thelia\Core\Install\Database;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\TheliaCMS;
 
 /**
  * A site on 1.5.0 moving to documents: the columns of the former editor go,
- * the document columns come, the pages stay and their content does not, and
- * the update can be played twice.
+ * the document columns come, the pages stay and their content does not, the
+ * tables of the blocks go, and the update can be played twice.
  *
  * Runs outside a transaction: an ALTER TABLE commits on its own, so a rollback
  * would undo nothing and the test would prove nothing. The tables are put back
@@ -52,18 +53,21 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
 
         self::assertTrue($this->columnExists('cms_page_content', 'draft_project_data'));
         self::assertFalse($this->columnExists('cms_page_content', 'draft_document'));
+        self::assertSame(1, $this->rowCount('cms_item_block'));
         self::assertSame(1, $this->rowCount('cms_page_template'));
 
         $module = new TheliaCMS();
         $module->update('1.5.0', '2.0.0', $this->getPropelConnection());
         $module->update('1.5.0', '2.0.0', $this->getPropelConnection());
 
-        foreach (['cms_page_content', 'cms_block_content'] as $table) {
-            self::assertTrue($this->columnExists($table, 'draft_document'), $table);
-            self::assertTrue($this->columnExists($table, 'published_document'), $table);
-            self::assertFalse($this->columnExists($table, 'draft_project_data'), $table);
-            self::assertFalse($this->columnExists($table, 'draft_css'), $table);
-            self::assertFalse($this->columnExists($table, 'published_css'), $table);
+        self::assertTrue($this->columnExists('cms_page_content', 'draft_document'));
+        self::assertTrue($this->columnExists('cms_page_content', 'published_document'));
+        self::assertFalse($this->columnExists('cms_page_content', 'draft_project_data'));
+        self::assertFalse($this->columnExists('cms_page_content', 'draft_css'));
+        self::assertFalse($this->columnExists('cms_page_content', 'published_css'));
+
+        foreach (['cms_block', 'cms_block_i18n', 'cms_block_content', 'cms_item_block'] as $table) {
+            self::assertFalse($this->tableExists($table), $table.' goes with the blocks.');
         }
 
         self::assertTrue($this->columnExists('cms_page_revision', 'document'));
@@ -104,9 +108,15 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
     {
         $connection = $this->getPropelConnection();
 
-        foreach (['cms_page_content', 'cms_block_content'] as $table) {
-            $connection->exec(\sprintf('ALTER TABLE %s DROP COLUMN draft_document, DROP COLUMN published_document, ADD COLUMN draft_project_data LONGTEXT AFTER locale, ADD COLUMN draft_css LONGTEXT AFTER draft_html, ADD COLUMN published_css LONGTEXT AFTER published_html', $table));
-        }
+        $connection->exec('ALTER TABLE cms_page_content DROP COLUMN draft_document, DROP COLUMN published_document, ADD COLUMN draft_project_data LONGTEXT AFTER locale, ADD COLUMN draft_css LONGTEXT AFTER draft_html, ADD COLUMN published_css LONGTEXT AFTER published_html');
+
+        // The tables of the blocks as 1.5.0 had them, with a block of a
+        // product in them.
+        $updates = \dirname(__DIR__, 3).'/Config/update/';
+        (new Database($connection))->insertSql(null, [$updates.'0.3.0.sql', $updates.'1.4.0.sql']);
+        $connection->exec("INSERT INTO cms_block (code, created_at, updated_at) VALUES ('product-1', NOW(), NOW())");
+        $connection->exec("INSERT INTO cms_block_content (block_id, locale, draft_html) VALUES (LAST_INSERT_ID(), 'fr_FR', '<p>Bloc</p>')");
+        $connection->exec("INSERT INTO cms_item_block (item_type, item_id, block_id, created_at, updated_at) SELECT 'product', 1, id, NOW(), NOW() FROM cms_block WHERE code = 'product-1'");
 
         $connection->exec('ALTER TABLE cms_page_revision DROP COLUMN document, ADD COLUMN project_data LONGTEXT AFTER locale, ADD COLUMN css LONGTEXT AFTER html');
 
@@ -115,6 +125,11 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
 
         $connection->prepare('INSERT INTO cms_page_template (code, title, payload, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())')
             ->execute(['test-'.bin2hex(random_bytes(4)), 'Modèle de 1.5.0', '{"format":"thelia-cms","version":1,"pages":[]}']);
+    }
+
+    private function tableExists(string $table): bool
+    {
+        return [] !== $this->rows(\sprintf("SHOW TABLES LIKE '%s'", $table));
     }
 
     private function columnExists(string $table, string $column): bool

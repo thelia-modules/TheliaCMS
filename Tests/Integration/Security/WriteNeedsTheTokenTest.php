@@ -15,8 +15,6 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Security;
 
 use TheliaCMS\Media\CmsMediaLibrary;
-use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsBlockQuery;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormQuery;
 use TheliaCMS\Model\CmsMenu;
@@ -24,7 +22,6 @@ use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
-use TheliaCMS\Model\Map\CmsBlockTableMap;
 use TheliaCMS\Model\Map\CmsFormTableMap;
 use TheliaCMS\Model\Map\CmsMenuTableMap;
 use TheliaCMS\Model\Map\CmsPageContentTableMap;
@@ -91,23 +88,6 @@ final class WriteNeedsTheTokenTest extends AdminScreenTestCase
         self::assertSame(302, $this->send('POST', $action, ['_token' => $token]));
         CmsMenuTableMap::clearInstancePool();
         self::assertNull(CmsMenuQuery::create()->findPk($id));
-    }
-
-    public function testBlocks(): void
-    {
-        $block = (new CmsBlock())->setCode('token-block');
-        $block->setLocale($this->locale())->setTitle('Token block');
-        $block->save();
-        $id = (int) $block->getId();
-        $action = \sprintf('/admin/cms/blocks/%d/delete', $id);
-
-        self::assertSame(403, $this->send('POST', $action));
-        self::assertNull($this->freshBlock($id)->getDeletedAt(), 'Refused, the block stays.');
-
-        $token = $this->tokenOfTheForm($this->screen(\sprintf('/admin/cms/blocks/%d', $id)), $action);
-
-        self::assertSame(302, $this->send('POST', $action, ['_token' => $token]));
-        self::assertNotNull($this->freshBlock($id)->getDeletedAt());
     }
 
     public function testForms(): void
@@ -183,16 +163,6 @@ final class WriteNeedsTheTokenTest extends AdminScreenTestCase
         self::assertNotNull($page);
 
         return $page;
-    }
-
-    private function freshBlock(int $id): CmsBlock
-    {
-        CmsBlockTableMap::clearInstancePool();
-
-        $block = CmsBlockQuery::create()->findPk($id);
-        self::assertNotNull($block);
-
-        return $block;
     }
 
     private function freshForm(int $id): CmsForm

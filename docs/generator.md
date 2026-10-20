@@ -87,10 +87,9 @@ site's, and the text itself only where the site never rewrote it.
 
 ## The screen
 
-CMS > Pages > a page > **Edit content** (`/admin/cms/pages/{id}/content`),
-and the same for a reusable block or the block of a catalogue item
-(`/admin/cms/blocks/{id}/content`). The brief on the left, the draft on the
-right as the theme shows it, through the signed preview link of the draft.
+CMS > Pages > a page > **Edit content** (`/admin/cms/pages/{id}/content`).
+The brief on the left, the draft on the right as the theme shows it, through
+the signed preview link of the draft.
 
 - The catalogue the generator writes from is the theme's first: the
   components the theme opens in `config/theliacms.yaml` (with the sections of
@@ -156,10 +155,7 @@ back with is put in place, the panel still open, as at the end of a
 generation.
 
 Opening the screen takes the page right; asking the generator takes
-`admin.cms.generate`; publishing takes the right to change pages. A block is
-told to the generator for what it is — no main heading, one to three
-sections — and may not hold `Partial:cms-block`: a block inside a block would
-never stop rendering.
+`admin.cms.generate`; publishing takes the right to change pages.
 
 ## The ledger
 

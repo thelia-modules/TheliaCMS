@@ -20,8 +20,6 @@ use Thelia\Model\Lang;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\Section;
-use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsBlockContentQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
@@ -230,25 +228,6 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $screen = $this->screen($this->url($page));
         self::assertSame(0, $screen->filter('[data-testid="cms-section-edit-hero"]')->count(), 'Reading the screen is not the right to change a section.');
         self::assertSame(403, $this->send('POST', \sprintf('/admin/cms/pages/%d/content/update', $page->getId()), ['_token' => $this->tokenOfTheScripts($screen), 'cms_section_hero' => ['section' => 'hero', 'title' => 'Refused']]));
-    }
-
-    public function testABlockIsEditedTheSameWay(): void
-    {
-        $block = (new CmsBlock())->setCode('edited-block');
-        $block->setLocale($this->locale())->setTitle('Edited');
-        $block->save();
-        $this->renderedOnce();
-        $this->getService(\TheliaCMS\Block\Admin\CmsBlockWriter::class)->saveContent($block, $this->locale(), new Document([
-            new Section('figures', 'Cms:Figures', ['title' => 'En chiffres', 'items' => [['value' => '48 h', 'label' => 'Livraison']]]),
-        ]));
-        $url = \sprintf('/admin/cms/blocks/%d/content?edit_language_id=%d', $block->getId(), Lang::getDefaultLanguage()->getId());
-
-        $form = $this->screen($url)->filter('[data-testid="cms-section-edit-figures"] form')->form();
-        $form['cms_section_figures[items][0][value]'] = '24 h';
-
-        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
-        self::assertStringContainsString('24 h', (string) CmsBlockContentQuery::create()->filterByBlockId($block->getId())->findOne()?->getDraftHtml());
-        self::assertSame('manual', CmsPageGenerationQuery::create()->filterByTargetType('block')->filterByTargetId($block->getId())->findOne()?->getKind());
     }
 
     /**

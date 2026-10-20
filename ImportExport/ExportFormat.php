@@ -27,7 +27,7 @@ final class ExportFormat
     public const string NAME = 'thelia-cms';
 
     /**
-     * 2 since module 2.0.0: the content of a page or of a block is a document
+     * 2 since module 2.0.0: the content of a page is a document
      * (see TheliaCMS\Content\Document) and its rendering, where version 1
      * carried the project of the former editor and its stylesheets. A version
      * 1 file still imports everything but those contents.
@@ -44,7 +44,7 @@ final class ExportFormat
      *
      * @var list<string>
      */
-    public const array SECTIONS = ['pages', 'blocks', 'menus', 'forms', 'settings', 'media'];
+    public const array SECTIONS = ['pages', 'menus', 'forms', 'settings', 'media'];
 
     /**
      * @param list<string> $locales

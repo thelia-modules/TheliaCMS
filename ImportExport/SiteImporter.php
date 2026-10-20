@@ -18,14 +18,9 @@ use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use Thelia\Model\RewritingUrlQuery;
-use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
 use TheliaCMS\Form\FieldChoices;
 use TheliaCMS\Menu\MenuCache;
-use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsBlockContent;
-use TheliaCMS\Model\CmsBlockContentQuery;
-use TheliaCMS\Model\CmsBlockQuery;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormField;
 use TheliaCMS\Model\CmsFormFieldQuery;
@@ -76,7 +71,6 @@ final readonly class SiteImporter
         private PageTypeWriter $pageTypeWriter,
         private PublishedContentSanitizer $sanitizer,
         private PageTagWriter $tagWriter,
-        private ItemBlockRepository $itemBlocks,
     ) {
     }
 
@@ -89,10 +83,16 @@ final readonly class SiteImporter
         }
 
         // A file written by 1.x holds the markup of the former editor, which
-        // has no document to be read back from: the pages and blocks come in
-        // without content, and everything else as before.
+        // has no document to be read back from: the pages come in without
+        // content, and everything else as before.
         if (!$document->carriesDocuments()) {
-            $report->warn('This file was written by an earlier version of the module: its pages and blocks were imported without their content.');
+            $report->warn('This file was written by an earlier version of the module: its pages were imported without their content.');
+        }
+
+        // Blocks are no longer part of the module: a file that carries some
+        // imports everything else and says what it left out.
+        if ([] !== $document->blocks()) {
+            $report->warn(\sprintf('This file holds %d block(s), which this version of the module no longer has: they were left out.', \count($document->blocks())));
         }
 
         $connection = Propel::getConnection('TheliaMain');
@@ -102,7 +102,6 @@ final readonly class SiteImporter
             $mediaMap = $this->mediaMap($document, $report);
             $pageIds = $this->importPages($document, $options, $report, $mediaMap, $connection);
 
-            $this->importBlocks($document, $options, $report, $mediaMap, $connection);
             $this->importMenus($document, $options, $report, $pageIds, $connection);
             $this->importForms($document, $options, $report, $pageIds, $connection);
 
@@ -397,74 +396,6 @@ final readonly class SiteImporter
         $page->setLocale($locale);
 
         $index->setContent(trim($page->getTitle().' '.$this->searchText->extract($html)))->save($connection);
-    }
-
-    /**
-     * @param array<int, int> $mediaMap
-     */
-    private function importBlocks(
-        SiteDocument $document,
-        ImportOptions $options,
-        ImportReport $report,
-        array $mediaMap,
-        ConnectionInterface $connection,
-    ): void {
-        foreach ($document->blocks() as $block) {
-            $code = trim((string) ($block['code'] ?? ''));
-
-            if ('' === $code) {
-                $report->skipped('blocks');
-
-                continue;
-            }
-
-            $existing = CmsBlockQuery::create()->findOneByCode($code);
-
-            // The block of a catalogue item is never exported, so a file
-            // naming its code comes from another site: replacing it would
-            // hand a product's block to whatever that site had written.
-            if (null !== $existing && null !== $this->itemBlocks->linkOf($existing)) {
-                $report->skipped('blocks');
-                $report->warn(\sprintf('The block "%s" belongs to a catalogue item on this site and was left alone.', $code));
-
-                continue;
-            }
-
-            if (null !== $existing && !$options->replace) {
-                $report->skipped('blocks');
-
-                continue;
-            }
-
-            $model = $existing ?? (new CmsBlock())->setCode($code);
-            $model->setDeletedAt(null);
-
-            foreach ($block['translations'] ?? [] as $locale => $translation) {
-                $model->setLocale((string) $locale)->setTitle((string) ($translation['title'] ?? $code));
-            }
-
-            $model->save($connection);
-
-            foreach ($document->carriesDocuments() ? $block['contents'] ?? [] : [] as $locale => $content) {
-                $locale = (string) $locale;
-
-                $contentModel = CmsBlockContentQuery::create()
-                    ->filterByBlockId($model->getId())
-                    ->filterByLocale($locale)
-                    ->findOne()
-                    ?? (new CmsBlockContent())->setBlockId($model->getId())->setLocale($locale);
-
-                $contentModel
-                    ->setDraftDocument($this->media->remap($content['draft_document'] ?? null, $mediaMap))
-                    ->setDraftHtml($this->media->remap($content['draft_html'] ?? null, $mediaMap))
-                    ->setPublishedDocument($this->media->remap($content['published_document'] ?? null, $mediaMap))
-                    ->setPublishedHtml($this->media->remap($content['published_html'] ?? null, $mediaMap))
-                    ->setPublishedAt($this->date($content['published_at'] ?? null))
-                    ->save($connection);
-            }
-
-            null !== $existing ? $report->replaced('blocks') : $report->created('blocks');
-        }
     }
 
     /**

@@ -15,15 +15,14 @@ declare(strict_types=1);
 namespace TheliaCMS\Partial;
 
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
-use TheliaCMS\Partial\Definition\BlockPartial;
 
 /**
  * Drops cached fragments when what they render has changed.
  *
- * A dynamic block outlives the page it sits in: publishing a reusable block
- * changes pages that were published months ago and that nothing else is going
- * to touch. Whoever writes has to say so here, or the site keeps serving the
- * previous version until the lifetime of the fragment runs out.
+ * A dynamic block outlives the page it sits in: saving a form changes pages
+ * that were published months ago and that nothing else is going to touch.
+ * Whoever writes has to say so here, or the site keeps serving the previous
+ * version until the lifetime of the fragment runs out.
  */
 final readonly class PartialCache
 {
@@ -38,19 +37,5 @@ final readonly class PartialCache
     public function invalidate(string $partialName): void
     {
         $this->cache->invalidateTags([PartialFragmentRenderer::tagFor($partialName)]);
-    }
-
-    /**
-     * Fragments of every reusable block.
-     *
-     * Not the fragments of the one block that changed: the key of a fragment
-     * holds the settings of the placeholder, so finding the entries of a single
-     * block would mean enumerating a cache that does not support it. Reusable
-     * blocks are written rarely and read constantly, which makes dropping them
-     * all the cheap side of the trade.
-     */
-    public function invalidateBlocks(): void
-    {
-        $this->invalidate(BlockPartial::NAME);
     }
 }

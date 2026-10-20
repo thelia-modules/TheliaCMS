@@ -44,3 +44,13 @@ theme puts the sections of the module it replaces away under
 `sections.hidden`, and the `catalogue` skill tells the model to prefer a
 component of the theme. The sections of the module remain for what the
 theme has no component for, and for a theme that declares nothing.
+
+## Amendment of 2026-10-20, later
+
+Blocks are no longer part of the module: `Partial:cms-block` goes with the
+reusable blocks and the blocks of catalogue items. The partials a theme
+component replaces go too — `Partial:product-card`, `Partial:product-strip`,
+`Partial:category-card`, `Partial:category-strip`, `Partial:video-facade` —
+so a product, a category or a video on a page is a component of the theme.
+The dynamic partials left are a form, a menu, the latest contents, a map and
+a social post.

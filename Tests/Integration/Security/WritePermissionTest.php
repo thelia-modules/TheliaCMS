@@ -16,35 +16,32 @@ namespace TheliaCMS\Tests\Integration\Security;
 
 use Thelia\Core\Security\AccessManager;
 use Thelia\Test\FixtureFactory;
-use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsBlockQuery;
-use TheliaCMS\Model\Map\CmsBlockTableMap;
+use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Model\Map\CmsPageTableMap;
 use TheliaCMS\Security\CmsResources;
 
 /**
  * Reading a screen is not the right to save it: an editor allowed to look at
- * the CMS pages, and nothing more, cannot change a block.
+ * the CMS pages, and nothing more, cannot change a page.
  */
 final class WritePermissionTest extends AdminScreenTestCase
 {
-    public function testABlockIsSavedOnlyWithTheRightToChangeThePages(): void
+    public function testAPageIsSavedOnlyWithTheRightToChangeThePages(): void
     {
-        $block = (new CmsBlock())->setCode('permission-block');
-        $block->setLocale($this->locale())->setTitle('Before');
-        $block->save();
-        $url = \sprintf('/admin/cms/blocks/%d', $block->getId());
+        $page = $this->createPage('Before', published: false);
+        $url = \sprintf('/admin/cms/pages/%d', $page->getId());
 
         $this->logInAs((new FixtureFactory($this->getPropelConnection()))->restrictedAdmin([
             CmsResources::PAGE => [AccessManager::VIEW],
         ]));
 
-        $form = $this->screen($url)->filter('form[name="cms_block"]')->form();
-        $form['cms_block[title]'] = 'After';
+        $form = $this->screen($url)->filter('form[name="cms_page"]')->form();
+        $form['cms_page[title]'] = 'After';
 
         self::assertSame(403, $this->send('POST', $form->getUri(), $form->getPhpValues()));
 
-        CmsBlockTableMap::clearInstancePool();
-        $saved = CmsBlockQuery::create()->findPk($block->getId());
+        CmsPageTableMap::clearInstancePool();
+        $saved = CmsPageQuery::create()->findPk($page->getId());
         self::assertNotNull($saved);
         self::assertSame('Before', $saved->setLocale($this->locale())->getTitle());
     }

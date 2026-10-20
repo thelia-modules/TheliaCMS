@@ -157,78 +157,6 @@ CREATE TABLE `cms_menu_item`
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
--- cms_block
--- ---------------------------------------------------------------------
-
-DROP TABLE IF EXISTS `cms_block`;
-
-CREATE TABLE `cms_block`
-(
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `code` VARCHAR(50) NOT NULL,
-    `deleted_at` TIMESTAMP NULL,
-    `created_by` INTEGER,
-    `updated_by` INTEGER,
-    `created_at` TIMESTAMP NULL,
-    `updated_at` TIMESTAMP NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE INDEX `unq_cms_block_code` (`code`),
-    INDEX `idx_cms_block_deleted_at` (`deleted_at`)
-) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
-
--- ---------------------------------------------------------------------
--- cms_block_content
--- ---------------------------------------------------------------------
-
-DROP TABLE IF EXISTS `cms_block_content`;
-
-CREATE TABLE `cms_block_content`
-(
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `block_id` INTEGER NOT NULL,
-    `locale` VARCHAR(5) NOT NULL,
-    `draft_document` LONGTEXT,
-    `draft_html` LONGTEXT,
-    `published_document` LONGTEXT,
-    `published_html` LONGTEXT,
-    `published_at` TIMESTAMP NULL,
-    `draft_updated_by` INTEGER,
-    `created_at` TIMESTAMP NULL,
-    `updated_at` TIMESTAMP NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE INDEX `unq_cms_block_content_block_locale` (`block_id`, `locale`),
-    CONSTRAINT `fk_cms_block_content_block`
-        FOREIGN KEY (`block_id`)
-        REFERENCES `cms_block` (`id`)
-        ON UPDATE RESTRICT
-        ON DELETE CASCADE
-) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
-
--- ---------------------------------------------------------------------
--- cms_item_block
--- ---------------------------------------------------------------------
-
-DROP TABLE IF EXISTS `cms_item_block`;
-
-CREATE TABLE `cms_item_block`
-(
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `item_type` VARCHAR(20) NOT NULL,
-    `item_id` INTEGER NOT NULL,
-    `block_id` INTEGER NOT NULL,
-    `created_at` TIMESTAMP NULL,
-    `updated_at` TIMESTAMP NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE INDEX `unq_cms_item_block_item` (`item_type`, `item_id`),
-    UNIQUE INDEX `unq_cms_item_block_block` (`block_id`),
-    CONSTRAINT `fk_cms_item_block_block`
-        FOREIGN KEY (`block_id`)
-        REFERENCES `cms_block` (`id`)
-        ON UPDATE RESTRICT
-        ON DELETE CASCADE
-) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
-
--- ---------------------------------------------------------------------
 -- cms_form
 -- ---------------------------------------------------------------------
 
@@ -415,24 +343,6 @@ CREATE TABLE `cms_menu_item_i18n`
     CONSTRAINT `cms_menu_item_i18n_fk_ea832f`
         FOREIGN KEY (`id`)
         REFERENCES `cms_menu_item` (`id`)
-        ON DELETE CASCADE
-) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
-
--- ---------------------------------------------------------------------
--- cms_block_i18n
--- ---------------------------------------------------------------------
-
-DROP TABLE IF EXISTS `cms_block_i18n`;
-
-CREATE TABLE `cms_block_i18n`
-(
-    `id` INTEGER NOT NULL,
-    `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
-    `title` VARCHAR(255),
-    PRIMARY KEY (`id`,`locale`),
-    CONSTRAINT `cms_block_i18n_fk_16ce41`
-        FOREIGN KEY (`id`)
-        REFERENCES `cms_block` (`id`)
         ON DELETE CASCADE
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 

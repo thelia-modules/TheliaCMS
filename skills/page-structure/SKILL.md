@@ -23,7 +23,7 @@ as proof → questions and answers that remove the last doubts → call to actio
 
 **Selection or collection page** (a theme, a season, the products of a
 story): hero that says what ties them together → a short text → the products
-in one row (the row component of the theme, else `Partial:product-strip`),
+in one row (the row component of the theme, when the catalogue has one),
 two to twelve of them, found with `search_products` → call to action to the
 category or the shop. Several rows when the brief groups the products, one
 heading each, never one card per product.

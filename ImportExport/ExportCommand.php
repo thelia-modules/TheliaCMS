@@ -23,7 +23,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'thelia_cms:export',
-    description: 'Writes the pages, blocks, menus, forms and settings of the site to a JSON file.',
+    description: 'Writes the pages, menus, forms and settings of the site to a JSON file.',
 )]
 final class ExportCommand extends Command
 {
@@ -60,9 +60,8 @@ final class ExportCommand extends Command
         }
 
         $io->success(\sprintf(
-            '%d page(s), %d block(s), %d menu(s) and %d form(s) written to %s.',
+            '%d page(s), %d menu(s) and %d form(s) written to %s.',
             \count($document['pages']),
-            \count($document['blocks']),
             \count($document['menus']),
             \count($document['forms']),
             $file,

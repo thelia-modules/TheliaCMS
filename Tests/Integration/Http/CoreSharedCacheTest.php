@@ -25,10 +25,6 @@ use Thelia\Core\SharedCache\SharedCacheMode;
 use Thelia\Core\SharedCache\SharedCachePolicy;
 use Thelia\Core\SharedCache\SharedCachePurgerInterface;
 use Thelia\Model\ConfigQuery;
-use TheliaCMS\Block\Admin\CmsBlockWriter;
-use TheliaCMS\Block\Item\ItemBlockWriter;
-use TheliaCMS\Block\Item\ItemType;
-use TheliaCMS\Content\Document;
 use TheliaCMS\Http\CachePurger;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Http\PageCacheListener;
@@ -116,22 +112,6 @@ final class CoreSharedCacheTest extends CmsIntegrationTestCase
         $this->getService(SharedCacheInvalidationListener::class)->flush();
 
         self::assertSame([[CacheTags::page(12)]], $this->purger->calls);
-    }
-
-    public function testPublishingTheBlockOfAProductPurgesThePageOfThatProduct(): void
-    {
-        $factory = $this->createFixtureFactory();
-        $product = $factory->product($factory->category(), $factory->taxRule(), $factory->currency());
-        $block = $this->getService(ItemBlockWriter::class)->blockFor(ItemType::Product, (int) $product->getId(), $this->locale());
-        $writer = $this->getService(CmsBlockWriter::class);
-        $writer->saveContent($block, $this->locale(), Document::richText('<div class="cms-page-content"><p>Made in the workshop next door.</p></div>'));
-        $this->getService(SharedCacheInvalidationListener::class)->flush();
-        $this->purger->calls = [];
-
-        $writer->publish($block, $this->locale());
-        $this->getService(SharedCacheInvalidationListener::class)->flush();
-
-        self::assertSame([['product-'.$product->getId()]], $this->purger->calls);
     }
 
     /**

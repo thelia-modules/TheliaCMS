@@ -17,7 +17,6 @@ namespace TheliaCMS\Tests\Integration\Security;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouterInterface;
-use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsMenu;
 use TheliaCMS\Model\CmsTag;
@@ -47,10 +46,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
      * answers GET and POST, the POST being the submission of its form.
      */
     private const array SCREENS = [
-        'admin.cms.blocks.content.edit',
-        'admin.cms.blocks.create',
-        'admin.cms.blocks.edit',
-        'admin.cms.blocks.list',
         'admin.cms.forms.create',
         'admin.cms.forms.edit',
         'admin.cms.forms.field_save',
@@ -68,11 +63,9 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.pages.edit',
         'admin.cms.pages.list',
         'admin.cms.pages.trash',
-        'admin.cms.partials.sources.blocks',
         'admin.cms.partials.sources.categories',
         'admin.cms.partials.sources.folders',
         'admin.cms.partials.sources.forms',
-        'admin.cms.partials.sources.images',
         'admin.cms.partials.sources.menus',
         'admin.cms.partials.sources.products',
         'admin.cms.scripts.create',
@@ -91,8 +84,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
     private const array SAMPLE_PARAMETERS = [
         'direction' => 'up',
         'format' => 'csv',
-        // The item blocks routes take the kind of item; the id stays unknown.
-        'type' => 'product',
     ];
 
     public function testEveryWriteIsRefusedWithoutTheToken(): void
@@ -164,10 +155,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
         $menu->setLocale($this->locale())->setTitle('Token screens menu');
         $menu->save();
 
-        $block = (new CmsBlock())->setCode('token-screens-block');
-        $block->setLocale($this->locale())->setTitle('Token screens block');
-        $block->save();
-
         $form = (new CmsForm())->setCode('token-screens-form');
         $form->setLocale($this->locale())->setTitle('Token screens form');
         $form->save();
@@ -184,10 +171,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
             '/admin/cms/menus',
             '/admin/cms/menus/new',
             '/admin/cms/menus/'.$menu->getId(),
-            '/admin/cms/blocks',
-            '/admin/cms/blocks/new',
-            '/admin/cms/blocks/'.$block->getId(),
-            '/admin/cms/blocks/'.$block->getId().'/content',
             '/admin/cms/forms',
             '/admin/cms/forms/new',
             '/admin/cms/forms/'.$form->getId(),

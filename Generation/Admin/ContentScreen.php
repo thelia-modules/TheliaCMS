@@ -35,8 +35,8 @@ use Twig\Environment;
 
 /**
  * The content screen: a brief and the generator on the left, the draft on
- * the right. Everything the template reads is shaped here, so the two
- * controllers — page and block — only say what they are about.
+ * the right. Everything the template reads is shaped here, so the
+ * controller only says which page it is about.
  */
 final readonly class ContentScreen
 {

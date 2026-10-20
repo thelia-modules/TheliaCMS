@@ -18,7 +18,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * A block whose content is produced by the server every time the page is
- * served: the latest news, a menu, a reusable block, a click-to-load embed.
+ * served: the latest news, a menu, a form, a click-to-load embed.
  *
  * A page stores nothing but the name of the partial and its settings; the
  * markup is never in the database, so what visitors get follows the site

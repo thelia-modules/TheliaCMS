@@ -29,11 +29,11 @@ final class ThemeSectionsTest extends TestCase
         mkdir($directory.'/config', 0o777, true);
 
         try {
-            file_put_contents($directory.'/config/theliacms.yaml', "sections:\n    components:\n        - Layouts:CrossSelling:Base\n    hidden:\n        - Partial:product-strip\n        - Partial:product-card\n");
+            file_put_contents($directory.'/config/theliacms.yaml', "sections:\n    components:\n        - Layouts:CrossSelling:Base\n    hidden:\n        - Partial:latest-contents\n        - Partial:cms-menu\n");
             $declared = ThemeSections::declaredIn([$directory]);
 
             self::assertSame(['Layouts:CrossSelling:Base'], $declared->components);
-            self::assertSame(['Partial:product-strip', 'Partial:product-card'], $declared->hidden);
+            self::assertSame(['Partial:latest-contents', 'Partial:cms-menu'], $declared->hidden);
 
             file_put_contents($directory.'/config/theliacms.yaml', "sections:\n    components: []\n    hidden: not a list\n");
             $this->expectException(\InvalidArgumentException::class);

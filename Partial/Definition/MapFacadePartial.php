@@ -22,10 +22,10 @@ use TheliaCMS\TheliaCMS;
 /**
  * A map that is fetched when a visitor asks to see it.
  *
- * Same reason as the video: an embedded map hands the IP address of every
- * visitor to a mapping service before anyone has agreed to anything. Until the
- * button is pressed, what the page holds is the address in plain text, which is
- * also what most visitors were looking for.
+ * An embedded map hands the IP address of every visitor to a mapping service
+ * before anyone has agreed to anything. Until the button is pressed, what the
+ * page holds is the address in plain text, which is also what most visitors
+ * were looking for.
  *
  * OpenStreetMap only for now, and deliberately: it is the one that answers
  * without an API key and without advertising cookies. A Google Maps option

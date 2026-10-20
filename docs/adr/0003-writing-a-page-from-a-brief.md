@@ -32,3 +32,8 @@ the corrected text.
   alert would read.
 - Adding, removing or reordering sections by hand is not offered: the brief
   and the change request cover it until an editor asks otherwise.
+
+## Amendment of 2026-10-20
+
+Blocks are no longer part of the module: the generator writes for a page
+only, and the screen of a block is gone with them.

@@ -17,9 +17,6 @@ namespace TheliaCMS\ImportExport;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Model\LangQuery;
 use Thelia\Model\ModuleQuery;
-use TheliaCMS\Block\Admin\CmsBlockRepository;
-use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsBlockContentQuery;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormFieldQuery;
 use TheliaCMS\Model\CmsFormQuery;
@@ -53,7 +50,6 @@ final readonly class SiteExporter
     public function __construct(
         private CmsSettings $settings,
         private MediaReferences $media,
-        private CmsBlockRepository $blocks,
     ) {
     }
 
@@ -72,20 +68,9 @@ final readonly class SiteExporter
             $mediaIds = [...$mediaIds, ...$this->mediaOf($document)];
         }
 
-        $blocks = [];
-
-        // The reusable blocks only. The block of a catalogue item is tied to
-        // a product or a category by id, and neither exists on the other site.
-        foreach ($this->blocks->reusableQuery()->orderById()->find() as $block) {
-            $document = $this->blockDocument($block, $locales);
-            $blocks[] = $document;
-            $mediaIds = [...$mediaIds, ...$this->mediaOf($document)];
-        }
-
         return [
             ...ExportFormat::header($this->moduleVersion(), $locales, new \DateTimeImmutable()),
             'pages' => $pages,
-            'blocks' => $blocks,
             'menus' => $this->menus($locales),
             'forms' => $this->forms($locales),
             'settings' => $this->settingsDocument(),
@@ -185,41 +170,6 @@ final readonly class SiteExporter
     public static function pageUid(int $id): string
     {
         return 'page-'.$id;
-    }
-
-    /**
-     * @param list<string> $locales
-     *
-     * @return array<string, mixed>
-     */
-    private function blockDocument(CmsBlock $block, array $locales): array
-    {
-        $document = [
-            'code' => (string) $block->getCode(),
-            'translations' => [],
-            'contents' => [],
-        ];
-
-        foreach ($locales as $locale) {
-            $block->setLocale($locale);
-            $title = (string) $block->getTitle();
-
-            if ('' !== trim($title)) {
-                $document['translations'][$locale] = ['title' => $title];
-            }
-        }
-
-        foreach (CmsBlockContentQuery::create()->filterByBlockId($block->getId())->find() as $content) {
-            $document['contents'][(string) $content->getLocale()] = [
-                'draft_document' => $content->getDraftDocument(),
-                'draft_html' => $content->getDraftHtml(),
-                'published_document' => $content->getPublishedDocument(),
-                'published_html' => $content->getPublishedHtml(),
-                'published_at' => $this->date($content->getPublishedAt()),
-            ];
-        }
-
-        return $document;
     }
 
     /**

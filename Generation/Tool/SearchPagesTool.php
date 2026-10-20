@@ -61,9 +61,7 @@ final readonly class SearchPagesTool implements GeneratorToolInterface
 
         $pages = CmsPageQuery::create()
             ->filterByDeletedAt(null, Criteria::ISNULL)
-            ->_if($request->target->isPage())
-                ->filterById($request->target->id, Criteria::NOT_EQUAL)
-            ->_endif()
+            ->filterById($request->target->id, Criteria::NOT_EQUAL)
             ->useCmsPageI18nQuery()
                 ->filterByLocale($locale)
                 ->_if('' !== $query)

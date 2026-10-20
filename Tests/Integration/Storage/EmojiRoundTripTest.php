@@ -15,10 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Storage;
 
 use Propel\Runtime\Propel;
-use TheliaCMS\Block\Admin\CmsBlockWriter;
 use TheliaCMS\Content\Document;
-use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsBlockContentQuery;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsPageRevisionQuery;
@@ -159,28 +156,5 @@ final class EmojiRoundTripTest extends CmsIntegrationTestCase
 
         self::assertNotNull($reloaded);
         self::assertSame('Nos services '.self::EMOJI, $reloaded->setLocale($this->locale())->getTitle());
-    }
-
-    /**
-     * A reusable block is written by its own writer, on its own tables.
-     */
-    public function testAReusableBlockContainingAnEmojiIsSaved(): void
-    {
-        $writer = $this->getService(CmsBlockWriter::class);
-        $locale = $this->locale();
-
-        $block = new CmsBlock();
-        $writer->save($block, $locale, 'bandeau-emoji', 'Bandeau');
-
-        $writer->saveContent($block, $locale, Document::richText('<p>Suivez-nous '.self::EMOJI.'</p>'));
-        $writer->publish($block, $locale);
-
-        $content = CmsBlockContentQuery::create()
-            ->filterByBlockId($block->getId())
-            ->filterByLocale($locale)
-            ->findOne();
-
-        self::assertNotNull($content);
-        self::assertStringContainsString(self::EMOJI, (string) $content->getPublishedHtml());
     }
 }

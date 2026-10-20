@@ -77,30 +77,13 @@ final readonly class PromptBuilder
 
         $lines[] = '';
 
-        if ($target->isPage()) {
-            $lines[] = '# The page';
-            $lines[] = '';
-            $lines[] = \sprintf('- Title: %s', $target->title);
-            $lines[] = \sprintf('- Type: %s', (string) $target->pageType);
+        $lines[] = '# The page';
+        $lines[] = '';
+        $lines[] = \sprintf('- Title: %s', $target->title);
+        $lines[] = \sprintf('- Type: %s', (string) $target->pageType);
 
-            if (null !== $target->summary) {
-                $lines[] = \sprintf('- Summary written by the editor: %s', $target->summary);
-            }
-        } else {
-            $lines[] = '# The block';
-            $lines[] = '';
-            $lines[] = \sprintf('- Name: %s', $target->title);
-
-            if (null !== $target->summary) {
-                $lines[] = \sprintf('- Shown on: %s', $target->summary);
-            }
-
-            $lines[] = '';
-            $lines[] = 'This document is a block, not a page: a piece of content shown inside pages that have a main heading of their own. Give it no main heading (no `heading_level` 1, no `<h1>`), one to three sections, and nothing that only makes sense as a whole page.';
-        }
-
-        if ([] !== $target->excludedComponents) {
-            $lines[] = \sprintf('- Never use these components here: %s.', implode(', ', array_map(static fn (string $name): string => '`'.$name.'`', $target->excludedComponents)));
+        if (null !== $target->summary) {
+            $lines[] = \sprintf('- Summary written by the editor: %s', $target->summary);
         }
 
         $lines[] = '';

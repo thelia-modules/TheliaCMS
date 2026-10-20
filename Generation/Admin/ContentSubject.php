@@ -18,9 +18,8 @@ use TheliaCMS\Content\Document;
 use TheliaCMS\Generation\GenerationTarget;
 
 /**
- * What the content screen shows and where its forms post: the same screen
- * writes a page and a block, and this is everything that differs between
- * the two.
+ * What the content screen shows and where its forms post, for the page it
+ * writes.
  */
 final readonly class ContentSubject
 {

@@ -17,7 +17,6 @@ namespace TheliaCMS\Generation\Admin;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use TheliaCMS\Content\Document;
-use TheliaCMS\Model\CmsBlockContentQuery;
 use TheliaCMS\Model\CmsPageContentQuery;
 
 /**
@@ -41,28 +40,9 @@ final readonly class TranslationSources
         return $this->sources($drafts, $locale);
     }
 
-    /**
-     * @return list<array{locale: string, label: string}>
-     */
-    public function forBlock(int $blockId, string $locale): array
-    {
-        $drafts = [];
-
-        foreach (CmsBlockContentQuery::create()->filterByBlockId($blockId)->find() as $content) {
-            $drafts[(string) $content->getLocale()] = $content->getDraftDocument();
-        }
-
-        return $this->sources($drafts, $locale);
-    }
-
     public function pageDocument(int $pageId, string $sourceLocale): ?Document
     {
         return Document::fromJson(CmsPageContentQuery::create()->filterByPageId($pageId)->filterByLocale($sourceLocale)->findOne()?->getDraftDocument());
-    }
-
-    public function blockDocument(int $blockId, string $sourceLocale): ?Document
-    {
-        return Document::fromJson(CmsBlockContentQuery::create()->filterByBlockId($blockId)->filterByLocale($sourceLocale)->findOne()?->getDraftDocument());
     }
 
     /**

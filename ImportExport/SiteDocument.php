@@ -131,6 +131,9 @@ final readonly class SiteDocument
     }
 
     /**
+     * The blocks a file written before they were removed carries, read only
+     * to say they were left out.
+     *
      * @return list<array<string, mixed>>
      */
     public function blocks(): array
@@ -206,7 +209,7 @@ final readonly class SiteDocument
     }
 
     /**
-     * Whether the contents of pages and blocks in this file are documents this
+     * Whether the contents of pages in this file are documents this
      * module can read, rather than the markup of the former editor.
      */
     public function carriesDocuments(): bool
