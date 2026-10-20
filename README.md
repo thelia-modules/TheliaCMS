@@ -367,7 +367,9 @@ news.
 ### A product or a category of the catalogue
 
 The `Partial:product-card` and `Partial:category-card` sections put one item
-of the catalogue on a page. The generator finds it with its search tools: a
+of the catalogue on a page; `Partial:product-strip` and
+`Partial:category-strip` put two to twelve of them side by side in one row,
+in the order they were picked, under a heading. The generator finds it with its search tools: a
 product by the start of its reference, a part of its name or its barcode, a
 category by its name; the form that edits the section by hand picks it the same
 way, each result followed by its parent so two "Vegetables" can be told apart.
@@ -381,7 +383,12 @@ link. A shop draws its own by shipping `cms/partials/product-card.html.twig` and
 `cms/partials/category-card.html.twig` in its theme: they receive `product`
 (`id`, `ref`, `title`, `url`, `image`, `price`) or `category` (`id`, `title`,
 `url`, `image`), null once the item is offline, and `labels`. A theme that sells
-renders its own product card there, buy button included.
+renders its own product card there, buy button included. The rows are drawn
+by `cms/partials/product-strip.html.twig` and
+`cms/partials/category-strip.html.twig`, which receive `heading` and
+`products` or `categories` (the same keys, the ones online only, in order);
+the product row also receives `product_ids`, for a theme whose strip
+component reads the products itself.
 
 ### Embeds that load nothing until they are asked to
 

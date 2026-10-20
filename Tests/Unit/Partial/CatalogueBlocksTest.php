@@ -18,9 +18,13 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Partial\Catalogue\CatalogueImage;
+use TheliaCMS\Partial\Catalogue\CategorySummary;
 use TheliaCMS\Partial\Catalogue\ProductCardPrice;
+use TheliaCMS\Partial\Catalogue\ProductSummary;
 use TheliaCMS\Partial\Definition\CategoryCardPartial;
+use TheliaCMS\Partial\Definition\CategoryStripPartial;
 use TheliaCMS\Partial\Definition\ProductCardPartial;
+use TheliaCMS\Partial\Definition\ProductStripPartial;
 use TheliaCMS\Partial\PartialDefinitionInterface;
 use TheliaCMS\Partial\PartialPropType;
 
@@ -33,6 +37,35 @@ final class CatalogueBlocksTest extends TestCase
     public function testTheProductIsPickedBySearchAndNeverCached(): void
     {
         $this->assertPickedBySearch($this->product(), 'product', 'admin.cms.partials.sources.products');
+    }
+
+    public function testTheStripTakesTwoToTwelveProductsPickedBySearchAndIsNeverCached(): void
+    {
+        $strip = $this->strip();
+        $products = $strip->props()[1];
+
+        self::assertSame('product-strip', $strip->name());
+        self::assertSame(PartialPropType::References, $products->type);
+        self::assertSame('product', $products->itemName);
+        self::assertSame([2, 12], [$products->min, $products->max]);
+        self::assertTrue($products->required, 'A row of nothing is no row.');
+        self::assertTrue($products->searchable);
+        self::assertStringContainsString('sources.products', (string) $products->source);
+        self::assertNull($strip->cacheTtl(), 'Prices change without an event to drop a fragment on.');
+    }
+
+    public function testTheCategoryStripTakesTwoToTwelveCategoriesPickedBySearchAndIsNeverCached(): void
+    {
+        $strip = $this->categoryStrip();
+        $categories = $strip->props()[1];
+
+        self::assertSame('category-strip', $strip->name());
+        self::assertSame(PartialPropType::References, $categories->type);
+        self::assertSame('category', $categories->itemName);
+        self::assertSame([2, 12], [$categories->min, $categories->max]);
+        self::assertTrue($categories->searchable);
+        self::assertStringContainsString('sources.categories', (string) $categories->source);
+        self::assertNull($strip->cacheTtl());
     }
 
     public function testTheCategoryIsPickedBySearchAndNeverCached(): void
@@ -56,9 +89,17 @@ final class CatalogueBlocksTest extends TestCase
 
     private function product(): ProductCardPartial
     {
-        return new ProductCardPartial(
-            $this->translator(),
-            $this->urls(),
+        return new ProductCardPartial($this->translator(), $this->urls(), $this->summaries());
+    }
+
+    private function strip(): ProductStripPartial
+    {
+        return new ProductStripPartial($this->translator(), $this->urls(), $this->summaries());
+    }
+
+    private function summaries(): ProductSummary
+    {
+        return new ProductSummary(
             (new \ReflectionClass(ProductCardPrice::class))->newInstanceWithoutConstructor(),
             (new \ReflectionClass(CatalogueImage::class))->newInstanceWithoutConstructor(),
         );
@@ -66,11 +107,17 @@ final class CatalogueBlocksTest extends TestCase
 
     private function category(): CategoryCardPartial
     {
-        return new CategoryCardPartial(
-            $this->translator(),
-            $this->urls(),
-            (new \ReflectionClass(CatalogueImage::class))->newInstanceWithoutConstructor(),
-        );
+        return new CategoryCardPartial($this->translator(), $this->urls(), $this->categorySummaries());
+    }
+
+    private function categoryStrip(): CategoryStripPartial
+    {
+        return new CategoryStripPartial($this->translator(), $this->urls(), $this->categorySummaries());
+    }
+
+    private function categorySummaries(): CategorySummary
+    {
+        return new CategorySummary((new \ReflectionClass(CatalogueImage::class))->newInstanceWithoutConstructor());
     }
 
     private function translator(): TranslatorInterface

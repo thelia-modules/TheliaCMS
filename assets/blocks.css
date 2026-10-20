@@ -595,6 +595,36 @@
     font-weight: 600;
   }
 
+  /* Several products or categories in one row: the cards side by side, each
+     the width of a column, the row scrolled sideways when it does not fit. */
+  .cms-product-strip__heading,
+  .cms-category-strip__heading {
+    margin: 0 0 1rem;
+  }
+
+  .cms-product-strip__row,
+  .cms-category-strip__row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(14rem, 1fr);
+    gap: 1rem;
+    margin: 0;
+    padding: 0 0 0.5rem;
+    list-style: none;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+
+  .cms-product-strip__item,
+  .cms-category-strip__item {
+    scroll-snap-align: start;
+  }
+
+  .cms-product-strip__item > .cms-product-card,
+  .cms-category-strip__item > .cms-category-card {
+    height: 100%;
+  }
+
 
   .cms-block {
     display: contents;

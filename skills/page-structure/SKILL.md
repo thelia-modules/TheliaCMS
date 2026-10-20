@@ -21,6 +21,13 @@ always: true
 text and image on the one thing that matters most → figures or testimonials
 as proof → questions and answers that remove the last doubts → call to action.
 
+**Selection or collection page** (a theme, a season, the products of a
+story): hero that says what ties them together → a short text → the products
+in one `Partial:product-strip`, two to twelve of them, found with
+`search_products` → call to action to the category or the shop. Several
+strips when the brief groups the products, one heading each, never one card
+per product.
+
 **About page**: hero with the sentence that says who you are → text and image
 on the story or the team → figures → logos of partners or clients when the
 brief names them → call to action to get in touch.

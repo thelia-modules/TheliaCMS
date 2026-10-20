@@ -50,6 +50,26 @@ final class PartialPropsTest extends TestCase
         self::assertSame(['count' => 3], $this->props->validate([], $definition));
     }
 
+    public function testAListOfReferencesKeepsTheOrderDropsWhatIsNoIdAndStopsAtTheMost(): void
+    {
+        $definition = new FakePartial('strip', [PartialProp::references('products', 'Products', '/sources/products', 'product', min: 2, max: 3)]);
+
+        self::assertSame(
+            ['products' => [22, 17, 5]],
+            $this->props->validate(['products' => [['product' => 22], ['product' => '17'], ['product' => 'abc'], ['product' => -1], 22, ['product' => 5], ['product' => 9]]], $definition),
+            'Rows and bare ids alike, each once, in order, cut at the most.',
+        );
+        self::assertSame(['products' => []], $this->props->validate(['products' => 'not a list'], new FakePartial('strip', [PartialProp::references('products', 'Products', '/sources/products', 'product')])));
+    }
+
+    public function testAListOfReferencesThatNeedsSomeRefusesAnEmptyOne(): void
+    {
+        $definition = new FakePartial('strip', [PartialProp::references('products', 'Products', '/sources/products', 'product', min: 2)]);
+
+        $this->expectException(MissingPartialPropException::class);
+        $this->props->validate(['products' => [['product' => 'none']]], $definition);
+    }
+
     public function testKeepsANumberInsideItsBounds(): void
     {
         $definition = new FakePartial('news', [PartialProp::integer('count', 'How many', 3, 1, 12)]);

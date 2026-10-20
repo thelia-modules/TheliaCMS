@@ -1,0 +1,27 @@
+{#
+    Several products in one row, as the module renders them when the theme
+    ships no `cms/partials/product-strip.html.twig` of its own: the cards of
+    the module side by side, scrolled sideways when the row is wider than
+    the page. A theme that sells draws the row with its own cards, buy button
+    and all.
+
+    `products` holds only the products still online, in the order they were
+    picked; `product_ids` their ids, for a theme that fetches its cards
+    itself. The block renders nothing when none is left: the empty
+    placeholder leaves the page.
+#}
+{% if products is not empty %}
+    {% set heading_id = 'cms-product-strip-' ~ random(100000) %}
+    <section class="cms-product-strip"{% if heading %} aria-labelledby="{{ heading_id }}"{% endif %}>
+        {% if heading %}
+            <h2 class="cms-product-strip__heading" id="{{ heading_id }}">{{ heading }}</h2>
+        {% endif %}
+        <ul class="cms-product-strip__row">
+            {% for product in products %}
+                <li class="cms-product-strip__item">
+                    {{ include('@TheliaCMSModule/front/partials/product-card.html.twig', { product: product, labels: labels }) }}
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+{% endif %}

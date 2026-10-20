@@ -18,7 +18,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Model\Category;
 use Thelia\Model\CategoryQuery;
-use TheliaCMS\Partial\Catalogue\CatalogueImage;
+use TheliaCMS\Partial\Catalogue\CategorySummary;
 use TheliaCMS\Partial\PartialDefinitionInterface;
 use TheliaCMS\Partial\PartialProp;
 use TheliaCMS\TheliaCMS;
@@ -38,7 +38,7 @@ final readonly class CategoryCardPartial implements PartialDefinitionInterface
     public function __construct(
         private TranslatorInterface $translator,
         private UrlGeneratorInterface $urls,
-        private CatalogueImage $images,
+        private CategorySummary $summaries,
     ) {
     }
 
@@ -86,15 +86,8 @@ final readonly class CategoryCardPartial implements PartialDefinitionInterface
             return ['category' => null];
         }
 
-        $category->setLocale($locale);
-
         return [
-            'category' => [
-                'id' => (int) $category->getId(),
-                'title' => trim((string) $category->getTitle()),
-                'url' => $category->getUrl($locale),
-                'image' => $this->images->ofCategory((int) $category->getId(), $locale),
-            ],
+            'category' => $this->summaries->of($category, $locale),
             // Labels travel with the data: a theme template may ignore them,
             // the fallback cannot reach the catalogue of the module otherwise.
             'labels' => [

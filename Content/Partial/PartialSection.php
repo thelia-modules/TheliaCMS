@@ -76,9 +76,11 @@ final readonly class PartialSection implements SectionDefinitionInterface
         $sample = [];
 
         foreach ($this->partial->props() as $prop) {
-            $sample[$prop->name] = PartialPropType::Reference === $prop->type
-                ? ($prop->required ? 1 : null)
-                : $prop->default;
+            $sample[$prop->name] = match ($prop->type) {
+                PartialPropType::Reference => $prop->required ? 1 : null,
+                PartialPropType::References => [[$prop->itemName ?? 'id' => 1], [$prop->itemName ?? 'id' => 2]],
+                default => $prop->default,
+            };
         }
 
         return $sample;
@@ -108,6 +110,14 @@ final readonly class PartialSection implements SectionDefinitionInterface
             PartialPropType::Boolean => Prop::boolean($prop->name, $prop->label, (bool) $prop->default, $prop->help),
             PartialPropType::Choice => Prop::choice($prop->name, $prop->label, $prop->choices, (string) $prop->default, $prop->help),
             PartialPropType::Reference => Prop::reference($prop->name, $prop->label, $this->sourceOf($prop), $prop->required, $prop->help, $prop->source, $prop->searchable),
+            PartialPropType::References => Prop::items(
+                $prop->name,
+                $prop->label,
+                [Prop::reference($prop->itemName ?? 'id', $prop->itemLabel ?? $prop->label, $this->sourceOf($prop), true, null, $prop->source, $prop->searchable)],
+                $prop->min ?? 0,
+                $prop->max ?? 12,
+                $prop->help,
+            ),
         };
     }
 
@@ -120,6 +130,10 @@ final readonly class PartialSection implements SectionDefinitionInterface
         $source = (string) $prop->source;
         $segment = basename(parse_url($source, \PHP_URL_PATH) ?: $source);
 
-        return '' !== $segment ? rtrim($segment, 's') : 'item';
+        if ('' === $segment) {
+            return 'item';
+        }
+
+        return str_ends_with($segment, 'ies') ? substr($segment, 0, -3).'y' : rtrim($segment, 's');
     }
 }

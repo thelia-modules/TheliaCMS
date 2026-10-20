@@ -26,6 +26,12 @@ anything else is refused.
 - Live content (`Partial:*`) shows what the site holds today — a form, the
   latest news, a product — and takes the id of that item. Use the search tools
   to find the id; never guess one.
+- Several products go in **one** `Partial:product-strip`: a row of cards, the
+  ids from `search_products` in `products`, a heading that says what they
+  have in common. Never a `Partial:product-card` per product stacked one
+  under the other; `Partial:product-card` is for one product on its own,
+  next to the text that talks about it. The same for categories:
+  `Partial:category-strip` for several, `Partial:category-card` for one.
 
 ## Props
 

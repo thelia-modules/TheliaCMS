@@ -17,8 +17,11 @@ namespace TheliaCMS\Tests\Integration\Partial;
 use Thelia\Model\Category;
 use Thelia\Model\Product;
 use Thelia\Test\FixtureFactory;
+use TheliaCMS\Generation\CatalogSheet;
 use TheliaCMS\Partial\Definition\CategoryCardPartial;
+use TheliaCMS\Partial\Definition\CategoryStripPartial;
 use TheliaCMS\Partial\Definition\ProductCardPartial;
+use TheliaCMS\Partial\Definition\ProductStripPartial;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
 
 /**
@@ -94,6 +97,33 @@ final class CatalogueBlocksTest extends AdminScreenTestCase
         self::assertNull($partial->context(['product' => (int) $product->getId()], 'en_US')['product'], 'An offline product leaves the page.');
     }
 
+    public function testAStripShowsThePickedProductsInTheirOrderWithoutTheOnesOffline(): void
+    {
+        $first = $this->product('CMSBLK-STRIP-1', 'Strip one', 1);
+        $second = $this->product('CMSBLK-STRIP-2', 'Strip two', 1);
+        $third = $this->product('CMSBLK-STRIP-3', 'Strip three', 1);
+        $partial = $this->getService(ProductStripPartial::class);
+        \assert($partial instanceof ProductStripPartial);
+        $ids = [(int) $third->getId(), (int) $first->getId(), (int) $second->getId()];
+
+        $context = $partial->context(['heading' => 'Our picks', 'products' => $ids], 'en_US');
+
+        self::assertSame('Our picks', $context['heading']);
+        self::assertSame($ids, $context['product_ids'], 'The order is the one they were picked in, not the one of the database.');
+        self::assertSame(['Strip three', 'Strip one', 'Strip two'], array_column($context['products'], 'title'));
+        self::assertNotNull($context['products'][0]['price']);
+
+        $first->setVisible(0)->save();
+
+        self::assertSame([(int) $third->getId(), (int) $second->getId()], $partial->context(['products' => $ids, 'heading' => null], 'en_US')['product_ids'], 'An offline product leaves the row without a hole.');
+
+        $sheet = $this->getService(CatalogSheet::class)->text();
+        self::assertStringContainsString('## `Partial:product-strip`', $sheet, 'The strip is in the catalogue the model reads.');
+        self::assertStringContainsString('`products`* (list of 2 to 12 items)', $sheet);
+        self::assertStringContainsString('`product`* (id from the search tools)', $sheet);
+        self::assertStringContainsString('"products":[{"product":1},{"product":2}]', $sheet, 'The example shows the shape of a row.');
+    }
+
     public function testAPickedCategoryReachesTheTemplateUntilItGoesOffline(): void
     {
         $category = $this->category('Catalogue block picked', 0, 1);
@@ -107,6 +137,25 @@ final class CatalogueBlocksTest extends AdminScreenTestCase
         $category->setVisible(0)->save();
 
         self::assertNull($partial->context(['category' => (int) $category->getId()], 'en_US')['category']);
+    }
+
+    public function testAStripOfCategoriesKeepsTheOrderAndDropsTheOnesOffline(): void
+    {
+        $first = $this->category('Strip category one', 0, 1);
+        $second = $this->category('Strip category two', 0, 1);
+        $partial = $this->getService(CategoryStripPartial::class);
+        \assert($partial instanceof CategoryStripPartial);
+        $ids = [(int) $second->getId(), (int) $first->getId()];
+
+        $context = $partial->context(['heading' => 'Our worlds', 'categories' => $ids], 'en_US');
+
+        self::assertSame(['Strip category two', 'Strip category one'], array_column($context['categories'], 'title'));
+        self::assertSame('Our worlds', $context['heading']);
+
+        $second->setVisible(0)->save();
+
+        self::assertSame([(int) $first->getId()], array_column($partial->context(['categories' => $ids, 'heading' => null], 'en_US')['categories'], 'id'));
+        self::assertStringContainsString('## `Partial:category-strip`', $this->getService(CatalogSheet::class)->text());
     }
 
     /**
