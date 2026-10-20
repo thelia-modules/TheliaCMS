@@ -196,8 +196,6 @@ body:has(.cms-content) {
 
 .cms-content__preview {
     position: relative;
-    display: flex;
-    flex-direction: column;
     flex: 1 1 auto;
     min-width: 0;
     background: #e9ecef;
@@ -205,33 +203,35 @@ body:has(.cms-content) {
 
 .cms-content__frame {
     display: block;
-    flex: 1 1 auto;
-    min-height: 0;
     width: 100%;
+    height: 100%;
     border: 0;
     background: #fff;
 }
 
-/* Adding a section, under the preview: the list opens upwards over a
-   bounded height, the draft above it shrinking to make room. */
+/* Adding a section: the components, in a dialog opened from the button the
+   script writes into the preview after the last section. */
 .cms-content__add {
-    flex: 0 0 auto;
-    margin-top: auto;
-    padding: 0.5rem 1rem;
-    border-top: 1px solid var(--bs-border-color, #dee2e6);
-    background: var(--bs-body-bg, #fff);
+    width: min(60rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 4rem);
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.5rem;
 }
 
-.cms-content__add > summary {
-    list-style: none;
+.cms-content__add::backdrop {
+    background: rgba(33, 37, 41, 0.5);
 }
 
-.cms-content__add > summary::-webkit-details-marker {
-    display: none;
+.cms-content__add-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
 }
 
 .cms-content__add-hint {
-    margin: 0.5rem 0;
+    margin: 0.5rem 0 1rem;
     font-size: 0.8125rem;
     color: #495057;
 }
@@ -240,10 +240,8 @@ body:has(.cms-content) {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: 0.5rem;
-    max-height: 40vh;
     margin: 0;
     padding: 0;
-    overflow-y: auto;
     list-style: none;
 }
 

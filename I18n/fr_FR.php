@@ -833,4 +833,5 @@ return [
     'The section is added at the end of the draft with example text, which you then edit by hand.' => 'La section est ajoutée à la fin du brouillon avec un texte d’exemple, que vous modifiez ensuite à la main.',
     'The section is added at the end of the draft, with example text: edit it by hand.' => 'La section est ajoutée à la fin du brouillon, avec un texte d’exemple : modifiez-la à la main.',
     'This component is not offered on this site: reload the screen.' => 'Ce composant n’est pas proposé sur ce site : rechargez l’écran.',
+    'Or add a section by hand' => 'Ou ajoutez une section à la main',
 ];

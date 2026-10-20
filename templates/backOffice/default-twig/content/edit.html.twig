@@ -34,6 +34,8 @@
              close: 'Close'|trans({}, 'theliacms'),
              search: 'Search…'|trans({}, 'theliacms'),
              remove: 'Remove this section from the draft? Its text is lost unless the draft is written again.'|trans({}, 'theliacms'),
+             add: 'Add a section'|trans({}, 'theliacms'),
+             edit: 'Edit'|trans({}, 'theliacms'),
          }|json_encode }}">
         <header class="cms-content__bar">
             <a class="btn btn-sm btn-outline-secondary" href="{{ subject.backUrl }}" data-testid="cms-content-back">
@@ -278,17 +280,26 @@
                     <div class="cms-content__empty" data-testid="cms-content-empty">
                         <p class="cms-content__empty-title">{{ 'This page has no content yet'|trans({}, 'theliacms') }}</p>
                         <p class="cms-content__empty-hint">{{ 'Say what it should hold in the brief on the left, and the generator writes a first draft from the components of the theme. Nothing goes online until you publish it.'|trans({}, 'theliacms') }}</p>
+                        {% if addable is not empty %}
+                            <button type="button" class="btn btn-outline-primary mt-3" data-cms-add-open data-testid="cms-content-add-open">
+                                <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ 'Or add a section by hand'|trans({}, 'theliacms') }}
+                            </button>
+                        {% endif %}
                     </div>
                 {% endif %}
 
-                {# At the end of the preview, where a new section lands: one form per
-                   component the site offers, posted in the background like the other
-                   changes by hand. #}
+                {# The components a section is added from. The script opens it from a
+                   button it writes into the preview, after the last section, where the
+                   new one lands; on a page with nothing yet, from the button above.
+                   Each choice posts in the background like the other changes by hand. #}
                 {% if addable is not empty %}
-                    <details class="cms-content__add" data-testid="cms-content-add">
-                        <summary class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ 'Add a section'|trans({}, 'theliacms') }}
-                        </summary>
+                    <dialog class="cms-content__add" data-cms-add-dialog aria-labelledby="cms-content-add-title" data-testid="cms-content-add">
+                        <div class="cms-content__add-head">
+                            <h2 class="cms-content__heading mb-0" id="cms-content-add-title">{{ 'Add a section'|trans({}, 'theliacms') }}</h2>
+                            <form method="dialog">
+                                <button type="submit" class="btn-close" aria-label="{{ 'Close'|trans({}, 'theliacms') }}"></button>
+                            </form>
+                        </div>
                         <p class="cms-content__add-hint">{{ 'The section is added at the end of the draft with example text, which you then edit by hand.'|trans({}, 'theliacms') }}</p>
                         <ul class="cms-content__add-list">
                             {% for component in addable %}
@@ -304,7 +315,7 @@
                                 </li>
                             {% endfor %}
                         </ul>
-                    </details>
+                    </dialog>
                 {% endif %}
 
                 <div class="cms-content__progress" hidden data-cms-progress>

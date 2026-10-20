@@ -220,10 +220,13 @@ word corrected by hand costs nothing and takes the right to change pages, not
 the generate right. The same right reorders the sections, dragged by their
 handle or moved one place up or down with the arrows (the way from the
 keyboard), and removes them; what is online changes when the draft is
-published. **Add a section**, under the preview, lists the components the site
+published. **Add a section**, in the preview right after the last section
+(or on the screen of a page holding nothing yet), lists the components the site
 offers: the one picked is added at the end of the draft with the example
 props of its component, and its text is then edited by hand. A page holding
-nothing yet starts its draft that way, without the generator.
+nothing yet starts its draft that way, without the generator. Hovering a
+section in the preview outlines it and shows **Edit**, which opens its form in
+the list with the focus on its first field.
 
 Every action on the screen is a form that posts and comes back with a message,
 so it works without its script. With it, the forms post in the background and

@@ -26,6 +26,12 @@
     // last section, the one just added, rather than left at the top.
     var revealLast = false;
 
+    // The colour of the back office, for what the screen writes into the
+    // preview: the theme of the site has its own.
+    function accent() {
+        return getComputedStyle(document.documentElement).getPropertyValue("--bs-primary").trim() || "#0d6efd";
+    }
+
     /* ---- Notices --------------------------------------------------- */
 
     function dismiss(toast) {
@@ -369,7 +375,10 @@
             style.textContent = "[data-cms-section]{position:relative;scroll-margin-top:1rem}" +
                 "[data-cms-section][data-cms-rank]::before{content:attr(data-cms-rank);position:absolute;top:0.25rem;left:0.25rem;z-index:10;min-width:1.5rem;padding:0 0.4rem;border-radius:1rem;background:#0d6efd;color:#fff;font:600 0.75rem/1.5rem system-ui,sans-serif;text-align:center;opacity:0;transition:opacity .15s}" +
                 "[data-cms-section].cms-section--hover{outline:2px solid #0d6efd;outline-offset:2px}" +
-                "[data-cms-section].cms-section--hover::before{opacity:1}";
+                "[data-cms-section].cms-section--hover::before{opacity:1}" +
+                ".cms-content-edit{position:absolute;top:0.25rem;right:0.25rem;z-index:11;padding:0.25rem 0.75rem;border:0;border-radius:0.375rem;background:" + accent() + ";color:#fff;font:600 0.8125rem/1.5 system-ui,sans-serif;cursor:pointer;opacity:0;transition:opacity .15s}" +
+                "[data-cms-section]:hover>.cms-content-edit,.cms-section--hover>.cms-content-edit,.cms-content-edit:focus-visible{opacity:1}" +
+                "[data-cms-section]:has(>.cms-content-edit):hover{outline:2px solid " + accent() + ";outline-offset:2px}";
             inner.head.appendChild(style);
 
             items.forEach(function (item) {
@@ -380,8 +389,100 @@
                     section.setAttribute("data-cms-rank", rank.textContent.trim());
                     section.addEventListener("mouseenter", function () { item.classList.add("is-hover"); });
                     section.addEventListener("mouseleave", function () { item.classList.remove("is-hover"); });
+
+                    // Hovering a section of the preview offers to edit it: the
+                    // button opens its form in the list, where it is edited.
+                    if (item.querySelector("[data-cms-edit]")) {
+                        var button = inner.createElement("button");
+                        button.type = "button";
+                        button.className = "cms-content-edit";
+                        button.setAttribute("data-testid", "cms-content-edit-" + item.getAttribute("data-section"));
+                        button.textContent = labels.edit || "Edit";
+                        button.addEventListener("click", function (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            editSection(item);
+                        });
+                        section.appendChild(button);
+                    }
                 }
             });
+        }
+
+        // The form of a section opened from the preview: the panel is brought
+        // to it and its first field takes the focus.
+        function editSection(item) {
+            var panel = item.querySelector("[data-cms-edit]");
+
+            if (!panel) {
+                return;
+            }
+
+            panel.open = true;
+            item.scrollIntoView({ behavior: "smooth", block: "start" });
+            focusFirstField(panel, 10);
+        }
+
+        // The rich-text editor is mounted when the panel opens, a moment
+        // later: the first field is looked for until it shows.
+        function focusFirstField(panel, tries) {
+            var fields = panel.querySelectorAll(".ProseMirror, input:not([type=hidden]), textarea, select");
+
+            for (var index = 0; index < fields.length; index++) {
+                if (fields[index].offsetParent !== null) {
+                    fields[index].focus({ preventScroll: true });
+
+                    return;
+                }
+            }
+
+            if (tries > 0) {
+                setTimeout(function () { focusFirstField(panel, tries - 1); }, 100);
+            }
+        }
+
+        // Adding a section happens where it lands: a button written into the
+        // preview right after the last section, in the flow of the page. It
+        // only exists in this frame: the page itself, and its preview opened
+        // on its own, never carry it.
+        var addDialog = root.querySelector("[data-cms-add-dialog]");
+
+        function openAddDialog() {
+            if (addDialog && !addDialog.open && !running) {
+                addDialog.showModal();
+            }
+        }
+
+        root.querySelectorAll("[data-cms-add-open]").forEach(function (button) {
+            button.addEventListener("click", openAddDialog);
+        });
+
+        function addSlot() {
+            var inner = previewDocument();
+            var sections = inner ? inner.querySelectorAll("[data-cms-section]") : [];
+
+            if (!addDialog || !sections.length || inner.getElementById("cms-content-add-slot")) {
+                return;
+            }
+
+            var color = accent();
+            var style = inner.createElement("style");
+            style.textContent = "#cms-content-add-slot{display:flex;justify-content:center;width:min(75rem,100% - 2rem);margin:2rem auto;padding:1.25rem;border:2px dashed " + color + ";border-radius:.5rem;box-sizing:border-box}" +
+                "#cms-content-add-slot button{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border:1px solid " + color + ";border-radius:.375rem;background:#fff;color:" + color + ";font:600 .875rem/1.5 system-ui,sans-serif;cursor:pointer}" +
+                "#cms-content-add-slot button:hover,#cms-content-add-slot button:focus-visible{background:" + color + ";color:#fff}";
+            inner.head.appendChild(style);
+
+            var slot = inner.createElement("div");
+            slot.id = "cms-content-add-slot";
+            var button = inner.createElement("button");
+            button.type = "button";
+            button.setAttribute("data-testid", "cms-content-add-slot");
+            button.textContent = "+ " + (labels.add || "Add a section");
+            button.addEventListener("click", openAddDialog);
+            slot.appendChild(button);
+
+            var last = sections[sections.length - 1];
+            last.parentNode.insertBefore(slot, last.nextSibling);
         }
 
         function revealLastSection() {
@@ -396,8 +497,10 @@
 
         if (frame) {
             frame.addEventListener("load", markPreview);
+            frame.addEventListener("load", addSlot);
             frame.addEventListener("load", revealLastSection);
             markPreview();
+            addSlot();
         }
 
         items.forEach(function (item) {
@@ -554,11 +657,8 @@
                 event.preventDefault();
                 var button = form.querySelector("button[type=submit]");
 
-                // The panel listing the components belongs to no section: left
-                // open, the swap would read it as a panel to open again
-                // everywhere outside the sections.
                 if (form.hasAttribute("data-cms-add")) {
-                    form.closest("details").open = false;
+                    form.closest("dialog").close();
                     revealLast = true;
                 }
 

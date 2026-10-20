@@ -833,4 +833,5 @@ return [
     'The section is added at the end of the draft with example text, which you then edit by hand.' => 'The section is added at the end of the draft with example text, which you then edit by hand.',
     'The section is added at the end of the draft, with example text: edit it by hand.' => 'The section is added at the end of the draft, with example text: edit it by hand.',
     'This component is not offered on this site: reload the screen.' => 'This component is not offered on this site: reload the screen.',
+    'Or add a section by hand' => 'Or add a section by hand',
 ];

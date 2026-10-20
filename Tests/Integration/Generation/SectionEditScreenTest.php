@@ -191,7 +191,7 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $page = $this->pageWith([new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1>'])]);
 
         $screen = $this->screen($this->url($page));
-        self::assertSame(1, $screen->filter('[data-testid="cms-content-add"]')->count(), 'The preview offers to add a section.');
+        self::assertSame(1, $screen->filter('dialog[data-cms-add-dialog]')->count(), 'The components to add a section from are on the screen.');
         self::assertSame(1, $screen->filter('[data-testid="cms-content-add-Partial:cms-form"]')->count());
 
         $form = $screen->filter('[data-testid="cms-content-add-cms:richtext"]')->form();
@@ -235,7 +235,10 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $this->getService(CmsPageWriter::class)->saveDraft($page, $this->locale(), new PageDraft(title: 'Empty page'));
         $this->renderedOnce();
 
-        $form = $this->screen($this->url($page))->filter('[data-testid="cms-content-add-cms:richtext"]')->form();
+        $screen = $this->screen($this->url($page));
+        self::assertSame(1, $screen->filter('[data-testid="cms-content-empty"] [data-cms-add-open]')->count(), 'An empty page offers to add a section by hand.');
+
+        $form = $screen->filter('[data-testid="cms-content-add-cms:richtext"]')->form();
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
 
         $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
