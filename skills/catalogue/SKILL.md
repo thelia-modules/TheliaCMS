@@ -42,9 +42,10 @@ anything else is refused.
   `<strong>`, links `<a href>`, headings from `<h2>` down (`<h3>` inside a
   `Cms:Section`). No `style` attribute, no `<script>`, no `<iframe>`, no
   inline images.
-- `image` props take the id of an image found with `search_media`, or `null`
-  when the library has none that fits. Never a path, never an id you did not
-  get from the tool.
+- `image` props take the id of an image found with `search_media`, the
+  absolute `https://` address of a picture the brief gives, or `null` when
+  neither exists. Never a path, never an id you did not get from the tool,
+  never an address you made up.
 - `url` props take the `url` of a page found with `search_pages`, a
   `tel:` or `mailto:` address the brief gives, or an absolute `https://`
   address the brief gives. Never a path you did not get from a tool, however

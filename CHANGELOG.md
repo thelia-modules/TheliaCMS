@@ -124,6 +124,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   `catalogue` and `page-structure` skills now send several products there
   rather than into one card each. A theme draws the rows with
   `cms/partials/product-strip.html.twig` and `category-strip.html.twig`.
+- An `image` prop holds the id of a library image or the `https://` address
+  of a picture kept elsewhere; the hand-edit form previews the picture,
+  replaces it by a file that joins the media library, or takes an address.
+- The toolkit of the Flexy theme gets a page with every section of the
+  catalogue (`/toolkit/cms-all-sections`, `cms_catalogue()` in Twig), and
+  the content screen links to it in debug, so a brief names what it wants.
+  Every CMS story of the toolkit now loads the stylesheet of the sections.
 - The video partial hands its theme template `provider_code` next to the
   name of the platform, for a player that is told which one it plays.
 - On the content screen: the brief the page was last written from is back

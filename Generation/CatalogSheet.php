@@ -88,7 +88,7 @@ final readonly class CatalogSheet
             PropType::Integer => \sprintf('integer, %d to %d', $prop->min ?? 0, $prop->max ?? 0),
             PropType::Boolean => 'true or false',
             PropType::Choice => 'one of '.implode(', ', array_map(static fn (string|int $value): string => '`'.$value.'`', array_keys($prop->choices))),
-            PropType::Image => 'image id from search_media, or null',
+            PropType::Image => 'image id from search_media, an https address the brief gives, or null',
             PropType::Url => 'url',
             PropType::Items => \sprintf('list of %d to %d items', $prop->minItems ?? 0, $prop->maxItems ?? 12),
             PropType::Reference => 'id from the search tools',

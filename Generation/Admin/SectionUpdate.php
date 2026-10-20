@@ -75,7 +75,7 @@ final readonly class SectionUpdate
             return $problems ?: [$this->translator->trans('The form could not be read.', [], TheliaCMS::DOMAIN_NAME)];
         }
 
-        $document = $current->withSection($section->withProps(SectionFormBuilder::propsFrom((array) $form->getData(), $definition->schema()->props)));
+        $document = $current->withSection($section->withProps($this->forms->propsFrom((array) $form->getData(), $definition->schema()->props)));
 
         try {
             $save($document);

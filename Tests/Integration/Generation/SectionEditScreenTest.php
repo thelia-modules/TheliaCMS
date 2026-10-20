@@ -28,6 +28,7 @@ use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaLibrary\Model\LibraryImageQuery;
 
 /**
  * A section changed by hand on the content screen: a form read from the
@@ -89,6 +90,48 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $screen = $this->screen($this->url($page));
         self::assertSame(1, $screen->filter('[data-testid="cms-builder-flash-success"]')->count());
         self::assertStringContainsString('Après', $screen->filter('[data-testid="cms-content-sections"] li[data-section="hero"]')->text());
+    }
+
+    public function testAPictureIsReplacedByAnAddressOrByAFileThatJoinsTheLibrary(): void
+    {
+        $page = $this->pageWith([
+            new Section('gallery', 'Cms:Gallery', ['title' => 'Pictures', 'items' => [['image' => null, 'alt' => 'One', 'caption' => '']]]),
+        ]);
+        $url = $this->url($page);
+
+        $screen = $this->screen($url);
+        self::assertSame(1, $screen->filter('[data-testid="cms-section-edit-gallery"] select[data-cms-image]')->count(), 'The picture is chosen in the library.');
+        self::assertSame(1, $screen->filter('[data-testid="cms-section-edit-gallery"] input[data-cms-image-file]')->count(), 'Or replaced by a file.');
+        self::assertSame(1, $screen->filter('[data-testid="cms-section-edit-gallery"] input[data-cms-image-url]')->count(), 'Or given as an address.');
+
+        $form = $screen->filter('[data-testid="cms-section-edit-gallery"] form')->form();
+        $form['cms_section_gallery[items][0][image__url]'] = 'https://pictures.example.org/one.webp';
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $document = Document::fromJson(CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne()?->getDraftDocument());
+        self::assertSame('https://pictures.example.org/one.webp', $document?->section('gallery')?->props['items'][0]['image']);
+        self::assertStringContainsString('src="https://pictures.example.org/one.webp"', (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne()?->getDraftHtml(), 'Served from there, as it is.');
+
+        $screen = $this->screen($url);
+        self::assertSame('https://pictures.example.org/one.webp', $screen->filter('[data-testid="cms-section-edit-gallery"] input[data-cms-image-url]')->attr('value'), 'The address is back in its field.');
+
+        $form = $screen->filter('[data-testid="cms-section-edit-gallery"] form')->form();
+        $form['cms_section_gallery[items][0][image__url]'] = 'http://pictures.example.org/one.webp';
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+        self::assertStringContainsString('https address', $this->screen($url)->filter('[data-testid="cms-builder-flash-danger"]')->text(), 'A plain http address is refused with the reason.');
+
+        $before = LibraryImageQuery::create()->count();
+        $form = $this->screen($url)->filter('[data-testid="cms-section-edit-gallery"] form')->form();
+        $form['cms_section_gallery[items][0][image__url]'] = '';
+        $form['cms_section_gallery[items][0][image__file]']->upload($this->pngFile());
+        $this->client->request('POST', $form->getUri(), $form->getPhpValues(), $form->getPhpFiles(), self::SAME_SITE);
+        self::assertSame(302, $this->client->getResponse()->getStatusCode());
+
+        $document = Document::fromJson(CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne()?->getDraftDocument());
+        $imageId = $document?->section('gallery')?->props['items'][0]['image'];
+        self::assertIsInt($imageId);
+        self::assertSame($before + 1, LibraryImageQuery::create()->count(), 'The file joined the media library.');
+        self::assertNotNull(LibraryImageQuery::create()->findPk($imageId), 'The section holds the new image.');
     }
 
     public function testASectionIsRemovedByHandAndTheLedgerSaysSo(): void
@@ -226,6 +269,16 @@ final class SectionEditScreenTest extends AdminScreenTestCase
      * request of the moment — none, when the test renders a section before it
      * asks for a screen — and the screens then read `app.request` as null.
      */
+    private function pngFile(): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'cms-png-').'.png';
+        $image = imagecreatetruecolor(2, 2);
+        \assert(false !== $image);
+        imagepng($image, $path);
+
+        return $path;
+    }
+
     private function renderedOnce(): void
     {
         $this->client->request('GET', '/admin/cms/pages');

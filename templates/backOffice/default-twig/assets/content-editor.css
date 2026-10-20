@@ -237,6 +237,17 @@ body:has(.cms-content) {
     gap: 0.5rem;
 }
 
+.cms-content__image-preview {
+    display: block;
+    max-width: 100%;
+    max-height: 8rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    background: #fff;
+    object-fit: contain;
+}
+
 .cms-content__item-row {
     display: flex;
     align-items: flex-start;

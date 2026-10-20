@@ -92,6 +92,10 @@ and the same for a reusable block or the block of a catalogue item
 (`/admin/cms/blocks/{id}/content`). The brief on the left, the draft on the
 right as the theme shows it, through the signed preview link of the draft.
 
+- **See every section the generator can use**: a link, shown in debug with
+  the Flexy theme, to the page the module hangs in the toolkit
+  (`/toolkit/cms-all-sections`): every section with its sample, live content
+  named and described. A brief that names a section asks for it.
 - **Write it from a brief**: what the page should say, its tone and audience.
   The answer replaces the whole draft. The form holds the brief the page was
   last written from in this language (kept in the ledger, column `brief`),
@@ -134,8 +138,11 @@ Each section also opens a form to **edit it by hand**, read from the schema
 of its component (`Generation\Admin\SectionFormBuilder`): a field per prop,
 a textarea the Tiptap module upgrades for a `html` prop when the module is
 there (`thelia/tiptap-module`, suggested, not required), rows added and
-removed for a list prop, a select on the media library for an image, a
-picker on the source of a partial for a reference. What comes back goes
+removed for a list prop, a picker on the source of a partial for a
+reference. An image is chosen in the media library, with a preview, or
+replaced by a file that joins the library on the spot (the media right to
+create is needed), or given as the `https://` address of a picture kept
+elsewhere, stored as it is and served from there without resizing. What comes back goes
 through the same validator as a generated document, is stored through the
 writer, and is written to the ledger as a `manual` row with no cost, so the
 next request starts from the corrected text. A word corrected by hand costs

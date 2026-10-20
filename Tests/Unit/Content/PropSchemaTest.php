@@ -83,6 +83,23 @@ final class PropSchemaTest extends TestCase
         self::assertSame(42, $values['picture']);
     }
 
+    public function testAnImageMayBeTheHttpsAddressOfAPictureKeptElsewhere(): void
+    {
+        $values = $this->schema->normalize(['title' => 'T', 'picture' => ' https://cdn.example.org/a%20b.jpg?x=1 ', 'items' => [['label' => 'One', 'image' => 'https://example.org/one.png']]]);
+
+        self::assertSame('https://cdn.example.org/a%20b.jpg?x=1', $values['picture'], 'Kept as typed, trimmed.');
+        self::assertSame('https://example.org/one.png', $values['items'][0]['image']);
+
+        foreach (['http://example.org/one.png', 'https://', '/image-library/3/full/max/0/default.webp', 'https://example.org/a b.png'] as $address) {
+            try {
+                $this->schema->normalize(['title' => 'T', 'picture' => $address, 'items' => [['label' => 'One', 'image' => 7]]]);
+                self::fail(\sprintf('"%s" should have been refused.', $address));
+            } catch (InvalidDocumentException $exception) {
+                self::assertSame(['"picture" must be the id of an image of the media library, or an https address.'], $exception->problems);
+            }
+        }
+    }
+
     public function testEveryProblemIsListedAtOnce(): void
     {
         try {
@@ -102,7 +119,7 @@ final class PropSchemaTest extends TestCase
                 '"count" must be between 1 and 12.',
                 '"open" must be true or false.',
                 '"tone" must be one of light, dark.',
-                '"picture" must be the id of an image of the media library.',
+                '"picture" must be the id of an image of the media library, or an https address.',
                 '"link" must be a path of the site or an absolute http(s), mailto or tel address.',
                 '"items" must hold between 1 and 2 items.',
             ], $exception->problems);
@@ -196,9 +213,9 @@ final class PropSchemaTest extends TestCase
         self::assertSame(['type' => 'string', 'maxLength' => 20], array_diff_key($properties['title'], ['description' => true]));
         self::assertSame(['light', 'dark'], $properties['tone']['enum']);
         self::assertSame(['1', '2'], ((array) (new PropSchema([Prop::choice('level', 'Level', ['1' => 'h1', '2' => 'h2'], '1')]))->toJsonSchema()['properties'])['level']['enum'], 'A numeric choice stays a string in the schema.');
-        self::assertSame(['integer', 'null'], $properties['picture']['type']);
+        self::assertSame(['integer', 'string', 'null'], $properties['picture']['type'], 'An id of the library, or an https address.');
         self::assertSame(1, $properties['items']['minItems']);
         self::assertSame(['label', 'image'], $properties['items']['items']['required']);
-        self::assertSame('integer', ((array) $properties['items']['items']['properties'])['image']['type']);
+        self::assertSame(['integer', 'string'], ((array) $properties['items']['items']['properties'])['image']['type']);
     }
 }

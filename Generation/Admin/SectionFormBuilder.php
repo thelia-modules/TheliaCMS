@@ -18,6 +18,7 @@ use Symfony\Component\Form\CallbackTransformer;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
@@ -26,28 +27,45 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Validator\Constraints\Image;
+use Thelia\Core\Security\AccessManager;
+use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Content\Prop;
+use TheliaCMS\Content\PropSchema;
 use TheliaCMS\Content\PropType;
 use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionDefinitionInterface;
+use TheliaCMS\Media\Admin\CmsMediaType;
+use TheliaCMS\Media\Admin\CmsMediaWriter;
 use TheliaCMS\Media\CmsMediaLibrary;
+use TheliaCMS\Security\CmsResources;
+use TheliaLibrary\Model\LibraryImage;
 
 /**
  * A form for the props of one section, read from the schema of its
  * component: an editor corrects a word without paying a generation.
  *
  * Every prop type has its field; a `html` prop is a textarea the Tiptap
- * module upgrades when it is there, and a textarea when it is not. What the
- * form gives back is props the way the model writes them, so the validator
- * reads them exactly as it reads a generated document.
+ * module upgrades when it is there, and a textarea when it is not. An
+ * `image` prop is picked from the media library, replaced by a file that
+ * joins the library, or given as the address of a picture kept elsewhere.
+ * What the form gives back is props the way the model writes them, so the
+ * validator reads them exactly as it reads a generated document.
  */
 final readonly class SectionFormBuilder
 {
     public const string PREFIX = 'cms_section_';
 
+    /** The file and the address fields that go with an image prop. */
+    public const string FILE_SUFFIX = '__file';
+    public const string ADDRESS_SUFFIX = '__url';
+
     public function __construct(
         private FormFactoryInterface $forms,
         private CmsMediaLibrary $library,
+        private CmsMediaWriter $media,
+        private SecurityContext $securityContext,
     ) {
     }
 
@@ -72,14 +90,16 @@ final readonly class SectionFormBuilder
     }
 
     /**
-     * The props a submitted form holds, in the shape the schema reads.
+     * The props a submitted form holds, in the shape the schema reads. A
+     * file sent for an image joins the media library here and the prop
+     * takes its id; an address typed for it is kept as it is.
      *
      * @param array<string, mixed> $data
      * @param list<Prop>           $props
      *
      * @return array<string, mixed>
      */
-    public static function propsFrom(array $data, array $props): array
+    public function propsFrom(array $data, array $props): array
     {
         $values = [];
 
@@ -87,17 +107,52 @@ final readonly class SectionFormBuilder
             $value = $data[$prop->name] ?? null;
 
             $values[$prop->name] = match ($prop->type) {
+                PropType::Image => $this->imageFrom($data, $prop),
                 // An empty choice is "none", which the schema spells 0.
-                PropType::Image, PropType::Reference => (int) ($value ?? 0),
+                PropType::Reference => (int) ($value ?? 0),
                 PropType::Integer => (int) ($value ?? $prop->default ?? 0),
                 PropType::Boolean => (bool) $value,
-                PropType::Items => array_values(array_map(static fn (array $item): array => self::propsFrom($item, $prop->items), \is_array($value) ? $value : [])),
+                PropType::Items => array_values(array_map(fn (array $item): array => $this->propsFrom($item, $prop->items), \is_array($value) ? $value : [])),
                 PropType::Json => $value ?? [],
                 default => (string) ($value ?? ''),
             };
         }
 
         return $values;
+    }
+
+    /**
+     * The file wins over the address, which wins over the choice: each one
+     * is a step further from "keep what is there".
+     *
+     * @param array<string, mixed> $data
+     */
+    private function imageFrom(array $data, Prop $prop): int|string
+    {
+        $file = $data[$prop->name.self::FILE_SUFFIX] ?? null;
+
+        if ($file instanceof UploadedFile && $this->mayUpload()) {
+            $stored = $this->media->add([$file], $this->library->locale());
+
+            if (isset($stored[0]) && $stored[0] instanceof LibraryImage) {
+                return (int) $stored[0]->getId();
+            }
+        }
+
+        $address = trim((string) ($data[$prop->name.self::ADDRESS_SUFFIX] ?? ''));
+
+        if ('' !== $address) {
+            // Handed to the schema as typed: an address that is no https
+            // address is refused there, with a message the editor reads.
+            return $address;
+        }
+
+        return (int) ($data[$prop->name] ?? 0);
+    }
+
+    private function mayUpload(): bool
+    {
+        return $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::CREATE]);
     }
 
     /**
@@ -138,11 +193,7 @@ final readonly class SectionFormBuilder
                 'choices' => array_flip(array_map(strval(...), $prop->choices)),
                 'choice_translation_domain' => false,
             ]),
-            PropType::Image => $builder->add($prop->name, ChoiceType::class, $common + [
-                'choices' => $this->imageChoices(),
-                'placeholder' => $prop->required ? false : '—',
-                'choice_translation_domain' => false,
-            ]),
+            PropType::Image => $this->addImage($builder, $prop, $common),
             PropType::Reference => $builder->add($prop->name, IntegerType::class, $common + [
                 'attr' => array_filter([
                     'min' => 0,
@@ -169,9 +220,51 @@ final readonly class SectionFormBuilder
     }
 
     /**
+     * The picture of a section: a choice in the media library, with the
+     * address of each image for the preview of the form; a file to replace
+     * it with, for whoever may add to the library; and the address of a
+     * picture kept elsewhere.
+     *
+     * @param array<string, mixed> $common
+     */
+    private function addImage(FormBuilderInterface $builder, Prop $prop, array $common): void
+    {
+        $choices = $this->imageChoices();
+        $urls = $choices['urls'];
+
+        $builder->add($prop->name, ChoiceType::class, $common + [
+            'choices' => $choices['choices'],
+            'placeholder' => $prop->required ? false : '—',
+            'choice_translation_domain' => false,
+            'choice_attr' => static fn (int $id): array => isset($urls[$id]) ? ['data-url' => $urls[$id]] : [],
+            'attr' => ['data-cms-image' => ''],
+        ]);
+
+        if ($this->mayUpload()) {
+            $builder->add($prop->name.self::FILE_SUFFIX, FileType::class, [
+                'label' => 'Replace with a file',
+                'required' => false,
+                'translation_domain' => 'theliacms',
+                'constraints' => [new Image(mimeTypes: CmsMediaType::ACCEPTED_MIME_TYPES, mimeTypesMessage: 'Only JPEG, PNG and WebP images can be uploaded.')],
+                'help' => 'The file joins the media library and takes the place of the picture. Describe it there afterwards.',
+                'attr' => ['accept' => implode(',', CmsMediaType::ACCEPTED_MIME_TYPES), 'data-cms-image-file' => ''],
+            ]);
+        }
+
+        $builder->add($prop->name.self::ADDRESS_SUFFIX, TextType::class, [
+            'label' => 'Or the address of a picture kept elsewhere',
+            'required' => false,
+            'translation_domain' => 'theliacms',
+            'help' => 'An https address. The picture is shown from there, as it is, and is not resized by the site.',
+            'attr' => ['placeholder' => 'https://', 'maxlength' => 2048, 'inputmode' => 'url', 'data-cms-image-url' => ''],
+        ]);
+    }
+
+    /**
      * The props as the form holds them: the ids of an image or a reference
      * are integers and an absent one is nothing, which the form reads as
-     * "no choice".
+     * "no choice". The address of a picture kept elsewhere goes to its own
+     * field.
      *
      * @param list<Prop>           $props
      * @param array<string, mixed> $values
@@ -184,6 +277,13 @@ final readonly class SectionFormBuilder
 
         foreach ($props as $prop) {
             $value = $values[$prop->name] ?? $prop->default;
+
+            if (PropType::Image === $prop->type && \is_string($value) && PropSchema::isExternalImage($value)) {
+                $data[$prop->name] = null;
+                $data[$prop->name.self::ADDRESS_SUFFIX] = trim($value);
+
+                continue;
+            }
 
             $data[$prop->name] = match ($prop->type) {
                 PropType::Image => null === $value || 0 === (int) $value ? null : (int) $value,
@@ -200,17 +300,26 @@ final readonly class SectionFormBuilder
     /**
      * @return array<string, int>
      */
+    /**
+     * @return array{choices: array<string, int>, urls: array<int, string>}
+     */
     private function imageChoices(): array
     {
         $locale = $this->library->locale();
         $choices = [];
+        $urls = [];
 
         foreach ($this->library->images() as $image) {
             $title = trim((string) $image->setLocale($locale)->getTitle());
             $label = '' === $title ? (string) $image->getFileName() : $title;
             $choices[isset($choices[$label]) ? \sprintf('%s (#%d)', $label, $image->getId()) : $label] = (int) $image->getId();
+            $url = $this->library->publicUrl($image);
+
+            if (null !== $url) {
+                $urls[(int) $image->getId()] = $url;
+            }
         }
 
-        return $choices;
+        return ['choices' => $choices, 'urls' => $urls];
     }
 }

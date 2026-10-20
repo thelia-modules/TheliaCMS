@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Content\Section;
 
+use TheliaCMS\Content\PropSchema;
 use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaLibrary\Model\LibraryImageQuery;
 
@@ -33,10 +34,15 @@ final readonly class SectionImages
     }
 
     /**
-     * @return array{id: int, url: string, width: int|null, height: int|null}|null null when the id names no image
+     * @return array{id: int|null, url: string, width: int|null, height: int|null}|null null when the id names no image
      */
     public function resolve(mixed $imageId): ?array
     {
+        // A picture kept elsewhere: served as it is, its size unknown here.
+        if (\is_string($imageId) && PropSchema::isExternalImage($imageId)) {
+            return ['id' => null, 'url' => trim($imageId), 'width' => null, 'height' => null];
+        }
+
         if (!\is_int($imageId) || $imageId <= 0) {
             return null;
         }

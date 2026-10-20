@@ -198,11 +198,16 @@ final readonly class PropSchema
 
     /**
      * An image id, or the id of a referenced item: the same shape, a positive
-     * integer or nothing.
+     * integer or nothing. An image may also be the absolute https address of
+     * a picture kept elsewhere, which the editor types by hand.
      */
-    private function image(Prop $prop, mixed $value): ?int
+    private function image(Prop $prop, mixed $value): int|string|null
     {
-        $what = PropType::Image === $prop->type ? 'the id of an image of the media library' : 'the id of the item it refers to';
+        $what = PropType::Image === $prop->type ? 'the id of an image of the media library, or an https address' : 'the id of the item it refers to';
+
+        if (PropType::Image === $prop->type && \is_string($value) && self::isExternalImage($value)) {
+            return trim($value);
+        }
 
         if (!\is_int($value) && !(\is_string($value) && 1 === preg_match('/^\d+$/', $value))) {
             throw InvalidDocumentException::because([\sprintf('"%s" must be %s.', $prop->name, $what)]);
@@ -225,6 +230,19 @@ final readonly class PropSchema
         }
 
         return $id;
+    }
+
+    /**
+     * An absolute https address, as an editor pastes it: nothing else is read
+     * from outside the site, and a path is never an image of elsewhere.
+     */
+    public static function isExternalImage(string $value): bool
+    {
+        $value = trim($value);
+
+        return mb_strlen($value) <= 2048
+            && 1 === preg_match('#^https://[^\s/?\#]+[^\s]*$#i', $value)
+            && false !== filter_var($value, \FILTER_VALIDATE_URL);
     }
 
     private function url(Prop $prop, mixed $value): string

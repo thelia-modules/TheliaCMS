@@ -146,7 +146,7 @@ final readonly class Prop
             // Cast: PHP turns a numeric key such as '1' into an integer, and
             // the API refuses an integer in an enum of strings.
             PropType::Choice => ['type' => 'string', 'enum' => array_map(strval(...), array_keys($this->choices))],
-            PropType::Image => ['type' => $this->required ? 'integer' : ['integer', 'null']],
+            PropType::Image => ['type' => $this->required ? ['integer', 'string'] : ['integer', 'string', 'null']],
             PropType::Url => ['type' => 'string', 'maxLength' => $this->max ?? 2048],
             PropType::Items => [
                 'type' => 'array',

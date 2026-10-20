@@ -941,4 +941,10 @@ return [
     'Categories in a row' => 'Catégories en ligne',
     'Categories' => 'Catégories',
     'Two to twelve categories, shown in this order. Search by name; only categories online are offered, and one that goes offline leaves the row by itself.' => 'De deux à douze catégories, affichées dans cet ordre. Recherche par nom ; seules les catégories en ligne sont proposées, et une catégorie qui passe hors ligne quitte la rangée d’elle-même.',
+    'Replace with a file' => 'Remplacer par un fichier',
+    'The file joins the media library and takes the place of the picture. Describe it there afterwards.' => 'Le fichier rejoint la médiathèque et prend la place de l’image. Décrivez-le ensuite là-bas.',
+    'Or the address of a picture kept elsewhere' => 'Ou l’adresse d’une image hébergée ailleurs',
+    'An https address. The picture is shown from there, as it is, and is not resized by the site.' => 'Une adresse https. L’image est affichée depuis là, telle quelle, sans redimensionnement par le site.',
+    'See every section the generator can use' => 'Voir toutes les sections que le générateur peut utiliser',
+    'Name one in the brief to ask for it.' => 'Nommez-en une dans le brief pour la demander.',
 ];
