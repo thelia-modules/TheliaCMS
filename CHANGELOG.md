@@ -105,6 +105,18 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   the shipped text back.
 - The **Generator** card of CMS > Settings: the model, the effort and the
   token limit.
+- The answer of the API is read as a stream: the screen shows how much of
+  the document is written as it comes (`GenerationObserverInterface::onText`,
+  event `delta`). Measured on 2026-10-20: an answer constrained to the schema
+  is delivered by the API in a burst at the end of the turn (first delta at
+  4.3 s, last at 5.3 s on a 5.3 s call), so the turns stay the progress a
+  reader sees; the stream pays off on the day the API sends constrained
+  answers as they are written.
+- The tool `search_forms`, so a contact page finds the form of the site
+  rather than guessing its id.
+- `docs/adr/`: the eight decisions behind the generation of pages;
+  `docs/evaluation/`: ten briefs, a rubric and the scores of the shipped
+  skills (7.1 / 8 on 2026-10-20).
 - The right `admin.cms.generate`, given to the seeded editor profile.
 - The module requires `anthropic-ai/sdk` and `nyholm/psr7`.
 
@@ -130,6 +142,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   `CmsSettings::disabledBlocks()`; `PartialRegistry::toEditor()`;
   `PageContentNormalizer::css()`. The export format no longer carries
   `disabled_blocks`; a file that does is read without it.
+- The site styles screen (`/admin/cms/settings/styles`, closed since 1.4.0)
+  and the colour palette of the editor (`builder_palette`). The typography
+  of the site is still served (`SiteStyles::typography()`).
+- The webmaster guide (`docs/guide/`, PDF and screenshots): it described the
+  editor of 1.x. A guide for the content screen is to come.
 - The pipeline a page goes through before it is stored or published moves
   from `TheliaCMS\Builder` to `TheliaCMS\Content\Pipeline`:
   `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,

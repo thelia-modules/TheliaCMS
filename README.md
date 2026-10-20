@@ -1033,17 +1033,6 @@ Accessibility is checked separately, with axe-core driving a browser against a
 running shop. `Tests/Accessibility/README.md` says how to run it and what the
 last run found.
 
-## Guide for whoever runs the site
-
-`docs/guide/thelia-cms-guide-webmaster.pdf` is a printable guide in French,
-written for a webmaster rather than a developer: what each screen does, what the
-settings change, and what is worth checking once before a site goes live. Its
-source and the instructions to rebuild it are in the same directory.
-
-The guide describes the visual editor of the 1.x versions. The content screen
-of 2.0.0 replaces it, and the guide will be rewritten for it; until then, the
-chapter on editing a page is out of date and the others still hold.
-
 ## Licence
 
 LGPL-3.0-or-later. See [LICENSE](LICENSE).

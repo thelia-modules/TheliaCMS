@@ -39,7 +39,7 @@ final class WriteRoutesTest extends AdminScreenTestCase
     private const string PREFIX = '/admin/cms';
 
     /** Out of the back office on purpose, CmsAdminGuard answers 404 for them. */
-    private const array HIDDEN_PREFIXES = ['/admin/cms/scripts', '/admin/cms/settings/styles'];
+    private const array HIDDEN_PREFIXES = ['/admin/cms/scripts'];
 
     /**
      * The routes answering a GET. Each one only reads: it renders a screen, an
@@ -80,7 +80,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.scripts.list',
         'admin.cms.settings.edit',
         'admin.cms.settings.page_types.list',
-        'admin.cms.settings.styles.edit',
         'admin.cms.skills.edit',
         'admin.cms.skills.list',
         'admin.cms.tags.edit',

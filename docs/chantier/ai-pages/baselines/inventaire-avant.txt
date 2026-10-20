@@ -1,9 +1,0 @@
-hôte thelia/thelia: 49488470a (main), 0/0 avec origin/main
-module TheliaCMS: 7dd050a base 7dd050a (1.5.0), branche feat/ai-page-generation
-flexy: templates/frontOffice/flexy dans l'hôte, <version>1.2.0
-php: 8.3.30 (DDEV v1.25.1)
-page-builder-bundle: "version":"v0.2.2"
-anthropic-ai/sdk: "version":"v0.59.0"
-module en base dev et test: 1.5.0, actif
-tests unitaires: 558 OK ; intégration: 263 OK, 1 skipped (voir tests-*-avant.txt)
-date: 2026-10-20

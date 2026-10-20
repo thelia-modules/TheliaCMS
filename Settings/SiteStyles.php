@@ -17,20 +17,12 @@ namespace TheliaCMS\Settings;
 use TheliaCMS\TheliaCMS;
 
 /**
- * Where the global styles of the site are kept.
- *
- * The typography lives in `module_config` like the other settings of the
- * module. The palette lives under the key the builder has always read
- * (`builder_palette`), so a site that configured its colours by hand before
- * this screen existed keeps them, and the pickers of the editor and the
- * stylesheet of the site can never disagree.
+ * The typography of the site: the fonts and the element styles the pages
+ * follow, stored as a setting of the module and served as a stylesheet.
  */
 final readonly class SiteStyles
 {
     public const string TYPOGRAPHY = 'site_typography';
-    public const string PALETTE = 'builder_palette';
-
-    private const string COLOR = '/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i';
 
     public function __construct(
         private FontStacks $stacks,
@@ -51,39 +43,6 @@ final readonly class SiteStyles
             self::TYPOGRAPHY,
             $typography->isEmpty() ? '' : (string) json_encode($typography->toArray()),
         );
-    }
-
-    /**
-     * The colours offered by every picker of the builder. Empty means the
-     * defaults apply.
-     *
-     * @return list<string>
-     */
-    public function palette(): array
-    {
-        $raw = json_decode((string) TheliaCMS::getConfigValue(self::PALETTE, ''), true);
-
-        if (!\is_array($raw)) {
-            return [];
-        }
-
-        return array_values(array_filter(
-            array_map(static fn (mixed $colour): string => \is_string($colour) ? trim($colour) : '', $raw),
-            static fn (string $colour): bool => 1 === preg_match(self::COLOR, $colour),
-        ));
-    }
-
-    /**
-     * @param list<string> $colours
-     */
-    public function savePalette(array $colours): void
-    {
-        $kept = array_values(array_filter(
-            array_map(static fn (string $colour): string => trim($colour), $colours),
-            static fn (string $colour): bool => 1 === preg_match(self::COLOR, $colour),
-        ));
-
-        TheliaCMS::setConfigValue(self::PALETTE, [] === $kept ? '' : (string) json_encode($kept));
     }
 
     /**

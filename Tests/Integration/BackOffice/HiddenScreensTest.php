@@ -31,7 +31,7 @@ use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\TheliaCMS;
 
 /**
- * The scripts and the site styles screens are kept out of the back office.
+ * The scripts screen is kept out of the back office.
  *
  * Nothing of what they configure changes: the snippets already saved keep being
  * written into the pages, and the custom-code permission keeps deciding who may
@@ -68,7 +68,6 @@ final class HiddenScreensTest extends CmsIntegrationTestCase
 
         self::assertStringContainsString('href="'.$this->url('admin.cms.settings.edit').'"', $markup, 'The settings stay.');
         self::assertStringNotContainsString($this->url('admin.cms.scripts.list'), $markup);
-        self::assertStringNotContainsString($this->url('admin.cms.settings.styles.edit'), $markup);
     }
 
     public function testTheDashboardDoesNotSendToTheScripts(): void
@@ -85,7 +84,7 @@ final class HiddenScreensTest extends CmsIntegrationTestCase
 
     public function testATypedAddressOfEitherScreenAnswersNotFound(): void
     {
-        foreach (['/admin/cms/scripts', '/admin/cms/scripts/new', '/admin/cms/scripts/3', '/admin/cms/settings/styles', '/admin/cms/settings/styles/fonts'] as $path) {
+        foreach (['/admin/cms/scripts', '/admin/cms/scripts/new', '/admin/cms/scripts/3'] as $path) {
             try {
                 $this->guard($path);
                 self::fail(\sprintf('%s is still reachable.', $path));

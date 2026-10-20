@@ -67,15 +67,15 @@ final readonly class CmsAdminGuard
     ];
 
     /**
-     * Screens kept out of the back office: the third-party scripts and the site
-     * styles. What they configure keeps applying (the saved snippets are still
-     * written into the pages, and the custom-code permission still governs free
-     * HTML in a page); only the screens are closed, to everybody, so they answer
-     * 404 rather than a 403 that would say they exist.
+     * Screens kept out of the back office: the third-party scripts. What they
+     * configure keeps applying (the saved snippets are still written into the
+     * pages, and the custom-code permission still governs free HTML in a
+     * page); only the screen is closed, to everybody, so it answers 404 rather
+     * than a 403 that would say it exists.
      *
      * @var list<string>
      */
-    private const array HIDDEN_PREFIXES = ['/admin/cms/scripts', '/admin/cms/settings/styles'];
+    private const array HIDDEN_PREFIXES = ['/admin/cms/scripts'];
 
     public function __construct(
         private SecurityContext $securityContext,
