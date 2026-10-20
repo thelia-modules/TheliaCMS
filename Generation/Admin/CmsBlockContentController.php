@@ -67,6 +67,7 @@ final readonly class CmsBlockContentController
         private PreviewLink $previewLinks,
         private ContentScreen $screen,
         private GenerationRunner $runner,
+        private SectionUpdate $sectionUpdate,
     ) {
     }
 
@@ -155,6 +156,42 @@ final readonly class CmsBlockContentController
         return $this->run($request, $block, $lang, $generation);
     }
 
+    /**
+     * A section changed by hand: a word corrected costs no generation, and
+     * takes the right to change blocks, not the right to generate.
+     */
+    #[Route('/update', name: 'update', methods: ['POST'])]
+    public function update(Request $request, int $id): Response
+    {
+        $block = $this->liveBlockOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayPublish();
+
+        $current = $this->documentOrFail($request, $block, $lang);
+
+        if (!$current instanceof Document) {
+            return $this->back($block, $lang);
+        }
+
+        $locale = $lang->getLocale();
+        $problems = $this->sectionUpdate->apply(
+            $request,
+            $this->subject($block, $lang),
+            $current,
+            fn (Document $document) => $this->writer->saveContent($block, $locale, $document),
+        );
+
+        if ([] === $problems) {
+            $this->flash($request, 'success', $this->translate('The section is saved in the draft.'));
+        }
+
+        foreach ($problems as $problem) {
+            $this->flash($request, 'danger', $problem);
+        }
+
+        return $this->back($block, $lang);
+    }
+
     #[Route('/publish', name: 'publish', methods: ['POST'])]
     public function publish(Request $request, int $id): Response
     {
@@ -213,6 +250,7 @@ final readonly class CmsBlockContentController
                 'generate' => $this->urls->generate('admin.cms.blocks.content.generate', $parameters),
                 'revise' => $this->urls->generate('admin.cms.blocks.content.revise', $parameters),
                 'section' => $this->urls->generate('admin.cms.blocks.content.section', $parameters),
+                'update' => $this->urls->generate('admin.cms.blocks.content.update', $parameters),
                 'publish' => $this->urls->generate('admin.cms.blocks.content.publish', $parameters),
             ],
             testId: 'cms-block-content',

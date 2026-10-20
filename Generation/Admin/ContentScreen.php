@@ -54,23 +54,25 @@ final readonly class ContentScreen
         private GenerationLog $log,
         private GeneratorSettings $settings,
         private ClaudeClientProviderInterface $clients,
+        private SectionFormBuilder $sectionForms,
     ) {
     }
 
     public function render(Request $request, ContentSubject $subject): string
     {
         $mayGenerate = $this->securityContext->isGranted(['ADMIN'], [CmsResources::GENERATE], [], [AccessManager::UPDATE]);
+        $mayPublish = $this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::UPDATE]);
         $document = $subject->document;
 
         return $this->twig->render(self::TEMPLATE, [
             'subject' => $subject,
             'brief_form' => $this->forms->create(BriefType::class, null, ['action' => $subject->url('generate')])->createView(),
             'change_form' => $this->forms->create(ChangeType::class, null, ['action' => $subject->url('revise')])->createView(),
-            'sections' => null === $document ? [] : $this->sections($document, $subject),
+            'sections' => null === $document ? [] : $this->sections($document, $subject, $mayPublish),
             'history' => array_map($this->row(...), $this->log->history($subject->target, $subject->locale, 20)),
             'outcome' => $this->outcome($request, $subject),
             'may_generate' => $mayGenerate,
-            'may_publish' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::UPDATE]),
+            'may_publish' => $mayPublish,
             'generator_notice' => $mayGenerate ? $this->notice() : null,
             'model' => $this->settings->model(),
             'assets_version' => self::assetsVersion(),
@@ -89,9 +91,11 @@ final readonly class ContentScreen
     }
 
     /**
-     * @return list<array{id: string, component: string, label: string, excerpt: string, form: FormView}>
+     * @param bool $mayEdit whether the form to change the props by hand is offered
+     *
+     * @return list<array{id: string, component: string, label: string, excerpt: string, form: FormView, edit: FormView|null}>
      */
-    private function sections(Document $document, ContentSubject $subject): array
+    private function sections(Document $document, ContentSubject $subject, bool $mayEdit): array
     {
         $sections = [];
 
@@ -103,6 +107,9 @@ final readonly class ContentScreen
                 'component' => $section->component,
                 'label' => $definition?->label() ?? $section->component,
                 'excerpt' => self::excerpt($section),
+                // Changing a word by hand costs nothing: the right to change
+                // the page is enough, where the generator takes its own.
+                'edit' => $mayEdit && null !== $definition ? $this->sectionForms->build($definition, $section, $subject->url('update'))->createView() : null,
                 'form' => $this->forms
                     ->createNamed(self::sectionFormName($section->id), ChangeType::class, ['section' => $section->id], ['section' => true, 'action' => $subject->url('section')])
                     ->createView(),
@@ -259,6 +266,7 @@ final readonly class ContentScreen
             GenerationRequest::KIND_BRIEF => 'Brief',
             GenerationRequest::KIND_REVISION => 'Change',
             GenerationRequest::KIND_SECTION => 'Section',
+            GenerationLog::KIND_MANUAL => 'By hand',
             default => $kind,
         }, [], TheliaCMS::DOMAIN_NAME);
     }

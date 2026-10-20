@@ -86,6 +86,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   streamed as server-sent events; without the script, every action still
   posts and comes back with a message. "Edit content" everywhere in the back
   office now leads here rather than to the visual editor.
+- On the content screen, every section is also **edited by hand**: a form
+  read from the schema of its component, the `html` props in the editor of
+  the Tiptap module when it is there (`thelia/tiptap-module`, suggested),
+  lists as rows added and removed, images from the media library, references
+  from their picker. Stored through the writer like a generated document and
+  written to the ledger as a `manual` row, so the next request starts from
+  the corrected text. Costs nothing, takes the right to change pages.
 - `GenerationTarget`: the generator writes for a page or for a block, told
   for what it is; a block may not hold `Partial:cms-block`.
   `GenerationObserverInterface` reports each turn to whoever listens.

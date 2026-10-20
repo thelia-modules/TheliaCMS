@@ -239,6 +239,21 @@ un changement d'URL, pas un motif (capture 04 non rejouée).
 **Généralisable : oui.** Attendre une URL différente de l'URL courante, jamais
 un motif que l'URL courante satisfait déjà.
 
+### D-019 [phase 4 bis] Le parser Twig de Thelia fixe le global `app` au premier rendu du processus
+
+**Symptôme.** Les écrans de `SectionEditScreenTest` répondaient 500 :
+`merge` sur `null` dans `LanguageSwitcher.html.twig` (`app.request.query`).
+**Cause.** `TwigParser::assign()` (module TwigEngine) appelle
+`$twig->addGlobal('app', …)` avec la requête du moment ; l'appel ne passe
+qu'avant le premier rendu du processus, puis lève une `LogicException`
+avalée. En test, `CmsPageWriter::saveContent` rend les sections avant toute
+requête : `app.request` reste `null` pour tout le processus.
+**Résolution.** Dans le test, une requête d'écran avant le premier rendu de
+section (`SectionEditScreenTest::renderedOnce()`). Hors test, un processus
+web rend toujours après sa requête.
+**Généralisable : oui.** Un test d'écran qui rend un template du thème avant
+sa première requête doit d'abord demander un écran.
+
 ## Points ouverts
 
 - `cms_page_revision` n'a aucun lecteur en production : garder (avec le
@@ -246,3 +261,5 @@ un motif que l'URL courante satisfait déjà.
 - Guide webmaster (`docs/guide/`, PDF et captures du builder) : réécriture du
   texte dans le chantier ; captures d'écran à refaire après recette.
 - Une PR par phase sur le dépôt public, ou un seul merge en fin de chantier ?
+- Ajouter, supprimer ou réordonner une section à la main (phase 4 bis ne le
+  fait pas : brief et révision s'en chargent) : à décider pour 2.1.

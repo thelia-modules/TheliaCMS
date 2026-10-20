@@ -234,6 +234,164 @@
         });
     });
 
+    /* ---- Editing by hand ------------------------------------------- */
+
+    // The rich-text editor is mounted when a panel opens, not twenty times
+    // at once; a module that is not there leaves the textarea as it is.
+    root.querySelectorAll("[data-cms-edit]").forEach(function (panel) {
+        panel.addEventListener("toggle", function () {
+            if (!panel.open || panel.cmsMounted) {
+                return;
+            }
+
+            panel.cmsMounted = true;
+
+            if (window.TiptapEditor && typeof window.TiptapEditor.mount === "function") {
+                panel.querySelectorAll("textarea[data-cms-html]").forEach(function (textarea) {
+                    window.TiptapEditor.mount(textarea);
+                    nameTheEditor(textarea, 10);
+                });
+            }
+        });
+    });
+
+    // The editor replaces the textarea with an editable area the label of the
+    // field no longer points at: it is named after that label once mounted.
+    function nameTheEditor(textarea, tries) {
+        var label = textarea.labels && textarea.labels[0] ? textarea.labels[0].textContent.trim() : "";
+        var holder = textarea.closest(".mb-3") || textarea.parentElement;
+        var area = holder ? holder.querySelector(".ProseMirror") : null;
+
+        if (area) {
+            if (label && !area.hasAttribute("aria-label")) {
+                area.setAttribute("aria-label", label);
+            }
+
+            return;
+        }
+
+        if (tries > 0) {
+            setTimeout(function () { nameTheEditor(textarea, tries - 1); }, 300);
+        }
+    }
+
+    // Rows of a list prop, from the prototype of the collection.
+    root.querySelectorAll("[data-cms-items]").forEach(function (list) {
+        var rows = list.querySelector("[data-cms-items-list]");
+        var add = list.querySelector("[data-cms-items-add]");
+        var prototype = list.getAttribute("data-prototype");
+        var max = parseInt(list.getAttribute("data-cms-items-max"), 10) || 12;
+        var min = parseInt(list.getAttribute("data-cms-items-min"), 10) || 0;
+        var counter = rows.children.length;
+
+        function refresh() {
+            var count = rows.children.length;
+            add.hidden = count >= max;
+            rows.querySelectorAll(":scope > [data-cms-item] > [data-cms-item-remove]").forEach(function (button) {
+                button.hidden = count <= min;
+            });
+        }
+
+        add.addEventListener("click", function () {
+            var holder = document.createElement("template");
+            holder.innerHTML = prototype.replace(/__name__/g, String(counter++)).trim();
+            rows.appendChild(holder.content.firstElementChild);
+            refresh();
+            rows.lastElementChild.querySelector("input, textarea, select")?.focus();
+        });
+
+        rows.addEventListener("click", function (event) {
+            var remove = event.target.closest("[data-cms-item-remove]");
+
+            if (remove) {
+                remove.closest("[data-cms-item]").remove();
+                refresh();
+            }
+        });
+
+        refresh();
+    });
+
+    // A reference is picked from the list its source answers: a select for a
+    // short list, a search box for a long one. The number field stays
+    // underneath for whoever wants to type an id.
+    root.querySelectorAll("input[data-cms-picker]").forEach(function (input) {
+        var source = input.getAttribute("data-cms-picker");
+        var searchable = input.hasAttribute("data-cms-picker-searchable");
+        var picker = document.createElement(searchable ? "input" : "select");
+        picker.className = "form-select form-select-sm mb-1";
+        picker.setAttribute("aria-label", input.labels && input.labels[0] ? input.labels[0].textContent.trim() : "");
+
+        function fill(rows) {
+            picker.replaceChildren();
+            var none = document.createElement("option");
+            none.value = "";
+            none.textContent = "—";
+            picker.appendChild(none);
+            rows.forEach(function (row) {
+                var option = document.createElement("option");
+                option.value = String(row.id);
+                option.textContent = row.name;
+                option.selected = String(row.id) === input.value;
+                picker.appendChild(option);
+            });
+        }
+
+        if (searchable) {
+            var datalist = document.createElement("datalist");
+            datalist.id = input.id + "_options";
+            picker.setAttribute("list", datalist.id);
+            picker.className = "form-control form-control-sm mb-1";
+            picker.placeholder = labels.search || "Search…";
+            var found = {};
+            picker.addEventListener("input", function () {
+                var chosen = found[picker.value];
+
+                if (chosen) {
+                    input.value = String(chosen);
+
+                    return;
+                }
+
+                if (picker.value.length < 2) {
+                    return;
+                }
+
+                fetch(source + "?q=" + encodeURIComponent(picker.value), { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+                    .then(function (response) { return response.json(); })
+                    .then(function (rows) {
+                        datalist.replaceChildren();
+                        found = {};
+                        rows.forEach(function (row) {
+                            found[row.name] = row.id;
+                            var option = document.createElement("option");
+                            option.value = row.name;
+                            datalist.appendChild(option);
+                        });
+                    })
+                    .catch(function () {});
+            });
+            input.insertAdjacentElement("beforebegin", picker);
+            input.insertAdjacentElement("beforebegin", datalist);
+
+            if (input.value) {
+                fetch(source + "?id=" + encodeURIComponent(input.value), { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+                    .then(function (response) { return response.json(); })
+                    .then(function (row) { if (row && row.name) { picker.value = row.name; found[row.name] = row.id; } })
+                    .catch(function () {});
+            }
+        } else {
+            picker.addEventListener("change", function () {
+                input.value = picker.value;
+            });
+            input.insertAdjacentElement("beforebegin", picker);
+            fetch(source, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+                .then(function (response) { return response.json(); })
+                .then(fill)
+                .catch(function () { picker.remove(); });
+        }
+    });
+
     window.addEventListener("beforeunload", function (event) {
         if (running) {
             event.preventDefault();

@@ -1,0 +1,53 @@
+{#
+    The props of one section, by hand: a field per prop, read from the schema
+    of its component. A list prop is a set of rows the script adds and removes
+    from the prototype of the collection; without the script, the rows the
+    section holds are editable and nothing more.
+#}
+{% macro fields(form) %}
+    {% for child in form.children %}
+        {% if child.vars.name == 'section' %}
+            {{ form_widget(child) }}
+        {% elseif child.vars.prototype is defined %}
+            <fieldset class="cms-content__items" data-cms-items
+                      data-cms-items-min="{{ child.vars.attr['data-cms-items-min']|default(0) }}"
+                      data-cms-items-max="{{ child.vars.attr['data-cms-items-max']|default(12) }}"
+                      data-prototype="{{ _self.item(child.vars.prototype, child.vars.full_name ~ '[__name__]')|e('html_attr') }}">
+                <legend class="cms-content__items-legend">{{ child.vars.label }}</legend>
+                {% if child.vars.help %}<p class="form-text mt-0">{{ child.vars.help }}</p>{% endif %}
+                <ol class="cms-content__items-list" data-cms-items-list>
+                    {% for item in child %}
+                        {{ _self.item(item) }}
+                    {% endfor %}
+                </ol>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-cms-items-add hidden>
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ 'Add a row'|trans({}, 'theliacms') }}
+                </button>
+                {% do child.setRendered %}
+            </fieldset>
+        {% else %}
+            {{ form_row(child) }}
+        {% endif %}
+    {% endfor %}
+{% endmacro %}
+
+{% macro item(item) %}
+    <li class="cms-content__item-row" data-cms-item>
+        <div class="cms-content__item-fields">
+            {{ _self.fields(item) }}
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger cms-content__item-remove" data-cms-item-remove hidden
+                aria-label="{{ 'Remove this row'|trans({}, 'theliacms') }}" title="{{ 'Remove this row'|trans({}, 'theliacms') }}">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+    </li>
+{% endmacro %}
+
+{% form_theme form with bo_form_themes only %}
+{{ form_start(form, { attr: { 'data-cms-section-form': '', novalidate: 'novalidate' } }) }}
+    <input type="hidden" name="_token" value="{{ assignToken() }}">
+    {{ _self.fields(form) }}
+    <button type="submit" class="btn btn-sm btn-primary" data-testid="cms-section-save">
+        {{ 'Save this section'|trans({}, 'theliacms') }}
+    </button>
+{{ form_end(form, { render_rest: false }) }}

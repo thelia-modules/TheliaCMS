@@ -40,6 +40,8 @@ final readonly class Prop
         public array $items = [],
         public ?int $minItems = null,
         public ?int $maxItems = null,
+        public ?string $picker = null,
+        public bool $searchable = false,
     ) {
         if (1 !== preg_match('/^[a-z][a-z0-9_]*$/', $name)) {
             throw new \InvalidArgumentException(\sprintf('A prop name is lowercase letters, digits and underscores: "%s" given.', $name));
@@ -103,9 +105,14 @@ final readonly class Prop
     /**
      * @param string $source what the id names: `page`, `menu`, `form`, `product`, `category`, `folder`
      */
-    public static function reference(string $name, string $label, string $source, bool $required = true, ?string $help = null): self
+    /**
+     * @param string      $source     what the reference names, for the model: "a page", "a product"
+     * @param string|null $picker     the address of the list a screen picks the record from, `{id, name}` rows
+     * @param bool        $searchable whether the picker answers `?q=` with the matching rows rather than listing them all
+     */
+    public static function reference(string $name, string $label, string $source, bool $required = true, ?string $help = null, ?string $picker = null, bool $searchable = false): self
     {
-        return new self($name, PropType::Reference, $label, null, $required, trim($source.'. '.($help ?? '')));
+        return new self($name, PropType::Reference, $label, null, $required, trim($source.'. '.($help ?? '')), picker: $picker, searchable: $searchable);
     }
 
     public static function json(string $name, string $label, mixed $default = [], ?string $help = null): self

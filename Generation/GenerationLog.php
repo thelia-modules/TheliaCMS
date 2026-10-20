@@ -30,6 +30,9 @@ final readonly class GenerationLog
     public const string STATUS_INVALID = 'invalid';
     public const string STATUS_FAILED = 'failed';
 
+    /** A change made by hand, recorded with the calls so the history reads in order. */
+    public const string KIND_MANUAL = 'manual';
+
     public function __construct(
         private SecurityContext $securityContext,
         private Pricing $pricing,
@@ -69,6 +72,29 @@ final readonly class GenerationLog
             ->setCostUsd(number_format($this->pricing->cost($model, $usage), 6, '.', ''))
             ->setDurationMs($durationMs)
             ->setError(null !== $error ? mb_substr($error, 0, 60000) : null)
+            ->setDocument($document)
+            ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
+
+        $row->save();
+
+        return (int) $row->getId();
+    }
+
+    /**
+     * A change made by hand on the document: no call, no cost, and a row all
+     * the same, so the history reads in order and the next request starts
+     * from the corrected text.
+     */
+    public function recordManual(GenerationTarget $target, string $locale, string $document, string $note): int
+    {
+        $row = (new CmsPageGeneration())
+            ->setTargetType($target->type)
+            ->setTargetId($target->id)
+            ->setLocale($locale)
+            ->setKind(self::KIND_MANUAL)
+            ->setPrompt($note)
+            ->setStatus(self::STATUS_DONE)
+            ->setCostUsd('0.000000')
             ->setDocument($document)
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
 

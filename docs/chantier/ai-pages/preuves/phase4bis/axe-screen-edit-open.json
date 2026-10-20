@@ -1,0 +1,26 @@
+[
+  {
+    "id": "aria-input-field-name",
+    "impact": "serious",
+    "nodes": [
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(1) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-content > .tiptap.ProseMirror.tiptap-prose",
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(2) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-content > .tiptap.ProseMirror.tiptap-prose",
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(3) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-content > .tiptap.ProseMirror.tiptap-prose",
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(4) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-content > .tiptap.ProseMirror.tiptap-prose"
+    ]
+  },
+  {
+    "id": "label",
+    "impact": "critical",
+    "nodes": [
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(1) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-toolbar.btn-toolbar[role=\"toolbar\"] > .mb-1.me-1[role=\"group\"]:nth-child(7) > .position-relative.btn-group.btn-group-sm:nth-child(1) > .tiptap-color-input[type=\"color\"]",
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(1) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-toolbar.btn-toolbar[role=\"toolbar\"] > .mb-1.me-1[role=\"group\"]:nth-child(7) > .position-relative.btn-group.btn-group-sm:nth-child(2) > .tiptap-color-input[type=\"color\"]",
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(2) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-toolbar.btn-toolbar[role=\"toolbar\"] > .mb-1.me-1[role=\"group\"]:nth-child(7) > .position-relative.btn-group.btn-group-sm:nth-child(1) > .tiptap-color-input[type=\"color\"]",
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(2) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-toolbar.btn-toolbar[role=\"toolbar\"] > .mb-1.me-1[role=\"group\"]:nth-child(7) > .position-relative.btn-group.btn-group-sm:nth-child(2) > .tiptap-color-input[type=\"color\"]",
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(3) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-toolbar.btn-toolbar[role=\"toolbar\"] > .mb-1.me-1[role=\"group\"]:nth-child(7) > .position-relative.btn-group.btn-group-sm:nth-child(1) > .tiptap-color-input[type=\"color\"]",
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(3) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-toolbar.btn-toolbar[role=\"toolbar\"] > .mb-1.me-1[role=\"group\"]:nth-child(7) > .position-relative.btn-group.btn-group-sm:nth-child(2) > .tiptap-color-input[type=\"color\"]",
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(4) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-toolbar.btn-toolbar[role=\"toolbar\"] > .mb-1.me-1[role=\"group\"]:nth-child(7) > .position-relative.btn-group.btn-group-sm:nth-child(1) > .tiptap-color-input[type=\"color\"]",
+      ".cms-content__item-row[data-cms-item=\"\"]:nth-child(4) > .cms-content__item-fields > .mb-3:nth-child(2) > .tiptap-wrapper > .tiptap-toolbar.btn-toolbar[role=\"toolbar\"] > .mb-1.me-1[role=\"group\"]:nth-child(7) > .position-relative.btn-group.btn-group-sm:nth-child(2) > .tiptap-color-input[type=\"color\"]"
+    ]
+  }
+]

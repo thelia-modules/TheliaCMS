@@ -18,6 +18,9 @@
 {% endblock %}
 
 {% block scripts_extra %}
+    {# The rich-text editor of the back office, when a module answers the
+       hook: the html props are textareas it upgrades, and textareas without it. #}
+    {{ safe_hook('wysiwyg.js', { location: 'cms-content-js' }) }}
     <script src="{{ module_asset('TheliaCMS', 'assets/content-editor.js') }}?v={{ assets_version }}" defer></script>
 {% endblock %}
 
@@ -30,6 +33,7 @@
              network: 'The generator could not be reached. Check the connection and try again.'|trans({}, 'theliacms'),
              leaving: 'A generation is running. Leaving the screen does not stop it, but you will not see it finish.'|trans({}, 'theliacms'),
              close: 'Close'|trans({}, 'theliacms'),
+             search: 'Search…'|trans({}, 'theliacms'),
          }|json_encode }}">
         <header class="cms-content__bar">
             <a class="btn btn-sm btn-outline-secondary" href="{{ subject.backUrl }}" data-testid="cms-content-back">
@@ -115,6 +119,12 @@
                                     </div>
                                     {% if section.excerpt %}
                                         <p class="cms-content__item-excerpt">{{ section.excerpt }}</p>
+                                    {% endif %}
+                                    {% if section.edit is not null %}
+                                        <details class="cms-content__rewrite" data-cms-edit data-testid="cms-section-edit-{{ section.id }}">
+                                            <summary>{{ 'Edit by hand'|trans({}, 'theliacms') }}</summary>
+                                            {{ include('@TheliaCMSModule/backOffice/default-twig/content/_section_form.html.twig', { form: section.edit }) }}
+                                        </details>
                                     {% endif %}
                                     {% if may_generate %}
                                         <details class="cms-content__rewrite">

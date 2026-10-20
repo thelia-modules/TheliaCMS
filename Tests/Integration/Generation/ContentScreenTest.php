@@ -103,8 +103,8 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(1, $screen->filter('[data-testid="cms-builder-flash-success"]')->count(), 'The outcome is read from the ledger and shown.');
         self::assertStringContainsString('The draft is written', $screen->filter('[data-testid="cms-builder-flash-success"]')->text());
         self::assertSame(1, $screen->filter('[data-testid="cms-content-frame"]')->count(), 'The draft is previewed in the theme.');
-        self::assertSame(['hero', 'faq'], $screen->filter('[data-testid="cms-content-sections"] li')->each(static fn (Crawler $item): string => (string) $item->attr('data-section')));
-        self::assertStringContainsString('Nos services', $screen->filter('[data-testid="cms-content-sections"] li')->first()->text(), 'A section is quoted by its title.');
+        self::assertSame(['hero', 'faq'], $screen->filter('[data-testid="cms-content-sections"] li[data-section]')->each(static fn (Crawler $item): string => (string) $item->attr('data-section')));
+        self::assertStringContainsString('Nos services', $screen->filter('[data-testid="cms-content-sections"] li[data-section]')->first()->text(), 'A section is quoted by its title.');
         self::assertSame(1, $screen->filter('[data-testid="cms-content-history"] tbody tr')->count(), 'The history lists the call.');
         self::assertSame(2, $screen->filter('form[data-cms-generate] input[name$="[section]"]')->count(), 'Every section has its rewrite form.');
     }
@@ -192,7 +192,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Sectioned</h1><p>Shorter.</p>']]]))]));
 
         $screen = $this->screen($this->url($page->getId()));
-        $form = $screen->filter('[data-testid="cms-content-sections"] li[data-section="content"] form')->form();
+        $form = $screen->filter('[data-testid="cms-content-sections"] li[data-section="content"] form[data-cms-generate]')->form();
         $form['cms_change_content[text]'] = 'Shorter.';
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));

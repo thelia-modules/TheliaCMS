@@ -67,6 +67,7 @@ final readonly class CmsPageContentController
         private PreviewLink $previewLinks,
         private ContentScreen $screen,
         private GenerationRunner $runner,
+        private SectionUpdate $sectionUpdate,
     ) {
     }
 
@@ -157,6 +158,42 @@ final readonly class CmsPageContentController
         return $this->run($request, $page, $lang, $generation);
     }
 
+    /**
+     * A section changed by hand: a word corrected costs no generation, and
+     * takes the right to change pages, not the right to generate.
+     */
+    #[Route('/update', name: 'update', methods: ['POST'])]
+    public function update(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayPublish();
+
+        $current = $this->documentOrFail($request, $page, $lang);
+
+        if (!$current instanceof Document) {
+            return $this->back($page, $lang);
+        }
+
+        $locale = $lang->getLocale();
+        $problems = $this->sectionUpdate->apply(
+            $request,
+            $this->subject($page, $lang),
+            $current,
+            fn (Document $document) => $this->writer->saveContent($page, $locale, $document),
+        );
+
+        if ([] === $problems) {
+            $this->flash($request, 'success', $this->translate('The section is saved in the draft.'));
+        }
+
+        foreach ($problems as $problem) {
+            $this->flash($request, 'danger', $problem);
+        }
+
+        return $this->back($page, $lang);
+    }
+
     #[Route('/publish', name: 'publish', methods: ['POST'])]
     public function publish(Request $request, int $id): Response
     {
@@ -231,6 +268,7 @@ final readonly class CmsPageContentController
                 'generate' => $this->urls->generate('admin.cms.pages.content.generate', $parameters),
                 'revise' => $this->urls->generate('admin.cms.pages.content.revise', $parameters),
                 'section' => $this->urls->generate('admin.cms.pages.content.section', $parameters),
+                'update' => $this->urls->generate('admin.cms.pages.content.update', $parameters),
                 'publish' => $this->urls->generate('admin.cms.pages.content.publish', $parameters),
             ],
             testId: 'cms-page-content',

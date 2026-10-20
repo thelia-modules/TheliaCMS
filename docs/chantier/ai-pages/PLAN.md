@@ -430,17 +430,32 @@ verts sur le module, `JOURNAL.md` à jour, rapport de fin de phase.
   écrans d'avant la phase ; `BuilderImageDeletionTest` et `WriteNeedsTheTokenTest`
   lisent encore le jeton sur les écrans `builder` (à déplacer en phase 5).
 
-### Phase 4 bis — Édition manuelle des textes (D3, Tiptap)
+### Phase 4 bis — Édition manuelle des textes (D3, Tiptap) (faite le 2026-10-20)
 
-- Sur l'écran de contenu, chaque prop de type `html` d'une section s'édite
-  avec l'éditeur du module `thelia/tiptap-module` (déjà dans l'hôte, à
-  déclarer en `suggest` du module, dégradé en textarea s'il est absent) ; les
-  props `text`, `choice`, `image`, `reference` s'éditent dans un formulaire
-  généré depuis le schéma du composant.
-- Une édition manuelle met à jour le document, re-rend `draft_html`, et
-  s'inscrit dans l'historique (`cms_page_generation`, `kind = manual`) pour que
-  l'itération suivante parte du texte corrigé.
-- Preuve : corriger un mot, publier, le voir sur le front sans génération.
+- [x] `Generation/Admin/SectionFormBuilder` (formulaire Symfony depuis
+      `PropSchema` : html → textarea `.wysiwyg`, text, url, integer, boolean,
+      choice, image → select sur la médiathèque, reference → id + picker JS
+      sur la source du partial (`Prop::$picker`, `$searchable`), items →
+      `CollectionType` de `SectionItemType`, json → textarea),
+      `SectionUpdate` (document avec la section remplacée, écriture par le
+      writer, ligne `manual` au registre via `GenerationLog::recordManual`),
+      routes `admin.cms.{pages,blocks}.content.update` (droit page UPDATE).
+- [x] Template `content/_section_form.html.twig` (lignes et prototype),
+      hook `wysiwyg.js` dans l'écran, montage Tiptap à l'ouverture du volet,
+      ajout/retrait de lignes, picker de référence ; `thelia/tiptap-module`
+      en `suggest`.
+- [x] Tests `SectionEditScreenTest` (7 : formulaire conforme au schéma,
+      enregistrement + registre, lignes ajoutées/retirées, `javascript:`
+      refusé, section disparue, droit page sans generate, bloc) ; vus rouges
+      par sabotage (registre, droit, lecture des lignes).
+- [x] Preuve navigateur (`preuves/phase4bis/`) : bundle Tiptap chargé,
+      éditeurs montés dans le volet FAQ, titre du hero corrigé à la main,
+      enregistré sans génération (registre « À la main », 0 USD), publié,
+      lu sur le front.
+- [x] Docs : `docs/generator.md`, CHANGELOG, 10 clés i18n.
+- Écarts : pas d'ajout, de suppression ni de réordonnancement de sections à
+  la main (le brief et la révision s'en chargent ; point ouvert) ; le picker
+  d'image est un select sur toute la médiathèque (200 images au plus).
 
 ### Phase 5 — Suppression et nettoyage
 

@@ -110,6 +110,17 @@ its `GenerationObserverInterface`. Either way the screen is reloaded with
 `?done=<id>` and shows the outcome from that row of the ledger: a stream can
 leave no flash message behind, and the ledger says more.
 
+Each section also opens a form to **edit it by hand**, read from the schema
+of its component (`Generation\Admin\SectionFormBuilder`): a field per prop,
+a textarea the Tiptap module upgrades for a `html` prop when the module is
+there (`thelia/tiptap-module`, suggested, not required), rows added and
+removed for a list prop, a select on the media library for an image, a
+picker on the source of a partial for a reference. What comes back goes
+through the same validator as a generated document, is stored through the
+writer, and is written to the ledger as a `manual` row with no cost, so the
+next request starts from the corrected text. A word corrected by hand costs
+no generation, and takes the right to change pages, not the generate right.
+
 Opening the screen takes the page right; asking the generator takes
 `admin.cms.generate`; publishing takes the right to change pages. A block is
 told to the generator for what it is — no main heading, one to three

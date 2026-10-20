@@ -107,7 +107,7 @@ final readonly class PartialSection implements SectionDefinitionInterface
             PartialPropType::Integer => Prop::integer($prop->name, $prop->label, (int) ($prop->default ?? 0), $prop->min ?? 0, $prop->max ?? \PHP_INT_MAX, $prop->help),
             PartialPropType::Boolean => Prop::boolean($prop->name, $prop->label, (bool) $prop->default, $prop->help),
             PartialPropType::Choice => Prop::choice($prop->name, $prop->label, $prop->choices, (string) $prop->default, $prop->help),
-            PartialPropType::Reference => Prop::reference($prop->name, $prop->label, $this->sourceOf($prop), $prop->required, $prop->help),
+            PartialPropType::Reference => Prop::reference($prop->name, $prop->label, $this->sourceOf($prop), $prop->required, $prop->help, $prop->source, $prop->searchable),
         };
     }
 
