@@ -402,7 +402,10 @@ JavaScript the button is still a link to the platform.
 
 Videos come from YouTube, Vimeo or Dailymotion and are addressed by identifier,
 never by a URL typed into an iframe. Maps come from OpenStreetMap. The poster of
-a video is served by your own media library.
+a video is served by your own media library. A theme that draws the video with
+its own player ships `cms/partials/video-facade.html.twig`, which receives the
+platform as `provider` (its name) and `provider_code` (`youtube`, `vimeo`,
+`dailymotion`), `embed_url`, `page_url`, `title` and `poster_url`.
 
 Adding a component of your own takes one PHP class, or one line in the
 configuration of the theme:

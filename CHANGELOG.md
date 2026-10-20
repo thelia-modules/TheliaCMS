@@ -124,6 +124,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   `catalogue` and `page-structure` skills now send several products there
   rather than into one card each. A theme draws the rows with
   `cms/partials/product-strip.html.twig` and `category-strip.html.twig`.
+- The video partial hands its theme template `provider_code` next to the
+  name of the platform, for a player that is told which one it plays.
 - On the content screen: the brief the page was last written from is back
   in its form (the ledger keeps it, column `brief` of `cms_page_generation`);
   every section has a number, a button that scrolls the preview to it and a

@@ -105,6 +105,8 @@ final readonly class VideoFacadePartial implements PartialDefinitionInterface
 
         return [
             'provider' => $provider['label'],
+            // The code too, for a theme whose player is told the platform.
+            'provider_code' => isset(self::PROVIDERS[(string) $props['provider']]) ? (string) $props['provider'] : 'youtube',
             'title' => $props['title'],
             'embed_url' => \sprintf($provider['embed'], rawurlencode($video)),
             'page_url' => \sprintf($provider['page'], rawurlencode($video)),

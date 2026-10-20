@@ -25,6 +25,10 @@ directly (`composer.json` of the module says which) and no longer
 - **Compiled Twig** is invalidated on the mtime of the template. A template
   restored within the same second as it was changed keeps the compiled copy of
   the change: `touch` the template, then remove `var/cache/test`.
+- **Rendered partials** are kept in the `cache.app` pool for as long as their
+  `cacheTtl()` says (a day for a video). A theme template added or changed
+  for a partial shows up when that fragment expires, or after
+  `php Thelia cache:pool:clear cache.app`.
 - **Module assets** served by `module_asset()` are copied once into
   `public/assets/backOffice/default-twig/TheliaCMS/`. After a change to a
   script or a stylesheet of `templates/backOffice/default-twig/assets/`, copy
