@@ -494,14 +494,21 @@ verts sur le module, `JOURNAL.md` à jour, rapport de fin de phase.
   le guide webmaster (PDF, captures) décrit toujours l'éditeur 1.x ; les clés
   i18n du builder restent dans `I18n/*.php` (inoffensives, à purger en 2.1).
 
-### Phase 6 — Recette et restitution
+### Phase 6 — Recette et restitution (faite le 2026-10-20)
 
-- Non-régression : baselines de la phase 0 rejouées (tests, export, pages
-  héritées encore servies à l'identique, cache tags, sitemap, recherche).
-- Parcours utilisateur, recette graphique sur Flexy, performance (rendu d'une
-  page publiée avant/après, temps et coût d'une génération).
-- Cahier de recette lisible par un non-développeur ; restitution avec
-  arbitrages restants ; capitalisation (`.claude/rules/`, skill projet).
+- [x] Non-régression : suites (558/263 → 543/359, écart expliqué), export v2,
+      volumétrie, pages héritées, `Cache-Tag`, sitemap, recherche, module sans
+      le bundle (`RECETTE.md` volet 1).
+- [x] Parcours de la charte 1 à 6 déroulés (navigateur pour 1, 2, 2 bis ;
+      tests pour 3, 5, 6 ; 4 partiel : le thème n'appelle pas
+      `cms_item_block()`), recette graphique (sections sur Flexy, écrans sur
+      `default-twig`, axe), performance (temps serveur et mémoire par page ;
+      requêtes SQL non mesurables, pas de collecteur Propel).
+- [x] Test ajouté : `PageGeneratorTest::testAnErrorOfTheApiIsAFailureAndTheDraftIsLeftAsItIs`
+      (vu rouge par sabotage).
+- [x] `RECETTE.md` (cahier lisible par un non-développeur, neuf arbitrages),
+      `RESTITUTION.md`.
+- [ ] Capitalisation : voir `RESTITUTION.md` § capitalisation.
 
 ## 6. Pièges vérifiés à garder sous les yeux
 

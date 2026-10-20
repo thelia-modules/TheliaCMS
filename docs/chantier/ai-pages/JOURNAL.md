@@ -256,6 +256,8 @@ sa première requête doit d'abord demander un écran.
 
 ## Points ouverts
 
+Repris et numérotés A1 à A9 dans `RECETTE.md` § Arbitrages ouverts (2026-10-20).
+
 - `cms_page_revision` n'a aucun lecteur en production : garder (avec le
   document v2) ou supprimer en 2.0.0 ? À trancher en phase 1.
 - Guide webmaster (`docs/guide/`, PDF et captures du builder) : réécriture du

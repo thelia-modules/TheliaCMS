@@ -184,6 +184,24 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         }
     }
 
+    public function testAnErrorOfTheApiIsAFailureAndTheDraftIsLeftAsItIs(): void
+    {
+        $page = $this->createPage('Page en panne', html: '<h1>Avant</h1>', published: false);
+        // Nothing queued: the transport answers the way the API does when it
+        // is down, a 500 with an error body.
+
+        try {
+            $this->generator()->generate(GenerationRequest::fromBrief($this->target($page), $this->locale(), new Brief('Something')));
+            self::fail('The generation should have failed.');
+        } catch (GenerationException $exception) {
+            self::assertStringContainsString('The Claude API answered', $exception->getMessage());
+            self::assertNotNull($exception->logId);
+        }
+
+        self::assertSame(GenerationLog::STATUS_FAILED, $this->lastStatus($page));
+        self::assertStringContainsString('<h1>Avant</h1>', (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml(), 'The draft is untouched.');
+    }
+
     public function testARevisionSendsTheCurrentDocumentAndAsksForTheWholeOneBack(): void
     {
         $page = $this->createPage('Page revue', html: '<h1>Avant</h1>', published: false);

@@ -994,6 +994,9 @@ the editable 404, the ACL, and the activity log.
 
 ## Tests
 
+Working on the module inside a Thelia host, with the caches and the test
+pitfalls met on the way: [docs/developing.md](docs/developing.md).
+
 The unit tests need neither a database nor an installed shop, only the
 autoloader of the project the module sits in:
 
