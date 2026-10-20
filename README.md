@@ -294,29 +294,22 @@ made only of emoji, since the search index holds the written-out form.
 ## Sections
 
 The content of a page is a document: an ordered list of sections, each a
-component of the catalogue with its props — the ten sections the module ships
-(hero, text and image, call to action, quote, testimonials, key figures, logos,
-gallery, questions and answers, section), a piece of free text, the live
-content of the site, and the components the theme opens to pages in its
-`config/theliacms.yaml`. A theme takes any section over by shipping
-`cms/sections/<slug>.html.twig`, and shows one anywhere with
-`cms_section('Cms:Hero', {...})`. How to write one, and how a document is
+component of the catalogue with its props — the components the theme opens to
+pages in its `config/theliacms.yaml`, a piece of free text, and the live
+content of the site. A theme shows one anywhere with
+`cms_section('cms:richtext', {...})`. How to add one, and how a document is
 shaped: [docs/sections.md](docs/sections.md).
 
 ## The catalogue
 
 A document is made of three families of components.
 
-**The sections of the module** are the ten a page is built from: hero, text
-and image, call to action, quote, testimonials, key figures, logos, gallery,
-questions and answers, and a section to group others. They render semantic
-markup carrying `cms-*` class names, and the module ships the stylesheet that
-gives them their look, so a page reads as a page on a theme that knows nothing
-about the CMS. A theme decides what they look like by overriding the
-stylesheet or the template of a section, and a page written today still looks
-right after the theme is reworked. Next to them, `cms:richtext` holds a piece
-of free markup, and the components the theme opens in its
-`config/theliacms.yaml` render with the markup of the theme.
+**The components of the theme** are what a page is built from: the theme
+opens them in its `config/theliacms.yaml`, and they render with the markup and
+the stylesheet of the theme. The module ships no layout of its own.
+
+**Free text** (`cms:richtext`) holds a piece of markup, held at a readable
+width by the stylesheet of the module.
 
 **Live content** is rendered by the server on every visit rather than stored in
 the page: the latest news, a menu, a form, and the two click-to-load embeds
@@ -794,9 +787,7 @@ only needs a class to tell the types apart.
 
 ### Components
 
-A theme takes any section of the module over by shipping
-`cms/sections/<slug>.html.twig`, with the same variables as the template of
-the module. It opens its own Twig components to pages by naming them under
+A theme opens its own Twig components to pages by naming them under
 `sections.components` in `config/theliacms.yaml`; their props are read off the
 template, and nothing is opened until the theme says so. A module adds a
 component of its own with one class implementing `SectionDefinitionInterface`.
@@ -928,9 +919,10 @@ template built on one site is a file that can be handed to another.
 
 Working today: the page tree with its bin and duplication, the content screen
 with the generator, its skills and its ledger, sections edited by hand,
-drafts, revisions and shared previews, the catalogue of sections with the
-components of the theme, live content including click-to-load embeds, the publication pipeline (sanitizer,
-responsive images, search indexing, heading check), publication and
+drafts, revisions and shared previews, the catalogue of sections made of the
+components of the theme, free text and live content including click-to-load
+embeds, the publication pipeline (sanitizer, responsive images, search
+indexing, heading check), publication and
 generation from the command line, the media library, menus, hierarchical URLs
 with 301s on rename, forms and their answers, the front-office search,
 third-party snippets behind consent, the sitemap section, cache tags, the
@@ -962,7 +954,7 @@ vendor/bin/phpunit -c local/modules/TheliaCMS/phpunit.integration.xml.dist
 
 They cover what only exists once there are rows: the export and import round
 trip, the search index, the sitemap entries, the dashboard figures, the
-breadcrumb, the rendering of every section of the module and the generator,
+breadcrumb, the rendering of the sections and the generator,
 which runs against recorded answers and never reaches the API (see
 [docs/generator.md](docs/generator.md)). Each test runs inside a transaction that is rolled back afterwards,
 so the content of the shop is left alone. The exception is the search: InnoDB

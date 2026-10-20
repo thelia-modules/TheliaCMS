@@ -14,21 +14,21 @@ anything else is refused.
 
 ## Choosing sections
 
-- **A component of the theme comes first.** The catalogue may hold
-  components the theme opened (their names start with `Layouts:`,
-  `Organisms:` or `Molecules:`): they are the site's own blocks, drawn as the
-  rest of the site is. When one of them does what a `Cms:` or `Partial:`
-  section does, use the component of the theme.
-
-- Open with one section that carries the main heading of the page: `Cms:Hero`
-  with `heading_level` 1, or a `cms:richtext` starting with an `<h1>`. Never
-  two of them.
-- Three to seven sections make a page. One idea per section. A page that is
-  only free text is a page nobody reads.
-- Pick the section made for the content: a list of questions goes in
-  `Cms:Questions`, not in free text; figures go in `Cms:Figures`; a quotation in
-  `Cms:Quote`; pictures in `Cms:Gallery`.
-- Close with a `Cms:Cta` when the page asks the visitor to do something.
+- The catalogue holds three kinds of components: the components of the
+  theme (their names start with `Layouts:`, `Organisms:` or `Molecules:`),
+  the site's own blocks, drawn as the rest of the site is; free text
+  (`cms:richtext`); and live content (`Partial:*`).
+- **A component of the theme comes first.** When one of them is made for the
+  content — reviews, reassurance items, a row of products, a heading band —
+  use it, and keep free text for what no component is made for.
+- Open with one section that carries the main heading of the page: the
+  heading band of the theme when the catalogue has one, or a `cms:richtext`
+  starting with an `<h1>`. Never two of them.
+- Three to seven sections make a page. One idea per section.
+- Read the description of each component to pick the one made for the
+  content; never bend a component to say something it is not made for.
+- When the page asks the visitor to do something, close with that request: a
+  component of the theme made for it, or a short free text ending on the link.
 - Live content (`Partial:*`) shows what the site holds today — a form, the
   latest news, a product — and takes the id of that item. Use the search tools
   to find the id; never guess one.
@@ -45,8 +45,7 @@ anything else is refused.
   inventing a value for it.
 - `text` props are plain text: no markup, no line breaks.
 - `html` props hold markup: paragraphs `<p>`, lists `<ul><li>`, emphasis
-  `<strong>`, links `<a href>`, headings from `<h2>` down (`<h3>` inside a
-  `Cms:Section`). No `style` attribute, no `<script>`, no `<iframe>`, no
+  `<strong>`, links `<a href>`, headings from `<h2>` down. No `style` attribute, no `<script>`, no `<iframe>`, no
   inline images.
 - `image` props take the id of an image found with `search_media`, the
   absolute `https://` address of a picture the brief gives, or `null` when
@@ -56,10 +55,9 @@ anything else is refused.
   `tel:` or `mailto:` address the brief gives, or an absolute `https://`
   address the brief gives. Never a path you did not get from a tool, however
   likely it looks: a button to a page the site does not have is a dead end.
-  When no page fits, leave the button out (`cta_label` and `cta_url` empty, no
-  `Cms:Cta`).
+  When no page fits, leave the button out (its label and its address empty).
 - Every section has an `id`: short, lowercase, unique in the page, saying
-  what the section is (`hero`, `faq`, `figures`).
+  what the section is (`intro`, `faq`, `reviews`).
 
 ## Output
 

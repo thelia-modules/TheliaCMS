@@ -29,7 +29,7 @@ interface SectionDefinitionInterface
 {
     /**
      * The name a document refers to the component by, stable across versions:
-     * `cms:richtext`, `Cms:Hero`, `Partial:cms-form`.
+     * `cms:richtext`, `Partial:cms-form`, `Layouts:Subheader:Base`.
      */
     public function name(): string;
 

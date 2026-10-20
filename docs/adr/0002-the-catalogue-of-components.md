@@ -54,3 +54,12 @@ component replaces go too — `Partial:product-card`, `Partial:product-strip`,
 so a product, a category or a video on a page is a component of the theme.
 The dynamic partials left are a form, a menu, the latest contents, a map and
 a social post.
+
+## Amendment of 2026-10-20, last
+
+The ten sections of the module go too (`Cms:Hero` … `Cms:Section`), with
+`AbstractTemplateSection`, `SectionImages`, their templates and their styles:
+a page is built from the components of the theme, free text (`cms:richtext`)
+and live content. The catalogue keeps its three families, the first being the
+theme's. A module adds a component by implementing
+`SectionDefinitionInterface` or by writing a partial.

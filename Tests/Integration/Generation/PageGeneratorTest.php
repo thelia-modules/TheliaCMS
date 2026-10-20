@@ -64,16 +64,16 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
                 FakeClaudeTransport::text(json_encode([
                     'version' => 1,
                     'sections' => [
-                        ['id' => 'hero', 'component' => 'Cms:Hero', 'props' => ['title' => 'Nos services', 'heading_level' => '1', 'text' => 'Ce que nous faisons.', 'cta_label' => 'Voir les tarifs', 'cta_url' => $linked->getUrl($locale)]],
-                        ['id' => 'faq', 'component' => 'Cms:Questions', 'props' => ['title' => 'Questions', 'items' => [['question' => 'Combien ?', 'answer' => '<p>Voir la page des tarifs.</p>']]]],
+                        ['id' => 'hero', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Nos services</h1><p>Ce que nous faisons. <a href="'.$linked->getUrl($locale).'">Voir les tarifs</a></p>']],
+                        ['id' => 'news', 'component' => 'Partial:latest-contents', 'props' => ['count' => '4', 'heading' => 'Actualités']],
                     ],
                 ], \JSON_THROW_ON_ERROR)),
             ], 'end_turn', ['input_tokens' => 1300, 'cache_read_input_tokens' => 1000, 'output_tokens' => 400]));
 
         $result = $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Une page qui présente nos services de conseil, avec un lien vers les tarifs.', tone: 'direct')));
 
-        self::assertSame(['hero', 'faq'], array_map(static fn ($section) => $section->id, $result->document->sections));
-        self::assertSame('1', $result->document->sections[0]->props['heading_level'], 'The document comes back normalised by the validator.');
+        self::assertSame(['hero', 'news'], array_map(static fn ($section) => $section->id, $result->document->sections));
+        self::assertSame(4, $result->document->sections[1]->props['count'], 'The document comes back normalised by the validator.');
         self::assertSame(2, $result->turns);
         self::assertSame(2500, $result->usage->inputTokens);
         self::assertSame(1000, $result->usage->cacheReadTokens);
@@ -91,7 +91,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         self::assertSame(['type' => 'ephemeral'], $first['system'][2]['cache_control'], 'The catalogue, last of the stable blocks, is what the cache holds.');
         self::assertArrayNotHasKey('cache_control', $first['system'][0]);
         self::assertStringContainsString('# Skills', $first['system'][1]['text']);
-        self::assertStringContainsString('## `Cms:Hero`', $first['system'][2]['text']);
+        self::assertStringContainsString('## `cms:richtext`', $first['system'][2]['text']);
         self::assertSame('auto', $first['tool_choice']['type']);
         self::assertContains('search_pages', array_column($first['tools'], 'name'));
         self::assertArrayNotHasKey('strict', $first['tools'][0], 'A strict tool would join the grammar of the output schema, which is at its limit.');
@@ -114,14 +114,14 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         self::assertSame('brief', $row->getKind());
         self::assertSame(2500, $row->getInputTokens());
         self::assertSame(2, $row->getTurns());
-        self::assertStringContainsString('"component":"Cms:Hero"', (string) $row->getDocument());
+        self::assertStringContainsString('"component":"cms:richtext"', (string) $row->getDocument());
         self::assertStringContainsString('nos services', (string) $row->getPrompt());
     }
 
     public function testADocumentTheSiteRefusesGoesBackOnceWithItsProblems(): void
     {
         $page = $this->createPage('Page corrigée', published: false);
-        $valid = json_encode(['version' => 1, 'sections' => [['id' => 'hero', 'component' => 'Cms:Hero', 'props' => ['title' => 'Bonjour']]]], \JSON_THROW_ON_ERROR);
+        $valid = json_encode(['version' => 1, 'sections' => [['id' => 'hero', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Bonjour</h1>']]]], \JSON_THROW_ON_ERROR);
 
         $this->api
             ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text('{"version":1,"sections":[{"id":"hero","component":"Cms:Nope","props":{}}]}')]))
@@ -129,7 +129,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
 
         $result = $this->generator()->generate(GenerationRequest::fromBrief($this->target($page), $this->locale(), new Brief('Bonjour')));
 
-        self::assertSame('Bonjour', $result->document->sections[0]->props['title']);
+        self::assertSame('<h1>Bonjour</h1>', $result->document->sections[0]->props['html']);
         self::assertStringContainsString('"Cms:Nope", which is not a component', $this->api->requests[1]['messages'][2]['content'], 'The problems are sent back for correction.');
         self::assertSame(2, $result->turns);
     }
@@ -225,7 +225,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         $locale = $this->locale();
 
         $unknown = json_encode(['version' => 1, 'sections' => [['id' => 'inner', 'component' => 'Cms:Nothing', 'props' => []]]], \JSON_THROW_ON_ERROR);
-        $valid = json_encode(['version' => 1, 'sections' => [['id' => 'figures', 'component' => 'Cms:Figures', 'props' => ['title' => 'En chiffres', 'items' => [['value' => '48 h', 'label' => 'Livraison']]]]]], \JSON_THROW_ON_ERROR);
+        $valid = json_encode(['version' => 1, 'sections' => [['id' => 'figures', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>En chiffres</h2><p>48 h pour livrer.</p>']]]], \JSON_THROW_ON_ERROR);
 
         $this->api
             ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text($unknown)]))
@@ -258,7 +258,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
             $observer,
         );
 
-        self::assertSame('Cms:Figures', $result->document->sections[0]->component);
+        self::assertSame('cms:richtext', $result->document->sections[0]->component);
         self::assertSame(['turn 1: answer', 'correction 1', 'turn 2: answer'], $observer->events, 'The observer is told of every turn and of the correction.');
         self::assertSame(mb_strlen($valid), $observer->characters, 'The observer is told of the text as it is streamed.');
         self::assertTrue($this->api->requests[0]['stream'] ?? false, 'The answer is read as a stream.');

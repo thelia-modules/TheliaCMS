@@ -56,13 +56,6 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   in, described as a JSON schema), `DocumentValidator`, `DocumentRenderer`,
   and the one built-in component, `cms:richtext`, a piece of free markup held
   at the width of the sections by `.cms-richtext`. See `docs/sections.md`.
-- The ten page blocks become sections of the catalogue, `Cms:Hero` to
-  `Cms:Section`, each a class under `Content/Section/` with typed props and a
-  template under `templates/front/sections/` a theme takes over with
-  `cms/sections/<slug>.html.twig`. Same `cms-*` markup as the blocks they
-  replace, so `blocks.css` and the palette of the theme dress them unchanged.
-  Images are named by their library id and resolved when the section is
-  rendered.
 - Every partial of the site is a section, `Partial:<name>`, with the settings
   of the partial as props and the placeholder the page serves through as
   rendering.
@@ -71,8 +64,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   and the `{% props %}` tag of the template, and they render through the
   component renderer of Symfony UX. Nothing is opened by default.
 - `cms_section(name, props)` renders a section from a template, with its
-  sample props when none are given. The sections of the module are listed in
-  the toolkit of the Flexy theme, under "CMS".
+  sample props when none are given. Every section of the catalogue is listed
+  on one page of the toolkit of the Flexy theme, under "CMS".
 - **The generator** (`TheliaCMS\Generation`): a page is written from a brief
   by the Claude API, as a document constrained to the JSON schema of the
   catalogue, validated and rendered by the site. The model reads the skills
@@ -191,6 +184,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   `ProductCardPrice`, `CategorySummary`, `CatalogueImage` and the image
   source `admin.cms.partials.sources.images`. A product, a category or a
   video on a page is a component of the theme (`sections.components`).
+- **The page blocks of the module** (hero, text and image, call to action,
+  quote, testimonials, key figures, logos, gallery, questions and answers,
+  section) have no section of their own: a page is built from the
+  components the theme opens, free text (`cms:richtext`) and live content.
+  `blocks.css` keeps the styles of the free text, the partials and the forms.
+  A module adds a component by implementing `SectionDefinitionInterface`
+  (see `docs/creating-a-component.md`); there is no `AbstractTemplateSection`
+  and no `cms/sections/<slug>.html.twig` to take over.
 - The pipeline a page goes through before it is stored or published moves
   from `TheliaCMS\Builder` to `TheliaCMS\Content\Pipeline`:
   `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,

@@ -81,8 +81,8 @@ final class ContentScreenTest extends AdminScreenTestCase
         $url = $this->url($page->getId());
 
         $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([
-            ['id' => 'hero', 'component' => 'Cms:Hero', 'props' => ['title' => 'Nos services', 'heading_level' => '1', 'text' => 'Ce que nous faisons.']],
-            ['id' => 'faq', 'component' => 'Cms:Questions', 'props' => ['title' => 'Questions', 'items' => [['question' => 'Combien ?', 'answer' => '<p>Sur devis.</p>']]]],
+            ['id' => 'hero', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Nos services</h1><p>Ce que nous faisons.</p>']],
+            ['id' => 'faq', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Questions</h2><p>Sur devis.</p>']],
         ]))], 'end_turn', ['input_tokens' => 1200, 'output_tokens' => 400]));
 
         $form = $this->screen($url)->filter('[data-testid="cms-content-brief"] form')->form();
@@ -95,7 +95,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertMatchesRegularExpression('#/admin/cms/pages/\d+/content\?.*done=\d+#', $location, 'The screen is reloaded with the row of the ledger.');
 
         $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
-        self::assertStringContainsString('"component":"Cms:Hero"', (string) $content?->getDraftDocument(), 'The draft is the document the model wrote.');
+        self::assertStringContainsString('"html":"<h1>Nos services</h1>', (string) $content?->getDraftDocument(), 'The draft is the document the model wrote.');
         self::assertStringContainsString('Nos services', (string) $content?->getDraftHtml());
         self::assertNull($content?->getPublishedHtml(), 'Nothing went online.');
         self::assertStringContainsString('Tone asked for: direct', $this->api->requests[0]['messages'][0]['content']);

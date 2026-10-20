@@ -8,8 +8,8 @@ always: true
 
 ## Headings
 
-- One `<h1>` per page, and it is the main heading: the title of the hero, or
-  the first heading of the free text that opens the page.
+- One `<h1>` per page, and it is the main heading: the title of the heading
+  band, or the first heading of the free text that opens the page.
 - Section headings are `<h2>`. Inside a section, `<h3>`. Never skip a level:
   `<h2>` then `<h4>` is a hole a screen reader falls into.
 - A heading says what the section is about in the words a visitor would
@@ -17,26 +17,26 @@ always: true
 
 ## What a page of each kind holds
 
-**Landing or service page**: hero (what, for whom, one call to action) →
-text and image on the one thing that matters most → figures or testimonials
-as proof → questions and answers that remove the last doubts → call to action.
+**Landing or service page**: the main heading (what, for whom) → the one
+thing that matters most → proof, reviews or reassurance → questions and
+answers that remove the last doubts → what to do next.
 
 **Selection or collection page** (a theme, a season, the products of a
-story): hero that says what ties them together → a short text → the products
-in one row (the row component of the theme, when the catalogue has one),
-two to twelve of them, found with `search_products` → call to action to the
+story): the main heading that says what ties them together → a short text →
+the products in one row (the row component of the theme, when the catalogue
+has one), two to twelve of them, found with `search_products` → a link to the
 category or the shop. Several rows when the brief groups the products, one
 heading each, never one card per product.
 
-**About page**: hero with the sentence that says who you are → text and image
-on the story or the team → figures → logos of partners or clients when the
-brief names them → call to action to get in touch.
+**About page**: the main heading with the sentence that says who you are →
+the story or the team → figures → partners or clients when the brief names
+them → how to get in touch.
 
 **Legal or informational page** (legal notice, terms, privacy, accessibility,
 access): free text with an `<h1>` and `<h2>` sections, nothing decorative, no
 call to action. Keep the text the brief gives you; do not write law.
 
-**Contact or access page**: a short hero or free text with the address and
+**Contact or access page**: a short heading and free text with the address and
 the hours, a form if the site has one (`Partial:cms-form` with its id), a map
 if the brief gives an address and the catalogue offers one.
 
@@ -54,8 +54,8 @@ and leave out what you would have to make up. A section that says nothing —
 
 ## Length
 
-- A hero: a heading of eight words at most, one or two lines under it.
+- The main heading: eight words at most, one or two lines under it.
 - A section of text: two to four short paragraphs. A paragraph: three
   sentences.
-- Three testimonials, three figures, three to six questions: enough to
+- Three reviews, three figures, three to six questions: enough to
   convince, not enough to tire.

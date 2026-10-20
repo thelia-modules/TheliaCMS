@@ -79,13 +79,14 @@ content goes through a block cannot be filled from a document.
 
 ## A component of a module
 
-A class implementing `SectionDefinitionInterface` is a component the moment it
-is a service of the container with autoconfiguration on, which is how a
-Thelia 3 module registers its services: the interface carries the tag. The
-easiest path is `TheliaCMS\Content\Section\AbstractTemplateSection`, which
-normalises the props through the schema and renders a template the theme may
-take over. The example below is a complete section, modelled on
-`Content/Section/FiguresSection.php`:
+The first way to add a component is the theme: a Twig component opened in
+one line of `config/theliacms.yaml`, as above. A module that has to compute
+what it shows writes a partial (`PartialDefinitionInterface`), which joins the
+catalogue as `Partial:<name>`, or a class implementing
+`SectionDefinitionInterface`. Such a class is a component the moment it is a
+service of the container with autoconfiguration on, which is how a Thelia 3
+module registers its services: the interface carries the tag. The example
+below is complete:
 
 ```php
 <?php
@@ -94,16 +95,24 @@ declare(strict_types=1);
 
 namespace MyModule\Content\Section;
 
+use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Content\Prop;
 use TheliaCMS\Content\PropSchema;
-use TheliaCMS\Content\Section\AbstractTemplateSection;
+use TheliaCMS\Content\SectionDefinitionInterface;
+use Twig\Environment;
 
 /**
  * The opening hours of the shop, one line per day.
  */
-final readonly class OpeningHoursSection extends AbstractTemplateSection
+final readonly class OpeningHoursSection implements SectionDefinitionInterface
 {
     public const string NAME = 'MyModule:OpeningHours';
+
+    public function __construct(
+        private Environment $twig,
+        private TranslatorInterface $translator,
+    ) {
+    }
 
     public function name(): string
     {
@@ -123,7 +132,7 @@ final readonly class OpeningHoursSection extends AbstractTemplateSection
     public function schema(): PropSchema
     {
         return new PropSchema([
-            $this->headingProp($this->translator->trans('Heading', [], 'mymodule')),
+            Prop::text('title', $this->translator->trans('Heading', [], 'mymodule'), required: true, max: 120),
             Prop::items('days', $this->translator->trans('Days', [], 'mymodule'), [
                 Prop::text('day', $this->translator->trans('Day', [], 'mymodule'), required: true, max: 20),
                 Prop::text('hours', $this->translator->trans('Hours', [], 'mymodule'), required: true, max: 40, help: $this->translator->trans('As displayed, for instance "9:00 – 18:00".', [], 'mymodule')),
@@ -144,18 +153,17 @@ final readonly class OpeningHoursSection extends AbstractTemplateSection
         ];
     }
 
-    public function render(array $props, string $locale): string
+    public function normalizeProps(array $props): array
     {
-        return $this->templates->render(
-            'cms/sections/'.$this->slug(),
-            '@MyModuleModule/front/sections/'.$this->slug().'.html.twig',
-            $this->context($props, $locale),
-        );
+        return $this->schema()->normalize($props);
     }
 
-    protected function slug(): string
+    public function render(array $props, string $locale): string
     {
-        return 'opening-hours';
+        return $this->twig->render('@MyModuleModule/front/opening-hours.html.twig', [
+            'props' => $props,
+            'locale' => $locale,
+        ]);
     }
 }
 ```
@@ -163,9 +171,8 @@ final readonly class OpeningHoursSection extends AbstractTemplateSection
 What each method is for:
 
 - `name()` is the name a document refers to the component by, stable across
-  versions. Prefix it with the module, the way the module prefixes its own
-  with `Cms:`. The first definition claiming a name wins, so a name the module
-  already uses is ignored rather than replaced.
+  versions. Prefix it with the module. The first definition claiming a name
+  wins, so a name already in the catalogue is ignored rather than replaced.
 - `label()` is what a person reads in a list; `description()` is one or two
   sentences on what the component is for and when to use it, which is what the
   generator reads to pick it.
@@ -176,33 +183,22 @@ What each method is for:
   or an absolute http(s), mailto or tel address), `Prop::items` (a list of
   objects, each shaped by its own props), `Prop::reference` (the id of a page,
   a menu, a form, a product) and `Prop::json`. A prop name is lowercase
-  letters, digits and underscores. `headingProp()` is the `title` prop every
-  section with a heading shares.
+  letters, digits and underscores.
 - `sample()` shows the component at its best: it is what the toolkit renders
   and the example the generator is shown. It must pass the schema.
-- `normalizeProps()` comes from the abstract class: unknown props dropped,
-  missing ones given their default, wrong ones refused with every problem
-  listed (`InvalidDocumentException`). Override it only for a rule the schema
+- `normalizeProps()` drops unknown props, gives missing ones their default and
+  refuses wrong ones with every problem listed (`InvalidDocumentException`):
+  `PropSchema::normalize()` does it all. Add to it only a rule the schema
   cannot say.
-- `render()` receives the props already normalised. The abstract class renders
-  `cms/sections/<slug>.html.twig` from the active theme when the theme ships
-  one and `@TheliaCMSModule/front/sections/<slug>.html.twig` otherwise, so a
-  module overrides it, as above, to point the fallback at its own template:
-  the Twig namespace of a module is its code followed by `Module`. The
-  template receives `props`, `images` (each image prop resolved to
-  `{id, url, width, height}` or null, the items of a list under the index of
-  the item), `uid` (stable for the same props, for the ids an
-  `aria-labelledby` points at), `section` and `locale`.
-- `trans()` of the abstract class translates in the domain of TheliaCMS; a
-  module uses `$this->translator` with its own domain, as above.
+- `render()` receives the props already normalised. The Twig namespace of a
+  module is its code followed by `Module`.
 
-The template, at `templates/front/sections/opening-hours.html.twig` of the
-module:
+The template, at `templates/front/opening-hours.html.twig` of the module:
 
 ```twig
-<section class="cms-opening-hours" aria-labelledby="cms-opening-hours-title-{{ uid }}">
-    <h2 class="cms-opening-hours__title" id="cms-opening-hours-title-{{ uid }}">{{ props.title }}</h2>
-    <dl class="cms-opening-hours__list">
+<section class="opening-hours">
+    <h2>{{ props.title }}</h2>
+    <dl>
         {% for item in props.days %}
             <dt>{{ item.day }}</dt>
             <dd>{{ item.hours }}</dd>
@@ -211,7 +207,6 @@ module:
 </section>
 ```
 
-A theme takes it over by shipping `cms/sections/opening-hours.html.twig`.
 Several components decided at runtime (one per row of a table, say) go
 through `SectionProviderInterface` instead, the way the partials and the
 components of the theme do.
@@ -244,12 +239,12 @@ the normalised props, then assert that a wrong value is refused with the
 problem named.
 
 With a shop, an integration test extends `CmsIntegrationTestCase` and asks the
-container for the section, as `Tests/Integration/Content/Section/FiguresSectionTest.php`
-does: the name is the one of the catalogue, the sample normalises to the
-declared props, a list below its minimum and an item without its required
-prop are refused, and `render()` on the normalised sample, after
-`useAnInstalledFrontTheme()`, contains the class names and the
-`aria-labelledby` the template writes. For a component of the theme,
+`SectionCatalog` for the section, as
+`Tests/Integration/Content/Partial/PartialSectionTest.php` does for a partial:
+the name is the one of the catalogue, the sample normalises to the declared
+props, a required prop left out is refused, and `render()` on the normalised
+sample, after `useAnInstalledFrontTheme()`, writes the markup expected. For a
+component of the theme,
 `Tests/Integration/Content/Theme/ThemeComponentSectionTest.php` shows how the
 props are read off a template and how the rendering goes through the component
 renderer.

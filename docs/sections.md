@@ -9,8 +9,9 @@ produced when the page is saved and again when it is published.
 {
   "version": 1,
   "sections": [
-    {"id": "hero", "component": "Cms:Hero", "props": {"title": "Des studios photo à louer", "cta_label": "Réserver", "cta_url": "/contact"}},
-    {"id": "faq", "component": "Cms:Questions", "props": {"title": "Questions fréquentes", "items": [{"question": "…", "answer": "<p>…</p>"}]}}
+    {"id": "head", "component": "Layouts:Subheader:Base", "props": {"title": "Des studios photo à louer"}},
+    {"id": "intro", "component": "cms:richtext", "props": {"html": "<p>Trois plateaux, à l’heure ou à la journée.</p>"}},
+    {"id": "news", "component": "Partial:latest-contents", "props": {"count": 3, "heading": "Actualités"}}
   ]
 }
 ```
@@ -29,7 +30,6 @@ component refuses, is rejected on the way in, every problem listed at once
 | Family | Names | Where they come from |
 |---|---|---|
 | Free text | `cms:richtext` | The module. A piece of markup as is, filtered on the rendered page like everything that goes online. |
-| Sections of the module | `Cms:Hero`, `Cms:MediaText`, `Cms:Cta`, `Cms:Quote`, `Cms:Testimonials`, `Cms:Figures`, `Cms:Logos`, `Cms:Gallery`, `Cms:Questions`, `Cms:Section` | The module, one class each under `Content/Section/`, rendered by `templates/front/sections/<slug>.html.twig`. |
 | Live content | `Partial:<name>` | Every partial of the site (`PartialDefinitionInterface`), the ones of the module and the ones other modules register. The section renders the placeholder the partial renderer substitutes when the page is served. |
 | Components of the theme | As the theme names them, `Molecules:Reinsurance:Base` | The components the active theme opens to pages in `config/theliacms.yaml` (below). |
 
@@ -62,26 +62,33 @@ refused.
 
 ## Writing a section of your own
 
+The first way is a component of the theme, opened in one line of
+`config/theliacms.yaml` (below). A module that has to compute what it shows
+writes a partial (`PartialDefinitionInterface`), or a class implementing
+`SectionDefinitionInterface`:
+
 ```php
-final readonly class OpeningHoursSection extends AbstractTemplateSection
+final readonly class OpeningHoursSection implements SectionDefinitionInterface
 {
     public const string NAME = 'MyModule:OpeningHours';
 
+    public function __construct(private Environment $twig) {}
+
     public function name(): string { return self::NAME; }
-    public function label(): string { return $this->trans('Opening hours'); }
+    public function label(): string { return 'Opening hours'; }
 
     public function description(): string
     {
-        return $this->trans('The opening hours of the shop, one line per day. Use it on a contact or access page.');
+        return 'The opening hours of the shop, one line per day. Use it on a contact or access page.';
     }
 
     public function schema(): PropSchema
     {
         return new PropSchema([
-            Prop::text('title', $this->trans('Heading'), required: true, max: 120),
-            Prop::items('days', $this->trans('Days'), [
-                Prop::text('day', $this->trans('Day'), required: true, max: 20),
-                Prop::text('hours', $this->trans('Hours'), required: true, max: 40),
+            Prop::text('title', 'Heading', required: true, max: 120),
+            Prop::items('days', 'Days', [
+                Prop::text('day', 'Day', required: true, max: 20),
+                Prop::text('hours', 'Hours', required: true, max: 40),
             ], min: 1, max: 7),
         ]);
     }
@@ -91,29 +98,21 @@ final readonly class OpeningHoursSection extends AbstractTemplateSection
         return ['title' => 'Opening hours', 'days' => [['day' => 'Monday', 'hours' => '9:00 – 18:00']]];
     }
 
-    protected function slug(): string { return 'opening-hours'; }
+    public function normalizeProps(array $props): array
+    {
+        return $this->schema()->normalize($props);
+    }
+
+    public function render(array $props, string $locale): string
+    {
+        return $this->twig->render('@MyModule/opening-hours.html.twig', ['props' => $props, 'locale' => $locale]);
+    }
 }
 ```
-
-`AbstractTemplateSection` renders `cms/sections/<slug>.html.twig` from the
-active theme when it ships one, and `@YourModule/…` otherwise: override
-`render()` when the fallback lives elsewhere. The template receives `props`
-as the schema normalised them, `images` (each image prop resolved to
-`{id, url, width, height}` or null, the items of a list under the index of the
-item), `uid` (stable for these props, for the ids your `aria-labelledby`
-points at), `section` and `locale`.
 
 `description()` is read by a generator to pick the section: say what it is
 for and when to use it. `sample()` is what the toolkit renders and the example
 a generator is shown: realistic, complete, in the language of the back office.
-
-## Taking a section over in a theme
-
-Ship `cms/sections/<slug>.html.twig` in the theme: `cms/sections/hero.html.twig`
-replaces the hero of the module, with the same variables. Keep the `cms-*`
-class names the block stylesheet of the module knows, or restyle them in the
-theme: the stylesheet sits in a cascade layer, so a rule of the theme wins
-whatever the order the two are loaded in.
 
 ## Opening the components of the theme
 
@@ -144,6 +143,6 @@ from a document.
 ## From a template
 
 `cms_section(name, props)` renders a section anywhere in a theme, with its
-sample props when none are given: `{{ cms_section('Cms:Hero', {title: '…'}) }}`.
-An unknown section renders nothing. It is also how the stories of the toolkit
-of the Flexy theme (`/toolkit`, in debug) show every section of the module.
+sample props when none are given: `{{ cms_section('cms:richtext', {html: '…'}) }}`.
+An unknown section renders nothing. It is also how the page of the toolkit of
+the Flexy theme (`/toolkit/cms-all-sections`, in debug) shows every section.

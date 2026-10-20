@@ -40,7 +40,7 @@ final class DocumentTest extends TestCase
     public function testADocumentSurvivesTheRoundTripThroughJson(): void
     {
         $document = new Document([
-            new Section('hero', 'Cms:Hero', ['title' => 'Nos studios 📷', 'image' => 12, 'url' => '/image-library/12/full/960/0/default.webp']),
+            new Section('hero', FakeSection::NAME, ['title' => 'Nos studios 📷', 'image' => 12, 'url' => '/image-library/12/full/960/0/default.webp']),
             new Section('intro', RichTextSection::NAME, ['html' => '<p>Texte</p>']),
         ]);
 
@@ -88,9 +88,9 @@ final class DocumentTest extends TestCase
     {
         try {
             Document::fromArray(['version' => 1, 'sections' => [
-                ['component' => 'Cms:Hero', 'props' => []],
+                ['component' => FakeSection::NAME, 'props' => []],
                 ['id' => 'b', 'props' => []],
-                ['id' => 'c', 'component' => 'Cms:Hero', 'props' => ['a', 'b']],
+                ['id' => 'c', 'component' => FakeSection::NAME, 'props' => ['a', 'b']],
                 'not a section',
             ]]);
             self::fail('The document should have been refused.');
@@ -106,11 +106,11 @@ final class DocumentTest extends TestCase
     public function testASectionIsReplacedByIdAndTheOthersAreLeftAlone(): void
     {
         $document = new Document([
-            new Section('hero', 'Cms:Hero', ['title' => 'Avant']),
+            new Section('hero', FakeSection::NAME, ['title' => 'Avant']),
             new Section('intro', RichTextSection::NAME, ['html' => '<p>Texte</p>']),
         ]);
 
-        $changed = $document->withSection(new Section('hero', 'Cms:Hero', ['title' => 'Après']));
+        $changed = $document->withSection(new Section('hero', FakeSection::NAME, ['title' => 'Après']));
 
         self::assertSame('Après', $changed->section('hero')?->props['title']);
         self::assertSame('<p>Texte</p>', $changed->section('intro')?->props['html']);

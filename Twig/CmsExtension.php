@@ -69,7 +69,7 @@ final class CmsExtension extends AbstractExtension
 
     /**
      * A section of the catalogue rendered with the given props, or with its
-     * sample props when none are given: `cms_section('Cms:Hero', {title: '…'})`.
+     * sample props when none are given: `cms_section('cms:richtext', {html: '…'})`.
      * An unknown section renders nothing.
      *
      * @param array<string, mixed>|null $props

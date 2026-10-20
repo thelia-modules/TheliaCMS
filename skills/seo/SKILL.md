@@ -14,8 +14,7 @@ always: false
   them with `search_pages` and use their `url`. Two or three internal links on
   a page, in the text, with a link text that says where it leads.
 - A page is about one subject. Two subjects are two pages.
-- Questions and answers (`Cms:Questions`) are what engines show as rich
-  results: write the question as it is asked, and answer it in the first
-  sentence.
+- Questions and answers are what engines show as rich results: write the
+  question as it is asked, and answer it in the first sentence.
 - Nothing hidden, nothing stuffed: no list of keywords, no text written for a
   machine.
