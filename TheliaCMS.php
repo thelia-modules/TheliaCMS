@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS;
 
+use FlexyBundle\Toolkit\StoryProviderInterface;
 use OpenStudio\PageBuilderBundle\Contract\ImageLibraryPortInterface;
 use OpenStudio\PageBuilderBundle\Contract\ImageUploadPortInterface;
 use OpenStudio\PageBuilderBundle\Contract\PageBuilderConfigProviderInterface;
@@ -35,6 +36,7 @@ use Thelia\Model\ResourceQuery;
 use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
 use TheliaCMS\Builder\CmsBuilderConfig;
+use TheliaCMS\Content\Section\SectionStories;
 use TheliaCMS\Http\SharedCache\CmsSharedCacheContributor;
 use TheliaCMS\Http\SharedCache\CoreSharedCache;
 use TheliaCMS\Install\LegalPagesSeeder;
@@ -366,8 +368,19 @@ class TheliaCMS extends BaseModule
                 __DIR__.'/Builder/ThemeCanvas.php',
                 __DIR__.'/Content/Document.php',
                 __DIR__.'/Content/Section.php',
+                __DIR__.'/Content/Prop.php',
+                __DIR__.'/Content/PropSchema.php',
+                __DIR__.'/Content/PropType.php',
                 __DIR__.'/Content/InvalidDocumentException.php',
                 __DIR__.'/Content/UnknownSectionException.php',
+                // Built by their providers, one per partial or per component
+                // of the theme, never wired by the container.
+                __DIR__.'/Content/Partial/PartialSection.php',
+                __DIR__.'/Content/Theme/ThemeComponentSection.php',
+                __DIR__.'/Content/Theme/ThemeSections.php',
+                // Registered below, guarded: it implements an interface of the
+                // Flexy theme.
+                __DIR__.'/Content/Section/SectionStories.php',
                 __DIR__.'/Page/PageCard.php',
                 __DIR__.'/Page/PageImage.php',
                 __DIR__.'/Page/PageTagName.php',
@@ -428,6 +441,14 @@ class TheliaCMS extends BaseModule
                 ->autoconfigure(true);
 
             $servicesConfigurator->set(CoreSharedCache::class)
+                ->autowire(true)
+                ->autoconfigure(true);
+        }
+
+        // The toolkit of the Flexy theme lists the sections of the module when
+        // the theme is there; another theme has no toolkit to list them in.
+        if (interface_exists(StoryProviderInterface::class)) {
+            $servicesConfigurator->set(SectionStories::class)
                 ->autowire(true)
                 ->autoconfigure(true);
         }

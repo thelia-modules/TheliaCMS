@@ -46,9 +46,28 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 ### Added (2.0.0)
 
 - `TheliaCMS\Content`: `Document`, `Section`, `SectionDefinitionInterface`
-  (implementing it registers a component), `SectionCatalog`, `DocumentValidator`,
-  `DocumentRenderer`, and the one built-in component, `cms:richtext`, a piece
-  of free markup.
+  (implementing it registers a component), `SectionProviderInterface`,
+  `SectionCatalog`, `Prop` and `PropSchema` (typed props, checked on the way
+  in, described as a JSON schema), `DocumentValidator`, `DocumentRenderer`,
+  and the one built-in component, `cms:richtext`, a piece of free markup held
+  at the width of the sections by `.cms-richtext`. See `docs/sections.md`.
+- The ten page blocks become sections of the catalogue, `Cms:Hero` to
+  `Cms:Section`, each a class under `Content/Section/` with typed props and a
+  template under `templates/front/sections/` a theme takes over with
+  `cms/sections/<slug>.html.twig`. Same `cms-*` markup as the blocks they
+  replace, so `blocks.css` and the palette of the theme dress them unchanged.
+  Images are named by their library id and resolved when the section is
+  rendered.
+- Every partial of the site is a section, `Partial:<name>`, with the settings
+  of the partial as props and the placeholder the page serves through as
+  rendering.
+- A theme opens its Twig components to pages with `sections.components` in
+  `config/theliacms.yaml`; their props are read off the `{# @prop #}` comments
+  and the `{% props %}` tag of the template, and they render through the
+  component renderer of Symfony UX. Nothing is opened by default.
+- `cms_section(name, props)` renders a section from a template, with its
+  sample props when none are given. The sections of the module are listed in
+  the toolkit of the Flexy theme, under "CMS".
 
 ### Added (1.5.0)
 

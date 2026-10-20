@@ -1,0 +1,13 @@
+{#
+    The quote section, as the module renders it when the theme ships no
+    `cms/sections/quote.html.twig` of its own.
+
+    Receives `props` (text, author), `images`, `uid`, `section` and `locale`.
+    The class names are the ones `blocks.css` styles.
+#}
+<figure class="cms-quote">
+    <blockquote class="cms-quote__text"><p>{{ props.text }}</p></blockquote>
+    {% if props.author is not empty %}
+        <figcaption class="cms-quote__author">{{ props.author }}</figcaption>
+    {% endif %}
+</figure>

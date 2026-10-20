@@ -39,7 +39,7 @@ final class DocumentRendererTest extends TestCase
         ]);
 
         self::assertSame(
-            '<div class="cms-page-content"><h1 lang="fr_FR">Nos services</h1>'."\n".'<p>Texte</p></div>',
+            '<div class="cms-page-content"><h1 lang="fr_FR">Nos services</h1>'."\n".'<div class="cms-richtext"><p>Texte</p></div></div>',
             $this->renderer->render($document, 'fr_FR'),
         );
     }

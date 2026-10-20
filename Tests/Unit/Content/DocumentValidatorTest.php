@@ -66,7 +66,7 @@ final class DocumentValidatorTest extends TestCase
             self::assertStringContainsString('"Cms:Missing", which is not a component', $exception->problems[1]);
             self::assertStringContainsString('Section 2 ("intro"): The title must be a string.', $exception->problems[2]);
             self::assertStringContainsString('Section 3 ("intro") repeats the id of section 2', $exception->problems[3]);
-            self::assertStringContainsString('Section 3 ("intro"): A rich text section needs its "html" to be a string.', $exception->problems[4]);
+            self::assertStringContainsString('Section 3 ("intro"): "html" must be a string of markup.', $exception->problems[4]);
         }
     }
 

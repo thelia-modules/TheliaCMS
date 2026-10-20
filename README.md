@@ -259,6 +259,18 @@ escape a stylesheet understands, `\01f4f7`, which is what it needs to render and
 what the CSS panel shows. And the front-office search does not match a query made
 only of emoji, since the search index holds the written-out form.
 
+## Sections
+
+The content of a page is a document: an ordered list of sections, each a
+component of the catalogue with its props — the ten sections the module ships
+(hero, text and image, call to action, quote, testimonials, key figures, logos,
+gallery, questions and answers, section), a piece of free text, the live
+content of the site, and the components the theme opens to pages in its
+`config/theliacms.yaml`. A theme takes any section over by shipping
+`cms/sections/<slug>.html.twig`, and shows one anywhere with
+`cms_section('Cms:Hero', {...})`. How to write one, and how a document is
+shaped: [docs/sections.md](docs/sections.md).
+
 ## Blocks
 
 The editor panel holds three families.

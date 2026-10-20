@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Unit\Content;
 
 use TheliaCMS\Content\InvalidDocumentException;
+use TheliaCMS\Content\Prop;
+use TheliaCMS\Content\PropSchema;
 use TheliaCMS\Content\SectionDefinitionInterface;
 
 /**
@@ -28,6 +30,29 @@ final readonly class FakeSection implements SectionDefinitionInterface
     public function name(): string
     {
         return self::NAME;
+    }
+
+    public function label(): string
+    {
+        return 'Fake';
+    }
+
+    public function description(): string
+    {
+        return 'A heading at a level, for tests.';
+    }
+
+    public function schema(): PropSchema
+    {
+        return new PropSchema([
+            Prop::text('title', 'Title', required: true),
+            Prop::integer('level', 'Level', 2, 1, 6),
+        ]);
+    }
+
+    public function sample(): array
+    {
+        return ['title' => 'A heading', 'level' => 2];
     }
 
     public function normalizeProps(array $props): array

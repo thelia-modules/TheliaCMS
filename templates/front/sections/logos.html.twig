@@ -1,0 +1,25 @@
+{#
+    The logos section, as the module renders it when the theme ships no
+    `cms/sections/logos.html.twig` of its own.
+
+    Receives `props` (title, items[image, alt, url]), `images` (the image of
+    each item resolved under `images.items[index].image`, null when the id names
+    no image), `uid`, `section` and `locale`.
+#}
+<section class="cms-logos" aria-labelledby="cms-logos-title-{{ uid }}">
+    <h2 class="cms-logos__title" id="cms-logos-title-{{ uid }}">{{ props.title }}</h2>
+    <ul class="cms-logos__list">
+        {% for item in props.items %}
+            {% set image = images.items[loop.index0].image|default(null) %}
+            <li class="cms-logos__item">
+                {% if item.url is not empty %}<a href="{{ item.url }}">{% endif %}
+                {% if image %}
+                    <img src="{{ image.url }}" alt="{{ item.alt }}"{% if image.width %} width="{{ image.width }}"{% endif %}{% if image.height %} height="{{ image.height }}"{% endif %}>
+                {% else %}
+                    <img alt="{{ item.alt }}">
+                {% endif %}
+                {% if item.url is not empty %}</a>{% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+</section>

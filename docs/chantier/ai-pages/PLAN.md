@@ -305,16 +305,45 @@ verts sur le module, `JOURNAL.md` à jour, rapport de fin de phase.
   à la montée (conséquence de D5, la base de dev l'a montré : 0 page
   publiable après migration).
 
-### Phase 2 — Catalogue et composants
+### Phase 2 — Catalogue et composants (faite le 2026-10-20)
 
-- `components/Cms/*` (dix sections) + stories + `StoryProviderInterface`.
-- `Toolkit/ComponentCatalog`, lecture de `config/theliacms.yaml` du thème,
-  schéma JSON, fiche prompt, écran de réglages.
-- Partials exposés comme composants dynamiques.
-- Tests unitaires : parsing des `{% props %}`, schéma généré, rendu de chaque
-  section, allowlist et héritage de thème.
-- Preuve visuelle : `/toolkit` liste les sections ; une page de test composée
-  des dix sections rendue au navigateur à 1440 px, comparée aux blocs actuels.
+- [x] Props typées : `Content/Prop`, `PropType` (text, html, integer, boolean,
+      choice, image, url, items, reference, json), `PropSchema` (normalisation
+      stricte, `toJsonSchema()` prêt pour la phase 3).
+- [x] `SectionDefinitionInterface` étendue (`label`, `description`, `schema`,
+      `sample`), `SectionProviderInterface`, `SectionCatalog` à providers.
+- [x] Dix sections `Cms:*` dans `Content/Section/` sur `AbstractTemplateSection`
+      (templates `templates/front/sections/<slug>.html.twig` surchargeables par
+      `cms/sections/<slug>.html.twig`, images résolues par id via
+      `SectionImages`, `uid` stable pour les `aria-labelledby`). Même jeu de
+      classes `cms-*` que la baseline (diff vide hors conteneur). Huit écrites
+      par deux agents, relues sur pièces.
+- [x] `cms:richtext` enveloppé dans `.cms-richtext` (largeur des sections,
+      `blocks.css`).
+- [x] Partials : `Content/Partial/PartialSection` + provider, nom
+      `Partial:<name>`, rendu = placeholder substitué à la vue.
+- [x] Composants du thème : `Content/Theme/ThemeSections` (allowlist
+      `sections.components` de `config/theliacms.yaml`, héritage de chaîne),
+      `ComponentPropsReader` (`{# @prop #}` + `{% props %}`, camelCase ↔
+      snake_case), `ThemeComponentSection` (rendu par `ComponentRendererInterface`),
+      provider. Rien d'ouvert par défaut ; Flexy ne déclare rien.
+- [x] `cms_section(name, props)` dans `CmsExtension` ; stories dans
+      `templates/front/sections/toolkit/`, `SectionStories` enregistré si Flexy
+      est là : `/toolkit` liste les dix sections sous « CMS » (vérifié HTTP).
+- [x] Tests : unit 580 OK ; intégration 331 OK (1 skipped) dont 12 fichiers
+      `Tests/Integration/Content/**` (sections, thème, partials) ; deux tests
+      vus rouges par sabotage des templates (agents).
+- [x] Preuve : page « Preuve phase 2 : onze sections » importée (`var/proof-phase2.json`,
+      page 5 de la base de dev) et publiée par `thelia_cms:publish`, rendue sur
+      Flexy avec `blocks.css` + `cms.css` : `baselines/page-preuve-phase2.{html,png}`
+      (1440 px). Les images restent des emplacements vides : la médiathèque de
+      dev est vide.
+- [x] Docs : `docs/sections.md`, README (section « Sections »), CHANGELOG.
+- Écarts avec le plan initial : sections rendues par templates du module
+  (mécanisme des partials) et non par des composants UX anonymes du module,
+  qui ne seraient pas trouvables sous `@Flexy` ni surchargeables par fichier ;
+  écran de réglages inchangé (phase 4) ; `EditorBaseBlocks`/`BlockCatalog`
+  toujours là pour le panneau GrapesJS (phase 5).
 
 ### Phase 3 — Générateur
 

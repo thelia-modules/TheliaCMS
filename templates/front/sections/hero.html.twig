@@ -1,0 +1,20 @@
+{#
+    The hero section, as the module renders it when the theme ships no
+    `cms/sections/hero.html.twig` of its own.
+
+    Receives `props` (title, heading_level, text, cta_label, cta_url), `images`,
+    `uid` (stable for these props, for the ids the aria attributes point at),
+    `section` and `locale`. The class names are the ones `blocks.css` styles.
+#}
+{% set level = props.heading_level|default('1') %}
+<section class="cms-hero" aria-labelledby="cms-hero-title-{{ uid }}">
+    <div class="cms-hero__body">
+        <h{{ level }} class="cms-hero__title" id="cms-hero-title-{{ uid }}">{{ props.title }}</h{{ level }}>
+        {% if props.text is not empty %}
+            <p class="cms-hero__text">{{ props.text }}</p>
+        {% endif %}
+        {% if props.cta_label is not empty and props.cta_url is not empty %}
+            <p class="cms-hero__actions"><a class="cms-button" href="{{ props.cta_url }}">{{ props.cta_label }}</a></p>
+        {% endif %}
+    </div>
+</section>

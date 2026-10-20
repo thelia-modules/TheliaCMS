@@ -20,6 +20,7 @@ use Thelia\Model\Lang;
 use TheliaCMS\Block\Item\ItemType;
 use TheliaCMS\Block\Item\PublishedItemBlock;
 use TheliaCMS\Block\Item\PublishedItemBlockRepository;
+use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
 use TheliaCMS\Page\PageCard;
@@ -46,12 +47,17 @@ final class CmsExtension extends AbstractExtension
         private readonly PublishedPageRepository $pages,
         private readonly LangService $langService,
         private readonly PublishedItemBlockRepository $itemBlocks,
+        private readonly SectionCatalog $sections,
     ) {
     }
 
     public function getFunctions(): array
     {
         return [
+            // The one function that answers markup: a section is markup by
+            // definition, and the theme calls it to show a section outside a
+            // page — in the toolkit, on a template of its own.
+            new TwigFunction('cms_section', $this->section(...), ['is_safe' => ['html']]),
             new TwigFunction('cms_menu', $this->menus->menu(...)),
             new TwigFunction('cms_page_alternates', $this->alternates->all(...)),
             new TwigFunction('cms_site_icon', $this->siteIcon(...)),
@@ -62,6 +68,27 @@ final class CmsExtension extends AbstractExtension
             new TwigFunction('cms_pages_tagged', $this->pagesTagged(...)),
             new TwigFunction('cms_item_block', $this->itemBlock(...)),
         ];
+    }
+
+    /**
+     * A section of the catalogue rendered with the given props, or with its
+     * sample props when none are given: `cms_section('Cms:Hero', {title: '…'})`.
+     * An unknown section renders nothing.
+     *
+     * @param array<string, mixed>|null $props
+     */
+    public function section(string $name, ?array $props = null, ?string $locale = null): string
+    {
+        $definition = $this->sections->find($name);
+
+        if (null === $definition) {
+            return '';
+        }
+
+        return $definition->render(
+            $definition->normalizeProps($props ?? $definition->sample()),
+            $locale ?? $this->langService->getLocale(),
+        );
     }
 
     /**

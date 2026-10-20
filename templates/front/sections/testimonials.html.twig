@@ -1,0 +1,21 @@
+{#
+    The testimonials section, as the module renders it when the theme ships no
+    `cms/sections/testimonials.html.twig` of its own.
+
+    Receives `props` (title, items[quote, author]), `uid`, `section` and `locale`.
+#}
+<section class="cms-testimonials" aria-labelledby="cms-testimonials-title-{{ uid }}">
+    <h2 class="cms-testimonials__title" id="cms-testimonials-title-{{ uid }}">{{ props.title }}</h2>
+    <ul class="cms-testimonials__list">
+        {% for item in props.items %}
+            <li class="cms-testimonials__item">
+                <figure>
+                    <blockquote><p>{{ item.quote }}</p></blockquote>
+                    {% if item.author is not empty %}
+                        <figcaption>{{ item.author }}</figcaption>
+                    {% endif %}
+                </figure>
+            </li>
+        {% endfor %}
+    </ul>
+</section>

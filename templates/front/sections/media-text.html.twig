@@ -1,0 +1,26 @@
+{#
+    The text and image section, as the module renders it when the theme ships
+    no `cms/sections/media-text.html.twig` of its own.
+
+    Receives `props` (title, text, image, image_alt, link_label, link_url),
+    `images` (the image resolved under `images.image`, null when none),
+    `uid`, `section` and `locale`. The class names are the ones `blocks.css`
+    styles.
+#}
+{% set image = images.image|default(null) %}
+<section class="cms-media-text" aria-labelledby="cms-media-text-title-{{ uid }}">
+    {% if image %}
+        <figure class="cms-media-text__media">
+            <img src="{{ image.url }}" alt="{{ props.image_alt }}"{% if image.width %} width="{{ image.width }}"{% endif %}{% if image.height %} height="{{ image.height }}"{% endif %}>
+        </figure>
+    {% endif %}
+    <div class="cms-media-text__body">
+        <h2 class="cms-media-text__title" id="cms-media-text-title-{{ uid }}">{{ props.title }}</h2>
+        {% if props.text is not empty %}
+            {{ props.text|raw }}
+        {% endif %}
+        {% if props.link_label is not empty and props.link_url is not empty %}
+            <p><a class="cms-link" href="{{ props.link_url }}">{{ props.link_label }}</a></p>
+        {% endif %}
+    </div>
+</section>

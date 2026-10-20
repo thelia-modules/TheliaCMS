@@ -27,9 +27,9 @@ use Psr\Log\LoggerInterface;
  */
 final readonly class PartialRenderer
 {
-    private const string ATTRIBUTE = 'data-cms-partial';
+    public const string ATTRIBUTE = 'data-cms-partial';
 
-    private const string PROPS_ATTRIBUTE = 'data-props';
+    public const string PROPS_ATTRIBUTE = 'data-props';
 
     public function __construct(
         private PartialRegistry $registry,

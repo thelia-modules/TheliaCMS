@@ -89,6 +89,40 @@ migration elle-même pour purger ce qu'il a inséré.
 **Généralisable : oui.** Un test hors transaction doit nettoyer ce qu'il
 insère dans `tearDown`, pas s'en remettre au code testé.
 
+### D-008 [phase 2] Un composant anonyme d'un module n'est pas trouvable par Flexy
+
+**Symptôme.** Le plan prévoyait `components/Cms/*` dans le module, surchargeables
+par le thème.
+**Cause.** `twig_component.anonymous_template_directory` vaut `@Flexy`, la chaîne
+des `components/` des thèmes (`FlexyBundle.php:177`) : un module n'y dépose rien
+sans toucher la config de Flexy, et un composant à classe enregistré gagne
+toujours sur un fichier du thème.
+**Résolution.** Sections rendues par `ThemeTemplateRenderer` (template du thème
+`cms/sections/<slug>` sinon fallback du module), comme les partials ; listées
+au toolkit par `StoryProviderInterface`.
+**Généralisable : oui.** Pour un module Thelia 3, un « composant » surchargeable
+par le thème est un template résolu par la chaîne du thème, pas un composant UX.
+
+### D-009 [phase 2] Le cache Twig survit à une restauration de template dans la même seconde
+
+**Symptôme.** Après sabotage puis restauration d'un template de section, les
+tests d'intégration restaient rouges (agents A et B).
+**Cause.** Le compilé Twig de `var/cache/test` est invalidé sur le mtime du
+fichier ; une restauration dans la même seconde garde le compilé saboté.
+**Résolution.** `touch` du template puis `rm -r var/cache/test`.
+**Généralisable : oui.** Tout sabotage de template pour voir un test rouge se
+termine par `touch` + suppression de `var/cache/test`.
+
+### D-010 [phase 2] Le texte libre s'affichait contre le bord de la page
+
+**Symptôme.** Sur la page de preuve, la section `cms:richtext` (« Accès »)
+n'avait pas la largeur des autres sections.
+**Cause.** `blocks.css` centre les blocs par leur classe `cms-*` ; un fragment
+sans classe n'en a aucune.
+**Résolution.** `RichTextSection::render` enveloppe le markup dans
+`<div class="cms-richtext">`, ajouté à la liste de largeur de `blocks.css`.
+**Généralisable : non.**
+
 ## Points ouverts
 
 - `cms_page_revision` n'a aucun lecteur en production : garder (avec le

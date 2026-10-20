@@ -1,0 +1,81 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Content\Theme;
+
+use Psr\Log\LoggerInterface;
+use Symfony\UX\TwigComponent\ComponentRendererInterface;
+use Thelia\Core\Template\TemplateDefinition;
+use Thelia\Core\Template\TemplateHelperInterface;
+use TheliaCMS\Content\SectionProviderInterface;
+
+/**
+ * The components the active theme opens to the pages of the CMS, read from
+ * its `config/theliacms.yaml` at every call: the theme is a setting stored
+ * in the database, and a declaration edited while working on a theme shows
+ * up at the next request.
+ *
+ * A declared component the theme chain does not ship is logged and skipped
+ * rather than fatal: a page must keep rendering while a theme is reworked.
+ */
+final readonly class ThemeComponentSections implements SectionProviderInterface
+{
+    public function __construct(
+        private TemplateHelperInterface $templates,
+        private ComponentPropsReader $reader,
+        private ComponentRendererInterface $renderer,
+        private LoggerInterface $logger,
+    ) {
+    }
+
+    public function sections(): iterable
+    {
+        foreach ($this->declaration()->components as $component) {
+            try {
+                $read = $this->reader->read($component);
+            } catch (\InvalidArgumentException $exception) {
+                $this->logger->warning('TheliaCMS: a component the theme opens to pages cannot be read: {message}', ['message' => $exception->getMessage()]);
+
+                continue;
+            }
+
+            $twigNames = [];
+
+            foreach ($read['schema']->props as $prop) {
+                $twigNames[$prop->name] = self::twigName($prop->name);
+            }
+
+            yield new ThemeComponentSection($component, $read['description'], $read['schema'], $twigNames, $this->renderer);
+        }
+    }
+
+    public function declaration(): ThemeSections
+    {
+        $theme = $this->templates->getActiveFrontTemplate();
+
+        return ThemeSections::declaredIn(array_map(
+            static fn (TemplateDefinition $template): string => $template->getAbsolutePath(),
+            [$theme, ...array_values($theme->getParentList() ?? [])],
+        ));
+    }
+
+    /**
+     * `snake_case` back to the `camelCase` the component declares. A prop the
+     * component spells in lowercase comes back unchanged.
+     */
+    private static function twigName(string $name): string
+    {
+        return lcfirst(str_replace('_', '', ucwords($name, '_')));
+    }
+}

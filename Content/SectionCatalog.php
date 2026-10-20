@@ -19,23 +19,29 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 /**
  * Every component a document may use, by name.
  *
- * The first definition claiming a name wins: a module that ships a component
- * under a name this module already uses does not replace it, which is the
- * same rule the partial registry applies.
+ * The definitions registered one by one come first, then what the providers
+ * bring. The first definition claiming a name wins: a module that ships a
+ * component under a name this module already uses does not replace it, which
+ * is the same rule the partial registry applies.
  */
 final class SectionCatalog
 {
     public const string TAG = 'thelia_cms.section';
+
+    public const string PROVIDER_TAG = 'thelia_cms.section_provider';
 
     /** @var array<string, SectionDefinitionInterface>|null */
     private ?array $byName = null;
 
     /**
      * @param iterable<SectionDefinitionInterface> $definitions
+     * @param iterable<SectionProviderInterface>   $providers
      */
     public function __construct(
         #[AutowireIterator(self::TAG)]
         private readonly iterable $definitions,
+        #[AutowireIterator(self::PROVIDER_TAG)]
+        private readonly iterable $providers = [],
     ) {
     }
 
@@ -55,7 +61,7 @@ final class SectionCatalog
     /**
      * @return array<string, SectionDefinitionInterface>
      */
-    private function all(): array
+    public function all(): array
     {
         if (null !== $this->byName) {
             return $this->byName;
@@ -65,6 +71,12 @@ final class SectionCatalog
 
         foreach ($this->definitions as $definition) {
             $byName[$definition->name()] ??= $definition;
+        }
+
+        foreach ($this->providers as $provider) {
+            foreach ($provider->sections() as $definition) {
+                $byName[$definition->name()] ??= $definition;
+            }
         }
 
         return $this->byName = $byName;

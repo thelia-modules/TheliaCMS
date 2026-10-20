@@ -14,6 +14,9 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Content;
 
+use Symfony\Contracts\Translation\TranslatorInterface;
+use TheliaCMS\TheliaCMS;
+
 /**
  * A piece of free markup, as is.
  *
@@ -27,24 +30,55 @@ final readonly class RichTextSection implements SectionDefinitionInterface
 {
     public const string NAME = 'cms:richtext';
 
+    public function __construct(
+        private ?TranslatorInterface $translator = null,
+    ) {
+    }
+
     public function name(): string
     {
         return self::NAME;
     }
 
+    public function label(): string
+    {
+        return $this->trans('Free text');
+    }
+
+    public function description(): string
+    {
+        return $this->trans('Paragraphs, headings and lists written as markup, for text that fits no other section: a legal page, a long article.');
+    }
+
+    public function schema(): PropSchema
+    {
+        return new PropSchema([
+            Prop::html('html', $this->trans('Markup'), help: $this->trans('Headings from h2, paragraphs, lists, links and emphasis. No style attribute, no script.')),
+        ]);
+    }
+
+    public function sample(): array
+    {
+        return ['html' => '<h2>'.$this->trans('A heading').'</h2><p>'.$this->trans('A paragraph of text, with <a href="/">a link</a> and <strong>emphasis</strong>.').'</p>'];
+    }
+
     public function normalizeProps(array $props): array
     {
-        $html = $props['html'] ?? '';
-
-        if (!\is_string($html)) {
-            throw InvalidDocumentException::because(['A rich text section needs its "html" to be a string.']);
-        }
-
-        return ['html' => $html];
+        return $this->schema()->normalize($props);
     }
 
     public function render(array $props, string $locale): string
     {
-        return (string) ($props['html'] ?? '');
+        $html = (string) ($props['html'] ?? '');
+
+        // Held at the width of the other sections by the stylesheet of the
+        // module; without the wrapper the text sits against the edge of the
+        // page while every section around it is centred.
+        return '' === trim($html) ? '' : '<div class="cms-richtext">'.$html.'</div>';
+    }
+
+    private function trans(string $message): string
+    {
+        return $this->translator?->trans($message, [], TheliaCMS::DOMAIN_NAME) ?? $message;
     }
 }

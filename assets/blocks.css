@@ -115,7 +115,8 @@
     margin-top: 1rem;
   }
 
-  /* Blocks span the page, their content is held at a readable width. */
+  /* Blocks span the page, their content is held at a readable width. Free
+     text written as a section of its own obeys the same width. */
   .cms-hero,
   .cms-media-text,
   .cms-cta,
@@ -125,7 +126,8 @@
   .cms-logos,
   .cms-gallery,
   .cms-questions,
-  .cms-section {
+  .cms-section,
+  .cms-richtext {
     --cms-block-inline: min(75rem, 100% - 2rem);
 
     margin-inline: auto;
