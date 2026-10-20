@@ -31,7 +31,6 @@ use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Media\Admin\CmsMediaWriter;
 use TheliaCMS\Model\CmsPage;
-use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Notice\NativeContentNotice;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Page\PageTagRepository;
@@ -104,6 +103,12 @@ final readonly class CmsPageAdminController
 
         try {
             $this->writer->publish($this->livePageOrFail($id), $lang->getLocale());
+        } catch (HeadingStructureException $exception) {
+            foreach ($exception->problems as $problem) {
+                $this->flash($request, 'danger', $problem);
+            }
+
+            $this->flash($request, 'danger', $this->translate('The page was not published: fix the heading structure first.'));
         } catch (EmptyPageContentException) {
             $this->flash($request, 'danger', $this->translate('This page has no content yet: add at least one block in the editor before publishing it.'));
         } catch (PlaceholderPageContentException) {
@@ -250,11 +255,6 @@ final readonly class CmsPageAdminController
      */
     private function buildForm(CmsPage $page, string $locale, array $imageChoices): FormInterface
     {
-        $content = $page->isNew() ? null : CmsPageContentQuery::create()
-            ->filterByPageId($page->getId())
-            ->filterByLocale($locale)
-            ->findOne();
-
         if (!$page->isNew()) {
             $page->setLocale($locale);
         }
@@ -275,9 +275,6 @@ final readonly class CmsPageAdminController
             'visible' => $page->isNew() ? 1 : $page->getVisible(),
             'publishAt' => $page->getPublishAt(),
             'unpublishAt' => $page->getUnpublishAt(),
-            'projectData' => $content?->getDraftProjectData(),
-            'html' => $content?->getDraftHtml(),
-            'css' => $content?->getDraftCss(),
             'metaTitle' => $page->isNew() ? null : $page->getMetaTitle(),
             'metaDescription' => $page->isNew() ? null : $page->getMetaDescription(),
             'ogTitle' => $page->isNew() ? null : $page->getOgTitle(),

@@ -15,26 +15,14 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Unit\Page;
 
 use PHPUnit\Framework\TestCase;
-use TheliaCMS\Page\PageLayout;
 use TheliaCMS\Page\PublishedPage;
 
 /**
- * `layout` stays readable for the hooks written against 1.x, derived from the
- * type of the page.
+ * The object the theme hooks receive: resolving its dynamic blocks changes
+ * its HTML and nothing else.
  */
 final class PublishedPageTest extends TestCase
 {
-    public function testAFormerLayoutReadsAsThatLayout(): void
-    {
-        self::assertSame(PageLayout::FullWidth, $this->page('full-width')->layout);
-        self::assertSame(PageLayout::Landing, $this->page('landing')->layout);
-    }
-
-    public function testAnyOtherTypeReadsAsTheDefaultLayout(): void
-    {
-        self::assertSame(PageLayout::Default, $this->page('recipe')->layout);
-    }
-
     public function testResolvingTheBlocksKeepsTheType(): void
     {
         $page = $this->page('recipe')->withHtml('<p>resolved</p>');
@@ -45,7 +33,7 @@ final class PublishedPageTest extends TestCase
 
     public function testResolvingTheBlocksKeepsTheTag(): void
     {
-        $page = new PublishedPage(id: 1, locale: 'fr_FR', title: 'Gratin', pageType: 'recipe', html: '', css: '', tag: 'Recette');
+        $page = new PublishedPage(id: 1, locale: 'fr_FR', title: 'Gratin', pageType: 'recipe', html: '', tag: 'Recette');
 
         self::assertSame('Recette', $page->withHtml('<p>resolved</p>')->tag);
         self::assertNull($this->page('recipe')->tag, 'A page without a tag has none.');
@@ -53,6 +41,6 @@ final class PublishedPageTest extends TestCase
 
     private function page(string $pageType): PublishedPage
     {
-        return new PublishedPage(id: 1, locale: 'fr_FR', title: 'Gratin', pageType: $pageType, html: '', css: '');
+        return new PublishedPage(id: 1, locale: 'fr_FR', title: 'Gratin', pageType: $pageType, html: '');
     }
 }

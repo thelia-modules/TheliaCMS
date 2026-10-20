@@ -17,8 +17,8 @@ namespace TheliaCMS\Tests\Integration\Page;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPage;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
@@ -280,11 +280,7 @@ final class PageAddressTest extends CmsIntegrationTestCase
 
         // Content in the second language, and no address in it: what an import,
         // or a translation written in the builder alone, leaves behind.
-        $this->writer()->saveContent($leaf, $second, new BuilderContent(
-            projectData: '{"pages":[]}',
-            html: '<h1>Assistance</h1>',
-            css: '',
-        ));
+        $this->writer()->saveContent($leaf, $second, Document::richText('<h1>Assistance</h1>'));
 
         self::assertNull($leaf->getRewrittenUrl($second), 'Saving content in a language does not address the page in it.');
 

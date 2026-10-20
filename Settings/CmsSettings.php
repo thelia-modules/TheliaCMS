@@ -45,6 +45,7 @@ final readonly class CmsSettings
     public const string TRASH_RETENTION_DAYS = 'trash_retention_days';
     public const string HTTP_CACHE_TTL = PageCachePolicy::TTL_SETTING;
     public const string DISABLED_BLOCKS = 'disabled_blocks';
+    public const string HEADING_CHECK_MODE = 'heading_check_mode';
 
     /**
      * How long a client is asked to wait before coming back. Long enough for a
@@ -105,6 +106,15 @@ final readonly class CmsSettings
     public function disabledBlocks(): DisabledBlocks
     {
         return DisabledBlocks::fromStorage(TheliaCMS::getConfigValue(self::DISABLED_BLOCKS));
+    }
+
+    /**
+     * Whether a page whose heading structure is broken is kept offline, rather
+     * than published with a warning to its author.
+     */
+    public function headingCheckBlocks(): bool
+    {
+        return 'block' === (string) TheliaCMS::getConfigValue(self::HEADING_CHECK_MODE, 'warn');
     }
 
     public function isMaintenanceActive(): bool

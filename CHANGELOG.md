@@ -7,6 +7,49 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Changed (2.0.0)
+
+- **The content of a 1.x site is not carried over.** The content of a page or
+  of a block is now a document — an ordered list of sections, each a component
+  of the catalogue with its props — rendered to HTML on save and on publish.
+  The markup the former editor stored has no document to be read back from, so
+  the update to 2.0.0 puts every page and block back to draft, without content,
+  and removes their revisions, search entries and saved page templates. Pages
+  keep their tree, addresses, SEO, tags and types. **Export the site before
+  updating** (`php Thelia thelia_cms:export`): the file keeps the HTML, and a
+  2.0.0 module imports everything in it but the contents.
+- `cms_page_content` and `cms_block_content` carry `draft_document` and
+  `published_document` and lose `draft_project_data`, `draft_css` and
+  `published_css`; `cms_page_revision` carries `document` and loses
+  `project_data` and `css`. A page has no stylesheet of its own any more: its
+  look comes from the components it is made of and from the stylesheets of the
+  site.
+- The export format is version 2: contents are `draft_document`, `draft_html`,
+  `published_document`, `published_html`. A version 1 file still imports its
+  pages, blocks, menus, forms, settings and media, with a warning that the
+  contents were left out.
+- `TheliaCMS\Page\PublishedPage` loses `css` and the `layout` deprecated in
+  1.2.0; `TheliaCMS\Block\Item\PublishedItemBlock` and the object
+  `cms_item_block()` answers lose `css`. A theme that printed
+  `cms_page.css` or `block.css` removes the line.
+- The heading check (`heading_check_mode`) runs wherever a page goes online —
+  the editor, the settings screen, `thelia_cms:publish` — and no longer in the
+  editor alone. In `block` mode the writer refuses the page with
+  `HeadingStructureException`; in `warn` mode the editor still shows the
+  problems after publishing.
+- `CmsPageWriter::saveContent()` and `CmsBlockWriter::saveContent()` take a
+  `TheliaCMS\Content\Document`; `BuilderContent` is gone. A document whose
+  sections name no component of the catalogue, or carry props a component
+  refuses, is rejected with `InvalidDocumentException` listing every problem.
+- Unpublishing a page drops its published snapshot along with the date.
+
+### Added (2.0.0)
+
+- `TheliaCMS\Content`: `Document`, `Section`, `SectionDefinitionInterface`
+  (implementing it registers a component), `SectionCatalog`, `DocumentValidator`,
+  `DocumentRenderer`, and the one built-in component, `cms:richtext`, a piece
+  of free markup.
+
 ### Added (1.5.0)
 
 - On a Thelia core that brings the shared cache of the public pages

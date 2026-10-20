@@ -22,13 +22,6 @@ namespace TheliaCMS\Page;
 final readonly class PublishedPage
 {
     /**
-     * @deprecated since 1.2.0, removed in 2.0.0: read $pageType. Kept for the
-     *             hooks written against 1.x, derived from the type — a type
-     *             that is not one of the former layouts reads as Default.
-     */
-    public PageLayout $layout;
-
-    /**
      * @param string      $pageType the code of the type of the page, always a valid one
      * @param string|null $tag      the name of the tag of the page, when it has one
      */
@@ -38,7 +31,6 @@ final readonly class PublishedPage
         public string $title,
         public string $pageType,
         public string $html,
-        public string $css,
         public ?string $chapo = null,
         public ?string $description = null,
         public ?PageImage $image = null,
@@ -49,7 +41,6 @@ final readonly class PublishedPage
         public ?\DateTimeInterface $publishedAt = null,
         public ?string $tag = null,
     ) {
-        $this->layout = PageLayout::fromStorage($pageType);
     }
 
     /**
@@ -64,7 +55,6 @@ final readonly class PublishedPage
             title: $this->title,
             pageType: $this->pageType,
             html: $html,
-            css: $this->css,
             chapo: $this->chapo,
             description: $this->description,
             image: $this->image,

@@ -190,6 +190,53 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
      * DELETE rather than TRUNCATE: the transaction of the test case has to be
      * able to roll this back, and TRUNCATE commits on MySQL.
      */
+    /**
+     * A file written by 1.x holds the markup of the former editor: its pages
+     * come in without content, and the report says so once.
+     */
+    public function testAFileWrittenByTheFormerEditorImportsEverythingButTheContents(): void
+    {
+        $locale = $this->locale();
+        $document = SiteDocument::fromArray([
+            'format' => 'thelia-cms',
+            'version' => 1,
+            'module_version' => '1.5.0',
+            'locales' => [$locale],
+            'pages' => [[
+                'uid' => 'page-1',
+                'parent' => null,
+                'position' => 0,
+                'visible' => true,
+                'page_type' => 'default',
+                'translations' => [$locale => ['title' => 'Page venue de 1.5.0', 'slug' => 'page-venue-de-1-5-0']],
+                'contents' => [$locale => [
+                    'project_data' => '{"pages":[]}',
+                    'draft_html' => '<div class="cms-page-content"><p>Ancien</p></div>',
+                    'draft_css' => '',
+                    'published_html' => '<div class="cms-page-content"><p>Ancien</p></div>',
+                    'published_css' => '',
+                    'published_at' => '2026-01-01T00:00:00+00:00',
+                ]],
+            ]],
+        ]);
+
+        $report = $this->getService(SiteImporter::class)->import($document, new ImportOptions());
+
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('earlier version of the module', $report->warnings()[0]);
+
+        $rows = $this->query(
+            "SELECT i.title, c.published_at, c.draft_document
+             FROM cms_page_i18n i
+             LEFT JOIN cms_page_content c ON c.page_id = i.id AND c.locale = i.locale
+             WHERE i.title = 'Page venue de 1.5.0'",
+        );
+
+        self::assertCount(1, $rows, 'The page itself is imported.');
+        self::assertNull($rows[0]['published_at'], 'Markup without a document cannot go online.');
+        self::assertNull($rows[0]['draft_document']);
+    }
+
     private function emptyTheSite(): void
     {
         $connection = $this->getPropelConnection();

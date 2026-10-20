@@ -20,8 +20,8 @@ use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\ConfigQuery;
 use Thelia\Test\IntegrationTestCase;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPage;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\PageDraft;
 
@@ -183,11 +183,7 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
 
         $writer = $this->writer();
         $writer->saveDraft($page, $locale, new PageDraft(title: $title));
-        $writer->saveContent($page, $locale, new BuilderContent(
-            projectData: '{"pages":[]}',
-            html: $html ?? \sprintf('<h1>%s</h1>', htmlspecialchars($title)),
-            css: '',
-        ));
+        $writer->saveContent($page, $locale, Document::richText($html ?? \sprintf('<h1>%s</h1>', htmlspecialchars($title))));
 
         if ($published) {
             $writer->publish($page, $locale);

@@ -16,10 +16,10 @@ namespace TheliaCMS\Tests\Integration\Block;
 
 use TheliaCMS\Block\Admin\CmsBlockWriter;
 use TheliaCMS\Block\Admin\EmptyBlockContentException;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsBlockContent;
 use TheliaCMS\Model\CmsBlockContentQuery;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 
 /**
@@ -51,11 +51,7 @@ final class BlockPublishGuardTest extends CmsIntegrationTestCase
     {
         $block = $this->blockWithoutContent('bandeau-blanc');
 
-        $this->blockWriter()->saveContent($block, $this->locale(), new BuilderContent(
-            projectData: '{"pages":[]}',
-            html: '<div class="cms-page-content"><p>&nbsp;</p></div>',
-            css: '',
-        ));
+        $this->blockWriter()->saveContent($block, $this->locale(), Document::richText('<div class="cms-page-content"><p>&nbsp;</p></div>'));
 
         $this->expectException(EmptyBlockContentException::class);
 
@@ -66,11 +62,7 @@ final class BlockPublishGuardTest extends CmsIntegrationTestCase
     {
         $block = $this->blockWithoutContent('bandeau-contact');
 
-        $this->blockWriter()->saveContent($block, $this->locale(), new BuilderContent(
-            projectData: '{"pages":[]}',
-            html: '<p>Parlons de votre projet.</p>',
-            css: '',
-        ));
+        $this->blockWriter()->saveContent($block, $this->locale(), Document::richText('<p>Parlons de votre projet.</p>'));
 
         $this->blockWriter()->publish($block, $this->locale());
 

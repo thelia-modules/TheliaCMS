@@ -23,12 +23,15 @@ use TheliaCMS\Builder\EmptyContentChecker;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
 use TheliaCMS\Builder\PublishedContentSanitizer;
+use TheliaCMS\Content\Document;
+use TheliaCMS\Content\DocumentRenderer;
+use TheliaCMS\Content\DocumentValidator;
+use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Http\CachePurger;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsBlockContent;
 use TheliaCMS\Model\CmsBlockContentQuery;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\CmsActivityLog;
 use TheliaCMS\Partial\PartialCache;
 use TheliaCMS\Security\CmsResources;
@@ -49,6 +52,8 @@ final readonly class CmsBlockWriter
         private PublishedContentSanitizer $sanitizer,
         private EmptyContentChecker $emptiness,
         private ImageRewriter $images,
+        private DocumentValidator $validator,
+        private DocumentRenderer $renderer,
         private PartialCache $partialCache,
         private CachePurger $httpCache,
         private BlockUsageFinder $usages,
@@ -85,17 +90,19 @@ final readonly class CmsBlockWriter
     }
 
     /**
-     * Stores what the builder produced. Pages keep showing the published
+     * Stores the document and its rendering. Pages keep showing the published
      * version until the block is published in its turn.
+     *
+     * @throws InvalidDocumentException when the document cannot be stored
      */
-    public function saveContent(CmsBlock $block, string $locale, BuilderContent $content): void
+    public function saveContent(CmsBlock $block, string $locale, Document $document): void
     {
-        $html = $this->sanitizer->html($this->normalizer->html($content->html), $this->mayPublishCustomCode());
+        $document = $this->validator->validate($document);
+        $html = $this->sanitizer->html($this->normalizer->html($this->renderer->render($document, $locale)), $this->mayPublishCustomCode());
 
         $this->contentFor($block, $locale)
-            ->setDraftProjectData($content->projectData)
+            ->setDraftDocument($document->toJson())
             ->setDraftHtml($html)
-            ->setDraftCss($this->sanitizer->css($this->normalizer->css($content->css)))
             ->setDraftUpdatedBy($this->securityContext->getAdminUser()?->getId())
             ->save();
 
@@ -110,9 +117,17 @@ final readonly class CmsBlockWriter
     public function publish(CmsBlock $block, string $locale): void
     {
         $content = $this->contentFor($block, $locale);
+        $document = Document::fromJson($content->getDraftDocument());
 
+        if (null === $document) {
+            throw EmptyBlockContentException::for((int) $block->getId(), $locale);
+        }
+
+        // Rendered again from the document, as a page is: a component whose
+        // template changed since the last save goes online the way it looks
+        // today.
         $html = $this->images->rewrite(
-            $this->sanitizer->html($this->normalizer->html($content->getDraftHtml()), $this->mayPublishCustomCode()),
+            $this->sanitizer->html($this->normalizer->html($this->renderer->render($document, $locale)), $this->mayPublishCustomCode()),
         );
 
         // Refused rather than stored: the pages showing this block would lose
@@ -122,8 +137,8 @@ final readonly class CmsBlockWriter
             throw EmptyBlockContentException::for((int) $block->getId(), $locale);
         }
 
-        $content->setPublishedHtml($html)
-            ->setPublishedCss($this->sanitizer->css($this->normalizer->css($content->getDraftCss())))
+        $content->setPublishedDocument($content->getDraftDocument())
+            ->setPublishedHtml($html)
             ->setPublishedAt(new \DateTimeImmutable())
             ->save();
 

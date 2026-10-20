@@ -25,10 +25,10 @@ use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Block\Item\ItemBlockWriter;
 use TheliaCMS\Block\Item\ItemType;
 use TheliaCMS\Block\Item\PublishedItemBlockRepository;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsItemBlock;
 use TheliaCMS\Model\CmsItemBlockQuery;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 
 /**
@@ -87,11 +87,7 @@ final class ItemBlockTest extends CmsIntegrationTestCase
         $categoryId = (int) $category->getId();
         $block = $this->itemBlockWriter()->blockFor(ItemType::Category, $categoryId, $this->locale());
 
-        $this->blockWriter()->saveContent($block, $this->locale(), new BuilderContent(
-            projectData: '{"pages":[]}',
-            html: '<div class="cms-page-content"><p>Our vegetables, picked this morning.</p></div>',
-            css: '.cms-page-content p { color: green; }',
-        ));
+        $this->blockWriter()->saveContent($block, $this->locale(), Document::richText('<div class="cms-page-content"><p>Our vegetables, picked this morning.</p></div>'));
 
         self::assertNull($this->publishedItemBlocks()->find(ItemType::Category, $categoryId, $this->locale()), 'A draft never reaches the front.');
 
@@ -101,7 +97,6 @@ final class ItemBlockTest extends CmsIntegrationTestCase
 
         self::assertNotNull($published);
         self::assertStringContainsString('picked this morning', $published->html);
-        self::assertStringContainsString('color: green', $published->css);
         self::assertNull($this->publishedItemBlocks()->find(ItemType::Category, $categoryId, 'xx_XX'), 'Only in the language it was published in.');
     }
 

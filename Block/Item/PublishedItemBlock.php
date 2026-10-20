@@ -26,7 +26,6 @@ final readonly class PublishedItemBlock
         public int $itemId,
         public string $locale,
         public string $html,
-        public string $css,
         public ?\DateTimeInterface $publishedAt = null,
     ) {
     }

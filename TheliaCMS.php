@@ -364,6 +364,10 @@ class TheliaCMS extends BaseModule
                 // never wired by the container.
                 __DIR__.'/Block/Item/PublishedItemBlock.php',
                 __DIR__.'/Builder/ThemeCanvas.php',
+                __DIR__.'/Content/Document.php',
+                __DIR__.'/Content/Section.php',
+                __DIR__.'/Content/InvalidDocumentException.php',
+                __DIR__.'/Content/UnknownSectionException.php',
                 __DIR__.'/Page/PageCard.php',
                 __DIR__.'/Page/PageImage.php',
                 __DIR__.'/Page/PageTagName.php',

@@ -63,6 +63,32 @@ saute la construction tant que `var/propel/<env>/hash` égale
 fera), supprimer `var/propel/<env>` dans l'hôte, pour `dev` et pour `test`
 (ou rejouer `bin/test-prepare` pour `test`).
 
+### D-006 [phase 1] Conteneur de test périmé après un changement de constructeur
+
+**Symptôme.** 181 erreurs `CmsPageWriter::__construct(): Argument #10 must be
+of type DocumentValidator, MenuCache given` : le conteneur compilé de
+`var/cache/test` injectait les anciens arguments. `php Thelia cache:clear` en
+`APP_ENV=test` n'a rien changé.
+**Cause.** Le bootstrap des tests d'intégration (`tests/bootstrap.php` de
+l'hôte) utilise son propre conteneur compilé ; la commande ne l'a pas
+reconstruit.
+**Résolution.** Suppression de `var/cache/test`, le premier test recompile.
+**Généralisable : oui.** Après tout changement de signature de service dans le
+module : `rm -r var/cache/test var/propel/test` (et `var/propel/dev` si le
+schéma a changé) dans l'hôte, avec des chemins absolus (le cwd du shell de
+session saute entre l'hôte et le module).
+
+### D-007 [phase 1] Un test de migration hors transaction laisse des lignes derrière lui
+
+**Symptôme.** Après avoir saboté `2.0.0.sql` pour voir `ContentMigrationTest`
+rouge, le run suivant échouait encore : une ligne de `cms_page_template`
+insérée par le test restait dans la base de test.
+**Cause.** Le test tourne sans transaction (ALTER TABLE) et compte sur la
+migration elle-même pour purger ce qu'il a inséré.
+**Résolution.** Le run suivant, avec le fichier restauré, a purgé la ligne.
+**Généralisable : oui.** Un test hors transaction doit nettoyer ce qu'il
+insère dans `tearDown`, pas s'en remettre au code testé.
+
 ## Points ouverts
 
 - `cms_page_revision` n'a aucun lecteur en production : garder (avec le

@@ -162,7 +162,7 @@ final class PageTypeTest extends CmsIntegrationTestCase
 
             $html = $this->getService(CmsPageRenderer::class)->render($this->published($page));
 
-            self::assertStringContainsString(\sprintf('<main data-type-template="%s"><p>Recette</p></main>', $code), $html);
+            self::assertStringContainsString(\sprintf('<main data-type-template="%s"><div class="cms-page-content"><p>Recette</p></div></main>', $code), $html);
         } finally {
             unlink($file);
         }

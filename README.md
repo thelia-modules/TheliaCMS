@@ -283,13 +283,12 @@ published per language like a reusable block. The "Content block" card on the
 screen of the item creates it, opens it and deletes it; its builder leads back
 to the item, and the block goes when the item is deleted. The theme shows it
 where it likes with `cms_item_block('product', product.id)`, which answers an
-object carrying the published `html` and `css`, or null when nothing is online
-in the language served:
+object carrying the published `html`, or null when nothing is online in the
+language served:
 
 ```twig
 {% set block = cms_item_block('product', product.id) %}
 {% if block %}
-    <style>{{ block.css|raw }}</style>
     {{ block.html|raw }}
 {% endif %}
 ```

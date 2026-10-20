@@ -82,7 +82,7 @@ final readonly class BlockPartial implements PartialDefinitionInterface
             ->findOne();
 
         if (null === $block) {
-            return ['html' => null, 'css' => null];
+            return ['html' => null];
         }
 
         $content = CmsBlockContentQuery::create()
@@ -95,13 +95,10 @@ final readonly class BlockPartial implements PartialDefinitionInterface
         // the block, and a block written in French must not appear on an
         // English page.
         if (null === $content?->getPublishedAt()) {
-            return ['html' => null, 'css' => null];
+            return ['html' => null];
         }
 
-        return [
-            'html' => $content->getPublishedHtml(),
-            'css' => $content->getPublishedCss(),
-        ];
+        return ['html' => $content->getPublishedHtml()];
     }
 
     public function cacheTtl(): ?int

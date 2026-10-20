@@ -26,7 +26,16 @@ final class ExportFormat
 {
     public const string NAME = 'thelia-cms';
 
-    public const int VERSION = 1;
+    /**
+     * 2 since module 2.0.0: the content of a page or of a block is a document
+     * (see TheliaCMS\Content\Document) and its rendering, where version 1
+     * carried the project of the former editor and its stylesheets. A version
+     * 1 file still imports everything but those contents.
+     */
+    public const int VERSION = 2;
+
+    /** The first version whose contents this module can read. */
+    public const int FIRST_VERSION_WITH_DOCUMENTS = 2;
 
     /**
      * Sections a reader knows. Anything else in the file is ignored rather than

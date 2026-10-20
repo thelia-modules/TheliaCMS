@@ -20,20 +20,13 @@
 
 {% block body_class %}cms-page cms-page--{{ cms_page.pageType }}{% endblock %}
 
-{% block stylesheets %}
-    {{ parent() }}
-    {% if cms_page.css is not empty %}
-        <style>{{ cms_page.css|raw }}</style>
-    {% endif %}
-{% endblock %}
-
 {% block body %}
     {{ theme_hook('cmspage.top', {page: cms_page}) }}
 
     {# `cms-page-content` is the class the global styles of the site are
-       scoped to. Content published through the builder carries it on its own
-       wrapper; the article carries it too so a seeded or imported page obeys
-       the same choices. A theme shipping its own template should keep it. #}
+       scoped to. A rendered document carries it on its own wrapper; the
+       article carries it too so a theme hooking content in obeys the same
+       choices. A theme shipping its own template should keep it. #}
     <article class="cms-page__content cms-page-content">
         {{ theme_hook('cmspage.content.before', {page: cms_page}) }}
         {{ cms_page.html|raw }}

@@ -114,14 +114,14 @@ final readonly class MediaUsageFinder
             ->useCmsBlockQuery()
                 ->filterByDeletedAt(null, Criteria::ISNULL)
             ->endUse()
-            ->select(['BlockId', 'DraftHtml', 'PublishedHtml', 'DraftProjectData'])
+            ->select(['BlockId', 'DraftHtml', 'PublishedHtml', 'DraftDocument', 'PublishedDocument'])
             ->find()
             ->toArray();
 
         $blockIds = [];
 
         foreach ($rows as $row) {
-            if ($this->references((string) $row['DraftHtml'].(string) $row['PublishedHtml'].(string) $row['DraftProjectData'], $imageId)) {
+            if ($this->references((string) $row['DraftHtml'].(string) $row['PublishedHtml'].(string) $row['DraftDocument'].(string) $row['PublishedDocument'], $imageId)) {
                 $blockIds[(int) $row['BlockId']] = true;
             }
         }
@@ -132,12 +132,11 @@ final readonly class MediaUsageFinder
     /**
      * Stored content of every page not in the bin, one row per locale.
      *
-     * Three columns, not one. The draft counts as a use — an image referenced
+     * Four columns, not one. The draft counts as a use — an image referenced
      * by an unpublished draft is still expected to be there when that draft
-     * goes live — and the editor project is read too: it is what the canvas is
-     * rebuilt from, so an image could live there before the exported HTML has
-     * caught up. Missing a use would let an editor delete an image out from
-     * under a page.
+     * goes live — and the documents are read too: an image a section names in
+     * its props is in the document before any rendering shows it. Missing a
+     * use would let an editor delete an image out from under a page.
      *
      * @return list<array{pageId: int, locale: string, html: string}>
      */
@@ -147,7 +146,7 @@ final readonly class MediaUsageFinder
             ->useCmsPageQuery()
                 ->filterByDeletedAt(null, Criteria::ISNULL)
             ->endUse()
-            ->select(['PageId', 'Locale', 'DraftHtml', 'PublishedHtml', 'DraftProjectData'])
+            ->select(['PageId', 'Locale', 'DraftHtml', 'PublishedHtml', 'DraftDocument', 'PublishedDocument'])
             ->find()
             ->toArray();
 
@@ -157,7 +156,7 @@ final readonly class MediaUsageFinder
             $contents[] = [
                 'pageId' => (int) $row['PageId'],
                 'locale' => (string) $row['Locale'],
-                'html' => (string) $row['DraftHtml'].(string) $row['PublishedHtml'].(string) $row['DraftProjectData'],
+                'html' => (string) $row['DraftHtml'].(string) $row['PublishedHtml'].(string) $row['DraftDocument'].(string) $row['PublishedDocument'],
             ];
         }
 

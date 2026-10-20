@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Page;
 
 use Symfony\Component\Console\Tester\CommandTester;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Install\LegalPageTemplates;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Page\PublishPagesCommand;
@@ -33,7 +34,7 @@ final class PublishPagesCommandTest extends CmsIntegrationTestCase
         $locale = $this->locale();
 
         $this->contentOf($pageId, $locale)
-            ->setDraftHtml('<p><img src="/nowhere.jpg" alt="Une photo"></p>')
+            ->setDraftDocument(Document::richText('<p><img src="/nowhere.jpg" alt="Une photo"></p>')->toJson())
             ->setPublishedHtml(null)
             ->setPublishedAt(null)
             ->save();
@@ -58,7 +59,7 @@ final class PublishPagesCommandTest extends CmsIntegrationTestCase
         $locale = $this->locale();
 
         $this->contentOf($pageId, $locale)
-            ->setDraftHtml('<style>.a{color:red}</style>&nbsp;')
+            ->setDraftDocument(Document::richText('<style>.a{color:red}</style>&nbsp;')->toJson())
             ->setPublishedHtml(null)
             ->setPublishedAt(null)
             ->save();
@@ -87,7 +88,7 @@ final class PublishPagesCommandTest extends CmsIntegrationTestCase
         $pageId = (int) $page->getId();
 
         $this->contentOf($pageId, $locale)
-            ->setDraftHtml(LegalPageTemplates::html($sample))
+            ->setDraftDocument(Document::richText(LegalPageTemplates::html($sample))->toJson())
             ->setPublishedHtml(null)
             ->setPublishedAt(null)
             ->save();
@@ -118,11 +119,11 @@ final class PublishPagesCommandTest extends CmsIntegrationTestCase
         $pageId = (int) $page->getId();
 
         $this->contentOf($pageId, $locale)
-            ->setDraftHtml(\sprintf(
+            ->setDraftDocument(Document::richText(\sprintf(
                 '<section class="cms-block"><h1>%s</h1><div><p><span>%s</span></p></div><h2>Anything</h2></section>',
                 htmlspecialchars($sample['title'], \ENT_QUOTES),
                 htmlspecialchars($sample['intro'], \ENT_QUOTES),
-            ))
+            ))->toJson())
             ->setPublishedHtml(null)
             ->setPublishedAt(null)
             ->save();
@@ -144,7 +145,7 @@ final class PublishPagesCommandTest extends CmsIntegrationTestCase
         $pageId = (int) $page->getId();
 
         $this->contentOf($pageId, $locale)
-            ->setDraftHtml('<h1>Mentions légales</h1><h2>Éditeur du site</h2><p>OpenStudio, 12 rue de la Liberté.</p>')
+            ->setDraftDocument(Document::richText('<h1>Mentions légales</h1><h2>Éditeur du site</h2><p>OpenStudio, 12 rue de la Liberté.</p>')->toJson())
             ->setPublishedHtml(null)
             ->setPublishedAt(null)
             ->save();
@@ -170,7 +171,7 @@ final class PublishPagesCommandTest extends CmsIntegrationTestCase
         $pageId = (int) $page->getId();
 
         $this->contentOf($pageId, $locale)
-            ->setDraftHtml(LegalPageTemplates::html($sample))
+            ->setDraftDocument(Document::richText(LegalPageTemplates::html($sample))->toJson())
             ->setPublishedHtml(null)
             ->setPublishedAt(null)
             ->save();

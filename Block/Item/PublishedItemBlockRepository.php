@@ -60,7 +60,6 @@ final readonly class PublishedItemBlockRepository
             itemId: $itemId,
             locale: $locale,
             html: (string) $this->partials->substitute($content->getPublishedHtml(), $locale),
-            css: (string) $content->getPublishedCss(),
             publishedAt: $content->getPublishedAt(),
         );
     }

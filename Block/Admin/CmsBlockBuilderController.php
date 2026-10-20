@@ -35,10 +35,9 @@ use TheliaCMS\Block\Item\ItemType;
 use TheliaCMS\Builder\Admin\CmsPageContentType;
 use TheliaCMS\Builder\BlockCatalog;
 use TheliaCMS\Builder\CmsBuilderConfig;
-use TheliaCMS\Builder\InitialCanvas;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsItemBlock;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaCMS\Partial\Definition\BlockPartial;
 use TheliaCMS\Security\CmsResources;
@@ -73,7 +72,6 @@ final readonly class CmsBlockBuilderController
         private BlockCatalog $catalog,
         private CmsSettings $settings,
         private EditLanguage $languages,
-        private InitialCanvas $initialCanvas,
         private ItemBlockRepository $itemBlocks,
         private ItemTitle $itemTitles,
         private ItemAddress $itemAddresses,
@@ -105,7 +103,7 @@ final readonly class CmsBlockBuilderController
 
         return new Response($this->twig->render(self::TEMPLATE, [
             'form' => $form->createView(),
-            'initial_html' => $this->initialCanvas->htmlFor($content?->getDraftProjectData(), $content?->getDraftHtml()),
+            'initial_html' => $content?->getDraftHtml(),
             'block' => $block,
             'item' => $item,
             'builder_partials' => null !== $item ? $this->partialsForAnItemBlock() : null,
@@ -131,11 +129,7 @@ final readonly class CmsBlockBuilderController
         $data = $form->getData();
         $intent = $request->request->getString('save');
 
-        $this->writer->saveContent($block, $lang->getLocale(), new BuilderContent(
-            projectData: $data['projectData'],
-            html: $data['html'],
-            css: $data['css'],
-        ));
+        $this->writer->saveContent($block, $lang->getLocale(), Document::richText((string) $data['html']));
 
         if ('autosave' === $intent) {
             return new JsonResponse(['saved' => true]);
@@ -213,9 +207,9 @@ final readonly class CmsBlockBuilderController
         $content = $this->blocks->contentOf($block, $locale);
 
         return $this->forms->create(CmsPageContentType::class, [
-            'projectData' => $content?->getDraftProjectData(),
+            'projectData' => null,
             'html' => $content?->getDraftHtml(),
-            'css' => $content?->getDraftCss(),
+            'css' => null,
         ]);
     }
 

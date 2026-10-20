@@ -89,9 +89,9 @@ final readonly class BlockUsageFinder
     /**
      * Stored content of every page not in the bin, one row per locale.
      *
-     * The draft counts as a use, and so does the editor project: a block
-     * dropped in the canvas is in the project before it is in the exported
-     * HTML, and deleting it then would break a page that is about to go live.
+     * The draft counts as a use, and so do the documents: a block a section
+     * names in its props is in the document before any rendering shows it,
+     * and deleting it then would break a page that is about to go live.
      *
      * @return list<array{pageId: int, locale: string, html: string}>
      */
@@ -101,7 +101,7 @@ final readonly class BlockUsageFinder
             ->useCmsPageQuery()
                 ->filterByDeletedAt(null, Criteria::ISNULL)
             ->endUse()
-            ->select(['PageId', 'Locale', 'DraftHtml', 'PublishedHtml', 'DraftProjectData'])
+            ->select(['PageId', 'Locale', 'DraftHtml', 'PublishedHtml', 'DraftDocument', 'PublishedDocument'])
             ->find()
             ->toArray();
 
@@ -111,7 +111,7 @@ final readonly class BlockUsageFinder
             $contents[] = [
                 'pageId' => (int) $row['PageId'],
                 'locale' => (string) $row['Locale'],
-                'html' => (string) $row['DraftHtml'].(string) $row['PublishedHtml'].(string) $row['DraftProjectData'],
+                'html' => (string) $row['DraftHtml'].(string) $row['PublishedHtml'].(string) $row['DraftDocument'].(string) $row['PublishedDocument'],
             ];
         }
 

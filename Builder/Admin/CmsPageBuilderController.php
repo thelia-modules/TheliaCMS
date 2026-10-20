@@ -31,15 +31,15 @@ use Thelia\Model\Lang;
 use TheliaCMS\Builder\BlockCatalog;
 use TheliaCMS\Builder\CmsBuilderConfig;
 use TheliaCMS\Builder\HeadingChecker;
-use TheliaCMS\Builder\InitialCanvas;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\CmsPageAdminRepository;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaCMS\Page\Admin\EmptyPageContentException;
+use TheliaCMS\Page\Admin\HeadingStructureException;
 use TheliaCMS\Page\Admin\PlaceholderPageContentException;
 use TheliaCMS\Preview\PreviewLink;
 use TheliaCMS\Security\CmsResources;
@@ -72,7 +72,6 @@ final readonly class CmsPageBuilderController
         private EditLanguage $languages,
         private HeadingChecker $headings,
         private PreviewLink $previewLinks,
-        private InitialCanvas $initialCanvas,
     ) {
     }
 
@@ -101,10 +100,9 @@ final readonly class CmsPageBuilderController
 
         return new Response($this->twig->render(self::TEMPLATE, [
             'form' => $form->createView(),
-            // A page written before the builder existed — a seeded legal page,
-            // an import — has HTML but no GrapesJS project. Handing that HTML
-            // to the canvas is what keeps opening the editor from wiping it.
-            'initial_html' => $this->initialCanvas->htmlFor($content?->getDraftProjectData(), $content?->getDraftHtml()),
+            // The canvas always starts from the rendered draft: the page is
+            // stored as a document, and the editor keeps no project of its own.
+            'initial_html' => $content?->getDraftHtml(),
             'page' => $page,
             'status' => $this->pages->statusOf($page, $locale),
             'edit_locale' => $locale,
@@ -140,11 +138,9 @@ final readonly class CmsPageBuilderController
         $data = $form->getData();
         $intent = $request->request->getString('save');
 
-        $this->writer->saveContent($page, $lang->getLocale(), new BuilderContent(
-            projectData: $data['projectData'],
-            html: $data['html'],
-            css: $data['css'],
-        ));
+        // What the editor exports is kept as one piece of free markup; the
+        // project it keeps for itself and the stylesheet it writes are dropped.
+        $this->writer->saveContent($page, $lang->getLocale(), Document::richText((string) $data['html']));
 
         // The autosave posts the same form in the background; answering with a
         // redirect would send the editor's fetch chasing a full page.
@@ -172,25 +168,30 @@ final readonly class CmsPageBuilderController
      */
     private function publish(Request $request, CmsPage $page, Lang $lang): void
     {
-        $problems = $this->headings->check($this->draftHtmlOf($page, $lang->getLocale()));
-        $blocking = [] !== $problems && 'block' === TheliaCMS::getConfigValue('heading_check_mode', 'warn');
+        try {
+            $this->writer->publish($page, $lang->getLocale());
+        } catch (HeadingStructureException $exception) {
+            foreach ($exception->problems as $problem) {
+                $this->flash($request, 'danger', $problem);
+            }
 
-        foreach ($problems as $problem) {
-            $this->flash($request, $blocking ? 'danger' : 'warning', $problem);
-        }
-
-        if ($blocking) {
             $this->flash($request, 'danger', $this->translator->trans('The page was not published: fix the heading structure first.', [], TheliaCMS::DOMAIN_NAME));
+
+            return;
+        } catch (EmptyPageContentException) {
+            $this->flash($request, 'danger', $this->translator->trans('This page has no content yet: add at least one block in the editor before publishing it.', [], TheliaCMS::DOMAIN_NAME));
+
+            return;
+        } catch (PlaceholderPageContentException) {
+            $this->flash($request, 'danger', $this->translator->trans('This page still holds the sample text it was created with: write your own before publishing it.', [], TheliaCMS::DOMAIN_NAME));
 
             return;
         }
 
-        try {
-            $this->writer->publish($page, $lang->getLocale());
-        } catch (EmptyPageContentException) {
-            $this->flash($request, 'danger', $this->translator->trans('This page has no content yet: add at least one block in the editor before publishing it.', [], TheliaCMS::DOMAIN_NAME));
-        } catch (PlaceholderPageContentException) {
-            $this->flash($request, 'danger', $this->translator->trans('This page still holds the sample text it was created with: write your own before publishing it.', [], TheliaCMS::DOMAIN_NAME));
+        // In `warn` mode the page went online and its author is told what to
+        // fix; the writer refused it in `block` mode above.
+        foreach ($this->headings->check($this->draftHtmlOf($page, $lang->getLocale())) as $problem) {
+            $this->flash($request, 'warning', $problem);
         }
     }
 
@@ -219,9 +220,9 @@ final readonly class CmsPageBuilderController
         $content = $this->contentOf($page, $locale);
 
         return $this->forms->create(CmsPageContentType::class, [
-            'projectData' => $content?->getDraftProjectData(),
+            'projectData' => null,
             'html' => $content?->getDraftHtml(),
-            'css' => $content?->getDraftCss(),
+            'css' => null,
         ]);
     }
 

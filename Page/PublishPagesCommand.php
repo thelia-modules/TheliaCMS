@@ -26,6 +26,7 @@ use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\EmptyPageContentException;
+use TheliaCMS\Page\Admin\HeadingStructureException;
 use TheliaCMS\Page\Admin\PlaceholderPageContentException;
 
 /**
@@ -108,6 +109,8 @@ final class PublishPagesCommand extends Command
                     $refused[] = \sprintf('#%d %s: nothing to show', $page->getId(), $locale);
                 } catch (PlaceholderPageContentException) {
                     $refused[] = \sprintf('#%d %s: still the sample text it was created with', $page->getId(), $locale);
+                } catch (HeadingStructureException $exception) {
+                    $refused[] = \sprintf('#%d %s: %s', $page->getId(), $locale, implode(' ', $exception->problems));
                 } catch (\Throwable $throwable) {
                     $failed[] = \sprintf('#%d %s: %s', $page->getId(), $locale, $throwable->getMessage());
                 }
@@ -159,7 +162,7 @@ final class PublishPagesCommand extends Command
     {
         $query = CmsPageContentQuery::create()
             ->filterByPageId($page->getId())
-            ->filterByDraftHtml(null, Criteria::ISNOTNULL);
+            ->filterByDraftDocument(null, Criteria::ISNOTNULL);
 
         if ([] !== $wanted) {
             $query->filterByLocale($wanted, Criteria::IN);

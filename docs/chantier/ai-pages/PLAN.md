@@ -264,23 +264,46 @@ verts sur le module, `JOURNAL.md` à jour, rapport de fin de phase.
 - [ ] Rien n'est commité : `docs/chantier/` et `composer.json` du module sont
       en attente d'un feu vert de commit.
 
-### Phase 1 — Modèle de contenu v2, sans IA
+### Phase 1 — Modèle de contenu v2, sans IA (faite le 2026-10-20)
 
-- Schéma (4.1), migration 2.0.0, `TheliaMain.sql`, modèles Propel.
-- `BuilderContent` → `PageContent` (document + html), `CmsPageWriter::saveContent`
-  et `publish` adaptés, `HeadingChecker` déplacé dans `publishableHtml`,
-  `DocumentRenderer` minimal (sections de test), `DocumentValidator`.
-- Migration (D5) : `2.0.0.sql` vide le contenu et dépublie ; `update()` du
-  module écrit une notice console et une notice back-office (« les pages de la
-  version 1 ont perdu leur contenu, exportez-les avant de monter ») ; `UPDATE`
-  et CHANGELOG l'annoncent en tête. `PageStatus` et `PageStatusCriteria`
-  inchangés (une page vidée est un brouillon).
-- Fixture `CmsIntegrationTestCase::createPage` et `AdminScreenTestCase`
-  réécrites sur le document (35 fichiers de test en dépendent).
-- Import/export : `ExportFormat::VERSION = 2`, lecture du v1 (HTML hérité),
-  `cms_page_template.payload` en v2, round-trip testé.
-- Sortie : tout vert, builder GrapesJS encore présent mais n'écrivant plus
-  `project_data` (il sera retiré en phase 5).
+- [x] `Content/` : `Document`, `Section`, `SectionDefinitionInterface` (tag
+      `thelia_cms.section`), `SectionCatalog`, `RichTextSection` (`cms:richtext`),
+      `DocumentValidator`, `DocumentRenderer` (enveloppe `cms-page-content`),
+      exceptions ; 15 tests unitaires.
+- [x] Schéma : `draft_document` / `published_document` sur `cms_page_content`
+      et `cms_block_content`, `document` sur `cms_page_revision` ; colonnes
+      GrapesJS et CSS retirées ; `TheliaMain.sql` mis à jour à la main ;
+      `Config/update/2.0.0.sql` replayable (purge seulement si une colonne 1.x
+      existe) ; `module.xml` 2.0.0 ; CHANGELOG en tête.
+- [x] Writers : `saveContent(Document)` valide, rend, assainit ; `publish`
+      re-rend depuis le document, puis sanitizer, images, vide, texte
+      d'exemple, **`HeadingChecker` en mode `block` sur tous les chemins**
+      (`HeadingStructureException`) ; `unpublish` vide le snapshot ;
+      révisions gardées (document + html). Même chose pour les blocs, sans
+      contrôle des titres.
+- [x] Lecteurs : `PublishedPage` sans `css` ni `layout` (`PageLayout`
+      supprimé), `PublishedItemBlock` sans `css`, partial `cms-block` sans
+      `<style>`, `cmspage.html.twig` sans bloc `stylesheets`, finders d'usage
+      sur les documents.
+- [x] Builder GrapesJS conservé jusqu'en phase 5 : son `save` enveloppe le HTML
+      dans un document `cms:richtext`, le canvas repart toujours du HTML rendu ;
+      `InitialCanvas` et `BuilderContent` supprimés ; le formulaire garde ses
+      trois champs cachés (le composant du bundle les exige).
+- [x] Export v2 ; un fichier v1 importe tout sauf les contenus, avec une
+      alerte ; modèle de page v1 → page vide, avec une alerte.
+- [x] Tests : fixtures sur le document (7 fichiers), `ContentMigrationTest`
+      (1.5.0 → 2.0.0 joué deux fois, purge, fresh install intact),
+      `PublishPipelineTest` (+4), `SiteRoundTripTest` (+1), `EmojiRoundTripTest`
+      réécrit ; `InitialCanvasTest` supprimé. Deux tests vus rouges par
+      sabotage avant d'être crus.
+- [x] Gate : unit 565 OK, intégration 270 OK (1 skipped préexistant),
+      php-cs-fixer de l'hôte sans écart sur les fichiers touchés.
+- Écarts avec le plan initial : pas de notice back-office à la montée de
+  version (le CHANGELOG et `UPDATE.md` porteront l'avertissement, à écrire en
+  phase 5 avec le README) ; `HeadingChecker` reste dans `Builder/` jusqu'au
+  nettoyage de la phase 5 ; les pages légales semées en 1.x perdent leur texte
+  à la montée (conséquence de D5, la base de dev l'a montré : 0 page
+  publiable après migration).
 
 ### Phase 2 — Catalogue et composants
 

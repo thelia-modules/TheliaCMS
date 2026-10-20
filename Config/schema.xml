@@ -123,19 +123,20 @@
     </table>
 
     <!--
-        One GrapesJS project per page and per locale (decision D3): the layout
-        itself is translated, not only the strings, so a locale owns its own
-        canvas. Draft columns are never read on the front-office path.
+        One document per page and per locale: the layout itself is translated,
+        not only the strings, so a locale owns its own content. The document
+        (JSON, see TheliaCMS\Content\Document) is what is edited; the HTML next
+        to it is its rendering, kept so that serving a page reads one column.
+        Draft columns are never read on the front-office path.
     -->
     <table name="cms_page_content" namespace="TheliaCMS\Model">
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
         <column name="page_id" required="true" type="INTEGER"/>
         <column name="locale" required="true" size="5" type="VARCHAR"/>
-        <column name="draft_project_data" type="CLOB"/>
+        <column name="draft_document" type="CLOB"/>
         <column name="draft_html" type="CLOB"/>
-        <column name="draft_css" type="CLOB"/>
+        <column name="published_document" type="CLOB"/>
         <column name="published_html" type="CLOB"/>
-        <column name="published_css" type="CLOB"/>
         <column name="published_at" type="TIMESTAMP"/>
         <column name="draft_updated_by" type="INTEGER"/>
 
@@ -155,9 +156,8 @@
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
         <column name="page_id" required="true" type="INTEGER"/>
         <column name="locale" required="true" size="5" type="VARCHAR"/>
-        <column name="project_data" type="CLOB"/>
+        <column name="document" type="CLOB"/>
         <column name="html" type="CLOB"/>
-        <column name="css" type="CLOB"/>
         <column name="label" size="60" type="VARCHAR"/>
         <column name="created_by" type="INTEGER"/>
 
@@ -292,11 +292,10 @@
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
         <column name="block_id" required="true" type="INTEGER"/>
         <column name="locale" required="true" size="5" type="VARCHAR"/>
-        <column name="draft_project_data" type="CLOB"/>
+        <column name="draft_document" type="CLOB"/>
         <column name="draft_html" type="CLOB"/>
-        <column name="draft_css" type="CLOB"/>
+        <column name="published_document" type="CLOB"/>
         <column name="published_html" type="CLOB"/>
-        <column name="published_css" type="CLOB"/>
         <column name="published_at" type="TIMESTAMP"/>
         <column name="draft_updated_by" type="INTEGER"/>
 

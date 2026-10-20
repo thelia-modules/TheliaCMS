@@ -18,10 +18,10 @@ use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Builder\PublishedContentSanitizer;
 use TheliaCMS\Form\FieldChoices;
 use TheliaCMS\Menu\MenuCache;
-use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsBlockContent;
 use TheliaCMS\Model\CmsBlockContentQuery;
@@ -87,6 +87,13 @@ final readonly class SiteImporter
 
         foreach ($document->reparentedPages() as $uid) {
             $report->warn(\sprintf('Page "%s" refers to a parent that is not in the file: it was imported at the root of the tree.', $uid));
+        }
+
+        // A file written by 1.x holds the markup of the former editor, which
+        // has no document to be read back from: the pages and blocks come in
+        // without content, and everything else as before.
+        if (!$document->carriesDocuments()) {
+            $report->warn('This file was written by an earlier version of the module: its pages and blocks were imported without their content.');
         }
 
         $connection = Propel::getConnection('TheliaMain');
@@ -178,15 +185,20 @@ final readonly class SiteImporter
 
             $page->save($connection);
 
-            foreach ($source['contents'] ?? [] as $contentLocale => $content) {
+            // A template saved by 1.x holds the markup of the former editor
+            // and no document: the page starts empty, as the report says.
+            if (!$document->carriesDocuments()) {
+                $report->warn('This template was saved by an earlier version of the module: the page starts without content.');
+            }
+
+            foreach ($document->carriesDocuments() ? $source['contents'] ?? [] : [] as $contentLocale => $content) {
                 (new CmsPageContent())
                     ->setPageId($page->getId())
                     ->setLocale((string) $contentLocale)
-                    ->setDraftProjectData($this->media->remap($content['project_data'] ?? null, $mediaMap))
                     // What the template shows is what was published in it; the
                     // draft columns of the source may hold work in progress.
+                    ->setDraftDocument($this->media->remap($content['published_document'] ?? $content['draft_document'] ?? null, $mediaMap))
                     ->setDraftHtml($this->media->remap($content['published_html'] ?? $content['draft_html'] ?? null, $mediaMap))
-                    ->setDraftCss($this->media->remap($content['published_css'] ?? $content['draft_css'] ?? null, $mediaMap))
                     ->save($connection);
             }
 
@@ -318,7 +330,7 @@ final readonly class SiteImporter
             $model->save($connection);
             $pageIds[$uid] = (int) $model->getId();
 
-            $this->importPageContents($model, $page['contents'] ?? [], $mediaMap, $connection);
+            $this->importPageContents($model, $document->carriesDocuments() ? $page['contents'] ?? [] : [], $mediaMap, $connection);
 
             foreach ($translations as $locale => $translation) {
                 $this->refreshUrl($model, (string) $locale, $translation['slug'] ?? null, $report);
@@ -348,11 +360,10 @@ final readonly class SiteImporter
             $publishedHtml = $this->media->remap($content['published_html'] ?? null, $mediaMap);
 
             $model
-                ->setDraftProjectData($this->media->remap($content['project_data'] ?? null, $mediaMap))
+                ->setDraftDocument($this->media->remap($content['draft_document'] ?? null, $mediaMap))
                 ->setDraftHtml($this->media->remap($content['draft_html'] ?? null, $mediaMap))
-                ->setDraftCss($this->media->remap($content['draft_css'] ?? null, $mediaMap))
+                ->setPublishedDocument($this->media->remap($content['published_document'] ?? null, $mediaMap))
                 ->setPublishedHtml($publishedHtml)
-                ->setPublishedCss($this->media->remap($content['published_css'] ?? null, $mediaMap))
                 ->setPublishedAt($this->date($content['published_at'] ?? null));
 
             // The back office reads "edited since it went live" from this
@@ -435,7 +446,7 @@ final readonly class SiteImporter
 
             $model->save($connection);
 
-            foreach ($block['contents'] ?? [] as $locale => $content) {
+            foreach ($document->carriesDocuments() ? $block['contents'] ?? [] : [] as $locale => $content) {
                 $locale = (string) $locale;
 
                 $contentModel = CmsBlockContentQuery::create()
@@ -445,11 +456,10 @@ final readonly class SiteImporter
                     ?? (new CmsBlockContent())->setBlockId($model->getId())->setLocale($locale);
 
                 $contentModel
-                    ->setDraftProjectData($this->media->remap($content['project_data'] ?? null, $mediaMap))
+                    ->setDraftDocument($this->media->remap($content['draft_document'] ?? null, $mediaMap))
                     ->setDraftHtml($this->media->remap($content['draft_html'] ?? null, $mediaMap))
-                    ->setDraftCss($this->media->remap($content['draft_css'] ?? null, $mediaMap))
+                    ->setPublishedDocument($this->media->remap($content['published_document'] ?? null, $mediaMap))
                     ->setPublishedHtml($this->media->remap($content['published_html'] ?? null, $mediaMap))
-                    ->setPublishedCss($this->media->remap($content['published_css'] ?? null, $mediaMap))
                     ->setPublishedAt($this->date($content['published_at'] ?? null))
                     ->save($connection);
             }

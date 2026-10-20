@@ -22,10 +22,15 @@ use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\LangQuery;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Builder\EmptyContentChecker;
+use TheliaCMS\Builder\HeadingChecker;
 use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
 use TheliaCMS\Builder\PlaceholderContentChecker;
 use TheliaCMS\Builder\PublishedContentSanitizer;
+use TheliaCMS\Content\Document;
+use TheliaCMS\Content\DocumentRenderer;
+use TheliaCMS\Content\DocumentValidator;
+use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Http\CachePurger;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Menu\MenuCache;
@@ -40,6 +45,7 @@ use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Search\SearchTextExtractor;
 use TheliaCMS\Security\CmsResources;
+use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\TheliaCMS;
 
 /**
@@ -62,6 +68,10 @@ final readonly class CmsPageWriter
         private PlaceholderContentChecker $placeholders,
         private ImageRewriter $images,
         private SearchTextExtractor $searchText,
+        private DocumentValidator $validator,
+        private DocumentRenderer $renderer,
+        private HeadingChecker $headings,
+        private CmsSettings $settings,
         // Menus hold the address and the title of the pages they point at, and
         // they are cached: a page that is renamed, published, unpublished or
         // binned has to drop them, or the navigation of the site keeps pointing
@@ -138,22 +148,24 @@ final readonly class CmsPageWriter
     }
 
     /**
-     * Stores what the builder produced, without touching the published
-     * snapshot: saving in the editor never changes what visitors see.
+     * Stores the document and its rendering, without touching the published
+     * snapshot: saving never changes what visitors see.
+     *
+     * @throws InvalidDocumentException when the document cannot be stored
      */
-    public function saveContent(CmsPage $page, string $locale, BuilderContent $content): void
+    public function saveContent(CmsPage $page, string $locale, Document $document): void
     {
         $adminId = $this->securityContext->getAdminUser()?->getId();
+        $document = $this->validator->validate($document);
 
         // Drafts are filtered too, not only what goes online: the draft is
-        // loaded back into the editor of whoever opens the page next, so a
-        // script left in it would run in their back office.
-        $html = $this->sanitizer->html($this->normalizer->html($content->html), $this->mayPublishCustomCode());
+        // shown by the preview and loaded back in the back office of whoever
+        // opens the page next, so a script left in it would run there.
+        $html = $this->sanitizer->html($this->normalizer->html($this->renderer->render($document, $locale)), $this->mayPublishCustomCode());
 
         $this->contentFor($page, $locale)
-            ->setDraftProjectData($content->projectData)
+            ->setDraftDocument($document->toJson())
             ->setDraftHtml($html)
-            ->setDraftCss($this->sanitizer->css($this->normalizer->css($content->css)))
             ->setDraftUpdatedBy($adminId)
             ->save();
 
@@ -166,6 +178,7 @@ final readonly class CmsPageWriter
      *
      * @throws EmptyPageContentException       when the draft would put nothing online
      * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
+     * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
      */
     public function publish(CmsPage $page, string $locale): void
     {
@@ -177,10 +190,9 @@ final readonly class CmsPageWriter
 
             $content = $this->contentFor($page, $locale);
             $html = $this->publishableHtml($page, $locale, $content, $withCustomCode);
-            $css = $this->sanitizer->css($this->normalizer->css($content->getDraftCss()));
 
-            $content->setPublishedHtml($html)
-                ->setPublishedCss($css)
+            $content->setPublishedDocument($content->getDraftDocument())
+                ->setPublishedHtml($html)
                 ->setPublishedAt(new \DateTimeImmutable())
                 ->save($connection);
 
@@ -214,6 +226,7 @@ final readonly class CmsPageWriter
      *
      * @throws EmptyPageContentException       when the draft would put nothing online
      * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
+     * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
      */
     public function assertPublishable(CmsPage $page, string $locale): void
     {
@@ -223,22 +236,41 @@ final readonly class CmsPageWriter
     /**
      * What would actually be served, or the reason it must not be.
      *
-     * Both refusals are decided here, on the filtered HTML, because that is what
-     * a visitor would have been given and not what the editor holds.
+     * The refusals are decided here, on the filtered HTML, because that is what
+     * a visitor would have been given and not what the editor holds. The page
+     * is rendered again from its document rather than read from the draft
+     * HTML, so a component whose template changed since the last save is
+     * published the way it looks today.
      *
      * @throws EmptyPageContentException       when the draft would put nothing online
      * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
+     * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
      */
     private function publishableHtml(CmsPage $page, string $locale, CmsPageContent $content, bool $withCustomCode): string
     {
+        $document = Document::fromJson($content->getDraftDocument());
+
+        if (null === $document) {
+            throw EmptyPageContentException::for((int) $page->getId(), $locale);
+        }
+
         $html = $this->images->rewrite(
-            $this->sanitizer->html($this->normalizer->html($content->getDraftHtml()), $withCustomCode),
+            $this->sanitizer->html($this->normalizer->html($this->renderer->render($document, $locale)), $withCustomCode),
         );
 
         // Refused rather than stored: the column would be null, the front would
         // answer 404, and the back office would still read "published".
         if ($this->emptiness->isEmpty($html)) {
             throw EmptyPageContentException::for((int) $page->getId(), $locale);
+        }
+
+        // Checked on every path a page goes online by — the editor, the
+        // settings screen, the command — and not only in the editor, or the
+        // mode that keeps a broken page offline would only hold there.
+        $problems = $this->headings->check($html);
+
+        if ([] !== $problems && $this->settings->headingCheckBlocks()) {
+            throw HeadingStructureException::for((int) $page->getId(), $locale, $problems);
         }
 
         // The legal pages are seeded as drafts holding instructions, on purpose.
@@ -262,7 +294,12 @@ final readonly class CmsPageWriter
             ->filterByLocale($locale)
             ->findOne();
 
-        $content?->setPublishedAt(null)->save();
+        // The snapshot goes with the date: nothing online means nothing kept
+        // that a later read could mistake for a page.
+        $content?->setPublishedAt(null)
+            ->setPublishedDocument(null)
+            ->setPublishedHtml(null)
+            ->save();
 
         $this->menuCache->invalidate();
         $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
@@ -410,9 +447,8 @@ final readonly class CmsPageWriter
                 (new CmsPageContent())
                     ->setPageId($copy->getId())
                     ->setLocale($content->getLocale())
-                    ->setDraftProjectData($content->getDraftProjectData())
+                    ->setDraftDocument($content->getDraftDocument() ?? $content->getPublishedDocument())
                     ->setDraftHtml($content->getDraftHtml() ?? $content->getPublishedHtml())
-                    ->setDraftCss($content->getDraftCss() ?? $content->getPublishedCss())
                     ->setDraftUpdatedBy($this->securityContext->getAdminUser()?->getId())
                     ->save($connection);
 
@@ -607,9 +643,8 @@ final readonly class CmsPageWriter
         (new CmsPageRevision())
             ->setPageId($page->getId())
             ->setLocale($locale)
-            ->setProjectData($content->getDraftProjectData())
+            ->setDocument($content->getPublishedDocument())
             ->setHtml($content->getPublishedHtml())
-            ->setCss($content->getPublishedCss())
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
             ->save($connection);
 

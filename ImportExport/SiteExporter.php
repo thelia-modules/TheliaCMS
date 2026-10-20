@@ -166,11 +166,10 @@ final readonly class SiteExporter
 
         foreach (CmsPageContentQuery::create()->filterByPageId($page->getId())->find() as $content) {
             $document['contents'][(string) $content->getLocale()] = [
-                'project_data' => $content->getDraftProjectData(),
+                'draft_document' => $content->getDraftDocument(),
                 'draft_html' => $content->getDraftHtml(),
-                'draft_css' => $content->getDraftCss(),
+                'published_document' => $content->getPublishedDocument(),
                 'published_html' => $content->getPublishedHtml(),
-                'published_css' => $content->getPublishedCss(),
                 'published_at' => $this->date($content->getPublishedAt()),
                 // Carried because the back office compares it with the
                 // publication date to tell whether a page holds unpublished
@@ -212,11 +211,10 @@ final readonly class SiteExporter
 
         foreach (CmsBlockContentQuery::create()->filterByBlockId($block->getId())->find() as $content) {
             $document['contents'][(string) $content->getLocale()] = [
-                'project_data' => $content->getDraftProjectData(),
+                'draft_document' => $content->getDraftDocument(),
                 'draft_html' => $content->getDraftHtml(),
-                'draft_css' => $content->getDraftCss(),
+                'published_document' => $content->getPublishedDocument(),
                 'published_html' => $content->getPublishedHtml(),
-                'published_css' => $content->getPublishedCss(),
                 'published_at' => $this->date($content->getPublishedAt()),
             ];
         }

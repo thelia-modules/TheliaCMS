@@ -197,6 +197,24 @@ final readonly class SiteDocument
     }
 
     /**
+     * The version of the file format, checked readable when the document was
+     * built.
+     */
+    public function formatVersion(): int
+    {
+        return (int) ($this->document['version'] ?? 0);
+    }
+
+    /**
+     * Whether the contents of pages and blocks in this file are documents this
+     * module can read, rather than the markup of the former editor.
+     */
+    public function carriesDocuments(): bool
+    {
+        return $this->formatVersion() >= ExportFormat::FIRST_VERSION_WITH_DOCUMENTS;
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     private function rowsOf(string $section): array
