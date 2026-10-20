@@ -35,9 +35,21 @@ final readonly class SectionStories implements StoryProviderInterface
     ) {
     }
 
+    /** The slug the toolkit gives the page that lists every section: the category and the name. */
+    public const string ALL_SECTIONS_SLUG = 'cms-all-sections';
+
     public function stories(): array
     {
-        $stories = [];
+        // First: one page with every section, for whoever writes a brief and
+        // wants to know what the generator can use.
+        $all = \dirname(__DIR__, 2).'/templates/front/sections/toolkit/all.html.twig';
+        $stories = [new Story(
+            category: self::CATEGORY,
+            name: 'All sections',
+            twigPath: '@TheliaCMSModule/front/sections/toolkit/all.html.twig',
+            sourcePath: $all,
+            status: ComponentStatus::READY,
+        )];
 
         foreach ($this->catalog->all() as $definition) {
             if (!$definition instanceof AbstractTemplateSection) {

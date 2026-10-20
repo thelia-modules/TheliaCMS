@@ -55,6 +55,7 @@ final readonly class ContentScreen
         private GeneratorSettings $settings,
         private ClaudeClientProviderInterface $clients,
         private SectionFormBuilder $sectionForms,
+        private ToolkitLink $toolkit,
     ) {
     }
 
@@ -76,6 +77,7 @@ final readonly class ContentScreen
             'may_publish' => $mayPublish,
             'generator_notice' => $mayGenerate ? $this->notice() : null,
             'model' => $this->settings->model(),
+            'toolkit_url' => $this->toolkit->url(),
             'assets_version' => self::assetsVersion(),
         ]);
     }

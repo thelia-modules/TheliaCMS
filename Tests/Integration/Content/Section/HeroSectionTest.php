@@ -18,6 +18,7 @@ use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\Section\HeroSection;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\Twig\CmsExtension;
 
 /**
  * The hero, rendered through the real template chain: same markup as the
@@ -28,6 +29,18 @@ final class HeroSectionTest extends CmsIntegrationTestCase
     public function testTheCatalogueKnowsIt(): void
     {
         self::assertInstanceOf(HeroSection::class, $this->getService(SectionCatalog::class)->find(HeroSection::NAME));
+    }
+
+    public function testTheCatalogueIsListedForTheToolkitWithLiveContentToldApart(): void
+    {
+        $catalogue = $this->getService(CmsExtension::class)->catalogue();
+        $byName = array_column($catalogue, null, 'name');
+
+        self::assertArrayHasKey(HeroSection::NAME, $byName);
+        self::assertFalse($byName[HeroSection::NAME]['live']);
+        self::assertNotSame('', $byName[HeroSection::NAME]['description']);
+        self::assertArrayHasKey('Partial:product-strip', $byName);
+        self::assertTrue($byName['Partial:product-strip']['live'], 'Live content is named, not drawn.');
     }
 
     public function testTheSampleRendersTheMarkupOfTheFormerBlock(): void

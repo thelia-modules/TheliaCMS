@@ -94,6 +94,14 @@
                     {% if subject.hasContent %}
                         <p class="text-muted small">{{ 'A new brief replaces the whole draft. To keep it and change parts of it, use the sections below.'|trans({}, 'theliacms') }}</p>
                     {% endif %}
+                    {% if toolkit_url %}
+                        <p class="text-muted small">
+                            <a href="{{ toolkit_url }}" target="_blank" rel="noopener" data-testid="cms-content-toolkit">
+                                <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i> {{ 'See every section the generator can use'|trans({}, 'theliacms') }}
+                            </a>
+                            {{ 'Name one in the brief to ask for it.'|trans({}, 'theliacms') }}
+                        </p>
+                    {% endif %}
                     {% form_theme brief_form with bo_form_themes only %}
                     {{ form_start(brief_form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' } }) }}
                         <input type="hidden" name="_token" value="{{ assignToken() }}">

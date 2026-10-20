@@ -1,0 +1,20 @@
+{#
+    Every section a page of the CMS may be made of, on one page: what the
+    generator can use, for whoever writes a brief. A section that renders on
+    its own is shown with its sample props; live content — a form, a product,
+    a video — is filled by the server when a page is served, so it is named
+    and described here rather than drawn.
+#}
+{# The stylesheet of the sections, which a page of the site links and the toolkit does not. #}
+<link rel="stylesheet" href="{{ path('cms.block_styles') }}">
+<div class="Story">
+    {% for section in cms_catalogue() %}
+        <div class="Story-section" id="{{ section.name|lower|replace({':': '-'}) }}">
+            <h4 class="Story-title">{{ section.label }} <code>{{ section.name }}</code></h4>
+            <span class="Story-label">{{ section.description }}</span>
+            {% if not section.live %}
+                <div class="cms-page-content">{{ cms_section(section.name) }}</div>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>

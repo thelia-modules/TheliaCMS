@@ -20,6 +20,7 @@ use Thelia\Model\Lang;
 use TheliaCMS\Block\Item\ItemType;
 use TheliaCMS\Block\Item\PublishedItemBlock;
 use TheliaCMS\Block\Item\PublishedItemBlockRepository;
+use TheliaCMS\Content\Partial\PartialSection;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
@@ -58,6 +59,7 @@ final class CmsExtension extends AbstractExtension
             // definition, and the theme calls it to show a section outside a
             // page — in the toolkit, on a template of its own.
             new TwigFunction('cms_section', $this->section(...), ['is_safe' => ['html']]),
+            new TwigFunction('cms_catalogue', $this->catalogue(...)),
             new TwigFunction('cms_menu', $this->menus->menu(...)),
             new TwigFunction('cms_page_alternates', $this->alternates->all(...)),
             new TwigFunction('cms_site_icon', $this->siteIcon(...)),
@@ -89,6 +91,29 @@ final class CmsExtension extends AbstractExtension
             $definition->normalizeProps($props ?? $definition->sample()),
             $locale ?? $this->langService->getLocale(),
         );
+    }
+
+    /**
+     * Every section a page may be made of, as the toolkit lists them: what
+     * to call it, what it is for, and whether it renders on its own or is
+     * live content the server fills when the page is served.
+     *
+     * @return list<array{name: string, label: string, description: string, live: bool}>
+     */
+    public function catalogue(): array
+    {
+        $catalogue = [];
+
+        foreach ($this->sections->all() as $definition) {
+            $catalogue[] = [
+                'name' => $definition->name(),
+                'label' => $definition->label(),
+                'description' => $definition->description(),
+                'live' => str_starts_with($definition->name(), PartialSection::PREFIX),
+            ];
+        }
+
+        return $catalogue;
     }
 
     /**

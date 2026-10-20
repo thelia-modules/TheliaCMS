@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Tests\Unit\Generation;
+
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use TheliaCMS\Generation\Admin\ToolkitLink;
+
+/**
+ * The link to the page of every section: there in debug with the Flexy
+ * theme, nowhere otherwise, since the toolkit answers nowhere else.
+ */
+final class ToolkitLinkTest extends TestCase
+{
+    public function testLinksToThePageOfEverySectionInDebug(): void
+    {
+        $urls = $this->createStub(UrlGeneratorInterface::class);
+        $urls->method('generate')->willReturnCallback(static fn (string $route, array $parameters): string => '/'.$route.'/'.$parameters['slug']);
+
+        self::assertSame('/toolkit_show/cms-all-sections', (new ToolkitLink($urls, true))->url());
+    }
+
+    public function testLinksNowhereOutsideDebug(): void
+    {
+        $urls = $this->createStub(UrlGeneratorInterface::class);
+        $urls->method('generate')->willReturn('/toolkit/cms-all-sections');
+
+        self::assertNull((new ToolkitLink($urls, false))->url(), 'The toolkit answers 404 outside debug.');
+    }
+
+    public function testLinksNowhereWithoutTheToolkit(): void
+    {
+        $urls = $this->createStub(UrlGeneratorInterface::class);
+        $urls->method('generate')->willThrowException(new RouteNotFoundException());
+
+        self::assertNull((new ToolkitLink($urls, true))->url(), 'Another theme has no toolkit.');
+    }
+}
