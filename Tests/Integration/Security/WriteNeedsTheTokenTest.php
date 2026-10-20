@@ -135,15 +135,14 @@ final class WriteNeedsTheTokenTest extends AdminScreenTestCase
         $image->save();
         $this->getService(CmsMediaLibrary::class)->tag($image);
         $id = (int) $image->getId();
-        $action = \sprintf('/admin/cms/media/%d', $id);
+        $action = \sprintf('/admin/cms/media/%d/delete', $id);
 
-        // The image library of the editor deletes with a script.
-        self::assertSame(403, $this->send('DELETE', $action, [], self::XHR));
+        self::assertSame(403, $this->send('POST', $action));
         self::assertNotNull(LibraryImageQuery::create()->findPk($id), 'Refused, the image stays.');
 
-        $token = $this->tokenOfTheScripts($this->screen('/admin/cms/media'));
+        $token = $this->tokenOfTheForm($this->screen(\sprintf('/admin/cms/media/%d', $id)), $action);
 
-        self::assertSame(204, $this->send('DELETE', $action, [], [...self::XHR, 'HTTP_X_CSRF_TOKEN' => $token]));
+        self::assertSame(302, $this->send('POST', $action, ['_token' => $token]));
         LibraryImageTableMap::clearInstancePool();
         self::assertNull(LibraryImageQuery::create()->findPk($id));
     }
@@ -168,30 +167,6 @@ final class WriteNeedsTheTokenTest extends AdminScreenTestCase
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $values));
         self::assertSame($wanted, $settings->trashRetentionDays());
-    }
-
-    public function testBuilder(): void
-    {
-        $page = $this->createPage('Token builder');
-        $id = (int) $page->getId();
-
-        $form = $this->screen(\sprintf('/admin/cms/pages/%d/builder', $id))->filter('form.cms-builder__form')->form();
-        $values = $form->getPhpValues();
-        $values['save'] = 'autosave';
-
-        self::assertArrayHasKey('_token', $values, 'The builder form carries the token.');
-
-        $fields = array_key_first(array_filter($values, 'is_array'));
-        $values[$fields]['html'] = '<h1>Token builder</h1><p>Saved in the background.</p>';
-
-        $withoutToken = $values;
-        unset($withoutToken['_token']);
-
-        self::assertSame(403, $this->send('POST', $form->getUri(), $withoutToken, self::XHR));
-        self::assertStringNotContainsString('Saved in the background', $this->draftHtmlOf($id), 'Refused, the draft stays.');
-
-        self::assertSame(200, $this->send('POST', $form->getUri(), $values, self::XHR));
-        self::assertStringContainsString('Saved in the background', $this->draftHtmlOf($id));
     }
 
     private function statusOf(int $id): PageStatus

@@ -55,7 +55,7 @@ final readonly class SiteStyles
 
     /**
      * The colours offered by every picker of the builder. Empty means the
-     * defaults of {@see \TheliaCMS\Builder\CmsBuilderConfig} apply.
+     * defaults apply.
      *
      * @return list<string>
      */

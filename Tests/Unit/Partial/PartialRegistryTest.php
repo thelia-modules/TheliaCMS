@@ -15,9 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Unit\Partial;
 
 use PHPUnit\Framework\TestCase;
-use TheliaCMS\Partial\PartialProp;
 use TheliaCMS\Partial\PartialRegistry;
-use TheliaCMS\Settings\DisabledBlocks;
 
 /**
  * The registry is the allow list of the whole feature: a page names a block,
@@ -41,61 +39,16 @@ final class PartialRegistryTest extends TestCase
         self::assertNull($registry->find('latest-contents'));
     }
 
-    public function testDescribesEverySettingToTheEditor(): void
-    {
-        $registry = new PartialRegistry([
-            new FakePartial('news', [
-                PartialProp::integer('count', 'How many', 3, 1, 12),
-                PartialProp::reference('folder', 'Folder', '/sources/folders', required: false),
-            ]),
-        ]);
-
-        $described = $registry->toEditor();
-
-        self::assertCount(1, $described);
-        self::assertSame('news', $described[0]['name']);
-        self::assertSame(['count', 'folder'], array_column($described[0]['props'], 'name'));
-        self::assertSame('integer', $described[0]['props'][0]['type']);
-        self::assertSame('/sources/folders', $described[0]['props'][1]['source']);
-    }
-
     /**
      * A source too long to load at once is searched by the editor: the flag
      * reaches it on the searchable setting, and stays off the others so the
      * select of an ordinary reference is left as it is.
      */
-    public function testFlagsASearchableReferenceForTheEditor(): void
-    {
-        $registry = new PartialRegistry([
-            new FakePartial('product', [
-                PartialProp::reference('product', 'Product', '/sources/products', searchable: true),
-                PartialProp::reference('folder', 'Folder', '/sources/folders'),
-            ]),
-        ]);
-
-        $props = $registry->toEditor()[0]['props'];
-
-        self::assertTrue($props[0]['searchable']);
-        self::assertArrayNotHasKey('searchable', $props[1]);
-    }
-
     /**
      * A page holding a block switched off under CMS > Settings still has to
      * preview it and edit its settings, so the block is described with the
      * others and only flagged.
      */
-    public function testASwitchedOffPartialIsDescribedAllTheSameAndFlagged(): void
-    {
-        $registry = new PartialRegistry([new FakePartial('cms-menu'), new FakePartial('latest-contents')]);
-
-        self::assertSame([true, true], array_column($registry->toEditor(), 'enabled'), 'Everything is on until something is switched off.');
-
-        $described = $registry->toEditor(new DisabledBlocks(['cms-menu']));
-
-        self::assertSame(['cms-menu', 'latest-contents'], array_column($described, 'name'));
-        self::assertSame([false, true], array_column($described, 'enabled'));
-    }
-
     /**
      * Two modules shipping the same name is a configuration mistake, not a
      * reason to render both: the last one registered wins, and the page still

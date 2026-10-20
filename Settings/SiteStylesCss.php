@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Settings;
 
-use TheliaCMS\Builder\PageContentNormalizer;
+use TheliaCMS\Content\Pipeline\PageContentNormalizer;
 
 /**
  * Writes the global style choices as a stylesheet.

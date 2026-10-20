@@ -16,7 +16,7 @@ namespace TheliaCMS\Page;
 
 use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Model\LangQuery;
-use TheliaCMS\Builder\PlaceholderContentChecker;
+use TheliaCMS\Content\Pipeline\PlaceholderContentChecker;
 use TheliaCMS\Install\LegalPageTemplates;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;

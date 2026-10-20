@@ -457,14 +457,42 @@ verts sur le module, `JOURNAL.md` à jour, rapport de fin de phase.
   la main (le brief et la révision s'en chargent ; point ouvert) ; le picker
   d'image est un select sur toute la médiathèque (200 images au plus).
 
-### Phase 5 — Suppression et nettoyage
+### Phase 5 — Suppression et nettoyage (faite le 2026-10-20)
 
-- Tout le §4.6 ; `composer.json` du module ; `README.md`, `CHANGELOG.md`,
-  `module.xml` 2.0.0, `docs/` (nouveau `docs/generating-a-page.md`,
-  `docs/creating-a-component.md` remplace `creating-a-block.md`), guide
-  webmaster (texte ; captures à refaire, hors périmètre si pas de maquette).
-- Vérification sur pièces : `grep -ri "grapes\|PageBuilderBundle\|page-builder"`
-  retourne zéro hors CHANGELOG, vu tomber sur un cas connu avant d'être cru.
+- [x] Supprimés : `Builder/{CmsBuilderConfig,ActiveThemeCanvas,ThemeCanvas,
+      CanvasStylesheetProviderInterface,CatalogBlock,CatalogBlockProviderInterface,
+      BlockCatalog,CoreBlockCatalog,EditorBaseBlocks,Admin/*}`,
+      `Block/Admin/CmsBlockBuilderController`, `Media/{Admin/CmsMediaController,
+      LibraryImageUploader,LibraryImageCatalog}` (routes `openstudio_page_builder_image_*`),
+      `Settings/DisabledBlocks` (carte « Blocks offered », `disabled_blocks`
+      dans l'export), `PartialRegistry::toEditor()`, `PageContentNormalizer::css()`,
+      les deux `builder.html.twig`, `assets/{src,build.mjs,package*.json}`,
+      `templates/.../assets/page-builder/`, `docs/{editor-canvas,creating-a-block}.md`,
+      onze tests (sept unitaires `Builder/*`, `Integration/Builder/*`,
+      `BuilderImageDeletionTest`, `DisabledBlocksTest`), `WriteNeedsTheTokenTest::testBuilder`.
+- [x] Déplacés vers `Content/Pipeline/` (et `Tests/Unit/Content/Pipeline/`) :
+      `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,
+      `ImageRewriter`, `PublishedContentSanitizer`, `PageContentNormalizer`.
+- [x] `TheliaCMS.php` sans alias du bundle ni `asset_mapper.excluded_patterns` ;
+      `composer.json` sans `openstudio/page-builder-bundle` ; descriptions de
+      `module.xml` et `composer.json` ; CHANGELOG « Removed (2.0.0) » ;
+      `Tests/Accessibility/README.md`.
+- [x] Hôte (option A validée par le dev) : `composer remove openstudio/page-builder-bundle`
+      et ligne retirée de `config/bundles.php` ; `vendor/openstudio` disparu.
+- [x] Contrôle : `grep -rIli "grapes|PageBuilderBundle|page-builder|openstudio_page_builder"`
+      ne trouve plus que CHANGELOG, README (réécrit par l'agent docs), `docs/guide/`
+      et `docs/chantier/` ; le zéro vu tomber sur le CHANGELOG.
+- [x] Gate : 543 tests unitaires, 359 d'intégration (1 skip préexistant),
+      style sans écart sur les fichiers touchés. Écrans contenu, médias,
+      réglages, blocs, pages rejoués au navigateur sans le bundle
+      (`preuves/phase5/`), front 200.
+- [x] Docs : README et `docs/creating-a-component.md` réécrits, note en tête
+      de `docs/guide/README.md` (agent docs).
+- Écarts : `SiteStyles::palette()` et l'écran styles (déjà caché) restent ;
+  `docs/chantier/ai-pages/baselines/dump-blocks.php` référence encore
+  `CoreBlockCatalog` (script d'archive de la baseline, non exécutable désormais) ;
+  le guide webmaster (PDF, captures) décrit toujours l'éditeur 1.x ; les clés
+  i18n du builder restent dans `I18n/*.php` (inoffensives, à purger en 2.1).
 
 ### Phase 6 — Recette et restitution
 

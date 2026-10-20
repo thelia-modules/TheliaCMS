@@ -15,7 +15,6 @@ declare(strict_types=1);
 namespace TheliaCMS\Partial;
 
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
-use TheliaCMS\Settings\DisabledBlocks;
 
 /**
  * The list of partials a page may use.
@@ -64,34 +63,5 @@ final readonly class PartialRegistry
     public function all(): array
     {
         return array_values($this->definitions);
-    }
-
-    /**
-     * What the editor needs to offer these blocks: one entry per partial, with
-     * its settings already described.
-     *
-     * A partial switched off under CMS > Settings is described all the same,
-     * flagged `enabled: false`: a page that already holds it still has to be
-     * previewed and its settings edited. The editor only keeps it out of the
-     * panel.
-     *
-     * @return list<array<string, mixed>>
-     */
-    public function toEditor(?DisabledBlocks $disabled = null): array
-    {
-        $disabled ??= DisabledBlocks::none();
-
-        return array_map(
-            static fn (PartialDefinitionInterface $definition): array => [
-                'name' => $definition->name(),
-                'label' => $definition->label(),
-                'enabled' => !$disabled->contains($definition->name()),
-                'props' => array_map(
-                    static fn (PartialProp $prop): array => $prop->toEditor(),
-                    $definition->props(),
-                ),
-            ],
-            $this->all(),
-        );
     }
 }

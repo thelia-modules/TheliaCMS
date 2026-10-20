@@ -47,7 +47,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
      * answers GET and POST, the POST being the submission of its form.
      */
     private const array SCREENS = [
-        'admin.cms.blocks.builder',
         'admin.cms.blocks.content.edit',
         'admin.cms.blocks.create',
         'admin.cms.blocks.edit',
@@ -64,7 +63,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.menus.edit',
         'admin.cms.menus.entry_save',
         'admin.cms.menus.list',
-        'admin.cms.pages.builder',
         'admin.cms.pages.content.edit',
         'admin.cms.pages.create',
         'admin.cms.pages.edit',
@@ -88,7 +86,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.tags.edit',
         'admin.cms.tags.list',
         'admin.cms.templates.list',
-        'openstudio_page_builder_image_list',
     ];
 
     /** Placeholder values that match no record, so a refused write had nothing to touch. */
@@ -183,7 +180,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
             '/admin/cms/pages',
             '/admin/cms/pages/new',
             '/admin/cms/pages/'.$page->getId(),
-            '/admin/cms/pages/'.$page->getId().'/builder',
             '/admin/cms/pages/'.$page->getId().'/content',
             '/admin/cms/pages/trash',
             '/admin/cms/menus',
@@ -192,7 +188,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
             '/admin/cms/blocks',
             '/admin/cms/blocks/new',
             '/admin/cms/blocks/'.$block->getId(),
-            '/admin/cms/blocks/'.$block->getId().'/builder',
             '/admin/cms/blocks/'.$block->getId().'/content',
             '/admin/cms/forms',
             '/admin/cms/forms/new',

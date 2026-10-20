@@ -108,6 +108,33 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - The right `admin.cms.generate`, given to the seeded editor profile.
 - The module requires `anthropic-ai/sdk` and `nyholm/psr7`.
 
+### Removed (2.0.0)
+
+- **The visual page builder** (GrapesJS, `openstudio/page-builder-bundle`):
+  the screens `/admin/cms/pages/{id}/builder` and
+  `/admin/cms/blocks/{id}/builder`, their bundled editor, the routes
+  `openstudio_page_builder_image_*` the editor uploaded and listed images
+  with (the media screens of the module have their own), the "Blocks offered
+  in the editor" card of the settings with the `disabled_blocks` setting (the
+  catalogue a page is made of is the allowlist of the theme, see
+  `docs/sections.md`), the canvas stylesheet of the theme
+  (`config/theliacms.yaml` key `editor`, `builder_stylesheet`) and
+  `docs/editor-canvas.md`. The module needs no npm build any more.
+- `TheliaCMS\Builder`: `CmsBuilderConfig`, `ThemeCanvas`, `ActiveThemeCanvas`,
+  `CanvasStylesheetProviderInterface`, `BlockCatalog`, `CoreBlockCatalog`,
+  `CatalogBlock`, `CatalogBlockProviderInterface`, `EditorBaseBlocks`,
+  `Admin\CmsPageBuilderController`, `Admin\CmsPageContentType`;
+  `TheliaCMS\Block\Admin\CmsBlockBuilderController`;
+  `TheliaCMS\Media\LibraryImageUploader`, `LibraryImageCatalog`,
+  `Admin\CmsMediaController`; `TheliaCMS\Settings\DisabledBlocks` and
+  `CmsSettings::disabledBlocks()`; `PartialRegistry::toEditor()`;
+  `PageContentNormalizer::css()`. The export format no longer carries
+  `disabled_blocks`; a file that does is read without it.
+- The pipeline a page goes through before it is stored or published moves
+  from `TheliaCMS\Builder` to `TheliaCMS\Content\Pipeline`:
+  `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,
+  `ImageRewriter`, `PublishedContentSanitizer`, `PageContentNormalizer`.
+
 ### Added (1.5.0)
 
 - On a Thelia core that brings the shared cache of the public pages

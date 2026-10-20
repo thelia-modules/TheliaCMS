@@ -49,9 +49,11 @@ likely to exist in any project built on it.
 
 ## What this does not cover
 
-The back office. GrapesJS is a drag-and-drop editor and is not operable by
-keyboard, which is a documented limit of the module rather than something a
-scan would tell us. Contrast inside a page is the responsibility of whoever
-writes it: the editor shows the ratio of a colour as it is picked, and the
-palette it offers was checked, but nothing stops an author from typing a
-hex value.
+The back office. Its screens are ordinary forms of the `default-twig` theme,
+and the content screen (where a page is written from a brief and edited by
+hand) was scanned by hand when it was built, with zero violation of its own;
+what axe reports there comes from the theme (the dimmed help of a label, the
+side navigation) or from the rich-text editor module when it is installed.
+Contrast inside a page is the responsibility of whoever writes it: the
+components of the catalogue carry the palette of the theme, and the generator
+writes props, never colours.

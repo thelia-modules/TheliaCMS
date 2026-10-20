@@ -17,7 +17,6 @@ namespace TheliaCMS\Settings\Admin;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -110,25 +109,6 @@ final class CmsSettingsType extends AbstractType
                 'help' => 'An answer cut at this length loses the end of the page. A long page needs about four tokens a word.',
             ]);
 
-        // One list of ticks per group of the panel. Ticked means offered: the
-        // setting stores the opposite, so that a block a module adds later is
-        // offered without anybody ticking it.
-        $blocks = $builder->create('enabledBlocks', FormType::class, ['label' => false, 'required' => false]);
-
-        foreach ($options['block_groups'] as $key => $group) {
-            $blocks->add($key, ChoiceType::class, [
-                'label' => $group['label'],
-                'required' => false,
-                'multiple' => true,
-                'expanded' => true,
-                'choices' => $group['choices'],
-                // The labels arrive translated: they are the words of the panel.
-                'translation_domain' => false,
-            ]);
-        }
-
-        $builder->add($blocks);
-
         $builder->addEventListener(FormEvents::POST_SUBMIT, $this->validateAllowlist(...));
     }
 
@@ -138,11 +118,8 @@ final class CmsSettingsType extends AbstractType
             ->setDefaults([
                 'translation_domain' => 'theliacms',
                 'page_choices' => [],
-                // Group key => ['label' => heading, 'choices' => label => block id].
-                'block_groups' => [],
             ])
-            ->setAllowedTypes('page_choices', 'array')
-            ->setAllowedTypes('block_groups', 'array');
+            ->setAllowedTypes('page_choices', 'array');
     }
 
     /**
