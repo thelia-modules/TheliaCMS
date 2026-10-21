@@ -56,7 +56,7 @@ final readonly class ImageSection implements SectionDefinitionInterface
     {
         return new PropSchema([
             Prop::image('image', $this->trans('Image'), help: $this->trans('An image of the media library, or the https address of a picture kept elsewhere.')),
-            Prop::text('alt', $this->trans('Text of the image'), help: $this->trans('What the image shows, for a reader who does not see it; empty when the caption says it.')),
+            Prop::text('alt', $this->trans('Text of the image'), help: $this->trans('What the image shows, for a reader who does not see it, even with a caption; empty only for a decorative image.')),
             Prop::text('caption', $this->trans('Caption'), help: $this->trans('Under the image; none when empty.')),
             Prop::choice('width', $this->trans('Width'), [
                 'narrow' => $this->trans('Narrow, as a column of text'),

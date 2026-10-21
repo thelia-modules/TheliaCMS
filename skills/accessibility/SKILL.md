@@ -7,8 +7,9 @@ always: true
 # Accessibility
 
 - Every picture that carries meaning has an alternative text saying what it
-  shows, in one sentence, without "image of". A purely decorative picture has
-  an empty alternative text. A logo's alternative text is the name of the
+  shows, in one sentence, without "image of", even when a caption follows it:
+  the caption adds to the picture, it does not describe it. A purely
+  decorative picture has an empty alternative text. A logo's alternative text is the name of the
   organisation.
 - A link says where it leads, on its own: "See the opening hours", never
   "click here" or "read more". Two links with the same text lead to the same
