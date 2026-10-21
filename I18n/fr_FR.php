@@ -960,6 +960,7 @@ return [
     'Under the image; none when empty.' => 'Sous l’image ; aucune si vide.',
     'Width' => 'Largeur',
     'Narrow, as a column of text' => 'Étroite, comme une colonne de texte',
+    'Narrow suits a photo or an illustration; wider only when the brief asks for a large picture.' => 'Étroite pour une photo ou une illustration ; plus large seulement si le brief demande une grande image.',
     'As wide as the content' => 'Aussi large que le contenu',
     'The whole width of the screen' => 'Toute la largeur de l’écran',
     'A caption under the picture.' => 'Une légende sous l’image.',

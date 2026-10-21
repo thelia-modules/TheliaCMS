@@ -960,6 +960,7 @@ return [
     'Under the image; none when empty.' => 'Under the image; none when empty.',
     'Width' => 'Width',
     'Narrow, as a column of text' => 'Narrow, as a column of text',
+    'Narrow suits a photo or an illustration; wider only when the brief asks for a large picture.' => 'Narrow suits a photo or an illustration; wider only when the brief asks for a large picture.',
     'As wide as the content' => 'As wide as the content',
     'The whole width of the screen' => 'The whole width of the screen',
     'A caption under the picture.' => 'A caption under the picture.',

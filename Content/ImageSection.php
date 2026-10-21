@@ -62,13 +62,13 @@ final readonly class ImageSection implements SectionDefinitionInterface
                 'narrow' => $this->trans('Narrow, as a column of text'),
                 'column' => $this->trans('As wide as the content'),
                 'full' => $this->trans('The whole width of the screen'),
-            ], 'column'),
+            ], 'narrow', $this->trans('Narrow suits a photo or an illustration; wider only when the brief asks for a large picture.')),
         ]);
     }
 
     public function sample(): array
     {
-        return ['image' => null, 'alt' => '', 'caption' => $this->trans('A caption under the picture.'), 'width' => 'column'];
+        return ['image' => null, 'alt' => '', 'caption' => $this->trans('A caption under the picture.'), 'width' => 'narrow'];
     }
 
     public function normalizeProps(array $props): array
@@ -84,7 +84,7 @@ final readonly class ImageSection implements SectionDefinitionInterface
             return '';
         }
 
-        $width = \in_array($props['width'] ?? null, self::WIDTHS, true) ? $props['width'] : 'column';
+        $width = \in_array($props['width'] ?? null, self::WIDTHS, true) ? $props['width'] : 'narrow';
         $html = \sprintf(
             '<figure class="cms-image cms-image--%s"><img class="cms-image__img" src="%s" alt="%s" loading="lazy">',
             $width,

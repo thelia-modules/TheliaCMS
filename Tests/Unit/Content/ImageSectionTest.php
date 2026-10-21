@@ -38,9 +38,9 @@ final class ImageSectionTest extends TestCase
         $section = new ImageSection();
 
         self::assertSame(
-            '<figure class="cms-image cms-image--column"><img class="cms-image__img" src="https://example.com/tarte.jpg" alt="" loading="lazy"></figure>',
+            '<figure class="cms-image cms-image--narrow"><img class="cms-image__img" src="https://example.com/tarte.jpg" alt="" loading="lazy"></figure>',
             $section->render($section->normalizeProps(['image' => 'https://example.com/tarte.jpg']), 'fr_FR'),
-            'As wide as the content unless asked otherwise.',
+            'As narrow as a column of text unless asked otherwise: a photo is not a banner.',
         );
     }
 

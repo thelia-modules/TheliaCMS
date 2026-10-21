@@ -114,7 +114,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   and a short text" now has a section to write it in.
 - An **Image** section (`cms:image`): one picture on its own, of the media
   library or the `https` address of a picture kept elsewhere, with an
-  optional caption and three widths (reading column, content, whole screen).
+  optional caption and three widths (reading column by default, content,
+  whole screen).
   Free text holds no image: a brief asking for "a photo of the tart out of
   the oven" now has a section to put it in.
 - The generator says what a draft leaves out of the brief: an image the
