@@ -67,10 +67,12 @@ final readonly class ContentScreen
         $mayGenerate = $this->securityContext->isGranted(['ADMIN'], [CmsResources::GENERATE], [], [AccessManager::UPDATE]);
         $mayPublish = $this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::UPDATE]);
         $document = $subject->document;
+        $lastBrief = $this->lastBrief($subject);
 
         return $this->twig->render(self::TEMPLATE, [
             'subject' => $subject,
-            'brief_form' => $this->forms->create(BriefType::class, $this->lastBrief($subject), ['action' => $subject->url('generate')])->createView(),
+            'last_brief' => $lastBrief,
+            'brief_form' => $this->forms->create(BriefType::class, $lastBrief, ['action' => $subject->url('generate')])->createView(),
             'change_form' => $this->forms->create(ChangeType::class, null, ['action' => $subject->url('revise')])->createView(),
             'translate_form' => $this->translateForm($subject),
             'sections' => null === $document ? [] : $this->sections($document, $subject, $mayPublish),

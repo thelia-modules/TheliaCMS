@@ -75,6 +75,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(0, $screen->filter('[data-testid="cms-content-frame"]')->count());
         self::assertSame(0, $screen->filter('[data-testid="cms-content-sections"]')->count());
         self::assertSame(1, $screen->filter('[data-testid="cms-content-brief"] form input[name="_token"]')->count(), 'The brief form carries the token.');
+        self::assertSame(0, $screen->filter('[data-testid="cms-content-brief-dialog"]')->count(), 'Without a brief, the form is in the screen, the first thing to fill.');
         self::assertSame(0, $screen->filter('[data-testid="cms-content-notice"]')->count(), 'With a client at hand, nothing warns about the key.');
         self::assertNotNull($screen->filter('[data-testid="cms-content-publish"] button')->attr('disabled'), 'Nothing to publish yet.');
     }
@@ -115,7 +116,10 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(2, $screen->filter('form[data-cms-generate] input[name$="[section]"]')->count(), 'Every section has its rewrite form.');
         self::assertSame(1, $screen->filter('dialog#cms-section-rewrite-hero form[data-cms-generate]')->count(), 'The rewrite form of a section is in a dialog.');
         self::assertSame('cms-section-rewrite-hero', $screen->filter('[data-testid="cms-section-rewrite-open-hero"]')->attr('commandfor'), 'Its button opens that dialog.');
-        self::assertSame('Une page qui présente nos services de conseil.', $screen->filter('[data-testid="cms-content-brief"] textarea')->text(), 'The brief is back in its form, to be corrected rather than typed again.');
+        self::assertSame('Une page qui présente nos services de conseil.', $screen->filter('[data-testid="cms-content-brief-dialog"] textarea')->text(), 'The brief is back in its form, in a dialog, to be corrected rather than typed again.');
+        self::assertSame('Une page qui présente nos services de conseil.', $screen->filter('[data-testid="cms-content-brief-recall"]')->text(), 'The screen recalls the brief in a few lines.');
+        self::assertStringContainsString('direct', $screen->filter('[data-testid="cms-content-brief"] .cms-content__brief-meta')->text());
+        self::assertSame('cms-content-brief-dialog', $screen->filter('[data-testid="cms-content-brief-open"]')->attr('commandfor'));
         self::assertSame('direct', $screen->filter('[data-testid="cms-content-brief"] input[name="cms_brief[tone]"]')->attr('value'));
         self::assertSame('{"text":"Une page qui présente nos services de conseil.","tone":"direct","audience":null}', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getBrief());
     }

@@ -851,4 +851,8 @@ return [
     'Small' => 'Petit',
     'Large' => 'Grand',
     'A colour written #rrggbb, for instance #f8d7d7. Empty: the one of the theme.' => 'Une couleur écrite #rrggbb, par exemple #f8d7d7. Vide : celle du thème.',
+    'The brief' => 'Le brief',
+    'Change the brief' => 'Modifier le brief',
+    'Tone: %tone%' => 'Ton : %tone%',
+    'Audience: %audience%' => 'Public : %audience%',
 ];

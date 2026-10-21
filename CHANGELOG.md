@@ -76,6 +76,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   picker sits next to each colour field and writes into it.
 - "Edit by hand" and "Rewrite this section" open in a dialog rather than
   under the section in the list.
+- Once a page has a brief, the content screen recalls it in three lines,
+  with its tone and audience, and **Change the brief** opens the form in a
+  dialog: the room goes to the sections. A page without a brief keeps the
+  form in the screen.
 
 - A brief may cite web pages by their address: the generator offers the
   `web_fetch` tool of the Claude API for that request, and the model reads

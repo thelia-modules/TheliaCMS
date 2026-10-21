@@ -176,6 +176,29 @@ body:has(.cms-content) {
     color: #495057;
 }
 
+/* The brief a page was written from, recalled in a few lines once there is
+   one: the form itself opens in a dialog. */
+.cms-content__brief-recall {
+    display: -webkit-box;
+    margin: 0 0 0.25rem;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    font-size: 0.875rem;
+    color: #495057;
+    white-space: pre-line;
+}
+
+.cms-content__brief-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0 0 0.5rem;
+    font-size: 0.8125rem;
+    color: #5c636a;
+}
+
 .cms-content__edit-open {
     display: block;
     margin-top: 0.5rem;
