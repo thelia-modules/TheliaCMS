@@ -22,6 +22,7 @@ use Thelia\Model\ConfigQuery;
 use Thelia\Model\LangQuery;
 use Thelia\Test\IntegrationTestCase;
 use TheliaCMS\Content\Document;
+use TheliaCMS\Content\Theme\ThemeComponentSections;
 use TheliaCMS\ImportExport\ExportFormat;
 use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\Model\CmsPage;
@@ -121,6 +122,17 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
         preg_match('/^\s*DATABASE_NAME\s*=\s*[\'"]?([^\'"\s#]+)/m', (string) file_get_contents($file), $matches);
 
         return $matches[1] ?? null;
+    }
+
+    /**
+     * The class of a free text section under the active theme, which may
+     * name classes of its own for written text.
+     */
+    protected function richTextClass(): string
+    {
+        $themeClass = $this->getService(ThemeComponentSections::class)->declaration()->richTextClass;
+
+        return null === $themeClass ? 'cms-richtext' : 'cms-richtext '.$themeClass;
     }
 
     /**

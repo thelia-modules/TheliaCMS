@@ -55,12 +55,14 @@ final readonly class ThemeSections
     /**
      * @param list<string>                        $components
      * @param list<string>                        $hidden
-     * @param array<string, array<string, mixed>> $examples props as the component names them, by component
+     * @param array<string, array<string, mixed>> $examples      props as the component names them, by component
+     * @param string|null                         $richTextClass the classes the theme styles written text with, added to the free text sections
      */
     public function __construct(
         public array $components = [],
         public array $hidden = [],
         public array $examples = [],
+        public ?string $richTextClass = null,
     ) {
     }
 
@@ -75,7 +77,7 @@ final readonly class ThemeSections
             $declared = self::readFrom($directory);
 
             if (null !== $declared) {
-                return new self($declared['components'], $declared['hidden'], $declared['examples']);
+                return new self($declared['components'], $declared['hidden'], $declared['examples'], $declared['richtext_class']);
             }
         }
 
@@ -83,7 +85,7 @@ final readonly class ThemeSections
     }
 
     /**
-     * @return array{components: list<string>, hidden: list<string>, examples: array<string, array<string, mixed>>}|null null when the theme declares nothing
+     * @return array{components: list<string>, hidden: list<string>, examples: array<string, array<string, mixed>>, richtext_class: string|null}|null null when the theme declares nothing
      */
     private static function readFrom(string $themeDirectory): ?array
     {
@@ -113,7 +115,25 @@ final readonly class ThemeSections
             'components' => self::names($sections['components'] ?? [], 'sections.components', $file),
             'hidden' => self::names($sections['hidden'] ?? [], 'sections.hidden', $file),
             'examples' => self::examples($sections['examples'] ?? [], $file),
+            'richtext_class' => self::classes($sections['richtext_class'] ?? null, $file),
         ];
+    }
+
+    /**
+     * Class names and nothing else: they end up in an attribute of every
+     * page written as free text.
+     */
+    private static function classes(mixed $classes, string $file): ?string
+    {
+        if (null === $classes || '' === $classes) {
+            return null;
+        }
+
+        if (!\is_string($classes) || 1 !== preg_match('/^[A-Za-z0-9_:\/\[\]\.-]+( [A-Za-z0-9_:\/\[\]\.-]+)*$/', trim($classes))) {
+            throw new \InvalidArgumentException(\sprintf('The "sections.richtext_class" key of %s must be class names separated by spaces, such as "prose prose-lg".', $file));
+        }
+
+        return trim($classes);
     }
 
     /**

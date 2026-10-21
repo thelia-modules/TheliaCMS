@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Content;
 
 use Symfony\Contracts\Translation\TranslatorInterface;
+use TheliaCMS\Content\Theme\ThemeComponentSections;
 use TheliaCMS\TheliaCMS;
 
 /**
@@ -32,6 +33,7 @@ final readonly class RichTextSection implements SectionDefinitionInterface
 
     public function __construct(
         private ?TranslatorInterface $translator = null,
+        private ?ThemeComponentSections $theme = null,
     ) {
     }
 
@@ -71,10 +73,18 @@ final readonly class RichTextSection implements SectionDefinitionInterface
     {
         $html = (string) ($props['html'] ?? '');
 
+        if ('' === trim($html)) {
+            return '';
+        }
+
         // Held at the width of the other sections by the stylesheet of the
         // module; without the wrapper the text sits against the edge of the
-        // page while every section around it is centred.
-        return '' === trim($html) ? '' : '<div class="cms-richtext">'.$html.'</div>';
+        // page while every section around it is centred. The theme styles
+        // its lists and headings under a class of its own, which it names.
+        $themeClass = $this->theme?->declaration()->richTextClass;
+        $class = null === $themeClass ? 'cms-richtext' : 'cms-richtext '.$themeClass;
+
+        return '<div class="'.htmlspecialchars($class, \ENT_QUOTES | \ENT_HTML5).'">'.$html.'</div>';
     }
 
     private function trans(string $message): string

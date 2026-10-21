@@ -76,6 +76,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   picker sits next to each colour field and writes into it.
 - "Edit by hand" and "Rewrite this section" open in a dialog rather than
   under the section in the list.
+- A theme names the classes it styles written text with,
+  `sections.richtext_class` in its `config/theliacms.yaml`, and free text
+  sections carry them next to `cms-richtext`: on Flexy, `wysiwyg
+  wysiwyg-theme` gives their lists and headings the look of the other texts
+  of the shop. A page saved before keeps its old rendering until its next
+  save or publication.
 - Once a page has a brief, the content screen recalls it in three lines,
   with its tone and audience, and **Change the brief** opens the form in a
   dialog: the room goes to the sections. A page without a brief keeps the

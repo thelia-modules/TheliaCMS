@@ -176,6 +176,21 @@ what a generator reads about the component. Slots (`{% block %}`) are not
 supported: a component whose content goes through a block cannot be filled
 from a document.
 
+The same file names the classes the theme styles written text with, which
+free text sections (`cms:richtext`) then carry next to `cms-richtext`:
+
+```yaml
+sections:
+    richtext_class: wysiwyg wysiwyg-theme
+    components: []
+```
+
+Flexy styles its text with Tailwind Typography under the name `wysiwyg`:
+without the class, its reset leaves the lists of a free text without bullets
+or numbers and its headings the size of a paragraph. The class is written
+when a page is rendered, at its save: a page saved before the theme named it
+keeps its old rendering until it is saved or published again.
+
 ## From a template
 
 `cms_section(name, props)` renders a section anywhere in a theme, with its
