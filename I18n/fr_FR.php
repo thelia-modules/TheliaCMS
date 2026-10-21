@@ -855,4 +855,12 @@ return [
     'Change the brief' => 'Modifier le brief',
     'Tone: %tone%' => 'Ton : %tone%',
     'Audience: %audience%' => 'Public : %audience%',
+    'Columns' => 'Colonnes',
+    'Two to four columns side by side, each an image (a logo, an icon, a photo) over an optional heading and a short text: partners, promises, steps. As many columns as items.' => 'Deux à quatre colonnes côte à côte, chacune une image (un logo, une icône, une photo) au-dessus d’un titre facultatif et d’un texte court : partenaires, engagements, étapes. Autant de colonnes que d’éléments.',
+    'Above the columns; none when empty.' => 'Au-dessus des colonnes ; aucun si vide.',
+    'An image of the media library, or the https address of a picture kept elsewhere.' => 'Une image de la médiathèque, ou l’adresse https d’une image hébergée ailleurs.',
+    'Text of the image' => 'Texte de l’image',
+    'What the image shows, for a reader who does not see it; empty when the text beside it says it.' => 'Ce que montre l’image, pour qui ne la voit pas ; vide si le texte à côté le dit.',
+    'A sentence or two on what this column is about.' => 'Une phrase ou deux sur le sujet de cette colonne.',
+    'A heading' => 'Un titre',
 ];

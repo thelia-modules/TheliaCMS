@@ -283,6 +283,27 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame('revision', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getKind());
     }
 
+    public function testAChangeAddsColumnsOfLogosOverAShortText(): void
+    {
+        $page = $this->createPage('Partners', published: false);
+        $logos = array_map(static fn (int $id): array => ['image' => \sprintf('https://img.logoipsum.com/%d.svg', $id), 'image_alt' => 'Logoipsum', 'text' => 'Lorem ipsum dolor sit amet.'], [243, 245, 247]);
+        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([
+            ['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Partners</h1><p>Written for the test.</p>']],
+            ['id' => 'logos', 'component' => 'cms:columns', 'props' => json_encode(['title' => '', 'columns' => $logos], \JSON_THROW_ON_ERROR)],
+        ]))]));
+
+        $form = $this->screen($this->url($page->getId()))->filter('[data-testid="cms-content-change"] form')->form();
+        $form['cms_change[text]'] = 'Ajoute 3 colonnes avec dans chacune un logo venant de https://logoipsum.com/ et un texte court en lorem ipsum sous l’image';
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+        self::assertStringContainsString('`cms:columns`', json_encode($this->api->requests[0]['system'] ?? [], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE), 'The model is offered the columns.');
+        self::assertSame('web_fetch', array_column($this->api->requests[0]['tools'] ?? [], 'name')[array_key_last(array_column($this->api->requests[0]['tools'] ?? [], 'name'))] ?? null, 'The site the change cites can be read for its logos.');
+
+        $html = (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml();
+        self::assertStringContainsString('<section data-cms-section="logos" class="cms-columns cms-columns--3">', $html);
+        self::assertSame(3, substr_count($html, 'src="https://img.logoipsum.com/'), 'The logos of elsewhere are kept by the sanitizer.');
+    }
+
     public function testOneSectionIsWrittenAgainByItsOwnForm(): void
     {
         $page = $this->createPage('Sectioned', published: false);

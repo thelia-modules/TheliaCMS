@@ -147,6 +147,75 @@
     text-underline-offset: 0.2em;
   }
 
+  /* Columns ------------------------------------------------------------------ */
+
+  /* Held at the width of free text, and stacked below 48rem: three columns of a
+     few words each on a phone are three words a line. */
+  .cms-columns {
+    margin-inline: auto;
+    width: min(75rem, 100% - 2rem);
+  }
+
+  .cms-columns__title {
+    margin: 0 0 2rem;
+    font-size: var(--font-size-h2-d, 1.75rem);
+    font-weight: var(--font-weight-h2, 600);
+    line-height: 1.2;
+  }
+
+  .cms-columns__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  @media (min-width: 48rem) {
+    .cms-columns--2 .cms-columns__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cms-columns--3 .cms-columns__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cms-columns--4 .cms-columns__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  /* The image keeps its proportions inside a band of fixed height, so a row of
+     logos of different shapes lines up; it follows the alignment of the text. */
+  .cms-columns__image {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: 5rem;
+    margin-bottom: 1rem;
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  :where([style*="text-align:center"]) .cms-columns__image {
+    margin-inline: auto;
+    object-position: center;
+  }
+
+  :where([style*="text-align:right"]) .cms-columns__image {
+    margin-left: auto;
+    object-position: right center;
+  }
+
+  .cms-columns__heading {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-h3-d, 1.375rem);
+    font-weight: var(--font-weight-h2, 600);
+    line-height: 1.25;
+  }
+
+  .cms-columns__text {
+    margin: 0;
+  }
+
   /* The footer menu ---------------------------------------------------------- */
 
   .cms-menu__list {

@@ -855,4 +855,12 @@ return [
     'Change the brief' => 'Change the brief',
     'Tone: %tone%' => 'Tone: %tone%',
     'Audience: %audience%' => 'Audience: %audience%',
+    'Columns' => 'Columns',
+    'Two to four columns side by side, each an image (a logo, an icon, a photo) over an optional heading and a short text: partners, promises, steps. As many columns as items.' => 'Two to four columns side by side, each an image (a logo, an icon, a photo) over an optional heading and a short text: partners, promises, steps. As many columns as items.',
+    'Above the columns; none when empty.' => 'Above the columns; none when empty.',
+    'An image of the media library, or the https address of a picture kept elsewhere.' => 'An image of the media library, or the https address of a picture kept elsewhere.',
+    'Text of the image' => 'Text of the image',
+    'What the image shows, for a reader who does not see it; empty when the text beside it says it.' => 'What the image shows, for a reader who does not see it; empty when the text beside it says it.',
+    'A sentence or two on what this column is about.' => 'A sentence or two on what this column is about.',
+    'A heading' => 'A heading',
 ];

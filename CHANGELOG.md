@@ -76,6 +76,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   picker sits next to each colour field and writes into it.
 - "Edit by hand" and "Rewrite this section" open in a dialog rather than
   under the section in the list.
+- A **Columns** section (`cms:columns`): two to four columns side by side,
+  each an image over an optional heading and a short text, as many columns as
+  items. The image is one of the media library or the `https` address of a
+  picture kept elsewhere; the text is written as text. The module draws it
+  with a grid of its own (`blocks.css`), one column on a narrow screen, so it
+  needs nothing from the theme. A brief asking for "three columns with a logo
+  and a short text" now has a section to write it in.
 - `thelia_cms:render` renders the drafts of pages again from their documents,
   without publishing them (`--page`, `--all`, `--locale`): a change of the
   module or of the theme reaches every draft at once instead of at its next
