@@ -1,7 +1,8 @@
 # Plan: components made in the back office
 
-Status: steps 1 to 3 done (storage, definition, validator), not committed
-yet; step 4 (the generator of components) is next. The design questions are
+Status: steps 1 to 4 done (storage, definition, validator, generator);
+step 5 (the screen) is next. No real call of the API has been made for a
+component yet: the first one comes with the screen. The design questions are
 settled (see "Decisions taken").
 
 ## What is asked
@@ -150,6 +151,15 @@ renders the sample, and keeps it only when the editor says so.
 - **Step 3.** `SiteComponentValidator`. Tests: `Tests/Unit/Content/Site/`,
   `Tests/Integration/Content/Site/SiteComponentTest.php`.
 
+- **Step 4.** `Generation/Component/`: `ComponentPrompt` (system prompt
+  cached: rules of the props, of the sandbox and of the stylesheet, the
+  colour tokens read from `assets/blocks.css`, the accessibility skill, an
+  example; user message: the shop, the components the catalogue already
+  has, the request, the component to change), `ComponentGenerator`,
+  `ComponentRequest`, `ComponentResult`; `GenerationLog::recordComponent()`
+  and `GenerationTarget::TYPE_COMPONENT`. Tests:
+  `Tests/Integration/Generation/Component/ComponentGeneratorTest.php`.
+
 What the code settled that the plan did not say:
 
 - The prop types are text, html, integer, boolean, choice, image, url and
@@ -170,6 +180,14 @@ What the code settled that the plan did not say:
   `@import`) and kept filtered by `PublishedContentSanitizer::css()`; it is
   scoped when served. At-rules other than `@media`, `@supports`,
   `@container` are refused, `@keyframes` included.
+- The generator of components offers no tool: one request, the component,
+  and up to two corrections. The answer carries the props and the sample as
+  JSON strings, like the props of a document.
+- A new component has no row until it is kept: its calls are in the ledger
+  under `target_type` `component` and `target_id` 0, and count in the spend.
+  A change is recorded under the id of the component.
+- A new component whose code is taken, or a change that renames its
+  component, is sent back for correction like any other problem.
 - Until step 5, the components screen shows a component of the site with the
   origin "module" (`CmsComponentAdminController::origin()`).
 

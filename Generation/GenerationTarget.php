@@ -28,6 +28,9 @@ final readonly class GenerationTarget
 {
     public const string TYPE_PAGE = 'page';
 
+    /** A component of the site, made in the back office: its calls go in the same ledger. */
+    public const string TYPE_COMPONENT = 'component';
+
     /**
      * @param array<string, int|float|string|bool|null> $fieldValues   the values the page holds, by field code
      * @param Document|null                             $modelDocument the draft of the model of the type in this language, when the page is not that model

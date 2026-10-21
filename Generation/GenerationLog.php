@@ -90,6 +90,54 @@ final readonly class GenerationLog
     }
 
     /**
+     * A call that made or changed a component of the site. A new component
+     * has no row until the editor keeps it: its calls are recorded under the
+     * id 0, and count in the spend all the same.
+     */
+    public function recordComponent(
+        int $componentId,
+        string $locale,
+        string $kind,
+        string $request,
+        string $status,
+        string $model,
+        Usage $usage,
+        int $turns,
+        int $durationMs,
+        ?string $requestId = null,
+        ?string $stopReason = null,
+        ?string $stopCategory = null,
+        ?string $error = null,
+        ?string $component = null,
+    ): int {
+        $row = (new CmsPageGeneration())
+            ->setTargetType(GenerationTarget::TYPE_COMPONENT)
+            ->setTargetId($componentId)
+            ->setLocale($locale)
+            ->setKind($kind)
+            ->setPrompt($request)
+            ->setBrief(json_encode(['text' => $request], \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR))
+            ->setModel($model)
+            ->setRequestId($requestId)
+            ->setStatus($status)
+            ->setStopReason($stopReason)
+            ->setStopCategory($stopCategory)
+            ->setInputTokens($usage->inputTokens)
+            ->setOutputTokens($usage->outputTokens)
+            ->setCacheReadTokens($usage->cacheReadTokens)
+            ->setCacheWriteTokens($usage->cacheWriteTokens)
+            ->setTurns($turns)
+            ->setCostUsd(number_format($this->pricing->cost($model, $usage), 6, '.', ''))
+            ->setDurationMs($durationMs)
+            ->setError(null !== $error ? mb_substr($error, 0, 60000) : null)
+            ->setDocument($component)
+            ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
+        $row->save();
+
+        return (int) $row->getId();
+    }
+
+    /**
      * What the answer of a call said the page leaves out of the brief. A row
      * written before the column, or by a call that left nothing out, holds
      * nothing.
