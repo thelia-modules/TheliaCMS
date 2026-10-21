@@ -176,20 +176,6 @@ body:has(.cms-content) {
     color: #495057;
 }
 
-.cms-content__rewrite {
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-}
-
-.cms-content__rewrite summary {
-    cursor: pointer;
-    color: var(--bs-link-color, #0d6efd);
-}
-
-.cms-content__rewrite form {
-    margin-top: 0.5rem;
-}
-
 .cms-content__edit-open {
     display: block;
     margin-top: 0.5rem;

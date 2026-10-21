@@ -193,8 +193,19 @@
                                         </dialog>
                                     {% endif %}
                                     {% if may_generate %}
-                                        <details class="cms-content__rewrite">
-                                            <summary>{{ 'Rewrite this section'|trans({}, 'theliacms') }}</summary>
+                                        <button type="button" class="cms-content__edit-open" command="show-modal" commandfor="cms-section-rewrite-{{ section.id }}" data-cms-dialog-open data-testid="cms-section-rewrite-open-{{ section.id }}">
+                                            {{ 'Rewrite this section'|trans({}, 'theliacms') }}
+                                        </button>
+                                        <dialog class="cms-content__edit" id="cms-section-rewrite-{{ section.id }}" aria-labelledby="cms-section-rewrite-title-{{ section.id }}" data-cms-rewrite data-testid="cms-section-rewrite-{{ section.id }}">
+                                            <div class="cms-content__add-head">
+                                                <h2 class="cms-content__heading mb-0" id="cms-section-rewrite-title-{{ section.id }}">
+                                                    {{ section.rank }}. {{ section.label }} <code class="cms-content__item-component">{{ section.component }}</code>
+                                                </h2>
+                                                <form method="dialog">
+                                                    <button type="submit" class="btn-close" aria-label="{{ 'Close'|trans({}, 'theliacms') }}"></button>
+                                                </form>
+                                            </div>
+                                            <p class="cms-content__add-hint">{{ 'Rewrite this section'|trans({}, 'theliacms') }}</p>
                                             {% form_theme section.form with bo_form_themes only %}
                                             {{ form_start(section.form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' } }) }}
                                                 <input type="hidden" name="_token" value="{{ assignToken() }}">
@@ -204,7 +215,7 @@
                                                     {{ 'Rewrite'|trans({}, 'theliacms') }}
                                                 </button>
                                             {{ form_end(section.form) }}
-                                        </details>
+                                        </dialog>
                                     {% endif %}
                                 </li>
                             {% endfor %}

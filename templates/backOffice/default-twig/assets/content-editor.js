@@ -334,6 +334,15 @@
                 }
 
                 event.preventDefault();
+
+                // A section rewritten from its dialog: the dialog gives way to
+                // the progress of the generation.
+                var dialog = form.closest("dialog");
+
+                if (dialog) {
+                    dialog.close();
+                }
+
                 generate(form);
             });
         });
@@ -694,6 +703,21 @@
 
                 if (dialog) {
                     openEditDialog(dialog);
+                }
+            });
+        });
+
+        // The rewrite of a section opens in its dialog too, its text field
+        // focused.
+        root.querySelectorAll("[data-cms-dialog-open]").forEach(function (button) {
+            var dialog = root.querySelector("#" + CSS.escape(button.getAttribute("commandfor")));
+
+            button.addEventListener("click", function (event) {
+                event.preventDefault();
+
+                if (dialog && !dialog.open) {
+                    dialog.showModal();
+                    focusFirstField(dialog, 0);
                 }
             });
         });
