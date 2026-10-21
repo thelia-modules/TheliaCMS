@@ -32,6 +32,7 @@ final readonly class PromptBuilder
         private SkillRepository $skills,
         private CatalogSheet $catalog,
         private ShopContext $shop,
+        private GeneratorSettings $settings,
     ) {
     }
 
@@ -115,7 +116,35 @@ final readonly class PromptBuilder
             default => $request->brief->text,
         };
 
+        if ([] !== $addresses = $this->readableAddresses($request)) {
+            $lines[] = '';
+            $lines[] = '# The pages the brief cites';
+            $lines[] = '';
+            $lines[] = 'Read each of them with the `web_fetch` tool before you write: what they say counts as given by the brief. A page that cannot be read is left out, and the document says nothing it would have said.';
+            $lines[] = '';
+
+            foreach ($addresses as $address) {
+                $lines[] = '- '.$address;
+            }
+        }
+
         return implode("\n", $lines);
+    }
+
+    /**
+     * The web pages the model may read for this request: the ones its brief
+     * cites, unless the site turned the reading off. A translation has no
+     * brief of the editor's to cite any.
+     *
+     * @return list<string>
+     */
+    public function readableAddresses(GenerationRequest $request): array
+    {
+        if (!$this->settings->webFetch() || GenerationRequest::KIND_TRANSLATION === $request->kind) {
+            return [];
+        }
+
+        return $request->brief->addresses();
     }
 
     /**

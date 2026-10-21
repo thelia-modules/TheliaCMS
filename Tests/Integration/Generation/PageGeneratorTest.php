@@ -272,6 +272,169 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         self::assertNull($this->getService(GenerationLog::class)->find((int) $row->getId(), GenerationTarget::page($this->createPage('Other'), $locale), $locale), 'A row is found for its own target only.');
     }
 
+    public function testABriefCitingAWebPageLetsTheModelReadItAndTheDocumentIsWhatFollowsTheReading(): void
+    {
+        $page = $this->createPage('Notre histoire', published: false);
+        $locale = $this->locale();
+        $document = json_encode(['version' => 1, 'sections' => [['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Depuis 1987</h1>']]]], \JSON_THROW_ON_ERROR);
+
+        $this->api->answer(FakeClaudeTransport::message([
+            FakeClaudeTransport::text('I will read the page the brief cites.'),
+            FakeClaudeTransport::serverToolUse('srvtoolu_1', 'web_fetch', ['url' => 'https://example.com/a-propos']),
+            FakeClaudeTransport::webFetchResult('srvtoolu_1', 'https://example.com/a-propos', 'Fondée en 1987 à Lyon.'),
+            FakeClaudeTransport::text($document),
+        ]))->answer(FakeClaudeTransport::tokenCount(1234));
+
+        $result = $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Reprends notre histoire depuis https://example.com/a-propos, en plus court.')));
+
+        self::assertSame('<h1>Depuis 1987</h1>', $result->document->sections[0]->props['html'], 'The text written before the reading is not part of the document.');
+
+        $count = $this->api->requests[1];
+        self::assertArrayNotHasKey('stream', $count, 'The page read is counted after the call.');
+        self::assertSame('Fondée en 1987 à Lyon.', $count['messages'][0]['content'][0]['source']['data'], 'What is counted is the text of the page alone.');
+
+        $row = CmsPageGenerationQuery::create()->findPk($result->logId);
+        self::assertNotNull($row);
+        self::assertSame([['url' => 'https://example.com/a-propos', 'error' => null, 'tokens' => 1234]], array_map(static fn ($page) => $page->toArray(), GenerationLog::webPagesOf($row)), 'The ledger keeps the page and its tokens.');
+
+        $first = $this->api->requests[0];
+        $fetch = array_values(array_filter($first['tools'], static fn (array $tool): bool => 'web_fetch' === $tool['name']));
+
+        self::assertCount(1, $fetch, 'A brief citing a page offers the reading tool of the API.');
+        self::assertSame('web_fetch_20260209', $fetch[0]['type']);
+        self::assertGreaterThan(0, $fetch[0]['max_uses']);
+        self::assertGreaterThan(0, $fetch[0]['max_content_tokens']);
+        self::assertStringContainsString('https://example.com/a-propos', $first['messages'][0]['content']);
+        self::assertStringContainsString('web_fetch', $first['messages'][0]['content'], 'The model is told it may read the pages the brief cites.');
+    }
+
+    public function testATurnTheApiPausedWhileReadingIsSentBackWithWhatWasReadAndGoesOn(): void
+    {
+        $page = $this->createPage('Notre histoire', published: false);
+        $locale = $this->locale();
+
+        $this->api
+            ->answer(FakeClaudeTransport::message([
+                FakeClaudeTransport::serverToolUse('srvtoolu_1', 'web_fetch', ['url' => 'https://example.com/a-propos']),
+                FakeClaudeTransport::webFetchResult('srvtoolu_1', 'https://example.com/a-propos', 'Fondée en 1987 à Lyon.'),
+            ], 'pause_turn'))
+            ->answer(FakeClaudeTransport::message([
+                FakeClaudeTransport::text(json_encode(['version' => 1, 'sections' => [['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<p>Lyon, 1987.</p>']]]], \JSON_THROW_ON_ERROR)),
+            ]))
+            ->answer(FakeClaudeTransport::tokenCount(800));
+
+        $result = $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Résume https://example.com/a-propos.')));
+
+        self::assertSame(2, $result->turns);
+        self::assertCount(3, $this->api->requests, 'Two turns, then the page read is counted.');
+
+        $messages = $this->api->requests[1]['messages'];
+
+        self::assertCount(2, $messages, 'A paused turn is resumed as it is, with no message of ours after it.');
+        self::assertSame('assistant', $messages[1]['role']);
+        self::assertSame(['server_tool_use', 'web_fetch_tool_result'], array_column($messages[1]['content'], 'type'), 'What was read goes back with the turn, or the model would read it again.');
+        self::assertSame('https://example.com/a-propos', $messages[1]['content'][0]['input']['url']);
+        self::assertSame('Fondée en 1987 à Lyon.', $messages[1]['content'][1]['content']['content']['source']['data']);
+    }
+
+    public function testABriefCitingNoAddressOffersNoReadingTool(): void
+    {
+        $page = $this->createPage('Nos services', published: false);
+        $locale = $this->locale();
+
+        $this->api->answer(FakeClaudeTransport::message([
+            FakeClaudeTransport::text(json_encode(['version' => 1, 'sections' => [['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<p>Conseil.</p>']]]], \JSON_THROW_ON_ERROR)),
+        ]));
+
+        $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Une page sur nos services de conseil.')));
+
+        self::assertNotContains('web_fetch', array_column($this->api->requests[0]['tools'], 'name'), 'Without an address, the request stays the one every site already sends.');
+        self::assertStringNotContainsString('web_fetch', $this->api->requests[0]['messages'][0]['content']);
+    }
+
+    public function testThePageFilteredByCodeOfTheApiGoesBackWholeWithTheToolCallThatFollowsAndItsContainer(): void
+    {
+        $page = $this->createPage('Notre histoire', published: false);
+        $locale = $this->locale();
+        $fromCode = ['type' => 'code_execution_20260120', 'tool_id' => 'srvtoolu_code'];
+
+        // As the API answers when web_fetch filters a page: the code it ran,
+        // the reading that code asked for, what both answered, then a tool of
+        // the site called in the same turn.
+        $this->api
+            ->answer(FakeClaudeTransport::message([
+                FakeClaudeTransport::serverToolUse('srvtoolu_code', 'code_execution', ['code' => 'r = await web_fetch(url="https://example.com/a-propos")']),
+                FakeClaudeTransport::serverToolUse('srvtoolu_fetch', 'web_fetch', ['url' => 'https://example.com/a-propos'], $fromCode),
+                FakeClaudeTransport::webFetchResult('srvtoolu_fetch', 'https://example.com/a-propos', 'Fondée en 1987 à Lyon.'),
+                FakeClaudeTransport::codeExecutionResult('srvtoolu_code', 'Fondée en 1987 à Lyon.'),
+                FakeClaudeTransport::toolUse('toolu_1', 'search_pages', ['query' => 'contact']),
+            ], 'tool_use', container: 'container_1'))
+            ->answer(FakeClaudeTransport::message([
+                FakeClaudeTransport::text(json_encode(['version' => 1, 'sections' => [['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<p>Lyon, 1987.</p>']]]], \JSON_THROW_ON_ERROR)),
+            ]))
+            ->answer(FakeClaudeTransport::tokenCount(500));
+
+        $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Résume https://example.com/a-propos.')));
+
+        $second = $this->api->requests[1];
+        $turn = $second['messages'][1]['content'];
+
+        self::assertSame(['server_tool_use', 'server_tool_use', 'web_fetch_tool_result', 'code_execution_tool_result', 'tool_use'], array_column($turn, 'type'), 'Every block of the turn goes back, the result of the code with its call, or the API refuses the turn.');
+        self::assertSame($fromCode, $turn[1]['caller'], 'A reading the code asked for goes back as the code asked for it.');
+        self::assertSame('container_1', $second['container'] ?? null, 'The next turn runs in the container the code ran in.');
+        self::assertSame('tool_result', $second['messages'][2]['content'][0]['type']);
+    }
+
+    public function testAPageThatCannotBeReadIsRecordedWithItsErrorAndAPageUncountedStaysInTheLedger(): void
+    {
+        $page = $this->createPage('Notre histoire', published: false);
+        $locale = $this->locale();
+
+        $this->api->answer(FakeClaudeTransport::message([
+            FakeClaudeTransport::serverToolUse('srvtoolu_1', 'web_fetch', ['url' => 'https://example.com/prive']),
+            FakeClaudeTransport::webFetchError('srvtoolu_1', 'url_not_accessible'),
+            FakeClaudeTransport::serverToolUse('srvtoolu_2', 'web_fetch', ['url' => 'https://example.com/a-propos']),
+            FakeClaudeTransport::webFetchResult('srvtoolu_2', 'https://example.com/a-propos', 'Fondée en 1987.'),
+            FakeClaudeTransport::text(json_encode(['version' => 1, 'sections' => [['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<p>1987.</p>']]]], \JSON_THROW_ON_ERROR)),
+        ]));
+        // No answer queued for the count: the fake answers it with an error.
+
+        $result = $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Voir https://example.com/prive et https://example.com/a-propos.')));
+
+        $row = CmsPageGenerationQuery::create()->findPk($result->logId);
+        self::assertNotNull($row);
+        self::assertSame([
+            ['url' => 'https://example.com/prive', 'error' => 'url_not_accessible', 'tokens' => null],
+            ['url' => 'https://example.com/a-propos', 'error' => null, 'tokens' => null],
+        ], array_map(static fn ($page) => $page->toArray(), GenerationLog::webPagesOf($row)), 'An error is kept with its address; a count that failed leaves the page uncounted, the call recorded.');
+        self::assertSame(GenerationLog::STATUS_DONE, $row->getStatus());
+    }
+
+    public function testASiteThatTurnedTheReadingOffSendsTheAddressesAsText(): void
+    {
+        $page = $this->createPage('Notre histoire', published: false);
+        $locale = $this->locale();
+        $settings = $this->getService(GeneratorSettings::class);
+        $settings->save($settings->model(), $settings->effort(), $settings->maxTokens(), webFetch: false);
+        \Thelia\Model\ModuleConfigQuery::resetConfigCache();
+
+        try {
+            $this->api->answer(FakeClaudeTransport::message([
+                FakeClaudeTransport::text(json_encode(['version' => 1, 'sections' => [['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<p>1987.</p>']]]], \JSON_THROW_ON_ERROR)),
+            ]));
+
+            $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Résume https://example.com/a-propos.')));
+        } finally {
+            $settings->save($settings->model(), $settings->effort(), $settings->maxTokens(), webFetch: true);
+            \Thelia\Model\ModuleConfigQuery::resetConfigCache();
+        }
+
+        $first = $this->api->requests[0];
+        self::assertNotContains('web_fetch', array_column($first['tools'], 'name'));
+        self::assertStringNotContainsString('web_fetch', $first['messages'][0]['content']);
+        self::assertStringContainsString('https://example.com/a-propos', $first['messages'][0]['content'], 'The brief still says what it says.');
+    }
+
     private function generator(): PageGenerator
     {
         return new PageGenerator(

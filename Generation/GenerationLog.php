@@ -39,6 +39,9 @@ final readonly class GenerationLog
     ) {
     }
 
+    /**
+     * @param list<WebPageRead> $webPages the pages the call read, counted
+     */
     public function record(
         GenerationRequest $request,
         string $status,
@@ -52,6 +55,7 @@ final readonly class GenerationLog
         ?string $stopCategory = null,
         ?string $error = null,
         ?string $document = null,
+        array $webPages = [],
     ): int {
         $row = (new CmsPageGeneration())
             ->setTargetType($request->target->type)
@@ -74,11 +78,35 @@ final readonly class GenerationLog
             ->setDurationMs($durationMs)
             ->setError(null !== $error ? mb_substr($error, 0, 60000) : null)
             ->setDocument($document)
+            ->setWebPages([] === $webPages ? null : json_encode(array_map(static fn (WebPageRead $page): array => $page->toArray(), $webPages), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE))
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
 
         $row->save();
 
         return (int) $row->getId();
+    }
+
+    /**
+     * The web pages a call read, as it recorded them. A row written before
+     * the column, or by a call that read none, holds none.
+     *
+     * @return list<WebPageRead>
+     */
+    public static function webPagesOf(CmsPageGeneration $row): array
+    {
+        $json = (string) $row->getWebPages();
+
+        if ('' === $json) {
+            return [];
+        }
+
+        try {
+            $rows = json_decode($json, true, 8, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return [];
+        }
+
+        return \is_array($rows) ? array_values(array_map(static fn (mixed $page): WebPageRead => WebPageRead::fromArray(\is_array($page) ? $page : []), $rows)) : [];
     }
 
     /**

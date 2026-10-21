@@ -456,6 +456,7 @@ CREATE TABLE `cms_page_generation`
     `duration_ms` INTEGER DEFAULT 0 NOT NULL,
     `error` TEXT,
     `document` LONGTEXT,
+    `web_pages` LONGTEXT,
     `created_by` INTEGER,
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,

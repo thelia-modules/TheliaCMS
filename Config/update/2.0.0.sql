@@ -186,9 +186,21 @@ CREATE TABLE IF NOT EXISTS `cms_page_generation`
     `duration_ms` INTEGER DEFAULT 0 NOT NULL,
     `error` TEXT,
     `document` LONGTEXT,
+    `web_pages` LONGTEXT,
     `created_by` INTEGER,
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
     INDEX `idx_cms_page_generation_target` (`target_type`, `target_id`, `locale`)
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+-- The web pages a call read, added after the table: a site already on a
+-- pre-release of 2.0.0 holds the table without the column.
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_generation' AND column_name = 'web_pages'),
+    'ALTER TABLE `cms_page_generation` ADD COLUMN `web_pages` LONGTEXT AFTER `document`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;

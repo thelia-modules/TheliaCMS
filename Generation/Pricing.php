@@ -46,4 +46,13 @@ final readonly class Pricing
             6,
         );
     }
+
+    /**
+     * What tokens read once as input cost, uncached: the price of a page the
+     * model read, before the cache makes a second reading of it cheaper.
+     */
+    public function inputCost(string $model, int $tokens): float
+    {
+        return $this->cost($model, new Usage(inputTokens: $tokens));
+    }
 }

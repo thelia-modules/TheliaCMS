@@ -21,15 +21,24 @@ use Anthropic\Messages\RawContentBlockStartEvent;
 use Anthropic\Messages\RawContentBlockStopEvent;
 use Anthropic\Messages\RawMessageDeltaEvent;
 use Anthropic\Messages\RawMessageStartEvent;
+use Anthropic\Messages\RedactedThinkingBlock;
+use Anthropic\Messages\ServerToolUseBlock;
 use Anthropic\Messages\TextBlock;
 use Anthropic\Messages\TextDelta;
+use Anthropic\Messages\ThinkingBlock;
 use Anthropic\Messages\ToolUseBlock;
 
 /**
  * A message read from the event stream of the API, put back together as
  * the whole message the API would have answered with in one piece: the
  * text blocks from their deltas, the tool calls from their JSON fragments,
- * the stop reason and the usage from the last events.
+ * the calls of the tools the API runs itself the same way and their results
+ * as they arrive, whole, the stop reason, the container and the usage from
+ * the last events. `web_fetch` filters a page with code it runs in a
+ * container: the call of that code, its result and the readings it asked for
+ * (with the caller that says so) go back with the turn, every one of them, or
+ * the API refuses the turn. Thinking blocks are left out, as they always
+ * were: they arrive without the signature a block sent back needs.
  *
  * Reading the stream rather than waiting for the message lets a screen show
  * the text as it is written; the generator itself only ever reads the whole.
@@ -38,7 +47,7 @@ final class StreamedMessage
 {
     private ?Message $message = null;
 
-    /** @var array<int, array{type: string, id?: string, name?: string, text: string}> */
+    /** @var array<int, array{type: string, id?: string, name?: string, caller?: mixed, text: string, block?: object}> */
     private array $blocks = [];
 
     private int $characters = 0;
@@ -61,9 +70,15 @@ final class StreamedMessage
 
         if ($event instanceof RawContentBlockStartEvent) {
             $block = $event->contentBlock;
-            $this->blocks[$event->index] = $block instanceof ToolUseBlock
-                ? ['type' => 'tool_use', 'id' => $block->id, 'name' => $block->name, 'text' => '']
-                : ['type' => 'text', 'text' => $block instanceof TextBlock ? $block->text : ''];
+            $this->blocks[$event->index] = match (true) {
+                // The API leaves the caller out of a call made directly.
+                $block instanceof ToolUseBlock => ['type' => 'tool_use', 'id' => $block->id, 'name' => $block->name, 'caller' => $block->caller ?? null, 'text' => ''],
+                $block instanceof ServerToolUseBlock => ['type' => 'server_tool_use', 'id' => $block->id, 'name' => $block->name, 'caller' => $block->caller ?? null, 'text' => ''],
+                $block instanceof TextBlock => ['type' => 'text', 'text' => $block->text],
+                $block instanceof ThinkingBlock, $block instanceof RedactedThinkingBlock => ['type' => 'text', 'text' => ''],
+                // The result of a tool the API ran: it arrives whole.
+                default => ['type' => 'kept', 'text' => '', 'block' => $block],
+            };
 
             return;
         }
@@ -90,6 +105,10 @@ final class StreamedMessage
             $this->message['stopReason'] = $event->delta->stopReason;
             $this->message['stopSequence'] = $event->delta->stopSequence;
             $this->message['stopDetails'] = $event->delta->stopDetails;
+
+            if (null !== $event->delta->container) {
+                $this->message['container'] = $event->delta->container;
+            }
 
             $usage = $this->message->usage;
             $usage['outputTokens'] = $event->usage->outputTokens;
@@ -123,9 +142,13 @@ final class StreamedMessage
         $content = [];
 
         foreach ($this->blocks as $block) {
-            if ('tool_use' === $block['type']) {
+            if ('tool_use' === $block['type'] || 'server_tool_use' === $block['type']) {
                 $input = '' === trim($block['text']) ? [] : json_decode($block['text'], true);
-                $content[] = ToolUseBlock::with($block['id'] ?? '', \is_array($input) ? $input : [], $block['name'] ?? '');
+                $content[] = 'tool_use' === $block['type']
+                    ? ToolUseBlock::with($block['id'] ?? '', \is_array($input) ? $input : [], $block['name'] ?? '', $block['caller'] ?? ['type' => 'direct'])
+                    : ServerToolUseBlock::with($block['id'] ?? '', \is_array($input) ? $input : [], $block['name'] ?? '', $block['caller'] ?? ['type' => 'direct']);
+            } elseif ('kept' === $block['type'] && isset($block['block'])) {
+                $content[] = $block['block'];
             } elseif ('' !== $block['text']) {
                 // The stream opens a text block before a tool call and may
                 // leave it empty; sent back as it is, the API refuses it.

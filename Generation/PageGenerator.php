@@ -14,11 +14,17 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation;
 
+use Anthropic\Client;
 use Anthropic\Core\Exceptions\APIConnectionException;
 use Anthropic\Core\Exceptions\APIStatusException;
+use Anthropic\Messages\Base64PDFSource;
 use Anthropic\Messages\Message;
+use Anthropic\Messages\ServerToolUseBlock;
 use Anthropic\Messages\TextBlock;
 use Anthropic\Messages\ToolUseBlock;
+use Anthropic\Messages\WebFetchBlock;
+use Anthropic\Messages\WebFetchToolResultBlock;
+use Anthropic\Messages\WebFetchToolResultErrorBlock;
 use Psr\Log\LoggerInterface;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentSchema;
@@ -42,6 +48,12 @@ final readonly class PageGenerator
 
     /** A ceiling on the tool turns, so a model that keeps searching stops. */
     private const int MAX_TURNS = 12;
+
+    /** How many pages the model may read for one request, the ones the brief cites and the links it follows from them. */
+    private const int WEB_FETCH_USES = 5;
+
+    /** How much of a page read reaches the model: a long page is cut rather than filling the context. */
+    private const int WEB_FETCH_CONTENT_TOKENS = 20_000;
 
     public function __construct(
         private ClaudeClientProviderInterface $clients,
@@ -70,16 +82,29 @@ final readonly class PageGenerator
         $prompt = $this->prompts->userMessage($request);
         $messages = [['role' => 'user', 'content' => $prompt]];
         $tools = $this->tools->definitions();
+
+        // Offered only when the brief cites a page: the request of a brief
+        // that cites none stays byte for byte the one it was.
+        if ([] !== $this->prompts->readableAddresses($request)) {
+            $tools[] = ['type' => 'web_fetch_20260209', 'name' => 'web_fetch', 'maxUses' => self::WEB_FETCH_USES, 'maxContentTokens' => self::WEB_FETCH_CONTENT_TOKENS];
+        }
+
         $format = ['type' => 'json_schema', 'schema' => $this->schema->strict($request->keptComponents())];
         $usage = new Usage();
         $turns = 0;
         $corrections = 0;
         $requestId = null;
+        // The container the code of web_fetch ran in: the next turn runs in it.
+        $container = null;
+        /** @var array<string, string> $addresses what each call of web_fetch asked for, by the id of the call */
+        $addresses = [];
+        /** @var list<array{page: WebPageRead, document: array<string, mixed>|null}> $reads */
+        $reads = [];
 
-        // A closure over references: the tokens, the turns and the request id
-        // are what they are when the outcome is written, not when the call
-        // started.
-        $record = function (string $status, ?Message $message = null, ?string $error = null, ?string $document = null) use ($request, $prompt, $model, $started, &$usage, &$turns, &$requestId): int {
+        // A closure over references: the tokens, the turns, the request id and
+        // the pages read are what they are when the outcome is written, not
+        // when the call started.
+        $record = function (string $status, ?Message $message = null, ?string $error = null, ?string $document = null) use ($request, $prompt, $model, $started, $client, &$usage, &$turns, &$requestId, &$reads): int {
             return $this->log->record(
                 $request,
                 $status,
@@ -93,6 +118,7 @@ final readonly class PageGenerator
                 $message?->stopDetails?->category,
                 $error,
                 $document,
+                $this->counted($client, $model, $reads),
             );
         };
 
@@ -110,6 +136,7 @@ final readonly class PageGenerator
                     $stream = $client->messages->createStream(
                         maxTokens: $this->settings->maxTokens(),
                         messages: $messages,
+                        container: $container,
                         model: $model,
                         outputConfig: ['effort' => $this->settings->effort(), 'format' => $format],
                         system: $system,
@@ -129,6 +156,8 @@ final readonly class PageGenerator
                 }
 
                 $usage = $usage->plus($message->usage);
+                $container = $message->container?->id ?? $container;
+                self::collectReads($message, $addresses, $reads);
                 $requestId = $message->id;
 
                 if ('refusal' === $message->stopReason) {
@@ -137,6 +166,15 @@ final readonly class PageGenerator
 
                 if ('max_tokens' === $message->stopReason) {
                     throw GenerationException::because(\sprintf('The answer was cut at %d tokens: raise the limit of the generator or ask for a shorter page.', $this->settings->maxTokens()));
+                }
+
+                // The API paused a turn of its own tools (a page being read):
+                // the turn goes back as it is and the API carries on with it.
+                if ('pause_turn' === $message->stopReason) {
+                    $observer?->onTurn($turns, self::toolsCalled($message));
+                    $messages[] = ['role' => 'assistant', 'content' => $message->content];
+
+                    continue;
                 }
 
                 if ('tool_use' === $message->stopReason) {
@@ -186,6 +224,83 @@ final readonly class PageGenerator
     }
 
     /**
+     * The pages a turn read or failed to read. The result of a call names it
+     * by id only, so the address comes from the call, which precedes it.
+     *
+     * @param array<string, string>                                               $addresses
+     * @param list<array{page: WebPageRead, document: array<string, mixed>|null}> $reads
+     */
+    private static function collectReads(Message $message, array &$addresses, array &$reads): void
+    {
+        foreach ($message->content as $block) {
+            if ($block instanceof ServerToolUseBlock && 'web_fetch' === $block->name) {
+                $addresses[$block->id] = (string) ($block->input['url'] ?? '');
+
+                continue;
+            }
+
+            if (!$block instanceof WebFetchToolResultBlock) {
+                continue;
+            }
+
+            $content = $block->content;
+            $url = $content instanceof WebFetchBlock ? $content->url : ($addresses[$block->toolUseID] ?? '');
+
+            if ($content instanceof WebFetchToolResultErrorBlock) {
+                $reads[] = ['page' => new WebPageRead($url, $content->errorCode), 'document' => null];
+
+                continue;
+            }
+
+            if ($content instanceof WebFetchBlock) {
+                $source = $content->content->source;
+                $reads[] = [
+                    'page' => new WebPageRead($url),
+                    'document' => [
+                        'type' => 'document',
+                        'source' => $source instanceof Base64PDFSource
+                            ? ['type' => 'base64', 'mediaType' => 'application/pdf', 'data' => $source->data]
+                            : ['type' => 'text', 'mediaType' => 'text/plain', 'data' => $source->data],
+                    ],
+                ];
+            }
+        }
+    }
+
+    /**
+     * The pages read, each with the tokens of its text, counted by the API
+     * (a count is not billed). A count that fails leaves the page uncounted
+     * rather than the call unrecorded.
+     *
+     * @param list<array{page: WebPageRead, document: array<string, mixed>|null}> $reads
+     *
+     * @return list<WebPageRead>
+     */
+    private function counted(Client $client, string $model, array $reads): array
+    {
+        $pages = [];
+
+        foreach ($reads as $read) {
+            if (null === $read['document']) {
+                $pages[] = $read['page'];
+
+                continue;
+            }
+
+            try {
+                $tokens = $client->messages->countTokens(messages: [['role' => 'user', 'content' => [$read['document']]]], model: $model)->inputTokens;
+            } catch (APIStatusException|APIConnectionException $exception) {
+                $this->logger->warning('TheliaCMS: the tokens of a page read could not be counted: {message}', ['message' => $exception->getMessage()]);
+                $tokens = null;
+            }
+
+            $pages[] = $read['page']->withTokens($tokens);
+        }
+
+        return $pages;
+    }
+
+    /**
      * @return list<string>
      */
     private static function toolsCalled(Message $message): array
@@ -193,7 +308,7 @@ final readonly class PageGenerator
         $names = [];
 
         foreach ($message->content as $block) {
-            if ($block instanceof ToolUseBlock) {
+            if ($block instanceof ToolUseBlock || $block instanceof ServerToolUseBlock) {
                 $names[] = $block->name;
             }
         }
@@ -221,14 +336,16 @@ final readonly class PageGenerator
         return $results;
     }
 
+    /**
+     * The text written after the last call of a tool: a turn that read a page
+     * may say so before it does, and only what follows is the document.
+     */
     private function textOf(Message $message): string
     {
         $text = '';
 
         foreach ($message->content as $block) {
-            if ($block instanceof TextBlock) {
-                $text .= $block->text;
-            }
+            $text = $block instanceof TextBlock ? $text.$block->text : '';
         }
 
         return trim($text);

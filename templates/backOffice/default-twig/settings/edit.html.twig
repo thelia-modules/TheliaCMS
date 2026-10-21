@@ -121,6 +121,11 @@
                             <div class="col-lg-4">
                                 {{ form_row(form.generatorMaxTokens) }}
                             </div>
+                            <div class="col-12">
+                                {{ form_row(form.generatorWebFetch, { row_attr: { class: 'mb-1' } }) }}
+                                {# The back-office theme renders help in the label, and its checkbox label leaves it out. #}
+                                <p class="text-muted small" data-testid="cms-settings-web-fetch-help">{{ form.generatorWebFetch.vars.help|trans({}, 'theliacms') }}</p>
+                            </div>
                         </div>
 
                         <p class="text-muted small mb-0">

@@ -29,4 +29,20 @@ final readonly class Brief
             throw new \InvalidArgumentException('A brief says something.');
         }
     }
+
+    /**
+     * The web pages the brief cites, in the order it cites them: the model
+     * may read them before it writes.
+     *
+     * @return list<string>
+     */
+    public function addresses(): array
+    {
+        preg_match_all('~https?://[^\s<>"\'`]+~i', $this->text, $matches);
+
+        // An address ending a sentence carries its punctuation: it is not part of it.
+        $addresses = array_map(static fn (string $address): string => rtrim($address, '.,;:!?)]}'), $matches[0]);
+
+        return array_values(array_unique($addresses));
+    }
 }

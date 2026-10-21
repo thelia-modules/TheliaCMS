@@ -78,6 +78,7 @@ final readonly class CmsSettingsController
             'generatorModel' => $this->generator->model(),
             'generatorEffort' => $this->generator->effort(),
             'generatorMaxTokens' => $this->generator->maxTokens(),
+            'generatorWebFetch' => $this->generator->webFetch(),
         ], [
             'page_choices' => $this->choices->pages($lang->getLocale()),
         ]);
@@ -123,6 +124,7 @@ final readonly class CmsSettingsController
             model: (string) $data['generatorModel'],
             effort: (string) $data['generatorEffort'],
             maxTokens: (int) $data['generatorMaxTokens'],
+            webFetch: (bool) $data['generatorWebFetch'],
         );
 
         // A showcase site is handed to someone who is not an administrator of

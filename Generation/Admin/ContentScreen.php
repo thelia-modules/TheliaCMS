@@ -28,6 +28,8 @@ use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationRequest;
 use TheliaCMS\Generation\GenerationUnavailableException;
 use TheliaCMS\Generation\GeneratorSettings;
+use TheliaCMS\Generation\Pricing;
+use TheliaCMS\Generation\WebPageRead;
 use TheliaCMS\Model\CmsPageGeneration;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -56,6 +58,7 @@ final readonly class ContentScreen
         private ClaudeClientProviderInterface $clients,
         private SectionFormBuilder $sectionForms,
         private ToolkitLink $toolkit,
+        private Pricing $pricing,
     ) {
     }
 
@@ -232,7 +235,7 @@ final readonly class ContentScreen
     }
 
     /**
-     * @return array{id: int, date: \DateTimeInterface|null, kind: string, status: string, status_class: string, cost: string, duration: string, turns: int, error: string|null}
+     * @return array{id: int, date: \DateTimeInterface|null, kind: string, status: string, status_class: string, cost: string, duration: string, turns: int, error: string|null, pages: list<array{url: string, read: bool, error: string|null, tokens: int|null, cost: string|null}>}
      */
     private function row(CmsPageGeneration $row): array
     {
@@ -250,6 +253,13 @@ final readonly class ContentScreen
             'duration' => number_format(((int) $row->getDurationMs()) / 1000, 1, '.', ''),
             'turns' => (int) $row->getTurns(),
             'error' => $row->getError(),
+            'pages' => array_map(fn (WebPageRead $page): array => [
+                'url' => $page->url,
+                'read' => $page->wasRead(),
+                'error' => $page->errorCode,
+                'tokens' => $page->tokens,
+                'cost' => null === $page->tokens ? null : number_format($this->pricing->inputCost((string) $row->getModel(), $page->tokens), 3, '.', ''),
+            ], GenerationLog::webPagesOf($row)),
         ];
     }
 

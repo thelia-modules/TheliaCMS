@@ -203,7 +203,8 @@ replaced. Each section of the draft is then listed by its title with a form to
 ask for a change on that section alone, the others kept as they are, and
 **Ask for a change** does the same on the whole draft. The generator reads the
 skills of the site and the catalogue, may search the products, the categories,
-the pages and the images of the site, and every call it makes is written to a
+the pages and the images of the site, reads the web pages the brief cites by
+their address ([docs/generator.md](docs/generator.md)), and every call it makes is written to a
 ledger the screen shows as its history, with its outcome, its turns, its
 duration and its cost. Asking it takes the right `admin.cms.generate`; the
 model, the effort and the length of an answer are settings. How it is

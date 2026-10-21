@@ -107,6 +107,11 @@ final class CmsSettingsType extends AbstractType
                 'label' => 'Longest answer, in tokens',
                 'attr' => ['min' => GeneratorSettings::MIN_MAX_TOKENS],
                 'help' => 'An answer cut at this length loses the end of the page. A long page needs about four tokens a word.',
+            ])
+            ->add('generatorWebFetch', CheckboxType::class, [
+                'label' => 'Read the web pages a brief cites',
+                'required' => false,
+                'help' => 'The model reads the public pages whose address the brief gives, through the web fetch tool of the Claude API: Anthropic reads them, not this server. The text read is billed as input tokens. Turn it off if the organisation of the key does not allow the tool.',
             ]);
 
         $builder->addEventListener(FormEvents::POST_SUBMIT, $this->validateAllowlist(...));

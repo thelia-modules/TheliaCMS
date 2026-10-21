@@ -114,6 +114,36 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame('{"text":"Une page qui présente nos services de conseil.","tone":"direct","audience":null}', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getBrief());
     }
 
+    public function testTheHistoryListsTheWebPagesACallReadWithTheirTokens(): void
+    {
+        $page = $this->createPage('Notre histoire', published: false);
+        $url = $this->url($page->getId());
+
+        $this->api
+            ->answer(FakeClaudeTransport::message([
+                FakeClaudeTransport::serverToolUse('srvtoolu_1', 'web_fetch', ['url' => 'https://example.com/a-propos']),
+                FakeClaudeTransport::webFetchResult('srvtoolu_1', 'https://example.com/a-propos', 'Fondée en 1987 à Lyon.'),
+                FakeClaudeTransport::serverToolUse('srvtoolu_2', 'web_fetch', ['url' => 'https://example.com/prive']),
+                FakeClaudeTransport::webFetchError('srvtoolu_2', 'url_not_accessible'),
+                FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<p>Lyon, 1987.</p>']]])),
+            ]))
+            ->answer(FakeClaudeTransport::tokenCount(2500));
+
+        $form = $this->screen($url)->filter('[data-testid="cms-content-brief"] form')->form();
+        $form['cms_brief[text]'] = 'Résume https://example.com/a-propos et https://example.com/prive.';
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $pages = $this->screen((string) $this->client->getResponse()->headers->get('Location'))->filter('[data-testid="cms-content-history-pages"]');
+
+        self::assertSame(1, $pages->count(), 'The call lists the pages it read.');
+        self::assertStringContainsString('2 web page(s) read', $pages->filter('summary')->text());
+        self::assertSame(2, $pages->filter('li')->count());
+        self::assertStringContainsString('https://example.com/a-propos', $pages->filter('li')->eq(0)->text());
+        self::assertStringContainsString('2 500 tokens, about 0.010 USD a reading', $pages->filter('li')->eq(0)->text(), 'Counted, and priced as input of the model.');
+        self::assertStringContainsString('not read (url_not_accessible)', $pages->filter('li')->eq(1)->text());
+    }
+
     public function testALanguageWithoutContentIsWrittenFromAnotherOne(): void
     {
         $page = $this->createPage('Nos services', published: false);

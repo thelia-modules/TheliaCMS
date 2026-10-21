@@ -60,6 +60,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.0.0)
 
+- A brief may cite web pages by their address: the generator offers the
+  `web_fetch` tool of the Claude API for that request, and the model reads
+  them before it writes (five pages at most, 20,000 tokens each). A brief
+  that cites none sends the request it always sent. The pages are read by
+  Anthropic, never by the server of the shop; the tool has to be allowed
+  for the organisation of the key, and **Read the web pages a brief cites**
+  in the Generator card of CMS > Settings turns it off (`generator_web_fetch`,
+  on by default). The history of the content screen lists the pages a call
+  read, with the tokens of each and what one reading costs; the ledger keeps
+  them in `cms_page_generation.web_pages`, which the update to 2.0.0 adds.
 - A theme gives a component the props it is shown with under
   `sections.examples` of `config/theliacms.yaml`: the toolkit, the generator
   and a section added by hand start from them. For a component whose defaults

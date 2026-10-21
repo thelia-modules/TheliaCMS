@@ -220,7 +220,7 @@
                     {% if history is empty %}
                         <p class="text-muted small mb-0">{{ 'Nothing was asked of the generator for this language yet.'|trans({}, 'theliacms') }}</p>
                     {% else %}
-                        <table class="table table-sm cms-content__history">
+                        <table class="table table-sm bo-table-wrap cms-content__history">
                             <caption class="visually-hidden">{{ 'The calls made to the generator, the latest first.'|trans({}, 'theliacms') }}</caption>
                             <thead>
                                 <tr>
@@ -239,7 +239,27 @@
                                             <span class="badge {{ row.status_class }}">{{ row.status }}</span>
                                             <span class="text-muted">{{ '%turns% turn(s), %duration% s'|trans({ '%turns%': row.turns, '%duration%': row.duration }, 'theliacms') }}</span>
                                             {% if row.error %}
-                                                <details class="small"><summary>{{ 'Details'|trans({}, 'theliacms') }}</summary><p class="mb-0">{{ row.error }}</p></details>
+                                                <details class="small"><summary>{{ 'Details'|trans({}, 'theliacms') }}</summary><p class="mb-0 cms-content__history-break">{{ row.error }}</p></details>
+                                            {% endif %}
+                                            {% if row.pages is not empty %}
+                                                <details class="small" data-testid="cms-content-history-pages">
+                                                    <summary>{{ '%count% web page(s) read'|trans({ '%count%': row.pages|length }, 'theliacms') }}</summary>
+                                                    <ul class="list-unstyled mb-0">
+                                                        {% for page in row.pages %}
+                                                            <li>
+                                                                <span class="cms-content__history-break">{{ page.url }}</span>
+                                                                {% if not page.read %}
+                                                                    <span class="text-danger">{{ 'not read (%error%)'|trans({ '%error%': page.error }, 'theliacms') }}</span>
+                                                                {% elseif page.tokens is null %}
+                                                                    <span class="text-muted">{{ 'not counted'|trans({}, 'theliacms') }}</span>
+                                                                {% else %}
+                                                                    <span class="text-muted">{{ '%tokens% tokens, about %cost% USD a reading'|trans({ '%tokens%': page.tokens|number_format(0, '.', ' '), '%cost%': page.cost }, 'theliacms') }}</span>
+                                                                {% endif %}
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                    <p class="text-muted mb-0">{{ 'Included in the cost of the call. A page read at several turns is billed each time, at the cache price after the first.'|trans({}, 'theliacms') }}</p>
+                                                </details>
                                             {% endif %}
                                         </td>
                                         <td class="text-end text-nowrap">{{ row.cost }} USD</td>

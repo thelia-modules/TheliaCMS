@@ -27,7 +27,7 @@ final class GeneratorSettingsScreenTest extends AdminScreenTestCase
 {
     private const string SCREEN = '/admin/cms/settings';
 
-    public function testTheCardShowsTheThreeSettingsAndNoKey(): void
+    public function testTheCardShowsTheSettingsAndNoKey(): void
     {
         $card = $this->screen(self::SCREEN)->filter('[data-testid="cms-settings-generator"]');
 
@@ -35,6 +35,8 @@ final class GeneratorSettingsScreenTest extends AdminScreenTestCase
         self::assertSame(1, $card->filter('input[name="cms_settings[generatorModel]"]')->count());
         self::assertSame(1, $card->filter('select[name="cms_settings[generatorEffort]"]')->count());
         self::assertSame(1, $card->filter('input[name="cms_settings[generatorMaxTokens]"]')->count());
+        self::assertSame(1, $card->filter('input[type="checkbox"][name="cms_settings[generatorWebFetch]"]')->count());
+        self::assertStringContainsString('billed as input tokens', $card->filter('[data-testid="cms-settings-web-fetch-help"]')->text(''), 'The box says what reading a page costs, which the theme of the back office leaves out of a checkbox.');
         self::assertSame(0, $card->filter('input[type="password"], input[name*="Key"], input[name*="key"]')->count(), 'No field takes the API key.');
         self::assertStringContainsString('ANTHROPIC_API_KEY', $card->text(''));
     }
@@ -53,6 +55,28 @@ final class GeneratorSettingsScreenTest extends AdminScreenTestCase
         self::assertSame('claude-sonnet-5', $settings->model());
         self::assertSame('low', $settings->effort());
         self::assertSame(4096, $settings->maxTokens());
+    }
+
+    public function testReadingTheWebPagesABriefCitesIsOnUntilTheSiteTurnsItOff(): void
+    {
+        self::assertTrue($this->settings()->webFetch(), 'On by default.');
+
+        $form = $this->settingsForm();
+        self::assertTrue($form['cms_settings[generatorWebFetch]']->hasValue(), 'The box shows the setting ticked.');
+        $form['cms_settings[generatorWebFetch]']->untick();
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        ModuleConfigQuery::resetConfigCache();
+        self::assertFalse($this->settings()->webFetch());
+
+        $form = $this->settingsForm();
+        self::assertFalse($form['cms_settings[generatorWebFetch]']->hasValue(), 'The box shows the setting as saved.');
+        $form['cms_settings[generatorWebFetch]']->tick();
+        $this->send('POST', $form->getUri(), $form->getPhpValues());
+
+        ModuleConfigQuery::resetConfigCache();
+        self::assertTrue($this->settings()->webFetch());
     }
 
     public function testAnEffortTheApiDoesNotKnowIsRefused(): void

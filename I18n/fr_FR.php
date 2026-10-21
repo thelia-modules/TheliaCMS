@@ -834,4 +834,11 @@ return [
     'The section is added at the end of the draft, with example text: edit it by hand.' => 'La section est ajoutée à la fin du brouillon, avec un texte d’exemple : modifiez-la à la main.',
     'This component is not offered on this site: reload the screen.' => 'Ce composant n’est pas proposé sur ce site : rechargez l’écran.',
     'Or add a section by hand' => 'Ou ajoutez une section à la main',
+    'Read the web pages a brief cites' => 'Lire les pages web citées dans le brief',
+    'The model reads the public pages whose address the brief gives, through the web fetch tool of the Claude API: Anthropic reads them, not this server. The text read is billed as input tokens. Turn it off if the organisation of the key does not allow the tool.' => 'Le modèle lit les pages publiques dont le brief donne l’adresse, avec l’outil de lecture web de l’API Claude : c’est Anthropic qui les lit, pas ce serveur. Le texte lu est facturé en tokens d’entrée. Désactivez-le si l’organisation de la clé n’autorise pas l’outil.',
+    '%count% web page(s) read' => '%count% page(s) web lue(s)',
+    'not read (%error%)' => 'non lue (%error%)',
+    'not counted' => 'non comptée',
+    '%tokens% tokens, about %cost% USD a reading' => '%tokens% tokens, environ %cost% USD par lecture',
+    'Included in the cost of the call. A page read at several turns is billed each time, at the cache price after the first.' => 'Compris dans le coût de l’appel. Une page lue à plusieurs tours est facturée à chaque fois, au prix du cache après la première.',
 ];

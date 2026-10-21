@@ -12,9 +12,10 @@ usual pipeline.
   Never in a setting: a setting travels with an export, a key must not. Without
   it the generator says so (`GenerationUnavailableException`) and nothing is
   called.
-- Three settings, in the **Generator** card of CMS > Settings, each with a
+- Four settings, in the **Generator** card of CMS > Settings, each with a
   default: `generator_model` (`claude-opus-5-5`), `generator_effort` (`high`;
-  `low`, `medium`, `xhigh` and `max` exist), `generator_max_tokens` (16000).
+  `low`, `medium`, `xhigh` and `max` exist), `generator_max_tokens` (16000),
+  `generator_web_fetch` (on: read the web pages a brief cites, below).
 - The right `admin.cms.generate`, given to the editor profile the module
   seeds: asking the generator to write costs money.
 
@@ -49,6 +50,25 @@ While it writes, the model may ask the site:
 
 A tool is a class implementing `TheliaCMS\Generation\Tool\GeneratorToolInterface`;
 implementing it is what offers it.
+
+### Web pages the brief cites
+
+A brief, a change or a section asked again may cite web pages by their
+address (`http://…` or `https://…`): "take our story from
+https://example.com/about, shorter". The user message then lists them and asks
+the model to read each before it writes, and the request offers `web_fetch`,
+the tool the Claude API runs itself (`web_fetch_20260209`): the page is read
+from the infrastructure of Anthropic, never from the server of the shop. Five
+pages at most per request, the ones cited and the links followed from them,
+each cut at 20,000 tokens. What a page says counts as given by the brief; a
+page that cannot be read (private, behind a login, an error) is left out.
+
+A brief that cites no address sends the request it always sent, without the
+tool, and so does every brief once **Read the web pages a brief cites** is
+turned off: the addresses then stay in the brief as text. The tool has to be
+allowed for the organisation of the API key (Claude Console, privacy
+settings); the pages read are billed as input tokens. A translation cites
+none: its source is the document of the other language.
 
 ## Skills
 
@@ -163,8 +183,14 @@ Every call writes a row of `cms_page_generation`, whatever its outcome: the
 page and the language, the kind of request (brief, revision, section), the
 prompt, the model, the tokens read and written, the cache hits, the turns, an
 estimate of the cost in US dollars from a price list shipped with the module,
-the duration, the stop reason and, for a refusal, its category, and the
-document produced. `GenerationLog::history()` is what a page screen reads;
+the duration, the stop reason and, for a refusal, its category, the
+document produced, and the web pages the call read (`web_pages`): each
+address, the error code of a page that could not be read, and the tokens of
+the text read. Those tokens are counted after the call by the token counting
+endpoint of the API, which is not billed, and priced in the history of the
+screen as one uncached reading: the cost of the call already includes them,
+and a page the model reads again at a later turn is billed again, at the cache
+price after the first. A count that fails leaves the page uncounted. `GenerationLog::history()` is what a page screen reads;
 `spentSince()` what a budget alert reads.
 
 ## From the command line

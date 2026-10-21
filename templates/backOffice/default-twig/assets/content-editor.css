@@ -194,6 +194,14 @@ body:has(.cms-content) {
     font-size: 0.8125rem;
 }
 
+/* An address, or the identifier in an error of the API, is one unbroken
+   word: without a break anywhere, it widens the table past the panel and
+   pushes its figures out of sight. */
+.cms-content__history-break {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
 .cms-content__preview {
     position: relative;
     flex: 1 1 auto;
