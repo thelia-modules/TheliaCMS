@@ -91,6 +91,9 @@ class CmsSideNavHook extends BaseHook
         $event->add($this->twig->render('@TheliaCMSModule/backOffice/default-twig/side-nav.html.twig', [
             'pages_url' => $maySeePages ? $this->urls->generate('admin.cms.pages.list') : null,
             'tags_url' => $maySeePages ? $this->urls->generate('admin.cms.tags.list') : null,
+            // The templates of pages are the page types, a screen of the
+            // settings: reached from here too, where the pages are.
+            'page_templates_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.page_types.list') : null,
             'menus_url' => $maySeeMenus ? $this->urls->generate('admin.cms.menus.list') : null,
             'forms_url' => $maySeeForms ? $this->urls->generate('admin.cms.forms.list') : null,
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
@@ -107,6 +110,7 @@ class CmsSideNavHook extends BaseHook
             'section_label' => $this->trans('CMS', [], TheliaCMS::DOMAIN_NAME),
             'pages_label' => $this->trans('Pages', [], TheliaCMS::DOMAIN_NAME),
             'tags_label' => $this->trans('Tags', [], TheliaCMS::DOMAIN_NAME),
+            'page_templates_label' => $this->trans('Page templates', [], TheliaCMS::DOMAIN_NAME),
             'menus_label' => $this->trans('Menus', [], TheliaCMS::DOMAIN_NAME),
             'folders_label' => $this->trans('Folders', [], TheliaCMS::DOMAIN_NAME),
             'forms_label' => $this->trans('Forms', [], TheliaCMS::DOMAIN_NAME),

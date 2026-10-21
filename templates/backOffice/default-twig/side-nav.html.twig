@@ -13,6 +13,13 @@
             <li class="nav-item">
                 <a class="nav-link" href="{{ pages_url }}">{{ pages_label }}</a>
             </li>
+        {% endif %}
+        {% if page_templates_url %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ page_templates_url }}" data-testid="bo-nav-cms-page-templates">{{ page_templates_label }}</a>
+            </li>
+        {% endif %}
+        {% if pages_url %}
             <li class="nav-item">
                 <a class="nav-link" href="{{ tags_url }}" data-testid="bo-nav-cms-tags">{{ tags_label }}</a>
             </li>
