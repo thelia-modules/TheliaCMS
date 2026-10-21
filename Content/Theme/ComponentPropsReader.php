@@ -29,7 +29,8 @@ use Twig\Environment;
  * The comment gives the type and the meaning, the tag the default; a prop
  * declared without a default and not documented as nullable is required. A
  * prop documented but not declared in the tag is one the PHP class of the
- * component takes (`mount()`), and is optional.
+ * component takes (`mount()`): optional, except a record or a picture not
+ * documented as nullable.
  *
  * Besides the scalar types, a prop may name what the site holds: `image` for
  * a picture of the media library, `product`, `category`, `folder`, `form` or
@@ -108,11 +109,12 @@ final readonly class ComponentPropsReader
         }
 
         // Documented and not declared: a parameter the class of the component
-        // takes. The template cannot say whether it has a default, so it is
-        // left optional.
+        // takes. The template cannot say whether it has a default, so a scalar
+        // is left optional; a record or a picture is required unless documented
+        // as nullable, since the component has nothing to show without it.
         foreach ($documented as $name => $doc) {
             if (!isset($declared[$name])) {
-                $props[] = $this->prop($name, $doc['type'], $doc['description'], null, true);
+                $props[] = $this->prop($name, $doc['type'], $doc['description'], null, !self::namesOneRecord($doc['type']));
             }
         }
 
@@ -332,6 +334,22 @@ final readonly class ComponentPropsReader
             $this->urls->generate(self::SOURCES[$record]),
             \in_array($record, self::SEARCHED, true),
         );
+    }
+
+    /**
+     * `product`, `category`, `image`…: one record of the site or one picture.
+     */
+    private static function namesOneRecord(string $type): bool
+    {
+        foreach (explode('|', $type) as $kind) {
+            $kind = trim($kind);
+
+            if ('image' === $kind || isset(self::SOURCES[$kind])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

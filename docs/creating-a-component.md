@@ -83,7 +83,9 @@ from two places:
   the way a template of the theme would pass them.
 - a prop documented and not declared in the `{% props %}` tag is one the PHP
   class of the component takes in `mount()` (`productIds` of a product strip,
-  for instance): it is read as optional, under the name the comment gives.
+  for instance): it is read as optional, under the name the comment gives,
+  except one record or one picture (`productId product` of a product card),
+  which is required unless its type says `|null`.
 
 A prop declared without a default and not documented as nullable is required.
 A component with no `@prop` comment at all still works: every declared prop

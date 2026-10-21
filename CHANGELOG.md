@@ -9,6 +9,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed (2.0.0)
 
+- A record or a picture the PHP class of a theme component takes
+  (`{# @prop productId product #}`, documented and not declared in
+  `{% props %}`) is required unless its type says `|null`: a product card
+  saved without its product rendered an empty card. Scalars the class takes
+  stay optional. A page holding such a section without the record keeps
+  rendering, and is refused at its next save until the record is picked.
 - **Blocks are gone.** The reusable blocks (**CMS > Blocks**) and the blocks
   of catalogue items (the "Content block" card of a product, a category, a
   brand or a store) are removed, with their tables: the update to 2.0.0 drops

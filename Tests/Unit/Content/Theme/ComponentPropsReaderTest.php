@@ -89,6 +89,24 @@ final class ComponentPropsReaderTest extends TestCase
         self::assertSame(['product_ids'], $read['id_lists']);
     }
 
+    public function testARecordTheClassTakesIsRequiredUnlessDocumentedAsNullable(): void
+    {
+        $read = $this->reader()->readSource(<<<'TWIG'
+            {# @prop productId product The product shown #}
+            {# @prop poster image A picture of the library over it #}
+            {# @prop categoryId category|null Where the link goes #}
+            {# @prop productIds product[] Picked by hand #}
+            {# @prop imgWidth int Width of the image #}
+            {% props imgWidth = 300 %}
+            TWIG);
+        $props = $this->byName($read);
+
+        self::assertTrue($props['product_id']->required, 'A card of one product renders empty without it.');
+        self::assertTrue($props['poster']->required);
+        self::assertFalse($props['category_id']->required, 'Documented as nullable.');
+        self::assertSame(0, $props['product_ids']->minItems, 'A list of records may stay empty.');
+    }
+
     /**
      * @return array<string, Prop>
      */
