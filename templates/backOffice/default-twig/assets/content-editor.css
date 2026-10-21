@@ -190,6 +190,40 @@ body:has(.cms-content) {
     margin-top: 0.5rem;
 }
 
+.cms-content__edit-open {
+    display: block;
+    margin-top: 0.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 0.875rem;
+    color: var(--bs-link-color, #0d6efd);
+    cursor: pointer;
+}
+
+.cms-content__edit-open:hover {
+    text-decoration: underline;
+}
+
+/* A section by hand: its fields in a dialog, wide enough for the rich-text
+   editor, scrolled inside when the section holds many. */
+.cms-content__edit {
+    width: min(50rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 4rem);
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.cms-content__edit::backdrop {
+    background: rgba(33, 37, 41, 0.5);
+}
+
+.cms-content__edit > form:not([method="dialog"]) {
+    margin-top: 1rem;
+}
+
 .cms-content__history {
     font-size: 0.8125rem;
 }

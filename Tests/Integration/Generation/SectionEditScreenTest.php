@@ -48,13 +48,15 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         ]);
 
         $screen = $this->screen($this->url($page));
-        $intro = $screen->filter('[data-testid="cms-section-edit-intro"] form');
+        $intro = $screen->filter('[data-testid="cms-section-edit-intro"] form[data-cms-section-form]');
 
         self::assertSame(1, $intro->count());
+        self::assertSame(1, $screen->filter('dialog#cms-section-edit-intro[data-testid="cms-section-edit-intro"] form[data-cms-section-form]')->count(), 'The form of a section is in a dialog.');
+        self::assertSame('cms-section-edit-intro', $screen->filter('[data-testid="cms-section-edit-open-intro"]')->attr('commandfor'), 'Its button opens that dialog.');
         self::assertSame(1, $intro->filter('input[name="_token"]')->count());
         self::assertSame(1, $intro->filter('textarea[name="cms_section_intro[html]"].wysiwyg')->count(), 'A html prop is a textarea the editor module upgrades.');
 
-        $contact = $screen->filter('[data-testid="cms-section-edit-contact"] form');
+        $contact = $screen->filter('[data-testid="cms-section-edit-contact"] form[data-cms-section-form]');
         self::assertSame(1, $contact->filter('[name="cms_section_contact[form]"]')->count(), 'A reference is picked in its own field.');
     }
 
@@ -65,7 +67,7 @@ final class SectionEditScreenTest extends AdminScreenTestCase
             new Section('contact', 'Partial:cms-form', ['form' => 1]),
         ]);
 
-        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-intro"] form')->form();
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-intro"] form[data-cms-section-form]')->form();
         $form['cms_section_intro[html]'] = '<h1>Après</h1><p>Un texte <strong>corrigé</strong>.</p>';
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
@@ -297,7 +299,7 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         self::assertSame(1, $list->count());
         self::assertStringContainsString('cms_section_row[product_ids][__name__]', (string) $list->attr('data-prototype'), 'The rows are added from the prototype.');
 
-        $form = $screen->filter('[data-testid="cms-section-edit-row"] form')->form();
+        $form = $screen->filter('[data-testid="cms-section-edit-row"] form[data-cms-section-form]')->form();
         $values = $form->getPhpValues();
         // The second row dropped, a third one picked as the script would add it.
         unset($values['cms_section_row']['product_ids'][1]);
@@ -315,7 +317,7 @@ final class SectionEditScreenTest extends AdminScreenTestCase
             new Section('contact', 'Partial:cms-form', ['form' => 1]),
         ]);
 
-        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-contact"] form')->form();
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-contact"] form[data-cms-section-form]')->form();
         $values = $form->getPhpValues();
         $values['cms_section_contact']['form'] = '';
 
@@ -345,7 +347,7 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $this->logInAs((new FixtureFactory($this->getPropelConnection()))->restrictedAdmin([
             CmsResources::PAGE => [AccessManager::VIEW, AccessManager::UPDATE],
         ]));
-        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-intro"] form')->form();
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-intro"] form[data-cms-section-form]')->form();
         $form['cms_section_intro[html]'] = '<h1>Sans générateur</h1>';
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
         self::assertStringContainsString('Sans générateur', (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml());

@@ -409,24 +409,24 @@
             });
         }
 
-        // The form of a section opened from the preview: the panel is brought
-        // to it and its first field takes the focus.
+        // The form of a section opened from the preview: its dialog opens and
+        // its first field takes the focus.
         function editSection(item) {
-            var panel = item.querySelector("[data-cms-edit]");
+            var dialog = item.querySelector("[data-cms-edit]");
 
-            if (!panel) {
-                return;
+            if (dialog) {
+                openEditDialog(dialog);
             }
-
-            panel.open = true;
-            item.scrollIntoView({ behavior: "smooth", block: "start" });
-            focusFirstField(panel, 10);
         }
 
         // The rich-text editor is mounted when the panel opens, a moment
         // later: the first field is looked for until it shows.
         function focusFirstField(panel, tries) {
-            var fields = panel.querySelectorAll(".ProseMirror, input:not([type=hidden]), textarea, select");
+            // The inputs of the editor's toolbar are not fields of the section.
+            var fields = Array.prototype.filter.call(
+                panel.querySelectorAll(".ProseMirror, input:not([type=hidden]), textarea, select"),
+                function (field) { return !field.closest(".tiptap-toolbar"); }
+            );
 
             for (var index = 0; index < fields.length; index++) {
                 if (fields[index].offsetParent !== null) {
@@ -684,24 +684,69 @@
             });
         });
 
-        // The rich-text editor is mounted when a panel opens, not twenty times
-        // at once; a module that is not there leaves the textarea as it is.
-        root.querySelectorAll("[data-cms-edit]").forEach(function (panel) {
-            panel.addEventListener("toggle", function () {
-                if (!panel.open || panel.cmsMounted) {
-                    return;
-                }
+        // The form of a section by hand opens in its dialog. The button opens
+        // it by itself; the script opens it in its place to mount the editor.
+        root.querySelectorAll("[data-cms-edit-open]").forEach(function (button) {
+            var dialog = root.querySelector("#" + CSS.escape(button.getAttribute("commandfor")));
 
-                panel.cmsMounted = true;
+            button.addEventListener("click", function (event) {
+                event.preventDefault();
+
+                if (dialog) {
+                    openEditDialog(dialog);
+                }
+            });
+        });
+
+        // The rich-text editor is mounted when a dialog opens, not twenty times
+        // at once; a module that is not there leaves the textarea as it is.
+        function openEditDialog(dialog) {
+            if (!dialog.open) {
+                dialog.showModal();
+            }
+
+            if (!dialog.cmsMounted) {
+                dialog.cmsMounted = true;
 
                 if (window.TiptapEditor && typeof window.TiptapEditor.mount === "function") {
-                    panel.querySelectorAll("textarea[data-cms-html]").forEach(function (textarea) {
+                    dialog.querySelectorAll("textarea[data-cms-html]").forEach(function (textarea) {
                         window.TiptapEditor.mount(textarea);
                         nameTheEditor(textarea, 10);
                     });
                 }
+            }
+
+            focusFirstField(dialog, 10);
+            adoptOverlays(dialog);
+        }
+
+        // The editor opens its special characters and its preview in windows
+        // it adds to the body, which an open dialog leaves inert behind it:
+        // they are moved into the dialog while it is open.
+        function adoptOverlays(dialog) {
+            function adopt(node) {
+                if (node.nodeType === 1 && node.parentNode !== dialog && node.matches(".modal[id^='tiptap-'], .modal-backdrop")) {
+                    dialog.appendChild(node);
+                }
+            }
+
+            document.querySelectorAll(".modal[id^='tiptap-']").forEach(adopt);
+
+            // A dialog drawn over by a save never closes: it is let go of then.
+            var observer = new MutationObserver(function (mutations) {
+                if (!dialog.isConnected || !dialog.open) {
+                    observer.disconnect();
+
+                    return;
+                }
+
+                mutations.forEach(function (mutation) {
+                    mutation.addedNodes.forEach(adopt);
+                });
             });
-        });
+            observer.observe(document.body, { childList: true });
+            dialog.addEventListener("close", function () { observer.disconnect(); }, { once: true });
+        }
 
         // The editor replaces the textarea with an editable area the label of the
         // field no longer points at: it is named after that label once mounted.

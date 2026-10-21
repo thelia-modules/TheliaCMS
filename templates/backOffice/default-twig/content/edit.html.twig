@@ -174,11 +174,23 @@
                                     {% if section.excerpt %}
                                         <p class="cms-content__item-excerpt">{{ section.excerpt }}</p>
                                     {% endif %}
+                                    {# The form of a section by hand, in a dialog the button opens
+                                       by itself; the script opens it too from the preview. #}
                                     {% if section.edit is not null %}
-                                        <details class="cms-content__rewrite" data-cms-edit data-testid="cms-section-edit-{{ section.id }}">
-                                            <summary>{{ 'Edit by hand'|trans({}, 'theliacms') }}</summary>
+                                        <button type="button" class="cms-content__edit-open" command="show-modal" commandfor="cms-section-edit-{{ section.id }}" data-cms-edit-open data-testid="cms-section-edit-open-{{ section.id }}">
+                                            {{ 'Edit by hand'|trans({}, 'theliacms') }}
+                                        </button>
+                                        <dialog class="cms-content__edit" id="cms-section-edit-{{ section.id }}" aria-labelledby="cms-section-edit-title-{{ section.id }}" data-cms-edit data-testid="cms-section-edit-{{ section.id }}">
+                                            <div class="cms-content__add-head">
+                                                <h2 class="cms-content__heading mb-0" id="cms-section-edit-title-{{ section.id }}">
+                                                    {{ section.rank }}. {{ section.label }} <code class="cms-content__item-component">{{ section.component }}</code>
+                                                </h2>
+                                                <form method="dialog">
+                                                    <button type="submit" class="btn-close" aria-label="{{ 'Close'|trans({}, 'theliacms') }}"></button>
+                                                </form>
+                                            </div>
                                             {{ include('@TheliaCMSModule/backOffice/default-twig/content/_section_form.html.twig', { form: section.edit }) }}
-                                        </details>
+                                        </dialog>
                                     {% endif %}
                                     {% if may_generate %}
                                         <details class="cms-content__rewrite">
