@@ -21,9 +21,12 @@ use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Content\Document;
+use TheliaCMS\Content\Section;
+use TheliaCMS\Content\SectionAppearance;
 use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
+use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
 
@@ -176,6 +179,27 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertStringContainsString('Nos services', (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($source->getLocale())->findOne()?->getDraftHtml(), 'The source draft is untouched.');
         self::assertSame('translation', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->filterByLocale($target->getLocale())->findOne()?->getKind());
         self::assertSame(0, $this->screen($url)->filter('[data-testid="cms-content-translate"]')->count(), 'Once written, the offer is gone.');
+    }
+
+    public function testATranslationKeepsTheAppearanceOfTheSource(): void
+    {
+        $page = $this->createPage('Nos produits', published: false);
+        $this->getService(CmsPageWriter::class)->saveContent($page, $this->locale(), new Document([
+            new Section('content', 'cms:richtext', ['html' => '<h2>Nos produits</h2>'], new SectionAppearance(background: '#f8d7d7', padding: 'medium')),
+        ]));
+        $source = Lang::getDefaultLanguage();
+        $target = LangQuery::create()->filterByActive(1)->filterById($source->getId(), Criteria::NOT_EQUAL)->orderById()->findOne();
+        self::assertNotNull($target);
+        // The model drops the background and changes the room: the source wins.
+        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Our products</h2>'], 'appearance' => ['padding' => 'large']]]))]));
+
+        $form = $this->screen(\sprintf('/admin/cms/pages/%d/content?edit_language_id=%d', $page->getId(), $target->getId()))->filter('[data-testid="cms-content-translate"] form')->form();
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($target->getLocale())->findOne();
+        $translated = Document::fromJson($content?->getDraftDocument())?->section('content');
+        self::assertSame('<h2>Our products</h2>', $translated?->props['html']);
+        self::assertSame(['background' => '#f8d7d7', 'padding' => 'medium'], $translated?->appearance->toArray());
     }
 
     public function testTheOutcomeOfAnotherPageIsNotShown(): void

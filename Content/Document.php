@@ -155,6 +155,20 @@ final readonly class Document
         return $id;
     }
 
+    /**
+     * Each section takes the appearance of the section of `$source` that
+     * carries its id; a section `$source` does not hold keeps its own.
+     */
+    public function withAppearancesOf(self $source): self
+    {
+        return new self(array_map(
+            static fn (Section $section): Section => null === ($original = $source->section($section->id))
+                ? $section
+                : $section->withAppearance($original->appearance),
+            $this->sections,
+        ));
+    }
+
     public function withoutSection(string $id): self
     {
         return new self(array_values(array_filter($this->sections, static fn (Section $section): bool => $section->id !== $id)));

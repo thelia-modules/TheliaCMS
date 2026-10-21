@@ -115,7 +115,7 @@ final readonly class SectionFormBuilder
     {
         $color = [
             'required' => false,
-            'attr' => ['maxlength' => 7, 'pattern' => '#[0-9a-fA-F]{6}'],
+            'attr' => ['maxlength' => 7, 'pattern' => '#[0-9a-fA-F]{6}', 'data-cms-color' => ''],
         ];
         $paddings = [];
 

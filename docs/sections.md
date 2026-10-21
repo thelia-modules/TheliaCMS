@@ -90,7 +90,9 @@ with an appearance renders inside a band of the whole width,
 `<div class="cms-section-styled" data-cms-section="…" style="…">`, the
 component unchanged inside it; a section without one renders, and is stored,
 without it. The generator sets the appearance when a brief asks for a look in
-words; "Edit by hand" sets it in its **Appearance** group.
+words; "Edit by hand" sets it in its **Appearance** group, a colour typed or
+picked. A translation takes the appearance of the source section by section:
+it changes the words, not the look.
 
 ## Writing a section of your own
 

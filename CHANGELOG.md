@@ -71,7 +71,9 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   appearance is wrapped in a `div.cms-section-styled` of the whole width that
   carries `data-cms-section` and the style; a section without one renders and
   is stored as before. A heading a component colours itself (`text-black`)
-  keeps its colour.
+  keeps its colour. A translation keeps the appearance of each section of
+  the source, whatever the model writes back. In "Edit by hand", a colour
+  picker sits next to each colour field and writes into it.
 - "Edit by hand" and "Rewrite this section" open in a dialog rather than
   under the section in the list.
 

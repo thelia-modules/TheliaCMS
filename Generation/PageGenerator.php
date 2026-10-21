@@ -203,6 +203,13 @@ final readonly class PageGenerator
                     continue;
                 }
 
+                // A translation changes the words, not the look: the appearance
+                // of each section is the one of the source, whatever the model
+                // wrote back.
+                if (GenerationRequest::KIND_TRANSLATION === $request->kind && null !== $request->current) {
+                    $document = $document->withAppearancesOf($request->current);
+                }
+
                 $durationMs = (int) ((hrtime(true) - $started) / 1_000_000);
                 $logId = $record(GenerationLog::STATUS_DONE, $message, null, $document->toJson());
 

@@ -792,6 +792,36 @@
             }
         }
 
+        // A colour of the appearance is typed #rrggbb, or picked: the picker
+        // next to the field writes into it. The field stays what is sent, so
+        // emptied it is the colour of the theme, which a picker cannot say.
+        root.querySelectorAll("input[data-cms-color]").forEach(function (field) {
+            var picker = document.createElement("input");
+            picker.type = "color";
+            picker.className = "form-control form-control-color";
+            // The label holds its help and its "optional" too: the theme sets its name apart.
+            var name = field.labels && field.labels[0] ? field.labels[0].querySelector(".bo-form-label__text") || field.labels[0] : null;
+            picker.setAttribute("aria-label", name ? name.textContent.trim() : "");
+            picker.setAttribute("data-testid", "cms-color-picker");
+
+            var group = document.createElement("div");
+            group.className = "input-group";
+            field.replaceWith(group);
+            group.append(field, picker);
+
+            function fromField() {
+                if (/^#[0-9a-f]{6}$/i.test(field.value.trim())) {
+                    picker.value = field.value.trim().toLowerCase();
+                }
+            }
+
+            picker.addEventListener("input", function () {
+                field.value = picker.value;
+            });
+            field.addEventListener("input", fromField);
+            fromField();
+        });
+
         // Rows of a list prop, from the prototype of the collection.
         root.querySelectorAll("[data-cms-items]").forEach(function (list) {
             var rows = list.querySelector("[data-cms-items-list]");
