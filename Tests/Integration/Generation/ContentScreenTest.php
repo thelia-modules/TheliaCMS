@@ -265,6 +265,7 @@ final class ContentScreenTest extends AdminScreenTestCase
 
         $screen = $this->screen($events[1]['data']['redirect']);
         self::assertSame(1, $screen->filter('[data-testid="cms-builder-flash-warning"]')->count(), 'A refusal is a warning, with the figures of the call.');
+        self::assertSame('false', $screen->filter('[data-testid="cms-builder-flash-warning"]')->attr('data-cms-toast-permanent-value'), 'A warning without details goes away by itself.');
         self::assertStringContainsString('<h1>Refused</h1>', (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml(), 'The draft was left as it was.');
     }
 
@@ -326,6 +327,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(1, $warning->count(), 'A draft that leaves part of the brief out comes back as a warning.');
         self::assertStringContainsString('The draft is written', $warning->text());
         self::assertStringContainsString($missing, $warning->text());
+        self::assertSame('true', $warning->attr('data-cms-toast-permanent-value'), 'A list of what is missing stays until it is closed.');
         self::assertSame(0, $screen->filter('[data-testid="cms-builder-flash-success"]')->count());
         self::assertStringContainsString('2 thing(s) of the brief left out', $screen->filter('[data-testid="cms-content-history-left-out"] summary')->text(), 'The history keeps it once the notice is gone.');
         self::assertStringContainsString('"left_out":{"type":"array"', json_encode($this->api->requests[0]['output_config'] ?? [], \JSON_THROW_ON_ERROR), 'The model is given where to say it.');

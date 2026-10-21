@@ -122,9 +122,9 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   the search does not find, a page that could not be read. The answer
   carries an optional `left_out` list, stored in a new column of
   `cms_page_generation` (added by the update to 2.0.0), shown as a warning
-  when the draft comes back, in the history of the page and by
-  `thelia_cms:generate`. A brief asking for a photo the site does not have
-  used to give a page without it, and no word about it.
+  that stays until it is closed when the draft comes back, in the history of
+  the page and by `thelia_cms:generate`. A brief asking for a photo the site
+  does not have used to give a page without it, and no word about it.
 - `thelia_cms:render` renders the drafts of pages again from their documents,
   without publishing them (`--page`, `--all`, `--locale`): a change of the
   module or of the theme reaches every draft at once instead of at its next

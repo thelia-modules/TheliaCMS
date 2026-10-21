@@ -10,9 +10,10 @@
 
     Accessibility: a warning or a confirmation is announced politely and
     dismisses itself; an error is announced assertively and stays until it is
-    closed, because it is the one the reader has to act on. Every notice can be
-    closed by hand, and the countdown stops while the pointer or the keyboard
-    focus is on it.
+    closed, because it is the one the reader has to act on. A notice with
+    details stays too, whatever its type: a list takes longer to read than the
+    countdown. Every notice can be closed by hand, and the countdown stops while
+    the pointer or the keyboard focus is on it.
 #}
 {% set toast_icons = {
     success: 'bi-check-circle-fill',
@@ -34,15 +35,16 @@
 {% if notices is not empty %}
     <div class="cms-toasts">
         {% for notice in notices %}
+            {% set details = notice.details|default([])|filter(detail => detail is not empty) %}
             <div class="cms-toast cms-toast--{{ notice.type }}"
                  data-controller="cms-toast"
-                 data-cms-toast-permanent-value="{{ notice.type == 'danger' ? 'true' : 'false' }}"
+                 data-cms-toast-permanent-value="{{ notice.type == 'danger' or details is not empty ? 'true' : 'false' }}"
                  role="{{ notice.type == 'danger' ? 'alert' : 'status' }}"
                  data-testid="cms-builder-flash-{{ notice.type }}">
                 <i class="bi {{ toast_icons[notice.type]|default('bi-info-circle-fill') }} cms-toast__icon" aria-hidden="true"></i>
                 <div class="cms-toast__message">
                     <p class="mb-0">{{ notice.message }}</p>
-                    {% for detail in notice.details|default([])|filter(detail => detail is not empty) %}
+                    {% for detail in details %}
                         <p class="mb-0 small text-muted">{{ detail }}</p>
                     {% endfor %}
                 </div>
