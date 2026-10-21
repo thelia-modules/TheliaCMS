@@ -73,6 +73,8 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.scripts.edit',
         'admin.cms.scripts.list',
         'admin.cms.settings.edit',
+        'admin.cms.settings.page_types.edit',
+        'admin.cms.settings.page_types.field_save',
         'admin.cms.settings.page_types.list',
         'admin.cms.skills.edit',
         'admin.cms.skills.list',
@@ -84,6 +86,8 @@ final class WriteRoutesTest extends AdminScreenTestCase
     private const array SAMPLE_PARAMETERS = [
         'direction' => 'up',
         'format' => 'csv',
+        // The code of a field of a page type starts with a letter.
+        'field' => 'sample_field',
     ];
 
     public function testEveryWriteIsRefusedWithoutTheToken(): void

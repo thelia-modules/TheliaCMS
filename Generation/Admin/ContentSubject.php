@@ -26,6 +26,7 @@ final readonly class ContentSubject
     /**
      * @param array<string, string>                      $routes             the screen, generate, revise, section, update, remove, translate and publish routes, with their parameters
      * @param list<array{locale: string, label: string}> $translationSources the languages the target holds a draft in, to write this one from
+     * @param bool                                       $publishable        false for the model of a page type, which is never published
      */
     public function __construct(
         public GenerationTarget $target,
@@ -42,6 +43,7 @@ final readonly class ContentSubject
         public array $routes,
         public string $testId,
         public array $translationSources = [],
+        public bool $publishable = true,
     ) {
     }
 

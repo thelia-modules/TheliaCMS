@@ -22,6 +22,8 @@ use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsTag;
 use TheliaCMS\Model\CmsTagQuery;
 use TheliaCMS\Model\Map\CmsPageContentTableMap;
+use TheliaCMS\Page\Field\FieldDefinitions;
+use TheliaCMS\Page\Field\PageFields;
 use TheliaLibrary\Model\LibraryImage;
 use TheliaLibrary\Model\LibraryImageQuery;
 
@@ -33,6 +35,7 @@ final readonly class PublishedPageRepository
 {
     public function __construct(
         private CmsMediaLibrary $library,
+        private PageFields $fields,
     ) {
     }
 
@@ -70,6 +73,7 @@ final readonly class PublishedPageRepository
             nofollow: 1 === $page->getNofollow(),
             publishedAt: $content->getPublishedAt(),
             tag: $this->tagOf($page),
+            fields: $this->fields->valuesOf($page, $locale),
         );
     }
 
@@ -114,11 +118,16 @@ final readonly class PublishedPageRepository
             ->find();
 
         $cards = [];
+        /** @var array<string, FieldDefinitions> $definitions read once per type */
+        $definitions = [];
 
         foreach ($pages as $page) {
             if (!$this->isLive($page, $now)) {
                 continue;
             }
+
+            $type = PageTypeCode::orDefault($page->getPageType());
+            $definitions[$type] ??= $this->fields->definitionsOf($page);
 
             $page->setLocale($locale);
             $publishedAt = $page->getVirtualColumn('content_published_at');
@@ -134,10 +143,96 @@ final readonly class PublishedPageRepository
                 image: $this->imageOf($page, $locale),
                 tag: (string) $tag->getName(),
                 publishedAt: \is_string($publishedAt) ? new \DateTimeImmutable($publishedAt) : null,
+                fields: $this->fields->valuesOf($page, $locale, $definitions[$type]),
             );
         }
 
         return $cards;
+    }
+
+    /**
+     * The pages online of a type, the model left out: what a list of the
+     * recipes of the site shows. Online means what find() means.
+     *
+     * The pages of the type are read once and ordered, filtered and cut
+     * here: the values live in JSON, and a series of pages is a few hundred
+     * at most (docs/adr/0009).
+     *
+     * @return list<PageCard>
+     */
+    public function ofType(string $pageType, string $locale, ?PageListQuery $query = null, ?\DateTimeInterface $now = null): array
+    {
+        if (!PageTypeCode::isValid($pageType)) {
+            return [];
+        }
+
+        $query ??= new PageListQuery();
+        $now ??= new \DateTimeImmutable();
+
+        $pages = CmsPageQuery::create()
+            ->filterByPageType($pageType)
+            ->filterByModel(0)
+            ->filterByDeletedAt(null, Criteria::ISNULL)
+            ->filterByVisible(1)
+            ->useCmsPageContentQuery()
+                ->filterByLocale($locale)
+                ->filterByPublishedAt(null, Criteria::ISNOTNULL)
+                ->filterByPublishedHtml(null, Criteria::ISNOTNULL)
+            ->endUse()
+            ->withColumn(CmsPageContentTableMap::COL_PUBLISHED_AT, 'content_published_at')
+            ->find();
+
+        $definitions = null;
+        $rows = [];
+
+        foreach ($pages as $page) {
+            if (!$this->isLive($page, $now)) {
+                continue;
+            }
+
+            $definitions ??= $this->fields->definitionsOf($page);
+            $values = $this->fields->valuesOf($page, $locale, $definitions);
+
+            if (!$query->matches($values, $definitions)) {
+                continue;
+            }
+
+            $page->setLocale($locale);
+            $publishedAt = $page->getVirtualColumn('content_published_at');
+
+            $rows[] = [
+                'page' => $page,
+                'title' => (string) $page->getTitle(),
+                'position' => (int) $page->getPosition(),
+                'published_at' => \is_string($publishedAt) ? new \DateTimeImmutable($publishedAt) : null,
+                'values' => $values,
+            ];
+        }
+
+        if (null === $definitions) {
+            return [];
+        }
+
+        usort($rows, static fn (array $a, array $b): int => $query->compare($a, $b, $definitions));
+        $rows = \array_slice($rows, $query->offset, $query->limit);
+
+        return array_map(function (array $row) use ($locale, $pageType): PageCard {
+            $page = $row['page'];
+
+            return new PageCard(
+                id: (int) $page->getId(),
+                locale: $locale,
+                title: $row['title'],
+                url: (string) $page->getUrl($locale),
+                pageType: $pageType,
+                chapo: $this->nullIfBlank($page->getChapo()),
+                description: $this->nullIfBlank($page->getDescription()),
+                image: $this->imageOf($page, $locale),
+                tag: $this->tagOf($page),
+                publishedAt: $row['published_at'],
+                fields: $row['values'],
+            );
+        }, $rows);
     }
 
     /**
@@ -181,6 +276,7 @@ final readonly class PublishedPageRepository
             noindex: true,
             nofollow: true,
             tag: $this->tagOf($page),
+            fields: $this->fields->valuesOf($page, $locale),
         );
     }
 

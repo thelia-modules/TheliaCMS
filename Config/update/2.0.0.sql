@@ -204,3 +204,57 @@ SET @cms_statement := IF(
 PREPARE cms_prepared FROM @cms_statement;
 EXECUTE cms_prepared;
 DEALLOCATE PREPARE cms_prepared;
+
+-- cms_page_type, cms_page_type_i18n, cms_page, cms_page_i18n ---------------
+-- A page type becomes a template of pages (docs/adr/0009): a name and a
+-- description per language, a brief, the definition of the fields its pages
+-- carry, and a model page. Pages carry the values of those fields.
+
+CREATE TABLE IF NOT EXISTS `cms_page_type_i18n`
+(
+    `id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
+    `title` VARCHAR(255),
+    `description` TEXT,
+    PRIMARY KEY (`id`,`locale`),
+    CONSTRAINT `cms_page_type_i18n_fk_7b1d2a`
+        FOREIGN KEY (`id`)
+        REFERENCES `cms_page_type` (`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_type' AND column_name = 'brief'),
+    'ALTER TABLE `cms_page_type` ADD COLUMN `brief` LONGTEXT AFTER `code`, ADD COLUMN `brief_tone` VARCHAR(200) AFTER `brief`, ADD COLUMN `brief_audience` VARCHAR(200) AFTER `brief_tone`, ADD COLUMN `fields` LONGTEXT AFTER `brief_audience`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page' AND column_name = 'model'),
+    'ALTER TABLE `cms_page` ADD COLUMN `model` TINYINT(4) DEFAULT 0 NOT NULL AFTER `page_type`, ADD COLUMN `fields` LONGTEXT AFTER `model`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'cms_page' AND index_name = 'idx_cms_page_page_type'),
+    'ALTER TABLE `cms_page` ADD INDEX `idx_cms_page_page_type` (`page_type`)',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_i18n' AND column_name = 'translated_fields'),
+    'ALTER TABLE `cms_page_i18n` ADD COLUMN `translated_fields` LONGTEXT AFTER `nofollow`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;

@@ -149,6 +149,7 @@ final readonly class CmsPageAdminRepository
     {
         return (int) CmsPageQuery::create()
             ->filterByDeletedAt(null, Criteria::ISNULL)
+            ->filterByModel(0)
             ->count();
     }
 
@@ -260,6 +261,8 @@ final readonly class CmsPageAdminRepository
     {
         $query = CmsPageQuery::create()
             ->filterByDeletedAt(null, Criteria::ISNULL)
+            // The models of the page types are reached from their type.
+            ->filterByModel(0)
             ->joinWithI18n($locale, Criteria::LEFT_JOIN);
 
         if ('' !== $filters->search) {
@@ -292,6 +295,10 @@ final readonly class CmsPageAdminRepository
     {
         $query = CmsPageQuery::create()
             ->filterByDeletedAt(null, Criteria::ISNULL)
+            // The models of the page types are reached from their type, and
+            // never parents: a page under a model would hang off a page
+            // nobody sees in the tree.
+            ->filterByModel(0)
             ->joinWithI18n($locale, Criteria::LEFT_JOIN)
             ->orderByParent()
             ->orderByPosition();
@@ -586,6 +593,7 @@ final readonly class CmsPageAdminRepository
     {
         $rows = CmsPageQuery::create()
             ->filterByDeletedAt(null, Criteria::ISNULL)
+            ->filterByModel(0)
             ->groupByParent()
             ->select(['Parent'])
             ->withColumn('COUNT(*)', 'children')

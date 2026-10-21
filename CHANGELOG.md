@@ -60,6 +60,27 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.0.0)
 
+- **A page type is a template of pages** (docs/adr/0009). Its screen under
+  **CMS > Page templates** (formerly **CMS > Settings > Page types**, the
+  same screen, now also in the menu) names it in each language, gives the brief
+  the generator reads before the brief of every page of the type, defines
+  the fields its pages carry (whole number, decimal, duration, short or long
+  text, yes or no, a word from a list, a date; with a unit, bounds, one value
+  per language for a text, required to publish) and creates its model page,
+  the demo content written like any page and never published. **Start a
+  page from a template** on the page list copies the model under the title
+  typed; the "Fields" tab of a page holds its values, which the generator
+  writes along with the content (a `fields` string in the envelope, checked
+  and sent back for correction like the props). A theme reads
+  `cms_page.fields.<code>`, `cms_page_fields(page)` and lists the pages of a
+  type with `cms_pages_of_type(type, {sort, direction, filter, limit})`; an
+  editor places the list with the **Pages of a type** section
+  (`Partial:cms-page-list`). The description of the types, the model flag
+  and the values travel with the site export. The update to 2.0.0 adds
+  `cms_page_type_i18n`, `cms_page_type.brief`, `brief_tone`,
+  `brief_audience` and `fields`, `cms_page.model` and `fields`, and
+  `cms_page_i18n.translated_fields`. A page of a type left without a
+  required value is refused at its publication, the model of a type always.
 - A section may carry an appearance besides its props: a background, a
   colour of text (`#rrggbb`), room above and below (`small`, `medium`,
   `large`) and an alignment. A brief or a change asks for it in words ("on a

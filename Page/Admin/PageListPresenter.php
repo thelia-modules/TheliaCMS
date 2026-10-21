@@ -17,6 +17,7 @@ namespace TheliaCMS\Page\Admin;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Model\Lang;
 use TheliaCMS\Page\PageTagRepository;
+use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\SampleTextPageFinder;
 use TheliaCMS\TheliaCMS;
 
@@ -36,6 +37,7 @@ final readonly class PageListPresenter
         private SampleTextPageFinder $sampleTextPages,
         private UrlGeneratorInterface $urls,
         private PageTagRepository $tags,
+        private PageTypeRepository $types,
     ) {
     }
 
@@ -68,7 +70,30 @@ final readonly class PageListPresenter
             // rather than only counted somewhere else: this is the screen
             // somebody opens to go and write them.
             'sample_text_pages' => $this->sampleTextPages->publishedPagesStillHoldingSampleText($locale),
+            'page_templates' => $this->pageTemplates($locale),
         ];
+    }
+
+    /**
+     * The types a page can be started from: the ones with a model, a brief
+     * or fields. A type that is only a code is picked in the form of a page.
+     *
+     * @return list<array{code: string, title: string, has_model: bool}>
+     */
+    private function pageTemplates(string $locale): array
+    {
+        $models = $this->types->modelIds();
+        $templates = [];
+
+        foreach ($this->types->allDetails() as $code => $details) {
+            if (!isset($models[$code]) && !$details->isTemplate()) {
+                continue;
+            }
+
+            $templates[] = ['code' => $code, 'title' => $details->title($locale), 'has_model' => isset($models[$code])];
+        }
+
+        return $templates;
     }
 
     /**

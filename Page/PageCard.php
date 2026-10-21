@@ -21,6 +21,9 @@ namespace TheliaCMS\Page;
  */
 final readonly class PageCard
 {
+    /**
+     * @param array<string, int|float|string|bool|null> $fields the value of every field its type defines, by code, in this language
+     */
     public function __construct(
         public int $id,
         public string $locale,
@@ -32,6 +35,7 @@ final readonly class PageCard
         public ?PageImage $image = null,
         public ?string $tag = null,
         public ?\DateTimeInterface $publishedAt = null,
+        public array $fields = [],
     ) {
     }
 }

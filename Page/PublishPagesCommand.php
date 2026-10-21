@@ -28,6 +28,8 @@ use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\EmptyPageContentException;
 use TheliaCMS\Page\Admin\HeadingStructureException;
+use TheliaCMS\Page\Admin\MissingPageFieldsException;
+use TheliaCMS\Page\Admin\ModelPagePublicationException;
 use TheliaCMS\Page\Admin\PlaceholderPageContentException;
 
 /**
@@ -115,6 +117,10 @@ final class PublishPagesCommand extends Command
                     $refused[] = \sprintf('#%d %s: still the sample text it was created with', $page->getId(), $locale);
                 } catch (HeadingStructureException $exception) {
                     $refused[] = \sprintf('#%d %s: %s', $page->getId(), $locale, implode(' ', $exception->problems));
+                } catch (ModelPagePublicationException) {
+                    $refused[] = \sprintf('#%d %s: the model of its type, never published', $page->getId(), $locale);
+                } catch (MissingPageFieldsException $exception) {
+                    $refused[] = \sprintf('#%d %s: required fields left empty (%s)', $page->getId(), $locale, implode(', ', $exception->labels));
                 } catch (\Throwable $throwable) {
                     $failed[] = \sprintf('#%d %s: %s', $page->getId(), $locale, $throwable->getMessage());
                 }
@@ -149,6 +155,10 @@ final class PublishPagesCommand extends Command
 
         if ([] !== $pageIds) {
             $query->filterById(array_map('intval', $pageIds), Criteria::IN);
+        } else {
+            // Every page means every page of the site: the models of the
+            // types are demos, refused one by one otherwise.
+            $query->filterByModel(0);
         }
 
         return array_values(iterator_to_array($query->find(), false));

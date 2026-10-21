@@ -15,11 +15,20 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\ImportExport;
 
 use Propel\Runtime\Propel;
+use TheliaCMS\Generation\Brief;
+use TheliaCMS\ImportExport\ExportFormat;
 use TheliaCMS\ImportExport\ImportOptions;
 use TheliaCMS\ImportExport\SiteDocument;
 use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\ImportExport\SiteImporter;
+use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsTag;
+use TheliaCMS\Model\Map\CmsPageTableMap;
+use TheliaCMS\Model\Map\CmsPageTypeDefinitionTableMap;
+use TheliaCMS\Page\Admin\PageDraft;
+use TheliaCMS\Page\Field\PageFields;
+use TheliaCMS\Page\PageTypeRepository;
+use TheliaCMS\Page\PageTypeWriter;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaLibrary\Model\LibraryImage;
 
@@ -267,6 +276,62 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
 
         self::assertSame(['This file holds 2 block(s), which this version of the module no longer has: they were left out.'], $report->warnings());
         self::assertCount(1, $this->query("SELECT id FROM cms_page_i18n WHERE title = 'Page à côté des blocs'"), 'The page is imported.');
+    }
+
+    public function testThePageTypesTheirModelAndTheFieldsOfThePagesComeBack(): void
+    {
+        $types = $this->getService(PageTypeWriter::class);
+        $types->add('recipe-round-trip');
+        $types->describe('recipe-round-trip', $this->locale(), 'Recette', 'Les recettes.', new Brief('Une recette de saison.', 'chaleureux'));
+        $types->saveField('recipe-round-trip', null, $this->locale(), ['code' => 'servings', 'kind' => 'integer', 'label' => 'Personnes']);
+        $types->saveField('recipe-round-trip', null, $this->locale(), ['code' => 'tip', 'kind' => 'text', 'label' => 'Astuce', 'translated' => true]);
+        $model = $this->writer()->createModel('recipe-round-trip', $this->locale(), 'Recette (modèle)');
+        $this->writer()->saveFields($model, $this->locale(), ['servings' => 4]);
+        $page = $this->createPage('Tarte aux pommes');
+        $page->setPageType('recipe-round-trip');
+        $this->writer()->saveDraft($page, $this->locale(), new PageDraft(title: 'Tarte aux pommes', fields: ['servings' => 6, 'tip' => 'Servir tiède.']));
+
+        $document = $this->getService(SiteExporter::class)->export();
+
+        $this->emptyTheSite();
+        $this->getPropelConnection()->exec("DELETE FROM cms_page_type WHERE code = 'recipe-round-trip'");
+        CmsPageTypeDefinitionTableMap::clearInstancePool();
+
+        $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions());
+
+        self::assertSame([], $report->warnings());
+
+        $repository = $this->getService(PageTypeRepository::class);
+        $details = $repository->details('recipe-round-trip');
+        self::assertSame('Recette', $details->title($this->locale()));
+        self::assertSame('chaleureux', $details->brief()?->tone);
+        self::assertSame(['servings', 'tip'], array_map(static fn ($field): string => $field->code, $details->fields()->fields));
+
+        $importedModel = $repository->modelOf('recipe-round-trip');
+        self::assertNotNull($importedModel, 'The model comes back as the model.');
+
+        CmsPageTableMap::clearInstancePool();
+        $imported = CmsPageQuery::create()->filterByPageType('recipe-round-trip')->filterByModel(0)->findOne();
+        self::assertNotNull($imported);
+        self::assertSame(['servings' => 6, 'tip' => 'Servir tiède.'], $this->getService(PageFields::class)->valuesOf($imported, $this->locale()));
+    }
+
+    public function testATypeTheSiteDescribedAlreadyKeepsItsFields(): void
+    {
+        $types = $this->getService(PageTypeWriter::class);
+        $types->add('recipe-kept');
+        $types->saveField('recipe-kept', null, $this->locale(), ['code' => 'servings', 'kind' => 'integer', 'label' => 'Personnes']);
+
+        $document = [
+            ...ExportFormat::header('test', [$this->locale()], new \DateTimeImmutable()),
+            'page_types' => [['code' => 'recipe-kept', 'fields' => [['code' => 'people', 'kind' => 'integer']], 'translations' => []]],
+        ];
+
+        $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions());
+
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('recipe-kept', $report->warnings()[0]);
+        self::assertNotNull($this->getService(PageTypeRepository::class)->details('recipe-kept')->fields()->find('servings'));
     }
 
     private function emptyTheSite(): void

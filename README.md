@@ -786,9 +786,11 @@ what a theme shows about the page elsewhere, a heading block or a card.
 
 A page has one type, picked in the "General" tab, which chooses the template it
 is displayed with: a recipe and a news item can look nothing alike. The types
-of the site are listed under **CMS > Settings > Page types**. A type is a code
-and nothing else — lowercase letters, digits and single hyphens, such as
-`recipe` or `news-item` — so it is shown as it is, never translated.
+of the site are listed under **CMS > Page templates** (also reached from
+**CMS > Settings**). A type is
+identified by its code — lowercase letters, digits and single hyphens, such as
+`recipe` or `news-item` — and may also be named in each language and serve as
+a template of pages (below).
 
 A page of type `recipe` is rendered with the first of these templates that
 exists:
@@ -805,19 +807,79 @@ page, and the page types screen says, for each type, which template it gets.
 A typed template receives the same `cms_page` as `cmspage.html.twig`, with
 `cms_page.pageType` holding the code, and must emit the same hooks.
 
+
 Every site has the `default` type, which cannot be deleted, and the update to
 1.2.0 turns the three former layouts into the types `default`, `full-width` and
 `landing`, so a page keeps the one it had. A type some page has, the bin
-included, cannot be deleted. Changing the type of a page applies as soon as the
+included, cannot be deleted; its model page is not one of them and goes with
+it. Changing the type of a page applies as soon as the
 page is saved, without publishing it again. With a shared cache in front of the
 site, a template added to the theme shows at the next expiry of
 `http_cache_ttl`: see [docs/shared-cache.md](docs/shared-cache.md).
 
 The type travels with the site export. An import of a site creates the types
-the site lacks (a type no page has is not exported).
+the site lacks (a type no page has is not exported, unless it is described as
+a template).
 
 The fallback template puts `cms-page--{type}` on the `<body>`, for a theme that
 only needs a class to tell the types apart.
+
+### Templates of pages
+
+A page type is also a template of the pages of a series (recipes, case
+studies, events), described on its screen under **CMS > Page templates**
+([ADR 9](docs/adr/0009-a-page-type-is-a-template-of-pages.md)):
+
+- a **name** and a description in each language;
+- a **brief**, with a tone and an audience, that the generator reads before
+  the brief of every page of the type;
+- **fields**, the values each page of the type carries: a whole number, a
+  decimal, a duration in minutes, a short or long text, yes or no, a word from
+  a list, a date. A field has a code, which a template reads it by and which
+  never changes, a label in each language, and may take a unit, bounds, be
+  written again for each language (texts only), or be required: a page cannot
+  be published while it is empty;
+- a **model page**, the demo content new pages of the type are copied from.
+  It is written like any page, from a brief or by hand, is never published,
+  and is not listed with the other pages.
+
+**Start a page from a template** on the page list copies the model of the
+type, its content in every language and its field values, under the title
+typed. The values of a page are filled in the "Fields" tab of its settings,
+and the generator writes them along with the content.
+
+A template of the theme reads the values of the page served as
+`cms_page.fields.<code>`, raw, and `cms_page_fields(cms_page)` gives the ones
+holding a value, labelled and written for a visitor:
+
+```twig
+<dl>
+    {% for field in cms_page_fields(cms_page) %}
+        <dt>{{ field.label }}</dt><dd>{{ field.text }}</dd>
+    {% endfor %}
+</dl>
+```
+
+The pages online of a type are listed with `cms_pages_of_type`, the model left
+out. `sort` is `recent` (the default), `oldest`, `title`, `position` or the code
+of a field, pages without a value last; `filter` keeps the pages holding a
+value, or a `{min, max}` range for a number or a date; `limit` and `offset` cut
+the list. Each card carries its `fields`:
+
+```twig
+{% for card in cms_pages_of_type('recipe', {sort: 'cooking_time', filter: {vegetarian: true, servings: {min: 4}}, limit: 6}) %}
+    <a href="{{ card.url }}">{{ card.title }}</a> {{ cms_page_fields(card)|map(f => f.text)|join(' · ') }}
+{% endfor %}
+```
+
+An editor places the same list in a page with the **Pages of a type** section
+(`Partial:cms-page-list`), rendered on every visit: a page published later
+shows in it without republishing the page that lists it. A theme takes the
+markup over with `cms/partials/page-list.html.twig`. From PHP, the list comes
+from `PublishedPageRepository::ofType($type, $locale, $query)`.
+
+The description of a type travels with the site export; an import keeps the
+fields of a type the site has described already, and says so.
 
 ### Components
 
@@ -866,6 +928,9 @@ to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
 | `cms_menu(code, locale)` | the tree of a menu. Each entry has `label`, `url` (null for a heading), `blank`, `children`, `active`, `in_trail`. The locale defaults to the one being served. |
 | `cms_page_alternates()` | the page being served, in each language it exists in: `locale`, `code`, `title`, `url`, `current` |
 | `cms_pages_tagged(tag, locale)` | the pages online carrying the tag, the most recently published first. The locale defaults to the one being served. |
+| `cms_pages_of_type(type, options, locale)` | the pages online of a type, the model left out, ordered, filtered and cut by `options` (`sort`, `direction`, `filter`, `limit`, `offset`): see [Templates of pages](#templates-of-pages). |
+| `cms_page_type(type, locale)` | the `code`, `title` and `description` of a type, for the heading of a list. |
+| `cms_page_fields(page)` | the fields of a page or a card holding a value, each with its `code`, `label`, raw `value` and `text` written for a visitor ("1 h 30 min"). |
 
 They return data rather than markup, because navigation markup belongs to the
 theme. A menu of any depth takes a dozen lines:

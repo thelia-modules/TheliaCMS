@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Page\Admin;
 
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -33,6 +34,8 @@ use TheliaCMS\Media\Admin\CmsMediaWriter;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Notice\NativeContentNotice;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\Field\InvalidFieldsException;
+use TheliaCMS\Page\Field\PageFields;
 use TheliaCMS\Page\PageTagRepository;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Security\CmsResources;
@@ -69,6 +72,7 @@ final readonly class CmsPageAdminController
         private CmsMediaWriter $media,
         private PageTypeRepository $pageTypes,
         private PageTagRepository $tags,
+        private PageFields $fields,
     ) {
     }
 
@@ -81,12 +85,58 @@ final readonly class CmsPageAdminController
         ]));
     }
 
+    /**
+     * A blank page; `?page_type=recipe` starts it with that type, and the
+     * fields of the type.
+     */
     #[Route('/new', name: 'create', methods: ['GET', 'POST'])]
     public function create(Request $request): Response
     {
         $this->denyUnless(AccessManager::CREATE);
 
-        return $this->handleForm($request, new CmsPage());
+        $page = new CmsPage();
+        $type = (string) $request->query->get('page_type', '');
+
+        if ($this->pageTypes->exists($type)) {
+            $page->setPageType($type);
+        }
+
+        return $this->handleForm($request, $page);
+    }
+
+    /**
+     * A new page of a type, named as the editor asked: a copy of the model of
+     * the type when it has one, a blank page of the type otherwise.
+     */
+    #[Route('/from-type', name: 'from_type', methods: ['POST'], priority: 1)]
+    public function fromType(Request $request): Response
+    {
+        $this->denyUnless(AccessManager::CREATE);
+        $lang = $this->editLang($request);
+        $code = (string) $request->request->get('page_type', '');
+
+        if (!$this->pageTypes->exists($code)) {
+            throw new NotFoundHttpException();
+        }
+
+        $title = trim((string) $request->request->get('title', ''));
+
+        if ('' === $title) {
+            $this->flash($request, 'danger', $this->translate('Give the new page a title.'));
+
+            return $this->backToList($request);
+        }
+
+        $model = $this->pageTypes->modelOf($code);
+
+        if (null !== $model) {
+            $page = $this->writer->startFromModel($model, $lang->getLocale(), $title);
+        } else {
+            $page = (new CmsPage())->setParent(0)->setPosition(0)->setVisible(1)->setPageType($code);
+            $this->writer->saveDraft($page, $lang->getLocale(), new PageDraft(title: mb_substr($title, 0, 255)));
+        }
+
+        return $this->backToEdit((int) $page->getId(), $lang);
     }
 
     #[Route('/{id}', name: 'edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
@@ -113,6 +163,10 @@ final readonly class CmsPageAdminController
             $this->flash($request, 'danger', $this->translate('This page has no content yet: add at least one block in the editor before publishing it.'));
         } catch (PlaceholderPageContentException) {
             $this->flash($request, 'danger', $this->translate('This page still holds the sample text it was created with: write your own before publishing it.'));
+        } catch (ModelPagePublicationException) {
+            $this->flash($request, 'danger', $this->translate('This page is the model of its type: it is never published. Start a new page from it instead.'));
+        } catch (MissingPageFieldsException $exception) {
+            $this->flash($request, 'danger', $this->translator->trans('Fill in the fields this type requires before publishing: %fields%.', ['%fields%' => implode(', ', $exception->labels)], TheliaCMS::DOMAIN_NAME));
         }
 
         return $this->backToEdit($id, $lang);
@@ -233,12 +287,24 @@ final readonly class CmsPageAdminController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->denyUnless($page->isNew() ? AccessManager::CREATE : AccessManager::UPDATE);
-            $this->applyTo($page, $locale, $form);
 
-            return $this->backToEdit((int) $page->getId(), $lang);
+            try {
+                $this->applyTo($page, $locale, $form);
+
+                return $this->backToEdit((int) $page->getId(), $lang);
+            } catch (InvalidFieldsException $exception) {
+                foreach ($exception->problems as $problem) {
+                    $form->addError(new FormError($problem));
+                }
+            }
         }
 
+        $type = $this->pageTypes->details((string) $page->getPageType());
+
         return new Response($this->twig->render(self::EDIT_TEMPLATE, [
+            'is_model' => 1 === $page->getModel(),
+            'page_type_title' => $type->title($locale),
+            'has_fields' => !$type->fields()->isEmpty(),
             'form' => $form->createView(),
             'page' => $page,
             'images' => $images,
@@ -257,6 +323,14 @@ final readonly class CmsPageAdminController
     {
         if (!$page->isNew()) {
             $page->setLocale($locale);
+        }
+
+        $definitions = $this->fields->definitionsOf($page);
+        $typeLabels = [];
+
+        foreach ($this->pageTypes->allDetails() as $code => $details) {
+            $title = $details->title($locale);
+            $typeLabels[$code] = $title === $code ? $code : \sprintf('%s (%s)', $title, $code);
         }
 
         return $this->forms->create(CmsPageType::class, [
@@ -283,10 +357,15 @@ final readonly class CmsPageAdminController
             'canonical' => $page->isNew() ? null : $page->getCanonical(),
             'noindex' => $page->isNew() ? 0 : $page->getNoindex(),
             'nofollow' => $page->isNew() ? 0 : $page->getNofollow(),
+            'fields' => $this->fields->valuesOf($page, $locale, $definitions),
         ], [
             'parent_choices' => $this->pages->parentChoices($locale, $page->isNew() ? null : (int) $page->getId()),
             'image_choices' => $imageChoices,
-            'page_type_choices' => $this->pageTypes->codes(),
+            'page_type_choices' => array_map(strval(...), array_keys($typeLabels)),
+            'page_type_labels' => $typeLabels,
+            'is_model' => 1 === $page->getModel(),
+            'field_definitions' => $definitions,
+            'field_locale' => $locale,
             'tag_choices' => $this->tags->namesById(),
             'allow_image_upload' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::CREATE]),
         ]);
@@ -297,7 +376,8 @@ final readonly class CmsPageAdminController
         $data = $form->getData();
 
         $page->setParent((int) $data['parent'])
-            ->setPageType($data['pageType'])
+            // A disabled field posts nothing: the model keeps its type.
+            ->setPageType($data['pageType'] ?? $page->getPageType())
             ->setTagId(null === $data['tag'] ? null : (int) $data['tag'])
             ->setImageId($this->chosenImage($data, $locale))
             ->setVisible((int) $data['visible'])
@@ -321,6 +401,7 @@ final readonly class CmsPageAdminController
         $this->writer->saveDraft($page, $locale, new PageDraft(
             title: $data['title'],
             slug: $data['slug'],
+            fields: \is_array($data['fields'] ?? null) ? $data['fields'] : [],
         ));
     }
 

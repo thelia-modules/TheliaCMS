@@ -17,9 +17,11 @@ namespace TheliaCMS\ImportExport;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
+use Thelia\Model\Lang;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
 use TheliaCMS\Form\FieldChoices;
+use TheliaCMS\Generation\Brief;
 use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormField;
@@ -36,6 +38,8 @@ use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsPageSearch;
 use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\Field\FieldDefinitions;
+use TheliaCMS\Page\Field\InvalidFieldsException;
 use TheliaCMS\Page\PageTagName;
 use TheliaCMS\Page\PageTagWriter;
 use TheliaCMS\Page\PageTypeCode;
@@ -100,6 +104,7 @@ final readonly class SiteImporter
 
         try {
             $mediaMap = $this->mediaMap($document, $report);
+            $this->importPageTypes($document, $report, $connection);
             $pageIds = $this->importPages($document, $options, $report, $mediaMap, $connection);
 
             $this->importMenus($document, $options, $report, $pageIds, $connection);
@@ -196,6 +201,8 @@ final readonly class SiteImporter
                 ->setPosition((int) ($page['position'] ?? 0))
                 ->setVisible(($page['visible'] ?? true) ? 1 : 0)
                 ->setPageType($this->pageTypeOf($page, $report, $connection, $knownTypes))
+                ->setModel($this->isModel($page, $existing, $report, $connection) ? 1 : 0)
+                ->setFields(self::fieldsJson($page['fields'] ?? null))
                 ->setTagId($this->tagIdOf($page, $report, $connection))
                 ->setImageId($this->mappedImage($page['image_id'] ?? null, $mediaMap))
                 ->setPublishAt($this->date($page['publish_at'] ?? null))
@@ -214,7 +221,8 @@ final readonly class SiteImporter
                     ->setTwitterCard($translation['twitter_card'] ?? null)
                     ->setCanonical($translation['canonical'] ?? null)
                     ->setNoindex(($translation['noindex'] ?? false) ? 1 : 0)
-                    ->setNofollow(($translation['nofollow'] ?? false) ? 1 : 0);
+                    ->setNofollow(($translation['nofollow'] ?? false) ? 1 : 0)
+                    ->setTranslatedFields(self::fieldsJson($translation['fields'] ?? null));
             }
 
             $model->save($connection);
@@ -230,6 +238,105 @@ final readonly class SiteImporter
         }
 
         return $pageIds;
+    }
+
+    /**
+     * The types the file describes as templates. A type the site lacks, or
+     * has as a bare code, takes the description of the file; a type the site
+     * has described already keeps its own, and the report says so when the
+     * two differ: the fields of a type are what its pages hold values under.
+     */
+    private function importPageTypes(SiteDocument $document, ImportReport $report, ConnectionInterface $connection): void
+    {
+        foreach ($document->pageTypes() as $row) {
+            $code = \is_string($row['code'] ?? null) ? $row['code'] : '';
+
+            if (!PageTypeCode::isValid($code)) {
+                $report->warn('A page type that is not a valid code was left out.');
+
+                continue;
+            }
+
+            try {
+                $fields = FieldDefinitions::fromArray(\is_array($row['fields'] ?? null) ? $row['fields'] : []);
+            } catch (InvalidFieldsException $exception) {
+                $report->warn(\sprintf('The fields of the page type "%s" were left out: %s', $code, $exception->getMessage()));
+                $fields = FieldDefinitions::none();
+            }
+
+            $current = $this->pageTypes->details($code, $connection);
+
+            if ($current->isTemplate()) {
+                if ($current->fields()->toArray() !== $fields->toArray()) {
+                    $report->warn(\sprintf('Page type "%s" already has fields on this site: they were kept, and the ones of the file left out.', $code));
+                }
+
+                continue;
+            }
+
+            $briefText = \is_string($row['brief'] ?? null) && '' !== trim($row['brief']) ? trim($row['brief']) : null;
+            $brief = null === $briefText ? null : new Brief($briefText, self::stringOrNull($row['brief_tone'] ?? null), self::stringOrNull($row['brief_audience'] ?? null));
+            $translations = \is_array($row['translations'] ?? null) ? $row['translations'] : [];
+
+            if ([] === $translations) {
+                $translations = [Lang::getDefaultLanguage()->getLocale() => []];
+            }
+
+            foreach ($translations as $locale => $translation) {
+                $this->pageTypeWriter->describe(
+                    $code,
+                    (string) $locale,
+                    self::stringOrNull($translation['title'] ?? null),
+                    self::stringOrNull($translation['description'] ?? null),
+                    $brief,
+                    $fields,
+                    $connection,
+                );
+            }
+        }
+    }
+
+    /**
+     * Whether an imported page is the model of its type. A type has one: a
+     * model the site has already keeps the place, and the page of the file
+     * comes in as an ordinary draft.
+     *
+     * @param array<string, mixed> $page
+     */
+    private function isModel(array $page, ?CmsPage $existing, ImportReport $report, ConnectionInterface $connection): bool
+    {
+        if (true !== ($page['model'] ?? false)) {
+            return false;
+        }
+
+        $model = $this->pageTypes->modelOf(PageTypeCode::orDefault(\is_string($page['page_type'] ?? null) ? $page['page_type'] : null), $connection);
+
+        if (null === $model || (null !== $existing && (int) $model->getId() === (int) $existing->getId())) {
+            return true;
+        }
+
+        $report->warn(\sprintf('Page "%s" is the model of its type, which already has one here: it was imported as an ordinary page.', (string) ($page['uid'] ?? '')));
+
+        return false;
+    }
+
+    /**
+     * Values of fields as the file carries them, stored as they are: they
+     * are read through the definition of the type, which leaves out what it
+     * does not take.
+     */
+    private static function fieldsJson(mixed $values): ?string
+    {
+        if (!\is_array($values) || [] === $values || array_is_list($values)) {
+            return null;
+        }
+
+        return json_encode($values, \JSON_UNESCAPED_SLASHES | \JSON_PRESERVE_ZERO_FRACTION | \JSON_THROW_ON_ERROR);
+    }
+
+    private static function stringOrNull(mixed $value): ?string
+    {
+        return \is_string($value) && '' !== trim($value) ? trim($value) : null;
     }
 
     /**

@@ -53,6 +53,13 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
         }
 
         $connection->exec('CREATE TABLE IF NOT EXISTS cms_page_type (id INTEGER NOT NULL AUTO_INCREMENT, code VARCHAR(50) NOT NULL, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL, PRIMARY KEY (id), UNIQUE INDEX unq_cms_page_type_code (code)) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC');
+        // The shape 2.0.0 gives the table, which the update to 1.2.0 knows
+        // nothing of.
+        if ([] === $this->rows("SHOW COLUMNS FROM cms_page_type LIKE 'brief'")) {
+            $connection->exec('ALTER TABLE cms_page_type ADD COLUMN brief LONGTEXT AFTER code, ADD COLUMN brief_tone VARCHAR(200) AFTER brief, ADD COLUMN brief_audience VARCHAR(200) AFTER brief_tone, ADD COLUMN fields LONGTEXT AFTER brief_audience');
+        }
+
+        $connection->exec("CREATE TABLE IF NOT EXISTS cms_page_type_i18n (id INTEGER NOT NULL, locale VARCHAR(5) DEFAULT 'en_US' NOT NULL, title VARCHAR(255), description TEXT, PRIMARY KEY (id, locale), CONSTRAINT cms_page_type_i18n_fk_7b1d2a FOREIGN KEY (id) REFERENCES cms_page_type (id) ON DELETE CASCADE) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC");
         $connection->exec('DELETE FROM cms_page_type');
 
         foreach ($this->codesBefore as $code) {
@@ -109,6 +116,8 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
     private function backTo110(array $layouts): void
     {
         $connection = $this->getPropelConnection();
+        // A 1.1.0 site has neither the types nor their translations.
+        $connection->exec('DROP TABLE IF EXISTS cms_page_type_i18n');
         $connection->exec('DROP TABLE cms_page_type');
         $connection->exec("ALTER TABLE cms_page CHANGE COLUMN page_type layout VARCHAR(20) NOT NULL DEFAULT 'default'");
 

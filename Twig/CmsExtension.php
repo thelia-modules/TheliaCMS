@@ -21,7 +21,11 @@ use TheliaCMS\Content\Partial\PartialSection;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
+use TheliaCMS\Page\Field\FieldFormatter;
 use TheliaCMS\Page\PageCard;
+use TheliaCMS\Page\PageListQuery;
+use TheliaCMS\Page\PageTypeRepository;
+use TheliaCMS\Page\PublishedPage;
 use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\SiteIcon;
@@ -45,6 +49,8 @@ final class CmsExtension extends AbstractExtension
         private readonly PublishedPageRepository $pages,
         private readonly LangService $langService,
         private readonly SectionCatalog $sections,
+        private readonly PageTypeRepository $pageTypes,
+        private readonly FieldFormatter $fieldFormatter,
     ) {
     }
 
@@ -64,6 +70,9 @@ final class CmsExtension extends AbstractExtension
             // on every page of the site.
             new TwigFunction('cms_is_showcase', $this->settings->isShowcase(...)),
             new TwigFunction('cms_pages_tagged', $this->pagesTagged(...)),
+            new TwigFunction('cms_pages_of_type', $this->pagesOfType(...)),
+            new TwigFunction('cms_page_type', $this->pageType(...)),
+            new TwigFunction('cms_page_fields', $this->pageFields(...)),
         ];
     }
 
@@ -121,6 +130,50 @@ final class CmsExtension extends AbstractExtension
     public function pagesTagged(string $tag, ?string $locale = null): array
     {
         return $this->pages->withTag($tag, $locale ?? $this->currentLocale());
+    }
+
+    /**
+     * The pages online of a type, the model left out, ordered, filtered and
+     * cut as the options say (see PageListQuery):
+     * `cms_pages_of_type('recipe', {sort: 'cooking_time', filter: {servings: {min: 4}}, limit: 6})`.
+     *
+     * @param array<string, mixed> $options sort, direction, filter, limit, offset
+     *
+     * @return list<PageCard>
+     */
+    public function pagesOfType(string $pageType, array $options = [], ?string $locale = null): array
+    {
+        return $this->pages->ofType($pageType, $locale ?? $this->currentLocale(), PageListQuery::fromArray($options));
+    }
+
+    /**
+     * What a heading of a list says about the type: its name and its
+     * description in the language served.
+     *
+     * @return array{code: string, title: string, description: string|null}
+     */
+    public function pageType(string $pageType, ?string $locale = null): array
+    {
+        $locale ??= $this->currentLocale();
+        $details = $this->pageTypes->details($pageType);
+
+        return ['code' => $details->code, 'title' => $details->title($locale), 'description' => $details->description($locale)];
+    }
+
+    /**
+     * The fields of a page or a card that hold a value, each with its label
+     * and its value written for a visitor ("1 h 30 min"), in the order of
+     * the type. `page.fields.<code>` is the raw value.
+     *
+     * @return list<array{code: string, label: string, value: int|float|string|bool, text: string}>
+     */
+    public function pageFields(PublishedPage|PageCard $page): array
+    {
+        if ([] === $page->fields) {
+            return [];
+        }
+
+        return $this->fieldFormatter->rows($this->pageTypes->fieldsOf($page->pageType), $page->fields, $page->locale);
     }
 
     private function currentLocale(): string

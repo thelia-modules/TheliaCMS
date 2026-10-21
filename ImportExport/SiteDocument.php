@@ -142,6 +142,17 @@ final readonly class SiteDocument
     }
 
     /**
+     * The page types the file describes as templates. Files written before
+     * 2.0.0 carry none.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function pageTypes(): array
+    {
+        return $this->rowsOf('page_types');
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     public function menus(): array

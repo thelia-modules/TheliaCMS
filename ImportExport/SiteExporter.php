@@ -26,6 +26,9 @@ use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Model\CmsPageTypeDefinitionQuery;
+use TheliaCMS\Page\Field\FieldDefinitions;
+use TheliaCMS\Page\Field\PageFields;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\TheliaCMS;
 use TheliaLibrary\Model\LibraryImageQuery;
@@ -70,6 +73,7 @@ final readonly class SiteExporter
 
         return [
             ...ExportFormat::header($this->moduleVersion(), $locales, new \DateTimeImmutable()),
+            'page_types' => $this->pageTypes($locales),
             'pages' => $pages,
             'menus' => $this->menus($locales),
             'forms' => $this->forms($locales),
@@ -95,6 +99,8 @@ final readonly class SiteExporter
             'position' => (int) $page->getPosition(),
             'visible' => 1 === $page->getVisible(),
             'page_type' => (string) $page->getPageType(),
+            'model' => 1 === $page->getModel(),
+            'fields' => PageFields::decode($page->getFields()),
             'tag' => $page->getCmsTag()?->getName(),
             'image_id' => $page->getImageId(),
             'publish_at' => $this->date($page->getPublishAt()),
@@ -125,6 +131,7 @@ final readonly class SiteExporter
                 'canonical' => $page->getCanonical(),
                 'noindex' => 1 === $page->getNoindex(),
                 'nofollow' => 1 === $page->getNofollow(),
+                'fields' => PageFields::decode($page->getTranslatedFields()),
             ];
         }
 
@@ -144,6 +151,39 @@ final readonly class SiteExporter
         }
 
         return $document;
+    }
+
+    /**
+     * The page types described as templates: a type that is only a code
+     * travels with the pages that carry it, as it always has.
+     *
+     * @param list<string> $locales
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function pageTypes(array $locales): array
+    {
+        $types = [];
+
+        foreach (CmsPageTypeDefinitionQuery::create()->orderByCode()->find() as $type) {
+            $fields = FieldDefinitions::fromJson($type->getFields());
+            $translations = $this->translationsOf($type, $locales, ['title' => 'getTitle', 'description' => 'getDescription']);
+
+            if ($fields->isEmpty() && null === $type->getBrief() && [] === $translations) {
+                continue;
+            }
+
+            $types[] = [
+                'code' => (string) $type->getCode(),
+                'brief' => $type->getBrief(),
+                'brief_tone' => $type->getBriefTone(),
+                'brief_audience' => $type->getBriefAudience(),
+                'fields' => $fields->toArray(),
+                'translations' => $translations,
+            ];
+        }
+
+        return $types;
     }
 
     public static function pageUid(int $id): string

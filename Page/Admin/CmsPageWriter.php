@@ -43,6 +43,10 @@ use TheliaCMS\Model\CmsPageRevisionQuery;
 use TheliaCMS\Model\CmsPageSearch;
 use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\Field\PageFields;
+use TheliaCMS\Page\PageTypeRepository;
+use TheliaCMS\Partial\Definition\PageListPartial;
+use TheliaCMS\Partial\PartialCache;
 use TheliaCMS\Search\SearchTextExtractor;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Settings\CmsSettings;
@@ -80,6 +84,12 @@ final readonly class CmsPageWriter
         // A shared cache in front of the site holds pages this writer just
         // changed, and it has no way of knowing on its own.
         private CachePurger $httpCache,
+        private PageFields $fields,
+        private PageTypeRepository $types,
+        // The lists of pages of a type are dynamic blocks, cached apart from
+        // the pages they sit in: a page that goes online, offline or changes
+        // a value has to drop them.
+        private PartialCache $partials,
     ) {
     }
 
@@ -108,6 +118,10 @@ final readonly class CmsPageWriter
                 ->setTitle($draft->title)
                 ->setChapo($this->sanitizer->html($page->getChapo(), $mayPublishCustomCode))
                 ->setDescription($this->sanitizer->html($page->getDescription(), $mayPublishCustomCode));
+            $this->assertSoleModel($page, $connection);
+            // Written on every save, values or not: a page whose type changed
+            // drops here the values the new type does not define.
+            $this->fields->write($page, $locale, $draft->fields ?? []);
             $page->save($connection);
 
             // The content itself belongs to the builder screen. The row is
@@ -133,6 +147,7 @@ final readonly class CmsPageWriter
             $connection->commit();
 
             $this->menuCache->invalidate();
+            $this->partials->invalidate(PageListPartial::NAME);
             // The settings of a page are live as soon as they are saved — its
             // type picks the template it is served with, its SEO fields are in
             // its head — so the copy a shared cache holds is stale already.
@@ -170,6 +185,25 @@ final readonly class CmsPageWriter
             ->save();
 
         $this->activityLog->record('UPDATE', (int) $page->getId(), \sprintf('CMS page #%d content edited in %s', $page->getId(), $locale));
+    }
+
+    /**
+     * Sets the values of the fields of a page in this language, the others
+     * kept: what the generator wrote along with the document. Like the other
+     * settings of a page, they are live as soon as they are saved.
+     *
+     * @param array<string, mixed> $values
+     *
+     * @throws \TheliaCMS\Page\Field\InvalidFieldsException when a value is not one its field takes
+     */
+    public function saveFields(CmsPage $page, string $locale, array $values): void
+    {
+        $this->fields->write($page, $locale, $values);
+        $page->setUpdatedBy($this->securityContext->getAdminUser()?->getId())->save();
+
+        $this->partials->invalidate(PageListPartial::NAME);
+        $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
+        $this->activityLog->record('UPDATE', (int) $page->getId(), \sprintf('CMS page #%d fields written in %s', $page->getId(), $locale));
     }
 
     /**
@@ -216,6 +250,8 @@ final readonly class CmsPageWriter
      * @throws EmptyPageContentException       when the draft would put nothing online
      * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
      * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
+     * @throws ModelPagePublicationException   when the page is the model of its type
+     * @throws MissingPageFieldsException      when a field the type requires is empty
      */
     public function publish(CmsPage $page, string $locale): void
     {
@@ -239,6 +275,7 @@ final readonly class CmsPageWriter
             $connection->commit();
 
             $this->menuCache->invalidate();
+            $this->partials->invalidate(PageListPartial::NAME);
             $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
             $this->activityLog->record('PUBLISH', (int) $page->getId(), \sprintf(
                 'CMS page #%d published in %s%s',
@@ -264,6 +301,8 @@ final readonly class CmsPageWriter
      * @throws EmptyPageContentException       when the draft would put nothing online
      * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
      * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
+     * @throws ModelPagePublicationException   when the page is the model of its type
+     * @throws MissingPageFieldsException      when a field the type requires is empty
      */
     public function assertPublishable(CmsPage $page, string $locale): void
     {
@@ -282,9 +321,24 @@ final readonly class CmsPageWriter
      * @throws EmptyPageContentException       when the draft would put nothing online
      * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
      * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
+     * @throws ModelPagePublicationException   when the page is the model of its type
+     * @throws MissingPageFieldsException      when a field the type requires is empty
      */
     private function publishableHtml(CmsPage $page, string $locale, CmsPageContent $content, bool $withCustomCode): string
     {
+        if (1 === $page->getModel()) {
+            throw ModelPagePublicationException::for((int) $page->getId());
+        }
+
+        // Checked before the content: a list of the type sorts and filters
+        // on these values, and a page without them has no place in it.
+        $definitions = $this->fields->definitionsOf($page);
+        $missing = $definitions->missingIn($this->fields->valuesOf($page, $locale, $definitions));
+
+        if ([] !== $missing) {
+            throw MissingPageFieldsException::for((int) $page->getId(), $locale, array_map(static fn ($field): string => $field->label($locale), $missing));
+        }
+
         $document = Document::fromJson($content->getDraftDocument());
 
         if (null === $document) {
@@ -339,6 +393,7 @@ final readonly class CmsPageWriter
             ->save();
 
         $this->menuCache->invalidate();
+        $this->partials->invalidate(PageListPartial::NAME);
         $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
         $this->activityLog->record('UNPUBLISH', (int) $page->getId(), \sprintf('CMS page #%d unpublished in %s', $page->getId(), $locale));
     }
@@ -378,6 +433,7 @@ final readonly class CmsPageWriter
             $connection->commit();
 
             $this->menuCache->invalidate();
+            $this->partials->invalidate(PageListPartial::NAME);
 
             $ids = array_map(static fn (CmsPage $node): int => (int) $node->getId(), $branch);
             $this->httpCache->purge(array_map(CacheTags::page(...), $ids));
@@ -422,6 +478,7 @@ final readonly class CmsPageWriter
             $connection->commit();
 
             $this->menuCache->invalidate();
+            $this->partials->invalidate(PageListPartial::NAME);
             $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
             $this->activityLog->record('RESTORE', (int) $page->getId(), \sprintf('CMS page #%d restored from the bin', $page->getId()));
         } catch (\Throwable $throwable) {
@@ -440,6 +497,64 @@ final readonly class CmsPageWriter
      */
     public function duplicate(CmsPage $page, string $locale, string $titleSuffix): CmsPage
     {
+        $copy = $this->copyOf($page, ' '.$titleSuffix, visible: false);
+
+        $this->activityLog->record('CREATE', (int) $copy->getId(), \sprintf('CMS page #%d duplicated from #%d', $copy->getId(), $page->getId()));
+
+        return $copy;
+    }
+
+    /**
+     * The model of a page type: a page of that type nobody publishes, holding
+     * the demo content its pages start from. Kept at the root of the tree,
+     * offline, out of the page list.
+     *
+     * @throws \LogicException when the type has a model already
+     */
+    public function createModel(string $pageType, string $locale, string $title): CmsPage
+    {
+        if (null !== $this->types->modelOf($pageType)) {
+            throw new \LogicException(\sprintf('The page type "%s" has a model already.', $pageType));
+        }
+
+        $model = new CmsPage();
+        $model->setParent(0)
+            ->setPosition(0)
+            ->setVisible(0)
+            ->setPageType($pageType)
+            ->setModel(1);
+
+        $this->saveDraft($model, $locale, new PageDraft(title: $title));
+
+        return $model;
+    }
+
+    /**
+     * A new page of the type of this model: its content in every language,
+     * its fields, its settings, as a draft at the root of the tree, named
+     * in this language as the editor asked. Online once published, like any
+     * page created in the back office.
+     *
+     * @throws \LogicException when the page is not a model
+     */
+    public function startFromModel(CmsPage $model, string $locale, string $title): CmsPage
+    {
+        if (1 !== $model->getModel()) {
+            throw new \LogicException(\sprintf('CMS page #%d is not the model of a type.', $model->getId()));
+        }
+
+        $page = $this->copyOf($model, '', visible: true, titles: [$locale => trim($title)]);
+
+        $this->activityLog->record('CREATE', (int) $page->getId(), \sprintf('CMS page #%d started from the model of the type "%s"', $page->getId(), $model->getPageType()));
+
+        return $page;
+    }
+
+    /**
+     * @param array<string, string> $titles the title of the copy in a language, over the one of the page
+     */
+    private function copyOf(CmsPage $page, string $titleSuffix, bool $visible, array $titles = []): CmsPage
+    {
         $connection = Propel::getConnection('TheliaMain');
         $connection->beginTransaction();
 
@@ -447,8 +562,9 @@ final readonly class CmsPageWriter
             $copy = new CmsPage();
             $copy->setParent($page->getParent())
                 ->setPosition($page->getPosition() + 1)
-                ->setVisible(0)
+                ->setVisible($visible ? 1 : 0)
                 ->setPageType($page->getPageType())
+                ->setFields($page->getFields())
                 ->setTagId($page->getTagId())
                 ->setImageId($page->getImageId())
                 ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
@@ -457,12 +573,12 @@ final readonly class CmsPageWriter
                 $source = $page->setLocale($lang->getLocale());
                 $title = trim((string) $source->getTitle());
 
-                if ('' === $title) {
+                if ('' === $title && !isset($titles[$lang->getLocale()])) {
                     continue;
                 }
 
                 $copy->setLocale($lang->getLocale())
-                    ->setTitle($title.' '.$titleSuffix)
+                    ->setTitle($titles[$lang->getLocale()] ?? $title.$titleSuffix)
                     ->setChapo($source->getChapo())
                     ->setDescription($source->getDescription())
                     ->setMetaTitle($source->getMetaTitle())
@@ -472,7 +588,8 @@ final readonly class CmsPageWriter
                     ->setOgImageId($source->getOgImageId())
                     ->setTwitterCard($source->getTwitterCard())
                     ->setNoindex($source->getNoindex())
-                    ->setNofollow($source->getNofollow());
+                    ->setNofollow($source->getNofollow())
+                    ->setTranslatedFields($source->getTranslatedFields());
                 // `canonical` is not copied: it points at this exact page.
             }
 
@@ -494,13 +611,28 @@ final readonly class CmsPageWriter
 
             $connection->commit();
 
-            $this->activityLog->record('CREATE', (int) $copy->getId(), \sprintf('CMS page #%d duplicated from #%d', $copy->getId(), $page->getId()));
-
             return $copy;
         } catch (\Throwable $throwable) {
             $connection->rollBack();
 
             throw $throwable;
+        }
+    }
+
+    /**
+     * A type has one model: two would leave the site guessing which one new
+     * pages start from.
+     */
+    private function assertSoleModel(CmsPage $page, ConnectionInterface $connection): void
+    {
+        if (1 !== $page->getModel()) {
+            return;
+        }
+
+        $model = $this->types->modelOf((string) $page->getPageType(), $connection);
+
+        if (null !== $model && (int) $model->getId() !== (int) $page->getId()) {
+            throw new \LogicException(\sprintf('The page type "%s" has a model already.', $page->getPageType()));
         }
     }
 
@@ -595,6 +727,7 @@ final readonly class CmsPageWriter
     public function toggleVisibility(CmsPage $page): void
     {
         $page->setVisible(1 === $page->getVisible() ? 0 : 1)->save();
+        $this->partials->invalidate(PageListPartial::NAME);
 
         $this->activityLog->record(
             'UPDATE',

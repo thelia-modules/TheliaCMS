@@ -22,8 +22,9 @@ namespace TheliaCMS\Page;
 final readonly class PublishedPage
 {
     /**
-     * @param string      $pageType the code of the type of the page, always a valid one
-     * @param string|null $tag      the name of the tag of the page, when it has one
+     * @param string                                    $pageType the code of the type of the page, always a valid one
+     * @param string|null                               $tag      the name of the tag of the page, when it has one
+     * @param array<string, int|float|string|bool|null> $fields   the value of every field its type defines, by code, in this language
      */
     public function __construct(
         public int $id,
@@ -40,6 +41,7 @@ final readonly class PublishedPage
         public bool $nofollow = false,
         public ?\DateTimeInterface $publishedAt = null,
         public ?string $tag = null,
+        public array $fields = [],
     ) {
     }
 
@@ -64,6 +66,7 @@ final readonly class PublishedPage
             nofollow: $this->nofollow,
             publishedAt: $this->publishedAt,
             tag: $this->tag,
+            fields: $this->fields,
         );
     }
 }

@@ -41,6 +41,19 @@
         -->
         <column defaultValue="default" name="page_type" required="true" size="50" type="VARCHAR"/>
         <!--
+            The model of its type: the demo content new pages of the type are
+            copied from. Never published; at most one per type, which the
+            writer keeps.
+        -->
+        <column defaultValue="0" name="model" required="true" type="TINYINT" size="4"/>
+        <!--
+            The values of the fields the type defines that are the same in
+            every language, as a JSON object by field code; the translated
+            ones are in `cms_page_i18n.translated_fields`. Checked against the definition
+            of the type on every write (TheliaCMS\Page\Field).
+        -->
+        <column name="fields" type="CLOB"/>
+        <!--
             The image of the page, a TheliaLibrary image, the same in every
             language like the image of a core content. No foreign key, for the
             reason given on `og_image_id`: a stale id renders as "no image".
@@ -96,6 +109,8 @@
         <column name="canonical" size="2048" type="VARCHAR"/>
         <column defaultValue="0" name="noindex" required="true" type="TINYINT" size="4"/>
         <column defaultValue="0" name="nofollow" required="true" type="TINYINT" size="4"/>
+        <!-- The values of the translated fields, the same JSON as `fields`. -->
+        <column name="translated_fields" type="CLOB"/>
 
         <index name="idx_cms_page_parent">
             <index-column name="parent"/>
@@ -110,6 +125,9 @@
         <index name="idx_cms_page_tag">
             <index-column name="tag_id"/>
         </index>
+        <index name="idx_cms_page_page_type">
+            <index-column name="page_type"/>
+        </index>
 
         <foreign-key foreignTable="cms_tag" name="fk_cms_page_tag" onDelete="SET NULL" onUpdate="RESTRICT">
             <reference foreign="id" local="tag_id"/>
@@ -117,7 +135,7 @@
 
         <behavior name="i18n">
             <parameter name="i18n_columns"
-                       value="title, slug, chapo, description, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow"/>
+                       value="title, slug, chapo, description, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow, translated_fields"/>
         </behavior>
         <behavior name="timestampable"/>
     </table>
@@ -423,19 +441,40 @@
     </table>
 
     <!--
-        The types a page can have. A type is a code and nothing else: it picks
-        the `cmspage-{code}` template the page is rendered with. Named
-        CmsPageTypeDefinition in PHP because `CmsPageType` is the form of a
-        page.
+        The types a page can have, each one a template of pages (see
+        docs/adr/0009): the code picks the `cmspage-{code}` template the page
+        is rendered with, and identifies the type through an export; a name,
+        a brief and the definition of the fields its pages carry come with
+        it. Its model is the page of the type with `cms_page.model` set.
+        Named CmsPageTypeDefinition in PHP because `CmsPageType` is the form
+        of a page.
     -->
     <table name="cms_page_type" namespace="TheliaCMS\Model" phpName="CmsPageTypeDefinition">
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
         <column name="code" required="true" size="50" type="VARCHAR"/>
+        <!--
+            What every page of the type is about, read by the generator before
+            the brief of the page; the shape of TheliaCMS\Generation\Brief.
+        -->
+        <column name="brief" type="CLOB"/>
+        <column name="brief_tone" size="200" type="VARCHAR"/>
+        <column name="brief_audience" size="200" type="VARCHAR"/>
+        <!--
+            The definition of the fields, a JSON list read by
+            TheliaCMS\Page\Field\FieldDefinitions. JSON rather than a table:
+            a definition is read whole, and travels whole through an export.
+        -->
+        <column name="fields" type="CLOB"/>
+        <column name="title" size="255" type="VARCHAR"/>
+        <column name="description" type="LONGVARCHAR"/>
 
         <unique name="unq_cms_page_type_code">
             <unique-column name="code"/>
         </unique>
 
+        <behavior name="i18n">
+            <parameter name="i18n_columns" value="title, description"/>
+        </behavior>
         <behavior name="timestampable"/>
     </table>
 

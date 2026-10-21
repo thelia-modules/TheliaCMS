@@ -39,6 +39,8 @@ use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaCMS\Page\Admin\EmptyPageContentException;
 use TheliaCMS\Page\Admin\HeadingStructureException;
+use TheliaCMS\Page\Admin\MissingPageFieldsException;
+use TheliaCMS\Page\Admin\ModelPagePublicationException;
 use TheliaCMS\Page\Admin\PlaceholderPageContentException;
 use TheliaCMS\Preview\PreviewLink;
 use TheliaCMS\Security\CmsResources;
@@ -356,6 +358,14 @@ final readonly class CmsPageContentController
             $this->flash($request, 'danger', $this->translate('This page still holds the sample text it was created with: write your own before publishing it.'));
 
             return $this->back($page, $lang);
+        } catch (ModelPagePublicationException) {
+            $this->flash($request, 'danger', $this->translate('This page is the model of its type: it is never published. Start a new page from it instead.'));
+
+            return $this->back($page, $lang);
+        } catch (MissingPageFieldsException $exception) {
+            $this->flash($request, 'danger', $this->translator->trans('Fill in the fields this type requires before publishing: %fields%.', ['%fields%' => implode(', ', $exception->labels)], TheliaCMS::DOMAIN_NAME));
+
+            return $this->back($page, $lang);
         }
 
         // In `warn` mode the page went online and its author is told what to
@@ -414,6 +424,7 @@ final readonly class CmsPageContentController
             ],
             testId: 'cms-page-content',
             translationSources: $this->translationSources->forPage((int) $page->getId(), $locale),
+            publishable: 1 !== $page->getModel(),
         );
     }
 

@@ -65,6 +65,33 @@
     {% include '@TheliaCMSModule/backOffice/default-twig/pages/_sample_text_warning.html.twig' %}
     {% include '@TheliaCMSModule/backOffice/default-twig/pages/_native_content_notice.html.twig' %}
 
+    {% if page_templates is not empty %}
+        {# A page of a type that is a template starts as a copy of its model,
+           named here: the editor writes the title, the model the rest. #}
+        <form class="card card-body mb-3" method="post" action="{{ path('admin.cms.pages.from_type', { edit_language_id: edit_language_id }) }}" data-testid="cms-pages-from-type">
+            <input type="hidden" name="_token" value="{{ assignToken() }}">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label" for="cms-from-type">{{ 'Start a page from a template'|trans({}, 'theliacms') }}</label>
+                    <select class="form-select" id="cms-from-type" name="page_type">
+                        {% for template in page_templates %}
+                            <option value="{{ template.code }}">{{ template.title }}{% if not template.has_model %} — {{ 'no model yet'|trans({}, 'theliacms') }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label" for="cms-from-type-title">{{ 'Title of the new page'|trans({}, 'theliacms') }}</label>
+                    <input class="form-control" id="cms-from-type-title" name="title" type="text" maxlength="255" required>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-primary w-100" type="submit">
+                        <i class="bi bi-files me-1" aria-hidden="true"></i>{{ 'Create from the template'|trans({}, 'theliacms') }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    {% endif %}
+
     {% if live_count == 0 %}
         <div class="card">
             <div class="card-body text-center py-5">

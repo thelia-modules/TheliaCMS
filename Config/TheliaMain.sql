@@ -16,6 +16,8 @@ CREATE TABLE `cms_page`
     `position` INTEGER DEFAULT 0 NOT NULL,
     `visible` TINYINT(4) DEFAULT 1 NOT NULL,
     `page_type` VARCHAR(50) DEFAULT 'default' NOT NULL,
+    `model` TINYINT(4) DEFAULT 0 NOT NULL,
+    `fields` LONGTEXT,
     `image_id` INTEGER,
     `tag_id` INTEGER,
     `publish_at` TIMESTAMP NULL,
@@ -30,6 +32,7 @@ CREATE TABLE `cms_page`
     INDEX `idx_cms_page_parent_position` (`parent`, `position`),
     INDEX `idx_cms_page_deleted_at` (`deleted_at`),
     INDEX `idx_cms_page_tag` (`tag_id`),
+    INDEX `idx_cms_page_page_type` (`page_type`),
     CONSTRAINT `fk_cms_page_tag`
         FOREIGN KEY (`tag_id`)
         REFERENCES `cms_tag` (`id`)
@@ -282,6 +285,7 @@ CREATE TABLE `cms_page_i18n`
     `canonical` VARCHAR(2048),
     `noindex` TINYINT(4) DEFAULT 0 NOT NULL,
     `nofollow` TINYINT(4) DEFAULT 0 NOT NULL,
+    `translated_fields` LONGTEXT,
     PRIMARY KEY (`id`,`locale`),
     CONSTRAINT `cms_page_i18n_fk_058391`
         FOREIGN KEY (`id`)
@@ -380,6 +384,10 @@ CREATE TABLE `cms_page_type`
 (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `code` VARCHAR(50) NOT NULL,
+    `brief` LONGTEXT,
+    `brief_tone` VARCHAR(200),
+    `brief_audience` VARCHAR(200),
+    `fields` LONGTEXT,
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
@@ -462,6 +470,25 @@ CREATE TABLE `cms_page_generation`
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
     INDEX `idx_cms_page_generation_target` (`target_type`, `target_id`, `locale`)
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+-- ---------------------------------------------------------------------
+-- cms_page_type_i18n
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_page_type_i18n`;
+
+CREATE TABLE `cms_page_type_i18n`
+(
+    `id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
+    `title` VARCHAR(255),
+    `description` TEXT,
+    PRIMARY KEY (`id`,`locale`),
+    CONSTRAINT `cms_page_type_i18n_fk_7b1d2a`
+        FOREIGN KEY (`id`)
+        REFERENCES `cms_page_type` (`id`)
+        ON DELETE CASCADE
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 # This restores the fkey checks, after having unset them earlier

@@ -13,6 +13,7 @@
             {{ parent() }}
             <span class="badge {{ status.badgeClass }}">{{ status.label|trans({}, 'theliacms') }}</span>
             {% if is_home %}<span class="badge bg-primary">{{ 'Home page'|trans({}, 'theliacms') }}</span>{% endif %}
+            {% if is_model %}<span class="badge text-bg-info" data-testid="cms-page-model-badge">{{ 'Model of the type %type%'|trans({ '%type%': page_type_title }, 'theliacms') }}</span>{% endif %}
         {% endblock %}
 
         {% block actions %}
@@ -40,6 +41,13 @@
                     {{ 'General'|trans({}, 'theliacms') }}
                 </button>
             </li>
+            {% if has_fields %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-fields" type="button" data-testid="cms-page-tab-fields">
+                        {{ 'Fields of %type%'|trans({ '%type%': page_type_title }, 'theliacms') }}
+                    </button>
+                </li>
+            {% endif %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-seo" type="button" data-testid="cms-page-tab-seo">
                     {{ 'Search engines and sharing'|trans({}, 'theliacms') }}
@@ -58,8 +66,15 @@
         {% endif %}
     </div>
 
+    {% if is_model %}
+        <div class="alert alert-info" role="status">
+            {{ 'This page is the model of its type: new pages of the type start as a copy of it. It is never published and is not listed with the other pages.'|trans({}, 'theliacms') }}
+        </div>
+    {% endif %}
+
     {{ form_start(form) }}
         <input type="hidden" name="_token" value="{{ assignToken() }}">
+        {{ form_errors(form) }}
         <div class="tab-content">
             <div class="tab-pane fade show active" id="tab-general" role="tabpanel">
                 <div class="row g-3">
@@ -80,6 +95,19 @@
                     </div>
                 </div>
             </div>
+
+            {% if has_fields %}
+                <div class="tab-pane fade" id="tab-fields" role="tabpanel" data-testid="cms-page-fields">
+                    <p class="text-muted">{{ 'The values of the fields of the type, read by the template of the page and by the lists of the type.'|trans({}, 'theliacms') }}</p>
+                    <div class="row g-3">
+                        {% for field in form.fields %}
+                            <div class="col-md-6">{{ form_row(field) }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                {% do form.fields.setRendered %}
+            {% endif %}
 
             <div class="tab-pane fade" id="tab-seo" role="tabpanel">
                 <div class="row g-3">
@@ -171,6 +199,7 @@
     {% if not is_new %}
         {# Kept out of the settings form: each one is a POST of its own. #}
         <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
+            {% if not is_model %}
             <form method="post" action="{{ path('admin.cms.pages.publish', { id: page.id, edit_language_id: edit_language_id }) }}">
                 <input type="hidden" name="_token" value="{{ assignToken() }}">
                 <button type="submit" class="btn btn-sm btn-success">{{ 'Publish this version'|trans({}, 'theliacms') }}</button>
@@ -183,7 +212,8 @@
                 <input type="hidden" name="_token" value="{{ assignToken() }}">
                 <button type="submit" class="btn btn-sm btn-outline-secondary">{{ 'Duplicate'|trans({}, 'theliacms') }}</button>
             </form>
-            {% if not is_home %}
+            {% endif %}
+            {% if not is_home and not is_model %}
                 <form method="post" action="{{ path('admin.cms.pages.set_as_home', { id: page.id, edit_language_id: edit_language_id }) }}">
                     <input type="hidden" name="_token" value="{{ assignToken() }}">
                     <button type="submit" class="btn btn-sm btn-outline-secondary">{{ 'Set as home page'|trans({}, 'theliacms') }}</button>
