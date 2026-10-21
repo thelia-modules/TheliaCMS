@@ -302,6 +302,16 @@
                                             {% if row.error %}
                                                 <details class="small"><summary>{{ 'Details'|trans({}, 'theliacms') }}</summary><p class="mb-0 cms-content__history-break">{{ row.error }}</p></details>
                                             {% endif %}
+                                            {% if row.left_out is not empty %}
+                                                <details class="small" data-testid="cms-content-history-left-out">
+                                                    <summary class="text-warning-emphasis">{{ '%count% thing(s) of the brief left out'|trans({ '%count%': row.left_out|length }, 'theliacms') }}</summary>
+                                                    <ul class="mb-0">
+                                                        {% for sentence in row.left_out %}
+                                                            <li class="cms-content__history-break">{{ sentence }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            {% endif %}
                                             {% if row.pages is not empty %}
                                                 <details class="small" data-testid="cms-content-history-pages">
                                                     <summary>{{ '%count% web page(s) read'|trans({ '%count%': row.pages|length }, 'theliacms') }}</summary>

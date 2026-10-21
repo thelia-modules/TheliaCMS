@@ -53,6 +53,8 @@ A brief of one line, or a brief that asks for things the site does not have
 a short page: say only what the brief said, in as few sections as it takes,
 and leave out what you would have to make up. A section that says nothing —
 "ask us your question", "discover our world" — is worse than no section.
+Say what you left out in `left_out`, one sentence each: the editor reads it
+and can add the image or the product, then ask again.
 
 ## Length
 

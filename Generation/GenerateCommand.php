@@ -123,6 +123,10 @@ final class GenerateCommand extends Command
             $result->durationMs / 1000,
         ));
 
+        if ([] !== $result->leftOut) {
+            $io->warning(['The page leaves out part of what the brief asked:', ...$result->leftOut]);
+        }
+
         if ($input->getOption('dry-run')) {
             return Command::SUCCESS;
         }

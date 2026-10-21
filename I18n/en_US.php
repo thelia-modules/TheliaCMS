@@ -963,4 +963,6 @@ return [
     'As wide as the content' => 'As wide as the content',
     'The whole width of the screen' => 'The whole width of the screen',
     'A caption under the picture.' => 'A caption under the picture.',
+    'The draft is written (%figures%), without part of what the brief asked:' => 'The draft is written (%figures%), without part of what the brief asked:',
+    '%count% thing(s) of the brief left out' => '%count% thing(s) of the brief left out',
 ];

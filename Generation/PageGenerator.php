@@ -57,6 +57,11 @@ final readonly class PageGenerator
     /** How much of a page read reaches the model: a long page is cut rather than filling the context. */
     private const int WEB_FETCH_CONTENT_TOKENS = 20_000;
 
+    /** What the answer may say it left out: a few sentences, each short. */
+    private const int LEFT_OUT_COUNT = 10;
+
+    private const int LEFT_OUT_LENGTH = 300;
+
     public function __construct(
         private ClaudeClientProviderInterface $clients,
         private GeneratorSettings $settings,
@@ -109,7 +114,7 @@ final readonly class PageGenerator
         // A closure over references: the tokens, the turns, the request id and
         // the pages read are what they are when the outcome is written, not
         // when the call started.
-        $record = function (string $status, ?Message $message = null, ?string $error = null, ?string $document = null) use ($request, $prompt, $model, $started, $client, &$usage, &$turns, &$requestId, &$reads): int {
+        $record = function (string $status, ?Message $message = null, ?string $error = null, ?string $document = null, array $leftOut = []) use ($request, $prompt, $model, $started, $client, &$usage, &$turns, &$requestId, &$reads): int {
             return $this->log->record(
                 $request,
                 $status,
@@ -124,6 +129,7 @@ final readonly class PageGenerator
                 $error,
                 $document,
                 $this->counted($client, $model, $reads),
+                $leftOut,
             );
         };
 
@@ -194,7 +200,7 @@ final readonly class PageGenerator
                 $text = $this->textOf($message);
 
                 try {
-                    [$document, $writtenFields] = self::documentFrom($text);
+                    [$document, $writtenFields, $leftOut] = self::documentFrom($text);
                     $document = $this->validator->validate($document);
                     $fields = $fieldsAsked->isEmpty() ? null : self::fieldsFrom($writtenFields, $fieldsAsked, $request->locale, $request->target->fieldValues);
                 } catch (InvalidDocumentException $exception) {
@@ -218,9 +224,9 @@ final readonly class PageGenerator
                 }
 
                 $durationMs = (int) ((hrtime(true) - $started) / 1_000_000);
-                $logId = $record(GenerationLog::STATUS_DONE, $message, null, $document->toJson());
+                $logId = $record(GenerationLog::STATUS_DONE, $message, null, $document->toJson(), $leftOut);
 
-                return new GenerationResult($document, $model, $requestId, $usage, $this->pricing->cost($model, $usage), $durationMs, $turns, $logId, $fields);
+                return new GenerationResult($document, $model, $requestId, $usage, $this->pricing->cost($model, $usage), $durationMs, $turns, $logId, $fields, $leftOut);
             }
         } catch (GenerationRefusedException $exception) {
             $exception->logId = $record(GenerationLog::STATUS_REFUSED, $message ?? null, $exception->getMessage());
@@ -366,10 +372,10 @@ final readonly class PageGenerator
     }
 
     /**
-     * The document of the answer, and what it wrote for the fields of the
-     * page, still to be read.
+     * The document of the answer, what it wrote for the fields of the page,
+     * still to be read, and what it says the page leaves out.
      *
-     * @return array{0: Document, 1: mixed}
+     * @return array{0: Document, 1: mixed, 2: list<string>}
      *
      * @throws InvalidDocumentException
      */
@@ -418,7 +424,31 @@ final readonly class PageGenerator
             throw InvalidDocumentException::because($problems);
         }
 
-        return [Document::fromArray($decoded), $decoded['fields'] ?? null];
+        return [Document::fromArray($decoded), $decoded['fields'] ?? null, self::leftOutFrom($decoded['left_out'] ?? null)];
+    }
+
+    /**
+     * What the answer says the page leaves out: sentences, read as text and
+     * held to a few short ones whatever the model wrote. Not a reason to
+     * send the document back: a malformed list is no list.
+     *
+     * @return list<string>
+     */
+    private static function leftOutFrom(mixed $written): array
+    {
+        if (!\is_array($written)) {
+            return [];
+        }
+
+        $sentences = [];
+
+        foreach ($written as $sentence) {
+            if (\is_string($sentence) && '' !== $sentence = trim(strip_tags($sentence))) {
+                $sentences[] = mb_substr($sentence, 0, self::LEFT_OUT_LENGTH);
+            }
+        }
+
+        return \array_slice(array_values(array_unique($sentences)), 0, self::LEFT_OUT_COUNT);
     }
 
     /**

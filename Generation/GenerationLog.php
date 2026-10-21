@@ -41,6 +41,7 @@ final readonly class GenerationLog
 
     /**
      * @param list<WebPageRead> $webPages the pages the call read, counted
+     * @param list<string>      $leftOut  what the answer says the page leaves out of the brief
      */
     public function record(
         GenerationRequest $request,
@@ -56,6 +57,7 @@ final readonly class GenerationLog
         ?string $error = null,
         ?string $document = null,
         array $webPages = [],
+        array $leftOut = [],
     ): int {
         $row = (new CmsPageGeneration())
             ->setTargetType($request->target->type)
@@ -79,11 +81,36 @@ final readonly class GenerationLog
             ->setError(null !== $error ? mb_substr($error, 0, 60000) : null)
             ->setDocument($document)
             ->setWebPages([] === $webPages ? null : json_encode(array_map(static fn (WebPageRead $page): array => $page->toArray(), $webPages), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE))
+            ->setLeftOut([] === $leftOut ? null : json_encode($leftOut, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE))
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
 
         $row->save();
 
         return (int) $row->getId();
+    }
+
+    /**
+     * What the answer of a call said the page leaves out of the brief. A row
+     * written before the column, or by a call that left nothing out, holds
+     * nothing.
+     *
+     * @return list<string>
+     */
+    public static function leftOutOf(CmsPageGeneration $row): array
+    {
+        $json = (string) $row->getLeftOut();
+
+        if ('' === $json) {
+            return [];
+        }
+
+        try {
+            $sentences = json_decode($json, true, 2, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return [];
+        }
+
+        return \is_array($sentences) ? array_values(array_filter($sentences, 'is_string')) : [];
     }
 
     /**

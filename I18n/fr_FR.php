@@ -963,4 +963,6 @@ return [
     'As wide as the content' => 'Aussi large que le contenu',
     'The whole width of the screen' => 'Toute la largeur de l’écran',
     'A caption under the picture.' => 'Une légende sous l’image.',
+    'The draft is written (%figures%), without part of what the brief asked:' => 'Le brouillon est écrit (%figures%), sans une partie de ce que demandait le brief :',
+    '%count% thing(s) of the brief left out' => '%count% élément(s) du brief laissé(s) de côté',
 ];

@@ -304,6 +304,33 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(3, substr_count($html, 'src="https://img.logoipsum.com/'), 'The logos of elsewhere are kept by the sanitizer.');
     }
 
+    public function testWhatTheDraftLeavesOutOfTheBriefIsReported(): void
+    {
+        $page = $this->createPage('Tarte aux pommes', published: false);
+        $missing = 'Aucune photo de tarte sortant du four : la médiathèque n’en a pas et le brief ne donne pas d’adresse.';
+        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(json_encode([
+            'version' => 1,
+            'sections' => [['id' => 'recette', 'component' => 'cms:richtext', 'props' => json_encode(['html' => '<h2>La recette</h2><p>Written for the test.</p>'], \JSON_THROW_ON_ERROR)]],
+            'left_out' => [$missing, ' ', '<b>Aucun moule</b> du catalogue.', 42],
+        ], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE))]));
+
+        $form = $this->screen($this->url($page->getId()))->filter('[data-testid="cms-content-brief"] form')->form();
+        $form['cms_brief[text]'] = 'La recette de la tarte aux pommes avec une photo de la tarte sortant du four.';
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+        self::assertSame(json_encode([$missing, 'Aucun moule du catalogue.'], \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES), CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getLeftOut(), 'Sentences only, read as text.');
+
+        $screen = $this->screen((string) $this->client->getResponse()->headers->get('Location'));
+        $warning = $screen->filter('[data-testid="cms-builder-flash-warning"]');
+
+        self::assertSame(1, $warning->count(), 'A draft that leaves part of the brief out comes back as a warning.');
+        self::assertStringContainsString('The draft is written', $warning->text());
+        self::assertStringContainsString($missing, $warning->text());
+        self::assertSame(0, $screen->filter('[data-testid="cms-builder-flash-success"]')->count());
+        self::assertStringContainsString('2 thing(s) of the brief left out', $screen->filter('[data-testid="cms-content-history-left-out"] summary')->text(), 'The history keeps it once the notice is gone.');
+        self::assertStringContainsString('"left_out":{"type":"array"', json_encode($this->api->requests[0]['output_config'] ?? [], \JSON_THROW_ON_ERROR), 'The model is given where to say it.');
+    }
+
     public function testAChangeAddsAPictureWithItsCaption(): void
     {
         $page = $this->createPage('Apple pie', published: false);

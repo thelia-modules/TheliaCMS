@@ -81,4 +81,12 @@ final class DocumentSchemaTest extends TestCase
         self::assertSame('string', $strict['properties']->fields['type'], 'The fields travel as a JSON string, like the props.');
         self::assertSame(['version', 'sections', 'fields'], $strict['required']);
     }
+
+    public function testWhatThePageLeavesOutIsAnOptionalListOfSentences(): void
+    {
+        $strict = $this->schema->strict();
+
+        self::assertSame(['type' => 'string'], $strict['properties']->left_out['items']);
+        self::assertNotContains('left_out', $strict['required'], 'A page that holds everything the brief asked says nothing.');
+    }
 }

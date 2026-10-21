@@ -140,7 +140,7 @@ the signed preview link of the draft.
   the order of the shop; a select lets the editor choose when there are
   several. The brief form stays at hand for a page written on its own.
 - **History**: the calls of the ledger for this page and language, with their
-  outcome, turns, duration and cost.
+  outcome, turns, duration and cost, and what each one left out of the brief.
 - **Publish**: the usual pipeline, with the heading check.
 
 Every action is a form that posts and comes back with a message, so the
@@ -155,7 +155,12 @@ the call ends, the script fetches the screen at `?done=<id>` and puts it in
 place of the one on show, so the address bar, the scroll and the open panels
 stay as they were; without the script, the browser is sent to that address.
 Either way the outcome is read from that row of the ledger: a stream can
-leave no flash message behind, and the ledger says more.
+leave no flash message behind, and the ledger says more. A draft that leaves
+out part of the brief — an image the media library does not hold and the
+brief gives no address of, a product the search does not find — comes back
+as a warning listing what is missing, in the words of the model: the answer
+carries it in an optional `left_out` list next to the sections, and the
+editor learns it there rather than by reading the page.
 
 Each section also opens a form to **edit it by hand**, read from the schema
 of its component (`Generation\Admin\SectionFormBuilder`): a field per prop,
@@ -190,7 +195,9 @@ the text read. Those tokens are counted after the call by the token counting
 endpoint of the API, which is not billed, and priced in the history of the
 screen as one uncached reading: the cost of the call already includes them,
 and a page the model reads again at a later turn is billed again, at the cache
-price after the first. A count that fails leaves the page uncounted. `GenerationLog::history()` is what a page screen reads;
+price after the first. A count that fails leaves the page uncounted. What the
+answer said the page leaves out is kept as a JSON list of sentences
+(`left_out`), at most ten of 300 characters. `GenerationLog::history()` is what a page screen reads;
 `spentSince()` what a budget alert reads.
 
 ## From the command line

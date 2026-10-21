@@ -465,6 +465,7 @@ CREATE TABLE `cms_page_generation`
     `error` TEXT,
     `document` LONGTEXT,
     `web_pages` LONGTEXT,
+    `left_out` LONGTEXT,
     `created_by` INTEGER,
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,

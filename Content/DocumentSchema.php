@@ -113,6 +113,14 @@ final readonly class DocumentSchema
             'additionalProperties' => false,
         ];
 
+        // Optional: the editor is told what the page could not hold, rather
+        // than finding out by reading it.
+        $schema['properties']->left_out = [
+            'type' => 'array',
+            'items' => ['type' => 'string'],
+            'description' => 'Only when the page leaves out something the brief asked for: one short sentence each, in the language of the page, saying what is missing and why — an image the media library does not hold and the brief gives no https address of, a product the search does not find, a page that could not be read.',
+        ];
+
         if ($withFields) {
             $schema['properties']->fields = [
                 'type' => 'string',

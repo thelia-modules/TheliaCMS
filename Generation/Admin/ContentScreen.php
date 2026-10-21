@@ -237,7 +237,7 @@ final readonly class ContentScreen
     }
 
     /**
-     * @return array{id: int, date: \DateTimeInterface|null, kind: string, status: string, status_class: string, cost: string, duration: string, turns: int, error: string|null, pages: list<array{url: string, read: bool, error: string|null, tokens: int|null, cost: string|null}>}
+     * @return array{id: int, date: \DateTimeInterface|null, kind: string, status: string, status_class: string, cost: string, duration: string, turns: int, error: string|null, pages: list<array{url: string, read: bool, error: string|null, tokens: int|null, cost: string|null}>, left_out: list<string>}
      */
     private function row(CmsPageGeneration $row): array
     {
@@ -262,6 +262,7 @@ final readonly class ContentScreen
                 'tokens' => $page->tokens,
                 'cost' => null === $page->tokens ? null : number_format($this->pricing->inputCost((string) $row->getModel(), $page->tokens), 3, '.', ''),
             ], GenerationLog::webPagesOf($row)),
+            'left_out' => GenerationLog::leftOutOf($row),
         ];
     }
 
@@ -292,8 +293,14 @@ final readonly class ContentScreen
             '%cost%' => number_format((float) $row->getCostUsd(), 3, '.', ''),
         ], TheliaCMS::DOMAIN_NAME);
 
+        $leftOut = GenerationLog::leftOutOf($row);
+
         return match ($row->getStatus()) {
-            GenerationLog::STATUS_DONE => [
+            GenerationLog::STATUS_DONE => [] !== $leftOut ? [
+                'type' => 'warning',
+                'message' => $this->translator->trans('The draft is written (%figures%), without part of what the brief asked:', ['%figures%' => $figures], TheliaCMS::DOMAIN_NAME),
+                'details' => $leftOut,
+            ] : [
                 'type' => 'success',
                 'message' => $this->translator->trans('The draft is written (%figures%). Read it, ask for changes, then publish it.', ['%figures%' => $figures], TheliaCMS::DOMAIN_NAME),
                 'details' => [],

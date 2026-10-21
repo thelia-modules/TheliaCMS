@@ -187,6 +187,7 @@ CREATE TABLE IF NOT EXISTS `cms_page_generation`
     `error` TEXT,
     `document` LONGTEXT,
     `web_pages` LONGTEXT,
+    `left_out` LONGTEXT,
     `created_by` INTEGER,
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,
@@ -199,6 +200,17 @@ CREATE TABLE IF NOT EXISTS `cms_page_generation`
 SET @cms_statement := IF(
     0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_generation' AND column_name = 'web_pages'),
     'ALTER TABLE `cms_page_generation` ADD COLUMN `web_pages` LONGTEXT AFTER `document`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+-- What the brief asked and the page does not hold, as the model said it,
+-- added after the table like the web pages.
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_generation' AND column_name = 'left_out'),
+    'ALTER TABLE `cms_page_generation` ADD COLUMN `left_out` LONGTEXT AFTER `web_pages`',
     'DO 0'
 );
 PREPARE cms_prepared FROM @cms_statement;
