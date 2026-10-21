@@ -270,3 +270,25 @@ SET @cms_statement := IF(
 PREPARE cms_prepared FROM @cms_statement;
 EXECUTE cms_prepared;
 DEALLOCATE PREPARE cms_prepared;
+
+-- cms_component --------------------------------------------------------------
+-- The components the site makes in the back office.
+
+CREATE TABLE IF NOT EXISTS `cms_component`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(40) NOT NULL,
+    `label` VARCHAR(120) NOT NULL,
+    `description` VARCHAR(500) NOT NULL,
+    `props` LONGTEXT,
+    `sample` LONGTEXT,
+    `template` LONGTEXT,
+    `css` LONGTEXT,
+    `status` VARCHAR(20) DEFAULT 'draft' NOT NULL,
+    `created_by` INTEGER,
+    `updated_by` INTEGER,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_component_code` (`code`)
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;

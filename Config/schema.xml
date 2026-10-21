@@ -496,6 +496,33 @@
     </table>
 
     <!--
+        The components the site made in the back office, from a prompt: the
+        props as data (the JSON form of TheliaCMS\Content\Prop), a sample, a
+        sandboxed Twig template and a stylesheet scoped to the component. Only
+        a `ready` one joins the catalogue; a `draft` is still being looked at.
+        The code is what documents name (`Site:<code>`) and never changes.
+    -->
+    <table name="cms_component" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="code" required="true" size="40" type="VARCHAR"/>
+        <column name="label" required="true" size="120" type="VARCHAR"/>
+        <column name="description" required="true" size="500" type="VARCHAR"/>
+        <column name="props" type="CLOB"/>
+        <column name="sample" type="CLOB"/>
+        <column name="template" type="CLOB"/>
+        <column name="css" type="CLOB"/>
+        <column defaultValue="draft" name="status" required="true" size="20" type="VARCHAR"/>
+        <column name="created_by" type="INTEGER"/>
+        <column name="updated_by" type="INTEGER"/>
+
+        <unique name="unq_cms_component_code">
+            <unique-column name="code"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
         The skills the generator reads before writing a page: shipped as
         files by the module and the theme (`skills/<code>/SKILL.md`), sown
         here at the first read and edited here by the site. `shipped_body`
