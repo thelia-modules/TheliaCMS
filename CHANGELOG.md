@@ -112,6 +112,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   with a grid of its own (`blocks.css`), one column on a narrow screen, so it
   needs nothing from the theme. A brief asking for "three columns with a logo
   and a short text" now has a section to write it in.
+- An **Image** section (`cms:image`): one picture on its own, of the media
+  library or the `https` address of a picture kept elsewhere, with an
+  optional caption and three widths (reading column, content, whole screen).
+  Free text holds no image: a brief asking for "a photo of the tart out of
+  the oven" now has a section to put it in.
 - `thelia_cms:render` renders the drafts of pages again from their documents,
   without publishing them (`--page`, `--all`, `--locale`): a change of the
   module or of the theme reaches every draft at once instead of at its next

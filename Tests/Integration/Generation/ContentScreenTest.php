@@ -304,6 +304,26 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(3, substr_count($html, 'src="https://img.logoipsum.com/'), 'The logos of elsewhere are kept by the sanitizer.');
     }
 
+    public function testAChangeAddsAPictureWithItsCaption(): void
+    {
+        $page = $this->createPage('Apple pie', published: false);
+        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([
+            ['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Apple pie</h2><p>Written for the test.</p>']],
+            ['id' => 'photo', 'component' => 'cms:image', 'props' => json_encode(['image' => 'https://example.com/tarte.jpg', 'alt' => 'Une tarte aux pommes dorée', 'caption' => 'Tout juste sortie du four', 'width' => 'narrow'], \JSON_THROW_ON_ERROR)],
+        ]))]));
+
+        $form = $this->screen($this->url($page->getId()))->filter('[data-testid="cms-content-change"] form')->form();
+        $form['cms_change[text]'] = 'Ajoute la photo https://example.com/tarte.jpg d’une tarte sortant du four';
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+        self::assertStringContainsString('`cms:image`', json_encode($this->api->requests[0]['system'] ?? [], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE), 'The model is offered the image section.');
+
+        $html = (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml();
+        self::assertStringContainsString('<figure data-cms-section="photo" class="cms-image cms-image--narrow">', $html);
+        self::assertStringContainsString('src="https://example.com/tarte.jpg"', $html, 'The picture of elsewhere is kept by the sanitizer.');
+        self::assertStringContainsString('<figcaption class="cms-image__caption">Tout juste sortie du four</figcaption>', $html);
+    }
+
     public function testOneSectionIsWrittenAgainByItsOwnForm(): void
     {
         $page = $this->createPage('Sectioned', published: false);

@@ -955,4 +955,12 @@ return [
     'The page template has been added.' => 'Le gabarit est ajouté.',
     'Brief, fields and model' => 'Brief, champs et modèle',
     'The content holds a level 1 heading, and the title of the page already is one. Start the sections at level 2.' => 'Le contenu a un titre de niveau 1, alors que le titre de la page en est déjà un. Commencez les sections au niveau 2.',
+    'One picture on its own (a photo, an illustration) with an optional caption under it. Only with an image of the media library or the https address of a picture the brief gives: with neither, leave the section out.' => 'Une image seule (une photo, une illustration) avec une légende facultative en dessous. Seulement avec une image de la médiathèque ou l’adresse https d’une image donnée par le brief : sinon, ne pas mettre la section.',
+    'What the image shows, for a reader who does not see it; empty when the caption says it.' => 'Ce que montre l’image, pour qui ne la voit pas ; vide si la légende le dit.',
+    'Under the image; none when empty.' => 'Sous l’image ; aucune si vide.',
+    'Width' => 'Largeur',
+    'Narrow, as a column of text' => 'Étroite, comme une colonne de texte',
+    'As wide as the content' => 'Aussi large que le contenu',
+    'The whole width of the screen' => 'Toute la largeur de l’écran',
+    'A caption under the picture.' => 'Une légende sous l’image.',
 ];

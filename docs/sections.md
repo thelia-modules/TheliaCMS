@@ -31,6 +31,7 @@ component refuses, is rejected on the way in, every problem listed at once
 |---|---|---|
 | Free text | `cms:richtext` | The module. A piece of markup as is, filtered on the rendered page like everything that goes online. |
 | Columns | `cms:columns` | The module. Two to four columns side by side, each an image (of the media library or an `https` address) over an optional heading and a short text, drawn with the grid of `blocks.css` and stacked below 48rem. |
+| Image | `cms:image` | The module. One picture (of the media library or an `https` address) with an optional caption, at the width of the content, of the reading column or of the whole screen; nothing is drawn while no image is chosen. |
 | Live content | `Partial:<name>` | Every partial of the site (`PartialDefinitionInterface`), the ones of the module and the ones other modules register. The section renders the placeholder the partial renderer substitutes when the page is served. |
 | Components of the theme | As the theme names them, `Molecules:Reinsurance:Base` | The components the active theme opens to pages in `config/theliacms.yaml` (below). |
 

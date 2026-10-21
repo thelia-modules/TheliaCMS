@@ -16,7 +16,6 @@ namespace TheliaCMS\Content;
 
 use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\TheliaCMS;
-use TheliaLibrary\Model\LibraryImageQuery;
 
 /**
  * Two to four columns side by side, each an image over a short text: logos
@@ -94,7 +93,7 @@ final readonly class ColumnsSection implements SectionDefinitionInterface
 
         foreach ($columns as $column) {
             $html .= '<div class="cms-columns__item">';
-            $source = self::source($column['image'] ?? null);
+            $source = ImageSource::of($column['image'] ?? null);
 
             if (null !== $source) {
                 $html .= \sprintf('<img class="cms-columns__image" src="%s" alt="%s" loading="lazy">', self::escape($source), self::escape((string) ($column['image_alt'] ?? '')));
@@ -112,32 +111,6 @@ final readonly class ColumnsSection implements SectionDefinitionInterface
         }
 
         return $html.'</div></section>';
-    }
-
-    /**
-     * An address of elsewhere as it is; an image of the library at its full
-     * size, in its own format, which the publication turns into a set of
-     * widths like any other image of a page.
-     */
-    private static function source(mixed $image): ?string
-    {
-        if (\is_string($image) && PropSchema::isExternalImage($image)) {
-            return $image;
-        }
-
-        $id = (int) $image;
-
-        if ($id <= 0) {
-            return null;
-        }
-
-        $fileName = LibraryImageQuery::create()->findPk($id)?->getFileName();
-
-        if (null === $fileName) {
-            return null;
-        }
-
-        return '/image-library/'.$id.'/full/max/0/default.'.strtolower(pathinfo($fileName, \PATHINFO_EXTENSION) ?: 'jpg');
     }
 
     private static function escape(string $value): string

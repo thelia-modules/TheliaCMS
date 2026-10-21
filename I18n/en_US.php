@@ -955,4 +955,12 @@ return [
     'The page template has been added.' => 'The page template has been added.',
     'Brief, fields and model' => 'Brief, fields and model',
     'The content holds a level 1 heading, and the title of the page already is one. Start the sections at level 2.' => 'The content holds a level 1 heading, and the title of the page already is one. Start the sections at level 2.',
+    'One picture on its own (a photo, an illustration) with an optional caption under it. Only with an image of the media library or the https address of a picture the brief gives: with neither, leave the section out.' => 'One picture on its own (a photo, an illustration) with an optional caption under it. Only with an image of the media library or the https address of a picture the brief gives: with neither, leave the section out.',
+    'What the image shows, for a reader who does not see it; empty when the caption says it.' => 'What the image shows, for a reader who does not see it; empty when the caption says it.',
+    'Under the image; none when empty.' => 'Under the image; none when empty.',
+    'Width' => 'Width',
+    'Narrow, as a column of text' => 'Narrow, as a column of text',
+    'As wide as the content' => 'As wide as the content',
+    'The whole width of the screen' => 'The whole width of the screen',
+    'A caption under the picture.' => 'A caption under the picture.',
 ];

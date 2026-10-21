@@ -216,6 +216,45 @@
     margin: 0;
   }
 
+  /* Image -------------------------------------------------------------------- */
+
+  /* `column` is the width of free text, `narrow` the reading column, `full` the
+     whole screen, edge to edge. The publication may wrap the image in a
+     `<picture>`, which is inline by default and would leave a gap under it. */
+  .cms-image {
+    margin: 0 auto;
+    width: min(75rem, 100% - 2rem);
+  }
+
+  .cms-image--narrow {
+    width: min(48rem, 100% - 2rem);
+  }
+
+  .cms-image--full {
+    width: 100%;
+  }
+
+  .cms-image picture,
+  .cms-image__img {
+    display: block;
+  }
+
+  .cms-image__img {
+    width: 100%;
+    height: auto;
+  }
+
+  .cms-image__caption {
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--cms-color-text-muted, currentColor);
+  }
+
+  .cms-image--full .cms-image__caption {
+    margin-inline: auto;
+    width: min(75rem, 100% - 2rem);
+  }
+
   /* The footer menu ---------------------------------------------------------- */
 
   .cms-menu__list {

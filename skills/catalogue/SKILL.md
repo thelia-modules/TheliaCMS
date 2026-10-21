@@ -46,7 +46,7 @@ anything else is refused.
 - `text` props are plain text: no markup, no line breaks.
 - `html` props hold markup: paragraphs `<p>`, lists `<ul><li>`, emphasis
   `<strong>`, links `<a href>`, headings from `<h2>` down. No `style` attribute, no `<script>`, no `<iframe>`, no
-  inline images.
+  inline images: a picture goes in a section of its own (`cms:image`).
 - `image` props take the id of an image found with `search_media`, the
   absolute `https://` address of a picture the brief gives, or `null` when
   neither exists. Never a path, never an id you did not get from the tool,

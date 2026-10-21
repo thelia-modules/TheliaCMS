@@ -208,7 +208,7 @@ final readonly class ContentScreen
      */
     private static function excerpt(Section $section): string
     {
-        foreach (['title', 'text', 'html', 'quote', 'label'] as $name) {
+        foreach (['title', 'text', 'html', 'quote', 'label', 'caption', 'alt'] as $name) {
             $value = $section->props[$name] ?? null;
 
             if (\is_string($value) && '' !== trim(strip_tags($value))) {
