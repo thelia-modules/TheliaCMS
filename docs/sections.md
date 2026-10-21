@@ -189,7 +189,8 @@ Flexy styles its text with Tailwind Typography under the name `wysiwyg`:
 without the class, its reset leaves the lists of a free text without bullets
 or numbers and its headings the size of a paragraph. The class is written
 when a page is rendered, at its save: a page saved before the theme named it
-keeps its old rendering until it is saved or published again.
+keeps its old rendering until it is saved or published again, or until
+`thelia_cms:render` renders its draft again.
 
 ## From a template
 

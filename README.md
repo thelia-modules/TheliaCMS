@@ -255,6 +255,29 @@ the command a Thelia site already schedules, and from
 `thelia_cms:pages:purge-trash` for a run on demand. That second command takes
 `--dry-run`, which lists what would go and deletes nothing.
 
+### Rendering drafts again
+
+The HTML of a draft is written when the draft is saved. A change of the module
+or of the theme since — the classes a theme gives free text, the markup of a
+component — reaches a page at its next save; `thelia_cms:render` brings the
+drafts up to date at once, from their documents, and publishes nothing:
+
+```bash
+php Thelia thelia_cms:render --page 12
+php Thelia thelia_cms:render --all --locale fr_FR
+```
+
+The document, its author and what is online are left as they are; a draft that
+renders the same is not written. The command holds nobody's right to custom
+code: a draft whose iframe its new rendering would take out is left alone and
+listed, for someone holding the right to save it from the back office.
+
+A component of the theme renders its links and images on the address of the
+shop: from the command line, that is the `url_site` setting, or `--url` over it
+(`--url https://www.example.com/`). Without either, a page holding such a
+component fails with a message saying so, and the other pages render.
+`thelia_cms:publish` and `thelia_cms:generate` take `--url` too.
+
 ### Publishing from the command line
 
 `thelia_cms:publish` puts drafts online through the same pipeline as the button

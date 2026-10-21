@@ -21,6 +21,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use TheliaCMS\Http\ConsoleRequest;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
@@ -53,6 +54,7 @@ final class PublishPagesCommand extends Command
 {
     public function __construct(
         private readonly CmsPageWriter $writer,
+        private readonly ConsoleRequest $request,
     ) {
         parent::__construct();
     }
@@ -63,7 +65,8 @@ final class PublishPagesCommand extends Command
             ->addOption('page', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'A page to publish, by id. Repeatable.')
             ->addOption('all', null, InputOption::VALUE_NONE, 'Every page that is not in the bin, drafts in progress included.')
             ->addOption('locale', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Restricts to these locales. Defaults to every locale the page has a draft in.')
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Lists what would be published, and publishes nothing.');
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Lists what would be published, and publishes nothing.')
+            ->addOption('url', null, InputOption::VALUE_REQUIRED, 'The address of the shop the links of a page point at, over the url_site setting.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -75,6 +78,7 @@ final class PublishPagesCommand extends Command
         /** @var list<string> $locales */
         $locales = $input->getOption('locale');
         $dryRun = (bool) $input->getOption('dry-run');
+        $url = $input->getOption('url');
 
         if ([] === $pageIds && !$input->getOption('all')) {
             $io->error('Name the pages with --page, or ask for every page with --all.');
@@ -99,7 +103,7 @@ final class PublishPagesCommand extends Command
                 try {
                     // A dry run runs the refusals and not the writes, so the
                     // count it announces is the count a real run reaches.
-                    $dryRun ? $this->writer->assertPublishable($page, $locale) : $this->writer->publish($page, $locale);
+                    $this->request->around(fn () => $dryRun ? $this->writer->assertPublishable($page, $locale) : $this->writer->publish($page, $locale), \is_string($url) ? $url : null);
                     ++$published;
 
                     if ($dryRun) {

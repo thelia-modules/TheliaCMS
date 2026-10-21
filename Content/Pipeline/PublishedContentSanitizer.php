@@ -68,6 +68,25 @@ final readonly class PublishedContentSanitizer
     }
 
     /**
+     * How many elements of custom code the markup holds: what a sanitizer
+     * without the right to them would take out.
+     */
+    public function customCodeCount(?string $html): int
+    {
+        if (null === $html || '' === $html) {
+            return 0;
+        }
+
+        $count = 0;
+
+        foreach (self::EMBED_ELEMENTS as $element) {
+            $count += preg_match_all('/<'.$element.'\b/i', $html);
+        }
+
+        return $count;
+    }
+
+    /**
      * The stylesheet is not run through the HTML sanitizer — it never reaches
      * the parser as markup. What it must not carry is a request to a third
      * party (a privacy leak, and a bypass of the consent gate) or the legacy

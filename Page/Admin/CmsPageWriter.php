@@ -173,6 +173,43 @@ final readonly class CmsPageWriter
     }
 
     /**
+     * Renders the draft again from its document, for a rendering the module
+     * or the theme changed since it was saved: the document, its author and
+     * what is online stay as they are.
+     *
+     * The right to custom code is the one of whoever runs this, nobody from
+     * the command line: a rendering that would take out an iframe the stored
+     * one holds is not written, and the page waits for a save by someone who
+     * holds the right.
+     *
+     * @throws InvalidDocumentException when the document is no longer accepted by the catalogue
+     */
+    public function renderDraftAgain(CmsPage $page, string $locale): DraftRendering
+    {
+        $content = $this->contentFor($page, $locale);
+        $document = Document::fromJson($content->getDraftDocument());
+
+        if (null === $document) {
+            return DraftRendering::NoDraft;
+        }
+
+        $stored = $content->getDraftHtml();
+        $html = $this->sanitizer->html($this->normalizer->html($this->renderer->render($this->validator->validate($document), $locale)), $this->mayPublishCustomCode());
+
+        if ($html === $stored) {
+            return DraftRendering::Unchanged;
+        }
+
+        if ($this->sanitizer->customCodeCount($html) < $this->sanitizer->customCodeCount($stored)) {
+            return DraftRendering::KeptForCustomCode;
+        }
+
+        $content->setDraftHtml($html)->save();
+
+        return DraftRendering::Rendered;
+    }
+
+    /**
      * Promotes the draft to the published snapshot and takes a revision, in one
      * transaction: a half-published page would be served to visitors.
      *

@@ -76,6 +76,17 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   picker sits next to each colour field and writes into it.
 - "Edit by hand" and "Rewrite this section" open in a dialog rather than
   under the section in the list.
+- `thelia_cms:render` renders the drafts of pages again from their documents,
+  without publishing them (`--page`, `--all`, `--locale`): a change of the
+  module or of the theme reaches every draft at once instead of at its next
+  save. A draft whose custom code the new rendering would take out is left
+  alone and listed, the command holding nobody's right to it.
+- `thelia_cms:publish`, `thelia_cms:generate` and `thelia_cms:render` render a
+  page holding a component of the theme that reads its records through the
+  API (a product card): from the command line, it failed with "No current
+  request found", then "URL instance is not initialized". The commands run
+  the rendering as a visit to the address of the shop, `url_site` or `--url`;
+  without one, the page fails with a message naming them.
 - A theme names the classes it styles written text with,
   `sections.richtext_class` in its `config/theliacms.yaml`, and free text
   sections carry them next to `cms-richtext`: on Flexy, `wysiwyg

@@ -21,6 +21,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use TheliaCMS\Content\Document;
+use TheliaCMS\Http\ConsoleRequest;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
@@ -39,6 +40,7 @@ final class GenerateCommand extends Command
     public function __construct(
         private readonly PageGenerator $generator,
         private readonly CmsPageWriter $writer,
+        private readonly ConsoleRequest $request,
     ) {
         parent::__construct();
     }
@@ -50,7 +52,8 @@ final class GenerateCommand extends Command
             ->addOption('locale', null, InputOption::VALUE_REQUIRED, 'The language of the page, such as fr_FR.')
             ->addOption('brief', null, InputOption::VALUE_REQUIRED, 'The brief, or a path to a file holding it.')
             ->addOption('revise', null, InputOption::VALUE_NONE, 'Reads the brief as a change asked on the document the page holds.')
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Prints the document and saves nothing.');
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Prints the document and saves nothing.')
+            ->addOption('url', null, InputOption::VALUE_REQUIRED, 'The address of the shop the links of the page point at, over the url_site setting.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -118,7 +121,8 @@ final class GenerateCommand extends Command
             return Command::SUCCESS;
         }
 
-        $this->writer->saveContent($page, $locale, $result->document);
+        $url = $input->getOption('url');
+        $this->request->around(fn () => $this->writer->saveContent($page, $locale, $result->document), \is_string($url) ? $url : null);
         $io->success(\sprintf('Draft of page #%d saved in %s. Publish it with thelia_cms:publish --page %d.', $pageId, $locale, $pageId));
 
         return Command::SUCCESS;
