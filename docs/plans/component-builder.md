@@ -1,7 +1,8 @@
 # Plan: components made in the back office
 
-Status: planned, not started. The design questions are settled (see
-"Decisions taken").
+Status: steps 1 to 3 done (storage, definition, validator), not committed
+yet; step 4 (the generator of components) is next. The design questions are
+settled (see "Decisions taken").
 
 ## What is asked
 
@@ -136,6 +137,41 @@ renders the sample, and keeps it only when the editor says so.
     breaks a page refused; the content screen offers no creation.
 11. **Browser.** A real generation of a component at 1440 px and at phone
     width, kept, then used by a page generated from a brief.
+
+## Done
+
+- **Step 1.** `cms_component` in `Config/schema.xml`, `Config/TheliaMain.sql`
+  and `Config/update/2.0.0.sql`; `Model/CmsComponent*.php`.
+- **Step 2.** `Content/Site/`: `SiteComponent` (the component as written, CSS
+  unscoped), `SitePropReader` (JSON form of the props), `SiteTemplateRenderer`
+  (the sandboxed Twig), `SiteCssScoper`, `SiteComponentSection` (drawn inside
+  `<div class="cms-site cms-site--<code>">`), `SiteComponentSections` (the
+  provider of the `ready` rows), `SiteComponentRepository`.
+- **Step 3.** `SiteComponentValidator`. Tests: `Tests/Unit/Content/Site/`,
+  `Tests/Integration/Content/Site/SiteComponentTest.php`.
+
+What the code settled that the plan did not say:
+
+- The prop types are text, html, integer, boolean, choice, image, url and
+  items; an item holds no items. A reference or a JSON value would need a
+  function to be of any use in a template: left out.
+- **The Twig sandbox checks a template when it is displayed, not when it is
+  compiled**: `SiteTemplateRenderer::problems()` runs
+  `unwrap()->checkSecurity()` itself, and `render()` refuses a template with
+  problems. The `constant` test escapes the policy: refused by a pattern.
+- Functions of values are allowed (`range`, `cycle`, `min`, `max`): `1..3`
+  compiles to `range`.
+- The template may not hold `script`, `style`, `iframe`, `object`, `embed`,
+  `form`, `base`, `meta`, `link`, an `on…=` attribute or `javascript:`: the
+  publication filters a page, but a draft is drawn in the back office first.
+- The template writes no text of its own: text outside its tags and prints
+  is refused.
+- The stylesheet is checked as written (the model is told about an
+  `@import`) and kept filtered by `PublishedContentSanitizer::css()`; it is
+  scoped when served. At-rules other than `@media`, `@supports`,
+  `@container` are refused, `@keyframes` included.
+- Until step 5, the components screen shows a component of the site with the
+  origin "module" (`CmsComponentAdminController::origin()`).
 
 ## Decisions taken
 
