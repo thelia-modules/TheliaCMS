@@ -33,9 +33,14 @@ final readonly class HeadingChecker
     }
 
     /**
+     * @param bool $underTitle whether the template draws the title of the page
+     *                         as its level 1 heading above this content, as the
+     *                         templates of a CMS page do (docs/adr/0010): the
+     *                         content then starts at level 2 and holds no level 1
+     *
      * @return list<string> readable problems, empty when the structure holds
      */
-    public function check(?string $html): array
+    public function check(?string $html, bool $underTitle = false): array
     {
         if (null === $html || '' === trim($html)) {
             return [];
@@ -47,6 +52,19 @@ final readonly class HeadingChecker
 
         $levels = array_map(intval(...), $matches[1]);
         $problems = [];
+
+        if ($underTitle && \in_array(1, $levels, true)) {
+            $problems[] = $this->translator->trans(
+                'The content holds a level 1 heading, and the title of the page already is one. Start the sections at level 2.',
+                [],
+                TheliaCMS::DOMAIN_NAME,
+            );
+            $levels = array_values(array_filter($levels, static fn (int $level): bool => 1 !== $level));
+        }
+
+        if ($underTitle) {
+            array_unshift($levels, 1);
+        }
 
         $firstLevelCount = \count(array_filter($levels, static fn (int $level): bool => 1 === $level));
 

@@ -372,7 +372,7 @@ final readonly class CmsPageContentController
 
         // In `warn` mode the page went online and its author is told what to
         // fix; the writer refused it in `block` mode above.
-        foreach ($this->headings->check($this->draftHtmlOf($page, $lang->getLocale())) as $problem) {
+        foreach ($this->headings->check($this->draftHtmlOf($page, $lang->getLocale()), underTitle: true) as $problem) {
             $this->flash($request, 'warning', $problem);
         }
 

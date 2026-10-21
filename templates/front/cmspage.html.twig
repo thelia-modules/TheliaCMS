@@ -5,12 +5,16 @@
     gives a page type its own layout with `cmspage-{type}.html.twig`; until it
     does, this file keeps the module usable on any Twig theme exposing a
     `base.html.twig`. Every version must emit the `cmspage.*` theme hooks, which
-    are the documented extension points for third-party modules.
+    are the documented extension points for third-party modules, and draw the
+    title of the page as its level 1 heading: the sections of a page start at
+    level 2 (docs/adr/0010). Flexy gets a layout of its own, shipped by the
+    module in `templates/frontOffice/flexy/`.
 #}
 {% extends 'base.html.twig' %}
 
 {% block title %}{{ cms_page.metaTitle|default(cms_page.title) }}{% endblock %}
 {% block meta_desc %}{{ cms_page.metaDescription|default('') }}{% endblock %}
+{% block meta_description %}{{ cms_page.metaDescription|default('') }}{% endblock %}
 
 {% block robots %}
     {% if cms_page.noindex or cms_page.nofollow %}
@@ -22,6 +26,25 @@
 
 {% block body %}
     {{ theme_hook('cmspage.top', {page: cms_page}) }}
+
+    <header class="cms-page__header">
+        <h1 class="cms-page__title">{{ cms_page.title }}</h1>
+        {% if cms_page.chapo %}
+            <div class="cms-page__summary">{{ cms_page.chapo|raw }}</div>
+        {% endif %}
+    </header>
+
+    {% set fields = cms_page_fields(cms_page) %}
+    {% if fields is not empty %}
+        <dl class="cms-page__fields">
+            {% for field in fields %}
+                <div class="cms-page__field cms-page__field--{{ field.code }}">
+                    <dt>{{ field.label }}</dt>
+                    <dd>{{ field.text }}</dd>
+                </div>
+            {% endfor %}
+        </dl>
+    {% endif %}
 
     {# `cms-page-content` is the class the global styles of the site are
        scoped to. A rendered document carries it on its own wrapper; the

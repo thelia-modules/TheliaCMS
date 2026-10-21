@@ -954,4 +954,5 @@ return [
     'The page template is saved.' => 'The page template is saved.',
     'The page template has been added.' => 'The page template has been added.',
     'Brief, fields and model' => 'Brief, fields and model',
+    'The content holds a level 1 heading, and the title of the page already is one. Start the sections at level 2.' => 'The content holds a level 1 heading, and the title of the page already is one. Start the sections at level 2.',
 ];

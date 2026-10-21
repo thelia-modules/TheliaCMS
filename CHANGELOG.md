@@ -60,6 +60,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.0.0)
 
+- **A page under Flexy is laid out like a content of the shop**
+  (docs/adr/0010): the module ships `templates/frontOffice/flexy/cmspage.html.twig`
+  with the heading band of the theme (title, summary, breadcrumb), the fields
+  of the page type, then the sections. Every template of a page draws its
+  title as the level 1 heading, the fallback of the module included: the
+  generator no longer writes an `<h1>` nor opens with a heading band, the
+  heading check reports a level 1 heading in the content of a page, and the
+  legal pages are seeded without one.
 - **A page type is a template of pages** (docs/adr/0009). Its screen under
   **CMS > Page templates** (formerly **CMS > Settings > Page types**, the
   same screen, now also in the menu) names it in each language, gives the brief

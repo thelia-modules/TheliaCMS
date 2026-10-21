@@ -98,6 +98,24 @@ final class HeadingCheckerTest extends TestCase
         self::assertSame([], $this->checker->check('<h1>Title</h1><header>x</header><hgroup>y</hgroup>'));
     }
 
+    public function testUnderTheTitleOfThePageTheContentStartsAtLevelTwo(): void
+    {
+        self::assertSame([], $this->checker->check('<h2>Section</h2><h3>Detail</h3>', underTitle: true));
+
+        $problems = $this->checker->check('<h3>Detail</h3>', underTitle: true);
+
+        self::assertCount(1, $problems);
+        self::assertStringContainsString('from level 1 to level 3', $problems[0], 'The title of the page is the level 1 the content follows.');
+    }
+
+    public function testUnderTheTitleOfThePageALevelOneHeadingIsASecondTitle(): void
+    {
+        $problems = $this->checker->check('<h1>Tarte aux pommes</h1><h2>Ingrédients</h2>', underTitle: true);
+
+        self::assertCount(1, $problems);
+        self::assertStringContainsString('the title of the page already is one', $problems[0]);
+    }
+
     public function testLeavesEmptyContentAlone(): void
     {
         self::assertSame([], $this->checker->check(null));

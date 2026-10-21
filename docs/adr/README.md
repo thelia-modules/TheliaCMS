@@ -15,3 +15,4 @@ decision supersedes it with a new file.
 | [7](0007-only-the-envelope-is-a-structured-output.md) | Only the envelope of the document is a structured output |
 | [8](0008-model-and-key.md) | Model, effort and key |
 | [9](0009-a-page-type-is-a-template-of-pages.md) | A page type is a template of pages |
+| [10](0010-the-template-draws-the-title-of-a-page.md) | The template draws the title of a page |

@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Page;
 
+use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Model\LangQuery;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\SectionCatalog;
@@ -27,9 +28,11 @@ use TheliaCMS\Page\Admin\MissingPageFieldsException;
 use TheliaCMS\Page\Admin\ModelPagePublicationException;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Page\Admin\PageFilters;
+use TheliaCMS\Page\CmsPageRenderer;
 use TheliaCMS\Page\Field\InvalidFieldsException;
 use TheliaCMS\Page\Field\PageFields;
 use TheliaCMS\Page\PageListQuery;
+use TheliaCMS\Page\PageTemplateResolver;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\PageTypeWriter;
 use TheliaCMS\Page\PublishedPageRepository;
@@ -282,6 +285,29 @@ final class PageTemplateTest extends CmsIntegrationTestCase
         self::assertStringContainsString('Nos recettes', (string) $html);
         self::assertStringContainsString('Tarte', (string) $html);
         self::assertStringContainsString('1 h 30 min', (string) $html);
+    }
+
+    public function testAPageOfATypeWithoutATemplateOfItsOwnIsLaidOutLikeAContentOfTheShop(): void
+    {
+        $this->useAnInstalledFrontTheme();
+
+        if ('flexy' !== $this->getService(TemplateHelperInterface::class)->getActiveFrontTemplate()->getName()) {
+            self::markTestSkipped('The layout shipped for the theme is the one of Flexy.');
+        }
+
+        $this->givenTheRecipeType();
+        $page = $this->givenARecipe('Tarte aux pommes', ['servings' => 6, 'cooking_time' => 90]);
+
+        self::assertSame('cmspage.html.twig', $this->getService(PageTemplateResolver::class)->resolve('recipe-test')->name, 'The layout the module ships for the theme is found like one of the theme.');
+
+        $published = $this->published()->find((int) $page->getId(), $this->locale());
+        self::assertNotNull($published);
+        $html = $this->getService(CmsPageRenderer::class)->render($published);
+
+        self::assertStringContainsString('Subheader', $html, 'The heading band of the theme, as on a content.');
+        self::assertMatchesRegularExpression('#<h1[^>]*>\s*Tarte aux pommes\s*</h1>#', $html, 'The title of the page is its level 1 heading.');
+        self::assertStringContainsString('1 h 30 min', $html, 'The fields of the type are shown.');
+        self::assertStringContainsString('cms-page-content', $html);
     }
 
     private function callTwig(string $name, mixed ...$arguments): mixed

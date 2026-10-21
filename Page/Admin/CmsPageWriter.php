@@ -358,7 +358,7 @@ final readonly class CmsPageWriter
         // Checked on every path a page goes online by — the editor, the
         // settings screen, the command — and not only in the editor, or the
         // mode that keeps a broken page offline would only hold there.
-        $problems = $this->headings->check($html);
+        $problems = $this->headings->check($html, underTitle: true);
 
         if ([] !== $problems && $this->settings->headingCheckBlocks()) {
             throw HeadingStructureException::for((int) $page->getId(), $locale, $problems);

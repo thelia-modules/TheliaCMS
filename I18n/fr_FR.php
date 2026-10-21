@@ -954,4 +954,5 @@ return [
     'The page template is saved.' => 'Le gabarit est enregistré.',
     'The page template has been added.' => 'Le gabarit est ajouté.',
     'Brief, fields and model' => 'Brief, champs et modèle',
+    'The content holds a level 1 heading, and the title of the page already is one. Start the sections at level 2.' => 'Le contenu a un titre de niveau 1, alors que le titre de la page en est déjà un. Commencez les sections au niveau 2.',
 ];

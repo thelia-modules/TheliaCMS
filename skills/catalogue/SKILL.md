@@ -21,9 +21,9 @@ anything else is refused.
 - **A component of the theme comes first.** When one of them is made for the
   content — reviews, reassurance items, a row of products, a heading band —
   use it, and keep free text for what no component is made for.
-- Open with one section that carries the main heading of the page: the
-  heading band of the theme when the catalogue has one, or a `cms:richtext`
-  starting with an `<h1>`. Never two of them.
+- The theme draws the title of the page as its main heading, above the
+  sections: never open with a heading band or an `<h1>`. The first section is
+  what comes under the title, its headings at level 2.
 - Three to seven sections make a page. One idea per section.
 - Read the description of each component to pick the one made for the
   content; never bend a component to say something it is not made for.

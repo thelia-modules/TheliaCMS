@@ -807,6 +807,13 @@ page, and the page types screen says, for each type, which template it gets.
 A typed template receives the same `cms_page` as `cmspage.html.twig`, with
 `cms_page.pageType` holding the code, and must emit the same hooks.
 
+Every template of a page draws its title as the level 1 heading, with its
+summary, above the sections, which start at level 2
+([ADR 10](docs/adr/0010-the-template-draws-the-title-of-a-page.md)). For
+Flexy, the module ships `templates/frontOffice/flexy/cmspage.html.twig`, found
+as the usual page template of the theme: a page is laid out like a content of
+the shop, with the heading band of the theme (title, summary, breadcrumb) and
+the fields of its type.
 
 Every site has the `default` type, which cannot be deleted, and the update to
 1.2.0 turns the three former layouts into the types `default`, `full-width` and

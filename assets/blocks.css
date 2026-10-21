@@ -432,6 +432,50 @@
     outline-offset: 2px;
   }
 
+  /* The page around its sections ----------------------------------------------- */
+
+  /* The title and the summary the fallback template of the module draws, for a
+     theme that has no heading band of its own. */
+  .cms-page__header {
+    margin-inline: auto;
+    width: min(75rem, 100% - 2rem);
+    padding-block: 3rem 1rem;
+  }
+
+  .cms-page__title {
+    margin: 0;
+    color: var(--cms-color-text);
+    font-size: var(--font-size-h1-d, 2.5rem);
+    font-weight: var(--font-weight-h1, 700);
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  .cms-page__summary {
+    margin-top: 1rem;
+    color: var(--cms-color-text-muted);
+  }
+
+  /* The fields of the type of the page, read at a glance: "4 pers. · 45 min". */
+  .cms-page__fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2.5rem;
+    margin: 0 auto 2.5rem;
+    width: min(75rem, 100% - 2rem);
+  }
+
+  .cms-page__field dt {
+    color: var(--cms-color-text-subtle);
+    font-size: 0.875rem;
+  }
+
+  .cms-page__field dd {
+    margin: 0;
+    color: var(--cms-color-text);
+    font-weight: 600;
+  }
+
   /* Pages of a type -------------------------------------------------------- */
 
   .cms-page-list {
