@@ -35,6 +35,7 @@ use TheliaCMS\Content\Prop;
 use TheliaCMS\Content\PropSchema;
 use TheliaCMS\Content\PropType;
 use TheliaCMS\Content\Section;
+use TheliaCMS\Content\SectionAppearance;
 use TheliaCMS\Content\SectionDefinitionInterface;
 use TheliaCMS\Media\Admin\CmsMediaType;
 use TheliaCMS\Media\Admin\CmsMediaWriter;
@@ -61,6 +62,9 @@ final readonly class SectionFormBuilder
     public const string FILE_SUFFIX = '__file';
     public const string ADDRESS_SUFFIX = '__url';
 
+    /** The child holding the appearance of the section, a name no prop takes. */
+    public const string APPEARANCE = 'cms_appearance';
+
     public function __construct(
         private FormFactoryInterface $forms,
         private CmsMediaLibrary $library,
@@ -85,8 +89,69 @@ final readonly class SectionFormBuilder
 
         $builder->add('section', HiddenType::class, ['data' => $section->id, 'mapped' => false]);
         $this->addProps($builder, $definition->schema()->props);
+        $this->addAppearance($builder, $section->appearance);
 
         return $builder->getForm();
+    }
+
+    /**
+     * The appearance of the section, as sent: checked by the appearance
+     * itself, which says what it refuses.
+     *
+     * @return array<string, mixed>
+     */
+    public static function appearanceFrom(FormInterface $form): array
+    {
+        $values = $form->has(self::APPEARANCE) ? $form->get(self::APPEARANCE)->getData() : [];
+
+        return \is_array($values) ? $values : [];
+    }
+
+    /**
+     * Unmapped, under a name no prop takes: the props of a component are
+     * the whole data of the form.
+     */
+    private function addAppearance(FormBuilderInterface $builder, SectionAppearance $appearance): void
+    {
+        $color = [
+            'required' => false,
+            'attr' => ['maxlength' => 7, 'pattern' => '#[0-9a-fA-F]{6}'],
+        ];
+        $paddings = [];
+
+        foreach (array_keys(SectionAppearance::PADDINGS) as $padding) {
+            $paddings[ucfirst($padding)] = $padding;
+        }
+
+        $group = $builder->create(self::APPEARANCE, FormType::class, [
+            'mapped' => false,
+            'label' => 'Appearance',
+            'data' => $appearance->toArray(),
+        ]);
+        $group->add('background', TextType::class, array_merge_recursive($color, [
+            'label' => 'Background',
+            'help' => 'A colour written #rrggbb, for instance #f8d7d7. Empty: the one of the theme.',
+            'attr' => ['placeholder' => '#f8d7d7'],
+        ]));
+        $group->add('text', TextType::class, array_merge_recursive($color, [
+            'label' => 'Text colour',
+            'help' => 'Written #rrggbb. A heading the component colours itself keeps its colour.',
+            'attr' => ['placeholder' => '#1c1f22'],
+        ]));
+        $group->add('padding', ChoiceType::class, [
+            'label' => 'Room above and below',
+            'required' => false,
+            'placeholder' => "The component's",
+            'choices' => $paddings,
+        ]);
+        $group->add('align', ChoiceType::class, [
+            'label' => 'Alignment of the text',
+            'required' => false,
+            'placeholder' => "The component's",
+            'choices' => ['Left' => 'left', 'Center' => 'center', 'Right' => 'right'],
+        ]);
+
+        $builder->add($group);
     }
 
     /**

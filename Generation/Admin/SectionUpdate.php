@@ -19,6 +19,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\Section;
+use TheliaCMS\Content\SectionAppearance;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\TheliaCMS;
@@ -76,7 +77,15 @@ final readonly class SectionUpdate
             return $problems ?: [$this->translator->trans('The form could not be read.', [], TheliaCMS::DOMAIN_NAME)];
         }
 
-        $document = $current->withSection($section->withProps($this->forms->propsFrom((array) $form->getData(), $definition->schema()->props)));
+        try {
+            $appearance = SectionAppearance::fromArray(SectionFormBuilder::appearanceFrom($form));
+        } catch (InvalidDocumentException $exception) {
+            return $exception->problems;
+        }
+
+        $document = $current->withSection($section
+            ->withProps($this->forms->propsFrom((array) $form->getData(), $definition->schema()->props))
+            ->withAppearance($appearance));
 
         try {
             $save($document);

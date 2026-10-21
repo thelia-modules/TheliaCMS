@@ -20,11 +20,12 @@ use Thelia\Model\Lang;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\Section;
+use TheliaCMS\Content\SectionAppearance;
+use TheliaCMS\Content\SectionAvailability;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
-use TheliaCMS\Content\SectionAvailability;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Security\CmsResources;
@@ -89,6 +90,39 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $screen = $this->screen($this->url($page));
         self::assertSame(1, $screen->filter('[data-testid="cms-builder-flash-success"]')->count());
         self::assertStringContainsString('Après', $screen->filter('[data-testid="cms-content-sections"] li[data-section="intro"]')->text());
+    }
+
+    public function testTheAppearanceOfASectionIsSetByHand(): void
+    {
+        $page = $this->pageWith([new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1>'], new SectionAppearance(background: '#f8d7d7'))]);
+
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-intro"] form[data-cms-section-form]')->form();
+        self::assertSame('#f8d7d7', $form['cms_section_intro[cms_appearance][background]']->getValue(), 'The form shows the appearance the section has.');
+
+        $form['cms_section_intro[cms_appearance][background]'] = '';
+        $form['cms_section_intro[cms_appearance][text]'] = '#1C1F22';
+        $form['cms_section_intro[cms_appearance][align]'] = 'center';
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+        self::assertSame(['text' => '#1c1f22', 'align' => 'center'], Document::fromJson($content?->getDraftDocument())?->section('intro')?->appearance->toArray(), 'An emptied setting is dropped, the others are kept.');
+        self::assertStringContainsString('style="color:#1c1f22;text-align:center"', (string) $content?->getDraftHtml());
+    }
+
+    public function testAnAppearanceThatIsNoColourIsRefusedByHand(): void
+    {
+        $page = $this->pageWith([new Section('intro', 'cms:richtext', ['html' => '<h1>Avant</h1>'])]);
+
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-intro"] form[data-cms-section-form]')->form();
+        $values = $form->getPhpValues();
+        $values['cms_section_intro']['cms_appearance']['background'] = 'red;position:fixed';
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $values));
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+        self::assertTrue((bool) Document::fromJson($content?->getDraftDocument())?->section('intro')?->appearance->isEmpty(), 'Nothing was changed.');
+        self::assertStringContainsString('#rrggbb', $this->screen($this->url($page))->filter('[data-testid="cms-builder-flash-danger"]')->text());
     }
 
     public function testASectionIsRemovedByHandAndTheLedgerSaysSo(): void

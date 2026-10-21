@@ -16,6 +16,7 @@ namespace TheliaCMS\Generation;
 
 use TheliaCMS\Content\Prop;
 use TheliaCMS\Content\PropType;
+use TheliaCMS\Content\SectionAppearance;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\SectionDefinitionInterface;
 
@@ -39,6 +40,8 @@ final readonly class CatalogSheet
             $lines[] = $this->section($definition);
         }
 
+        $lines[] = self::appearance();
+
         return implode("\n", $lines);
     }
 
@@ -58,6 +61,32 @@ final readonly class CatalogSheet
         $lines[] = '';
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * The settings any section takes besides its props, the only way a brief
+     * changes how a section looks: the components draw the rest.
+     */
+    private static function appearance(): string
+    {
+        return implode("\n", [
+            '## The appearance of a section',
+            '',
+            'Any section may carry an `appearance` besides its props, when the brief asks for a section to look a certain way: a background, a colour of text, more room, an alignment. Leave it out otherwise, and keep the appearance a section already has unless the brief changes it.',
+            '',
+            '- `background`: colour of the band the section sits on, written `#rrggbb`. A colour named in words is written as its value: "pastel red" is a light, soft red such as `#f8d7d7`.',
+            '- `text`: colour of the text, written `#rrggbb`, only when the background calls for it; a text that would be hard to read on the background is not acceptable.',
+            \sprintf('- `padding`: room added above and below the section: %s.', implode(', ', array_map(static fn (string $value): string => '`'.$value.'`', array_keys(SectionAppearance::PADDINGS)))),
+            \sprintf('- `align`: alignment of the text: %s.', implode(', ', array_map(static fn (string $value): string => '`'.$value.'`', SectionAppearance::ALIGNMENTS))),
+            '',
+            'Nothing else about the look of a section can be set: no other style, no class, no stylesheet.',
+            '',
+            'Example:',
+            '```json',
+            '{"id": "selection", "component": "…", "props": {"…": "…"}, "appearance": {"background": "#f8d7d7", "padding": "medium"}}',
+            '```',
+            '',
+        ]);
     }
 
     private static function propLine(Prop $prop, string $indent): string

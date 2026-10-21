@@ -16,8 +16,9 @@ namespace TheliaCMS\Content;
 
 /**
  * One section of a page: a component of the catalogue and the values of its
- * props. The id names the section inside its document, so a later change can
- * replace this section and leave the others alone.
+ * props, and how it stands out from the page. The id names the section
+ * inside its document, so a later change can replace this section and leave
+ * the others alone.
  */
 final readonly class Section
 {
@@ -28,6 +29,7 @@ final readonly class Section
         public string $id,
         public string $component,
         public array $props,
+        public SectionAppearance $appearance = new SectionAppearance(),
     ) {
     }
 
@@ -36,14 +38,28 @@ final readonly class Section
      */
     public function withProps(array $props): self
     {
-        return new self($this->id, $this->component, $props);
+        return new self($this->id, $this->component, $props, $this->appearance);
+    }
+
+    public function withAppearance(SectionAppearance $appearance): self
+    {
+        return new self($this->id, $this->component, $this->props, $appearance);
     }
 
     /**
-     * @return array{id: string, component: string, props: array<string, mixed>}
+     * The appearance is written only when it is set: a section drawn as its
+     * component draws it reads as it did before appearances existed.
+     *
+     * @return array{id: string, component: string, props: array<string, mixed>, appearance?: array<string, string>}
      */
     public function toArray(): array
     {
-        return ['id' => $this->id, 'component' => $this->component, 'props' => $this->props];
+        $array = ['id' => $this->id, 'component' => $this->component, 'props' => $this->props];
+
+        if (!$this->appearance->isEmpty()) {
+            $array['appearance'] = $this->appearance->toArray();
+        }
+
+        return $array;
     }
 }

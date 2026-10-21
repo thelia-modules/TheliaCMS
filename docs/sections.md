@@ -68,6 +68,30 @@ document, and becomes the JSON schema a generator is constrained with.
 Unknown props are dropped, missing ones get their default, wrong ones are
 refused.
 
+## Appearance
+
+Any section may carry an `appearance` next to its props, whatever its
+component (`TheliaCMS\Content\SectionAppearance`):
+
+```json
+{"id": "selection", "component": "Layouts:CrossSelling:Base", "props": {"…": "…"}, "appearance": {"background": "#f8d7d7", "padding": "medium"}}
+```
+
+| Setting | Values | Style written |
+|---------|--------|---------------|
+| `background` | `#rrggbb` | `background-color` |
+| `text` | `#rrggbb` | `color` |
+| `padding` | `small`, `medium`, `large` | `padding-block` of 1.5, 3 or 5 rem |
+| `align` | `left`, `center`, `right` | `text-align` |
+
+Every setting is optional, and nothing else can be set: an unknown setting or
+a value outside the list rejects the document like a wrong prop. A section
+with an appearance renders inside a band of the whole width,
+`<div class="cms-section-styled" data-cms-section="…" style="…">`, the
+component unchanged inside it; a section without one renders, and is stored,
+without it. The generator sets the appearance when a brief asks for a look in
+words; "Edit by hand" sets it in its **Appearance** group.
+
 ## Writing a section of your own
 
 The first way is a component of the theme, opened in one line of

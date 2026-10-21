@@ -254,8 +254,23 @@ final readonly class Document
                 $problems[] = \sprintf('Section %d has props that are not an object.', $index + 1);
             }
 
+            $appearance = new SectionAppearance();
+            $values = $section['appearance'] ?? null;
+
+            if (null !== $values && (!\is_array($values) || array_is_list($values) && [] !== $values)) {
+                $problems[] = \sprintf('Section %d has an appearance that is not an object.', $index + 1);
+            } elseif (null !== $values) {
+                try {
+                    $appearance = SectionAppearance::fromArray($values);
+                } catch (InvalidDocumentException $exception) {
+                    foreach ($exception->problems as $problem) {
+                        $problems[] = \sprintf('Section %d: %s', $index + 1, $problem);
+                    }
+                }
+            }
+
             if (\is_string($id) && '' !== $id && \is_string($component) && '' !== $component && \is_array($props)) {
-                $read[] = new Section($id, $component, $props);
+                $read[] = new Section($id, $component, $props, $appearance);
             }
         }
 

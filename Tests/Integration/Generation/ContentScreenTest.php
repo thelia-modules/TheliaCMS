@@ -20,6 +20,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use Thelia\Test\FixtureFactory;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
@@ -266,6 +267,29 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
         self::assertStringContainsString('Write the section `content` again', $this->api->requests[0]['messages'][0]['content']);
         self::assertSame('section', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getKind());
+    }
+
+    public function testASectionRewrittenOnAColouredBackgroundCarriesItsAppearanceToThePage(): void
+    {
+        $page = $this->createPage('Styled', published: false);
+        $this->api
+            // A colour named in words is refused and sent back, then written as a value.
+            ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Cinq produits</h2>'], 'appearance' => ['background' => 'rouge pastel']]]))]))
+            ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Cinq produits</h2>'], 'appearance' => ['background' => '#f8d7d7', 'padding' => 'medium']]]))]));
+
+        $screen = $this->screen($this->url($page->getId()));
+        $form = $screen->filter('[data-testid="cms-content-sections"] li[data-section="content"] form[data-cms-generate]')->form();
+        $form['cms_change_content[text]'] = 'Sur un fond rouge pastel.';
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $system = json_encode($this->api->requests[0]['system'] ?? [], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
+        self::assertStringContainsString('The appearance of a section', $system, 'The model is told what it may set.');
+        self::assertStringContainsString('#rrggbb', json_encode($this->api->requests[1]['messages'] ?? [], \JSON_THROW_ON_ERROR), 'The colour written in words is sent back to be corrected.');
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne();
+        self::assertSame(['background' => '#f8d7d7', 'padding' => 'medium'], Document::fromJson($content?->getDraftDocument())?->section('content')?->appearance->toArray());
+        self::assertStringContainsString('style="background-color:#f8d7d7;padding-block:3rem"', (string) $content?->getDraftHtml(), 'The draft draws the section on its background.');
     }
 
     public function testAnEmptyBriefIsRefusedBeforeAnyCall(): void

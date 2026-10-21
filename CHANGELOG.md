@@ -60,6 +60,21 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.0.0)
 
+- A section may carry an appearance besides its props: a background, a
+  colour of text (`#rrggbb`), room above and below (`small`, `medium`,
+  `large`) and an alignment. A brief or a change asks for it in words ("on a
+  pastel red background") and the generator writes the values; the
+  **Appearance** group of "Edit by hand" sets them too. Nothing else about
+  the look of a section can be set: the values are checked when the document
+  is read, a colour written otherwise is sent back to the model to be
+  corrected, and the module writes the style itself. A section with an
+  appearance is wrapped in a `div.cms-section-styled` of the whole width that
+  carries `data-cms-section` and the style; a section without one renders and
+  is stored as before. A heading a component colours itself (`text-black`)
+  keeps its colour.
+- "Edit by hand" and "Rewrite this section" open in a dialog rather than
+  under the section in the list.
+
 - A brief may cite web pages by their address: the generator offers the
   `web_fetch` tool of the Claude API for that request, and the model reads
   them before it writes (five pages at most, 20,000 tokens each). A brief

@@ -19,6 +19,7 @@ use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentRenderer;
 use TheliaCMS\Content\RichTextSection;
 use TheliaCMS\Content\Section;
+use TheliaCMS\Content\SectionAppearance;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\UnknownSectionException;
 
@@ -42,6 +43,19 @@ final class DocumentRendererTest extends TestCase
             '<div class="cms-page-content"><h1 data-cms-section="title" lang="fr_FR">Nos services</h1>'."\n".'<div data-cms-section="intro" class="cms-richtext"><p>Texte</p></div></div>',
             $this->renderer->render($document, 'fr_FR'),
             'The first element of every section is told which section it renders, so a screen can point at it.',
+        );
+    }
+
+    public function testASectionWithAnAppearanceIsWrappedInABandCarryingIt(): void
+    {
+        $document = new Document([
+            new Section('intro', RichTextSection::NAME, ['html' => '<p>Texte</p>'], new SectionAppearance(background: '#f8d7d7', padding: 'medium')),
+        ]);
+
+        self::assertSame(
+            '<div class="cms-page-content"><div class="cms-section-styled" data-cms-section="intro" style="background-color:#f8d7d7;padding-block:3rem"><div class="cms-richtext"><p>Texte</p></div></div></div>',
+            $this->renderer->render($document, 'fr_FR'),
+            'The band is the section for the content screen, and the component inside it is left as it draws itself.',
         );
     }
 

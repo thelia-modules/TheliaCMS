@@ -19,6 +19,7 @@ use TheliaCMS\Content\Document;
 use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\RichTextSection;
 use TheliaCMS\Content\Section;
+use TheliaCMS\Content\SectionAppearance;
 
 /**
  * The stored form of a page: what goes into the column must come back out the
@@ -134,6 +135,36 @@ final class DocumentTest extends TestCase
         $this->expectExceptionMessage('format version 2');
 
         Document::fromArray(['version' => 2, 'sections' => []]);
+    }
+
+    public function testTheAppearanceOfASectionSurvivesTheRoundTripAndAnAbsentOneIsNotWritten(): void
+    {
+        $document = new Document([
+            new Section('selection', RichTextSection::NAME, ['html' => '<p>Texte</p>'], new SectionAppearance(background: '#f8d7d7')),
+            new Section('intro', RichTextSection::NAME, ['html' => '<p>Texte</p>']),
+        ]);
+
+        $read = Document::fromJson($document->toJson());
+
+        self::assertSame('#f8d7d7', $read?->section('selection')?->appearance->background);
+        self::assertSame(['id' => 'intro', 'component' => RichTextSection::NAME, 'props' => ['html' => '<p>Texte</p>']], $document->toArray()['sections'][1], 'A section without an appearance is stored as before appearances existed.');
+        self::assertSame('#f8d7d7', $read?->section('selection')?->withProps(['html' => '<p>Autre</p>'])->appearance->background, 'Changing the props keeps the appearance.');
+    }
+
+    public function testAnAppearanceThatIsNotOneIsReportedWithTheOtherProblems(): void
+    {
+        try {
+            Document::fromArray(['version' => 1, 'sections' => [
+                ['id' => 'a', 'component' => FakeSection::NAME, 'props' => [], 'appearance' => 'rouge'],
+                ['id' => 'b', 'component' => FakeSection::NAME, 'props' => [], 'appearance' => ['background' => 'rouge pastel']],
+            ]]);
+            self::fail('The document should have been refused.');
+        } catch (InvalidDocumentException $exception) {
+            self::assertSame([
+                'Section 1 has an appearance that is not an object.',
+                'Section 2: The background of the appearance is not a colour written #rrggbb.',
+            ], $exception->problems);
+        }
     }
 
     public function testEveryMalformedSectionIsReportedAtOnce(): void

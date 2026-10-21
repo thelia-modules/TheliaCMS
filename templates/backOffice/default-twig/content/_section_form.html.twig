@@ -8,6 +8,17 @@
     {% for child in form.children %}
         {% if child.vars.name == 'section' %}
             {{ form_widget(child) }}
+        {% elseif child.vars.name == 'cms_appearance' %}
+            {# How the section stands out, besides its props. #}
+            <fieldset class="cms-content__appearance" data-testid="cms-section-appearance">
+                <legend class="cms-content__items-legend">{{ child.vars.label|trans({}, 'theliacms') }}</legend>
+                <div class="cms-content__appearance-fields">
+                    {% for setting in child %}
+                        {{ form_row(setting) }}
+                    {% endfor %}
+                </div>
+            </fieldset>
+            {% do child.setRendered %}
         {% elseif child.vars.prototype is defined %}
             <fieldset class="cms-content__items" data-cms-items
                       data-cms-items-min="{{ child.vars.attr['data-cms-items-min']|default(0) }}"

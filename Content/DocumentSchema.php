@@ -51,6 +51,7 @@ final readonly class DocumentSchema
                     'id' => ['type' => 'string', 'description' => 'Unique in the page: lowercase letters, digits, hyphens and underscores.'],
                     'component' => ['type' => 'string', 'const' => $definition->name()],
                     'props' => $definition->schema()->toJsonSchema(),
+                    'appearance' => self::appearance(),
                 ],
                 'required' => ['id', 'component', 'props'],
                 'additionalProperties' => false,
@@ -98,6 +99,7 @@ final readonly class DocumentSchema
                             'id' => ['type' => 'string', 'description' => 'Unique in the page: lowercase letters, digits, hyphens and underscores, saying what the section is.'],
                             'component' => ['type' => 'string', 'enum' => $names, 'description' => 'The name of a component of the catalogue.'],
                             'props' => ['type' => 'string', 'description' => 'The props of the component, as a JSON object written as a string, with the keys and the values the catalogue describes for this component.'],
+                            'appearance' => self::appearance(),
                         ],
                         'required' => ['id', 'component', 'props'],
                         'additionalProperties' => false,
@@ -105,6 +107,29 @@ final readonly class DocumentSchema
                 ],
             ],
             'required' => ['version', 'sections'],
+            'additionalProperties' => false,
+        ];
+    }
+
+    /**
+     * How a section stands out from the page. Optional, and so is each of
+     * its settings: a section without it is drawn as its component draws it.
+     * The colours are checked when the document is read, the schema having
+     * no pattern the API accepts.
+     *
+     * @return array<string, mixed>
+     */
+    private static function appearance(): array
+    {
+        return [
+            'type' => 'object',
+            'description' => 'Only when the brief asks for it: how the section stands out from the page.',
+            'properties' => (object) [
+                'background' => ['type' => 'string', 'description' => 'Background colour of the whole width of the section, written #rrggbb.'],
+                'text' => ['type' => 'string', 'description' => 'Colour of the text, written #rrggbb, readable on the background.'],
+                'padding' => ['type' => 'string', 'enum' => array_keys(SectionAppearance::PADDINGS), 'description' => 'Room added above and below the section.'],
+                'align' => ['type' => 'string', 'enum' => SectionAppearance::ALIGNMENTS, 'description' => 'Alignment of the text.'],
+            ],
             'additionalProperties' => false,
         ];
     }

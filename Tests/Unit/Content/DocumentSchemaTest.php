@@ -66,6 +66,9 @@ final class DocumentSchemaTest extends TestCase
         self::assertSame(['id', 'component', 'props'], $section['required']);
         self::assertSame([RichTextSection::NAME, FakeSection::NAME], $section['properties']->component['enum']);
         self::assertSame('string', $section['properties']->props['type'], 'The props travel as a JSON string the validator reads back.');
+        self::assertSame(['background', 'text', 'padding', 'align'], array_keys((array) $section['properties']->appearance['properties']), 'The appearance is optional, and so is each of its settings.');
+        self::assertSame(['small', 'medium', 'large'], $section['properties']->appearance['properties']->padding['enum']);
+        self::assertStringNotContainsString('"pattern"', $json, 'A colour is checked when the document is read: the API compiles no pattern.');
         self::assertSame(1, $strict['properties']->version['const']);
     }
 }

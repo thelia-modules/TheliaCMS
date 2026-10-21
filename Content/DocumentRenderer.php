@@ -30,6 +30,9 @@ final readonly class DocumentRenderer
     /** Attribute of the first element of a section, carrying the id of the section. */
     public const string SECTION_ATTRIBUTE = 'data-cms-section';
 
+    /** Class of the element wrapping a section that has an appearance. */
+    public const string STYLED_CLASS = 'cms-section-styled';
+
     public function __construct(
         private SectionCatalog $catalog,
     ) {
@@ -49,10 +52,33 @@ final readonly class DocumentRenderer
                 throw UnknownSectionException::for($section);
             }
 
-            $fragments[] = self::anchored($definition->render($section->props, $locale), $section->id);
+            $fragment = $definition->render($section->props, $locale);
+
+            $fragments[] = $section->appearance->isEmpty()
+                ? self::anchored($fragment, $section->id)
+                : self::styled($fragment, $section);
         }
 
         return \sprintf('<div class="%s">%s</div>', self::CONTAINER_CLASS, implode("\n", $fragments));
+    }
+
+    /**
+     * A section with an appearance is wrapped in an element of the whole
+     * width that carries it: the first element of a component is often its
+     * container, narrower than the page, and a background there would be a
+     * box rather than a band. The wrapper is the section for the content
+     * screen too.
+     */
+    private static function styled(string $fragment, Section $section): string
+    {
+        return \sprintf(
+            '<div class="%s" %s="%s" style="%s">%s</div>',
+            self::STYLED_CLASS,
+            self::SECTION_ATTRIBUTE,
+            htmlspecialchars($section->id, \ENT_QUOTES | \ENT_HTML5),
+            htmlspecialchars($section->appearance->style(), \ENT_QUOTES | \ENT_HTML5),
+            $fragment,
+        );
     }
 
     /**
