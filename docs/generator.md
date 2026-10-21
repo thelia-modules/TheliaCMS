@@ -62,6 +62,9 @@ from the infrastructure of Anthropic, never from the server of the shop. Five
 pages at most per request, the ones cited and the links followed from them,
 each cut at 20,000 tokens. What a page says counts as given by the brief; a
 page that cannot be read (private, behind a login, an error) is left out.
+The address of a picture (a path ending in `.jpg`, `.png`, `.webp`, `.gif`,
+`.svg` or `.avif`) is not a page: it is not offered for reading, and goes as
+it is into an image prop.
 
 A brief that cites no address sends the request it always sent, without the
 tool, and so does every brief once **Read the web pages a brief cites** is

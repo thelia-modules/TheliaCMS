@@ -20,6 +20,8 @@ namespace TheliaCMS\Generation;
  */
 final readonly class Brief
 {
+    private const string PICTURE = '~\\.(jpe?g|png|webp|gif|svg|avif)$~i';
+
     public function __construct(
         public string $text,
         public ?string $tone = null,
@@ -32,7 +34,8 @@ final readonly class Brief
 
     /**
      * The web pages the brief cites, in the order it cites them: the model
-     * may read them before it writes.
+     * may read them before it writes. The address of a picture is not a page:
+     * it goes as it is into an image prop, never read.
      *
      * @return list<string>
      */
@@ -43,6 +46,8 @@ final readonly class Brief
         // An address ending a sentence carries its punctuation: it is not part of it.
         $addresses = array_map(static fn (string $address): string => rtrim($address, '.,;:!?)]}'), $matches[0]);
 
-        return array_values(array_unique($addresses));
+        $pages = array_filter($addresses, static fn (string $address): bool => 1 !== preg_match(self::PICTURE, (string) parse_url($address, \PHP_URL_PATH)));
+
+        return array_values(array_unique($pages));
     }
 }

@@ -33,4 +33,16 @@ final class BriefTest extends TestCase
     {
         self::assertSame([], (new Brief('Une page sur nos services, voir www.example.com plus tard.'))->addresses());
     }
+
+    public function testTheAddressOfAPictureIsNotAPageToRead(): void
+    {
+        self::assertSame([], (new Brief('Ajoute la photo https://example.com/img/tarte.JPG?w=800 sous le titre.'))->addresses());
+    }
+
+    public function testABriefCitingAPageAndAPictureCitesThePageAlone(): void
+    {
+        $brief = new Brief('Reprends https://example.com/recettes/tarte et ajoute https://cdn.example.com/tarte.webp.');
+
+        self::assertSame(['https://example.com/recettes/tarte'], $brief->addresses());
+    }
 }
