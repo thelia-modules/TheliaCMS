@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation;
 
+use TheliaCMS\Page\Field\FieldDefinition;
+use TheliaCMS\Page\Field\FieldKind;
 use TheliaCMS\Skill\Skill;
 use TheliaCMS\Skill\SkillRepository;
 
@@ -89,12 +91,20 @@ final readonly class PromptBuilder
 
         $lines[] = '';
 
-        if (null !== $request->brief->tone) {
-            $lines[] = \sprintf('Tone asked for: %s', $request->brief->tone);
+        array_push($lines, ...$this->typeLines($request));
+
+        // The brief of the page wins; the brief of its type says how every
+        // page of the type sounds when the page says nothing.
+        $typeBrief = $target->typeBrief();
+        $tone = $request->brief->tone ?? $typeBrief?->tone;
+        $audience = $request->brief->audience ?? $typeBrief?->audience;
+
+        if (null !== $tone) {
+            $lines[] = \sprintf('Tone asked for: %s', $tone);
         }
 
-        if (null !== $request->brief->audience) {
-            $lines[] = \sprintf('Audience: %s', $request->brief->audience);
+        if (null !== $audience) {
+            $lines[] = \sprintf('Audience: %s', $audience);
         }
 
         if (null !== $request->current) {
@@ -129,6 +139,83 @@ final readonly class PromptBuilder
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * What the type of the page says about every page of it, and the fields
+     * the answer writes. Nothing for a type that is only a code: the request
+     * of such a page stays the one it was.
+     *
+     * @return list<string>
+     */
+    private function typeLines(GenerationRequest $request): array
+    {
+        $target = $request->target;
+        $brief = $target->typeBrief();
+        $fields = $request->fieldsAsked();
+
+        $model = GenerationRequest::KIND_BRIEF === $request->kind ? $target->modelDocument : null;
+
+        if (null === $brief && $fields->isEmpty() && null === $model) {
+            return [];
+        }
+
+        $lines = [\sprintf('# The type of the page: %s', $target->typeTitle()), ''];
+
+        if (null !== $brief) {
+            $lines[] = 'Every page of this type is written from this brief, before the brief of the page itself:';
+            $lines[] = '';
+            $lines[] = $brief->text;
+            $lines[] = '';
+        }
+
+        if (null !== $model) {
+            $lines[] = 'The model of the type, the demo every page of it starts from. Follow its structure — the kinds of sections and their order — and write everything in it again for this page: its texts, images and references are examples, not content of this page.';
+            $lines[] = '';
+            $lines[] = '```json';
+            $lines[] = $model->toJson();
+            $lines[] = '```';
+            $lines[] = '';
+        }
+
+        if (!$fields->isEmpty()) {
+            $lines[] = 'Pages of this type carry these fields. Write their values in `fields`, a JSON object by code written as a string; a value the brief gives no ground for is left out, never invented. A list of the pages of the type sorts and filters on them.';
+            $lines[] = '';
+
+            foreach ($fields as $field) {
+                $lines[] = $this->fieldLine($field, $target->fieldValues[$field->code] ?? null, $request->locale);
+            }
+
+            $lines[] = '';
+        }
+
+        return $lines;
+    }
+
+    private function fieldLine(FieldDefinition $field, int|float|string|bool|null $value, string $locale): string
+    {
+        $kind = match ($field->kind) {
+            FieldKind::Integer => 'a whole number',
+            FieldKind::Decimal => 'a number',
+            FieldKind::Duration => 'a whole number of minutes',
+            FieldKind::Text => 'one line of plain text',
+            FieldKind::LongText => 'plain text, no HTML',
+            FieldKind::Boolean => 'true or false',
+            FieldKind::Choice => 'one of '.implode(', ', array_map(static fn (string $choice): string => '"'.$choice.'"', $field->choices)),
+            FieldKind::Date => 'a date written YYYY-MM-DD',
+        };
+
+        $notes = array_filter([
+            $kind,
+            null === $field->unit ? null : 'in '.$field->unit,
+            null === $field->min ? null : 'at least '.$field->min,
+            null === $field->max ? null : ($field->kind->isNumber() ? 'at most '.$field->max : 'at most '.$field->max.' characters'),
+            $field->required ? 'required' : null,
+        ]);
+
+        $line = \sprintf('- `%s`: %s (%s)', $field->code, $field->label($locale), implode(', ', $notes));
+
+        return null === $value ? $line : $line.'. The page holds: '.json_encode($value, \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES);
     }
 
     /**

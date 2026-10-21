@@ -32,6 +32,7 @@ use TheliaCMS\Content\Pipeline\HeadingChecker;
 use TheliaCMS\Generation\Brief;
 use TheliaCMS\Generation\GenerationRequest;
 use TheliaCMS\Generation\GenerationTarget;
+use TheliaCMS\Generation\GenerationTargets;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Page\Admin\CmsPageAdminRepository;
@@ -71,6 +72,7 @@ final readonly class CmsPageContentController
         private GenerationRunner $runner,
         private SectionUpdate $sectionUpdate,
         private TranslationSources $translationSources,
+        private GenerationTargets $targets,
     ) {
     }
 
@@ -386,7 +388,13 @@ final readonly class CmsPageContentController
         return $this->runner->respond(
             $request,
             $generation,
-            fn (Document $document) => $this->writer->saveContent($page, $locale, $document),
+            function (Document $document, ?array $fields = null) use ($page, $locale): void {
+                $this->writer->saveContent($page, $locale, $document);
+
+                if (null !== $fields && [] !== $fields) {
+                    $this->writer->saveFields($page, $locale, $fields);
+                }
+            },
             $this->screenUrl($page, $lang),
         );
     }
@@ -430,7 +438,7 @@ final readonly class CmsPageContentController
 
     private function target(CmsPage $page, Lang $lang): GenerationTarget
     {
-        return GenerationTarget::page($page, $lang->getLocale());
+        return $this->targets->forPage($page, $lang->getLocale());
     }
 
     private function documentOf(CmsPage $page, string $locale): ?Document

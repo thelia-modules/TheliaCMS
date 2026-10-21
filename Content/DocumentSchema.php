@@ -70,13 +70,16 @@ final readonly class DocumentSchema
     }
 
     /**
-     * @param list<string> $kept components of the catalogue the site no longer
-     *                           offers, allowed all the same because the
-     *                           document being revised or translated uses them
+     * @param list<string> $kept       components of the catalogue the site no longer
+     *                                 offers, allowed all the same because the
+     *                                 document being revised or translated uses them
+     * @param bool         $withFields whether the answer also writes the values of
+     *                                 the fields of the page, as a JSON object written
+     *                                 as a string like the props (docs/adr/0009)
      *
      * @return array<string, mixed>
      */
-    public function strict(array $kept = []): array
+    public function strict(array $kept = [], bool $withFields = false): array
     {
         $names = $this->catalog->offeredNames();
 
@@ -86,7 +89,7 @@ final readonly class DocumentSchema
             }
         }
 
-        return [
+        $schema = [
             'type' => 'object',
             'properties' => (object) [
                 'version' => ['type' => 'integer', 'const' => Document::VERSION],
@@ -109,6 +112,16 @@ final readonly class DocumentSchema
             'required' => ['version', 'sections'],
             'additionalProperties' => false,
         ];
+
+        if ($withFields) {
+            $schema['properties']->fields = [
+                'type' => 'string',
+                'description' => 'The values of the fields of the page, as a JSON object written as a string, by field code, with the values the fields of the page type take.',
+            ];
+            $schema['required'][] = 'fields';
+        }
+
+        return $schema;
     }
 
     /**

@@ -31,6 +31,8 @@ use TheliaCMS\Content\DocumentSchema;
 use TheliaCMS\Content\DocumentValidator;
 use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Generation\Tool\GeneratorTools;
+use TheliaCMS\Page\Field\FieldDefinitions;
+use TheliaCMS\Page\Field\InvalidFieldsException;
 
 /**
  * Asks the model for a document and hands back one the site can store.
@@ -89,7 +91,10 @@ final readonly class PageGenerator
             $tools[] = ['type' => 'web_fetch_20260209', 'name' => 'web_fetch', 'maxUses' => self::WEB_FETCH_USES, 'maxContentTokens' => self::WEB_FETCH_CONTENT_TOKENS];
         }
 
-        $format = ['type' => 'json_schema', 'schema' => $this->schema->strict($request->keptComponents())];
+        // The fields of the page travel in the envelope, as a string like the
+        // props: the grammar stays the same size whatever the type defines.
+        $fieldsAsked = $request->fieldsAsked();
+        $format = ['type' => 'json_schema', 'schema' => $this->schema->strict($request->keptComponents(), !$fieldsAsked->isEmpty())];
         $usage = new Usage();
         $turns = 0;
         $corrections = 0;
@@ -189,7 +194,9 @@ final readonly class PageGenerator
                 $text = $this->textOf($message);
 
                 try {
-                    $document = $this->validator->validate(self::documentFrom($text));
+                    [$document, $writtenFields] = self::documentFrom($text);
+                    $document = $this->validator->validate($document);
+                    $fields = $fieldsAsked->isEmpty() ? null : self::fieldsFrom($writtenFields, $fieldsAsked, $request->locale, $request->target->fieldValues);
                 } catch (InvalidDocumentException $exception) {
                     if (++$corrections > self::CORRECTIONS) {
                         throw InvalidGenerationException::withProblems($exception->problems);
@@ -213,7 +220,7 @@ final readonly class PageGenerator
                 $durationMs = (int) ((hrtime(true) - $started) / 1_000_000);
                 $logId = $record(GenerationLog::STATUS_DONE, $message, null, $document->toJson());
 
-                return new GenerationResult($document, $model, $requestId, $usage, $this->pricing->cost($model, $usage), $durationMs, $turns, $logId);
+                return new GenerationResult($document, $model, $requestId, $usage, $this->pricing->cost($model, $usage), $durationMs, $turns, $logId, $fields);
             }
         } catch (GenerationRefusedException $exception) {
             $exception->logId = $record(GenerationLog::STATUS_REFUSED, $message ?? null, $exception->getMessage());
@@ -359,9 +366,14 @@ final readonly class PageGenerator
     }
 
     /**
+     * The document of the answer, and what it wrote for the fields of the
+     * page, still to be read.
+     *
+     * @return array{0: Document, 1: mixed}
+     *
      * @throws InvalidDocumentException
      */
-    private static function documentFrom(string $text): Document
+    private static function documentFrom(string $text): array
     {
         if ('' === $text) {
             throw InvalidDocumentException::because(['The answer holds no document.']);
@@ -406,6 +418,48 @@ final readonly class PageGenerator
             throw InvalidDocumentException::because($problems);
         }
 
-        return Document::fromArray($decoded);
+        return [Document::fromArray($decoded), $decoded['fields'] ?? null];
+    }
+
+    /**
+     * The values the answer wrote for the fields asked, read like a form of
+     * the back office reads them; what is wrong goes back to the model with
+     * the problems of the document.
+     *
+     * @param array<string, mixed> $held what the page holds already, which a field left out keeps
+     *
+     * @return array<string, int|float|string|bool|null>
+     *
+     * @throws InvalidDocumentException
+     */
+    private static function fieldsFrom(mixed $written, FieldDefinitions $asked, string $locale, array $held): array
+    {
+        if (\is_string($written)) {
+            try {
+                $written = json_decode($written, true, 8, \JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                throw InvalidDocumentException::because(['The fields are not valid JSON.']);
+            }
+        }
+
+        if (!\is_array($written) || ([] !== $written && array_is_list($written))) {
+            throw InvalidDocumentException::because(['The answer holds no object of fields.']);
+        }
+
+        try {
+            $values = $asked->normalize($written, $locale);
+        } catch (InvalidFieldsException $exception) {
+            throw InvalidDocumentException::because(array_map(static fn (string $problem): string => 'Field '.$problem, $exception->problems));
+        }
+
+        $missing = $asked->missingIn([...$held, ...$values]);
+
+        if ([] !== $missing) {
+            throw InvalidDocumentException::because(array_map(static fn ($field): string => \sprintf('The field `%s` is required.', $field->code), $missing));
+        }
+
+        // normalize() keeps the codes of the fields asked only; a field the
+        // answer left out is left as the page holds it.
+        return $values;
     }
 }

@@ -44,7 +44,7 @@ final readonly class GenerationRunner
     }
 
     /**
-     * @param \Closure(Document): void $save stores the document the generator hands back
+     * @param \Closure(Document, array<string, mixed>|null): void $save stores the document the generator hands back, and the values of the fields of the page when it wrote some
      */
     public function respond(Request $request, GenerationRequest $generation, \Closure $save, string $screenUrl): Response
     {
@@ -58,7 +58,7 @@ final readonly class GenerationRunner
 
         try {
             $result = $this->generator->generate($generation);
-            $save($result->document);
+            $save($result->document, $result->fields);
         } catch (GenerationException $exception) {
             if (null === $exception->logId) {
                 $this->flash($request, 'danger', $exception->getMessage());
@@ -73,7 +73,7 @@ final readonly class GenerationRunner
     }
 
     /**
-     * @param \Closure(Document): void $save
+     * @param \Closure(Document, array<string, mixed>|null): void $save
      */
     private function stream(GenerationRequest $generation, \Closure $save, string $screenUrl): StreamedResponse
     {
@@ -88,7 +88,7 @@ final readonly class GenerationRunner
 
             try {
                 $result = $this->generator->generate($generation, $events);
-                $save($result->document);
+                $save($result->document, $result->fields);
             } catch (GenerationException $exception) {
                 $events->error($exception->getMessage(), null === $exception->logId ? null : self::withOutcome($screenUrl, $exception->logId));
 

@@ -71,4 +71,14 @@ final class DocumentSchemaTest extends TestCase
         self::assertStringNotContainsString('"pattern"', $json, 'A colour is checked when the document is read: the API compiles no pattern.');
         self::assertSame(1, $strict['properties']->version['const']);
     }
+
+    public function testTheFieldsOfAPageJoinTheEnvelopeOnlyWhenAsked(): void
+    {
+        self::assertObjectNotHasProperty('fields', $this->schema->strict()['properties'], 'A page without fields is asked for the envelope it always was.');
+
+        $strict = $this->schema->strict([], withFields: true);
+
+        self::assertSame('string', $strict['properties']->fields['type'], 'The fields travel as a JSON string, like the props.');
+        self::assertSame(['version', 'sections', 'fields'], $strict['required']);
+    }
 }

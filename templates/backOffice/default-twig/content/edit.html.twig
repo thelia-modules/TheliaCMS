@@ -102,6 +102,14 @@
                             {{ 'Name one in the brief to ask for it.'|trans({}, 'theliacms') }}
                         </p>
                     {% endif %}
+                    {% if subject.target.typeBrief %}
+                        {# The brief of the type is read first, whatever is
+                           written below: said here so nobody copies it in. #}
+                        <p class="text-muted small" data-testid="cms-content-type-brief">
+                            <i class="bi bi-files" aria-hidden="true"></i>
+                            {{ 'The generator reads the brief of the type %type% first: write here what is particular to this page.'|trans({ '%type%': subject.target.typeTitle }, 'theliacms') }}
+                        </p>
+                    {% endif %}
                     {% form_theme brief_form with bo_form_themes only %}
                     {{ form_start(brief_form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' } }) }}
                         <input type="hidden" name="_token" value="{{ assignToken() }}">

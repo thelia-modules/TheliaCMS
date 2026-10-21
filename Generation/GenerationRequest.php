@@ -16,6 +16,7 @@ namespace TheliaCMS\Generation;
 
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\Section;
+use TheliaCMS\Page\Field\FieldDefinitions;
 
 /**
  * One call to the generator: a target, a language, and either a brief for a
@@ -101,5 +102,20 @@ final readonly class GenerationRequest
         }
 
         return array_values(array_unique(array_map(static fn (Section $section): string => $section->component, $this->current->sections)));
+    }
+
+    /**
+     * The fields of the page the answer writes along with the document: all
+     * of them for a page written or changed as a whole, the translated ones
+     * for a translation — the others are the same in every language — and
+     * none for one section.
+     */
+    public function fieldsAsked(): FieldDefinitions
+    {
+        return match ($this->kind) {
+            self::KIND_BRIEF, self::KIND_REVISION => $this->target->fields(),
+            self::KIND_TRANSLATION => $this->target->fields()->filter(translated: true),
+            default => FieldDefinitions::none(),
+        };
     }
 }

@@ -41,6 +41,7 @@ final class GenerateCommand extends Command
         private readonly PageGenerator $generator,
         private readonly CmsPageWriter $writer,
         private readonly ConsoleRequest $request,
+        private readonly GenerationTargets $targets,
     ) {
         parent::__construct();
     }
@@ -79,7 +80,7 @@ final class GenerateCommand extends Command
 
         $briefText = is_file($briefOption) ? (string) file_get_contents($briefOption) : $briefOption;
         $brief = new Brief($briefText);
-        $target = GenerationTarget::page($page, $locale);
+        $target = $this->targets->forPage($page, $locale);
 
         if ($input->getOption('revise')) {
             $content = CmsPageContentQuery::create()->filterByPageId($pageId)->filterByLocale($locale)->findOne();
@@ -105,6 +106,11 @@ final class GenerateCommand extends Command
         }
 
         $io->writeln($result->document->toJson());
+
+        if (null !== $result->fields) {
+            $io->writeln(json_encode($result->fields, \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR));
+        }
+
         $io->newLine();
         $io->comment(\sprintf(
             '%s, %d turn(s), %d in / %d out tokens (%d cached), %.4f USD, %.1f s',
@@ -122,7 +128,13 @@ final class GenerateCommand extends Command
         }
 
         $url = $input->getOption('url');
-        $this->request->around(fn () => $this->writer->saveContent($page, $locale, $result->document), \is_string($url) ? $url : null);
+        $this->request->around(function () use ($page, $locale, $result): void {
+            $this->writer->saveContent($page, $locale, $result->document);
+
+            if (null !== $result->fields && [] !== $result->fields) {
+                $this->writer->saveFields($page, $locale, $result->fields);
+            }
+        }, \is_string($url) ? $url : null);
         $io->success(\sprintf('Draft of page #%d saved in %s. Publish it with thelia_cms:publish --page %d.', $pageId, $locale, $pageId));
 
         return Command::SUCCESS;
