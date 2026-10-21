@@ -1,7 +1,8 @@
 # Follow-up: the image section and what a draft leaves out
 
-Status: four small changes planned, not started. The plan for searching
-pictures on the web is separate (`docs/plans/web-search.md`).
+Status: the four steps are done and checked with two real generations in the
+browser (see "Done"). The plan for searching pictures on the web is separate
+(`docs/plans/web-search.md`).
 
 ## Where it stands
 
@@ -59,6 +60,21 @@ back as a warning naming the missing picture, kept in the history.
 4. **Text of the image.** Make `alt` describe the picture even with a caption
    (help of the prop in `ImageSection`, rule in `skills/accessibility/SKILL.md`),
    unless the picture is decorative.
+
+## Done
+
+1. `Brief::addresses()` leaves out an address whose path ends with an image
+   extension. A real change citing a Wikimedia picture and asking for an
+   orchard photo read no page, and `left_out` named only the missing photo.
+2. `_toasts.html.twig`: a notice with details is permanent. Checked: the
+   warning was still on screen after ten seconds; a success without details
+   went away.
+3. `cms:image` defaults to `narrow`. The model never sees the default (the
+   catalogue shows the sample and the help, not the default) and still chose
+   `column` until the `width` prop got a help text saying narrow suits a
+   photo; it then chose `narrow` (768 × 576 at 1440 px).
+4. The help of `alt` and the accessibility skill ask for a text even with a
+   caption; both real generations wrote one.
 
 ## Not checked yet
 
