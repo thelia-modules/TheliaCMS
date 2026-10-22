@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation;
 
+use TheliaCMS\Catalogue\CatalogueItem;
+use TheliaCMS\Catalogue\CatalogueItemType;
 use TheliaCMS\Page\Field\FieldDefinition;
 use TheliaCMS\Page\Field\FieldKind;
 use TheliaCMS\Skill\Skill;
@@ -30,6 +32,9 @@ use TheliaCMS\Skill\SkillRepository;
  */
 final readonly class PromptBuilder
 {
+    /** How much of the description of an item the model is given: enough to know what not to repeat. */
+    private const int ITEM_DESCRIPTION_LENGTH = 1500;
+
     public function __construct(
         private SkillRepository $skills,
         private CatalogSheet $catalog,
@@ -80,16 +85,20 @@ final readonly class PromptBuilder
 
         $lines[] = '';
 
-        $lines[] = '# The page';
-        $lines[] = '';
-        $lines[] = \sprintf('- Title: %s', $target->title);
-        $lines[] = \sprintf('- Type: %s', (string) $target->pageType);
+        if (null !== $target->item) {
+            array_push($lines, ...self::itemLines($target->item));
+        } else {
+            $lines[] = '# The page';
+            $lines[] = '';
+            $lines[] = \sprintf('- Title: %s', $target->title);
+            $lines[] = \sprintf('- Type: %s', (string) $target->pageType);
 
-        if (null !== $target->summary) {
-            $lines[] = \sprintf('- Summary written by the editor: %s', $target->summary);
+            if (null !== $target->summary) {
+                $lines[] = \sprintf('- Summary written by the editor: %s', $target->summary);
+            }
+
+            $lines[] = '';
         }
-
-        $lines[] = '';
 
         array_push($lines, ...$this->typeLines($request));
 
@@ -139,6 +148,47 @@ final readonly class PromptBuilder
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * The item of the catalogue the document belongs to, in place of the
+     * page: the document is printed on the page of the item, under what the
+     * theme already draws of it, and adds to it.
+     *
+     * @return list<string>
+     */
+    private static function itemLines(CatalogueItem $item): array
+    {
+        $shown = match ($item->type) {
+            CatalogueItemType::Product => 'its name as the level 1 heading, its pictures, its price, its summary and its description',
+            CatalogueItemType::Category => 'its name as the level 1 heading, its summary, its description and the list of its products',
+            CatalogueItemType::Content => 'its title as the level 1 heading, its summary and its text',
+            CatalogueItemType::Folder => 'its title as the level 1 heading, its summary, its description and the list of its contents',
+        };
+
+        $lines = [
+            \sprintf('# The %s this document is shown on', $item->type->value),
+            '',
+            \sprintf('The document is printed on the page of this %s of the shop, under what the theme already shows of it: %s. Add to that page and repeat none of it. The sections start at level 2.', $item->type->value, $shown),
+            '',
+            \sprintf('- Name: %s', $item->title),
+        ];
+
+        if (null !== $item->reference) {
+            $lines[] = \sprintf('- Reference: %s', $item->reference);
+        }
+
+        if (null !== $item->summary) {
+            $lines[] = \sprintf('- Summary the page shows: %s', $item->summary);
+        }
+
+        if (null !== $item->description) {
+            $lines[] = \sprintf('- Description the page shows: %s', mb_strimwidth($item->description, 0, self::ITEM_DESCRIPTION_LENGTH, '…'));
+        }
+
+        $lines[] = '';
+
+        return $lines;
     }
 
     /**

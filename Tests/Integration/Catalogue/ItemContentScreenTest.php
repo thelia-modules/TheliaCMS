@@ -129,6 +129,12 @@ final class ItemContentScreenTest extends AdminScreenTestCase
         $row = CmsItemContentQuery::create()->filterByItemType('content')->filterByItemId($content->getId())->filterByLocale($this->locale())->findOne();
         self::assertStringContainsString('Sur devis.', (string) $row?->getDraftHtml());
         self::assertSame(1, CmsPageGenerationQuery::create()->filterByTargetType('content')->filterByTargetId($content->getId())->count(), 'The call is in the ledger, under the item.');
+
+        $prompt = $this->api->requests[0]['messages'][0]['content'];
+        self::assertStringContainsString('# The content this document is shown on', $prompt, 'The model is told what the document is shown on.');
+        self::assertStringContainsString('- Name: Notre méthode', $prompt);
+        self::assertStringContainsString('repeat none of it', $prompt);
+        self::assertStringNotContainsString('# The page', $prompt, 'An item is not a page of the CMS.');
     }
 
     public function testTheSignedLinkShowsTheDraftAndATamperedOneIsNotFound(): void
@@ -150,7 +156,7 @@ final class ItemContentScreenTest extends AdminScreenTestCase
     {
         $factory = new FixtureFactory($this->getPropelConnection());
 
-        return $factory->content($factory->folder(), ['title' => 'Notre méthode']);
+        return $factory->content($factory->folder(), ['title' => 'Notre méthode', 'locale' => $this->locale()]);
     }
 
     private function url(Content $content): string

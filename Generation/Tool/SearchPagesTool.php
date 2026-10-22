@@ -16,6 +16,7 @@ namespace TheliaCMS\Generation\Tool;
 
 use Propel\Runtime\ActiveQuery\Criteria;
 use TheliaCMS\Generation\GenerationRequest;
+use TheliaCMS\Generation\GenerationTarget;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\PublishedPageRepository;
@@ -61,7 +62,11 @@ final readonly class SearchPagesTool implements GeneratorToolInterface
 
         $pages = CmsPageQuery::create()
             ->filterByDeletedAt(null, Criteria::ISNULL)
-            ->filterById($request->target->id, Criteria::NOT_EQUAL)
+            // The page being written is not one to link to; the document of a
+            // catalogue item is not a page, and its id names no page.
+            ->_if(GenerationTarget::TYPE_PAGE === $request->target->type)
+                ->filterById($request->target->id, Criteria::NOT_EQUAL)
+            ->_endif()
             ->useCmsPageI18nQuery()
                 ->filterByLocale($locale)
                 ->_if('' !== $query)
