@@ -30,9 +30,11 @@ final class GenerationStream implements GenerationObserverInterface
 
     /**
      * @param \Closure(string, array<string, string>): string $translate
+     * @param array{answered?: string, refused?: string}       $messages what the model answering and a refusal of the site are called, for what is written: a document by default
      */
     public function __construct(
         private readonly \Closure $translate,
+        private readonly array $messages = [],
     ) {
     }
 
@@ -48,7 +50,7 @@ final class GenerationStream implements GenerationObserverInterface
             'turn' => $turn,
             'tools' => $tools,
             'message' => [] === $tools
-                ? ($this->translate)('The model answered: the site is checking the document.', [])
+                ? ($this->translate)($this->messages['answered'] ?? 'The model answered: the site is checking the document.', [])
                 : ($this->translate)('The model is looking through the site (%tools%).', ['%tools%' => implode(', ', $tools)]),
         ]);
     }
@@ -72,7 +74,7 @@ final class GenerationStream implements GenerationObserverInterface
         $this->emit('correction', [
             'round' => $round,
             'problems' => $problems,
-            'message' => ($this->translate)('The document was refused by the site and sent back for correction.', []),
+            'message' => ($this->translate)($this->messages['refused'] ?? 'The document was refused by the site and sent back for correction.', []),
         ]);
     }
 

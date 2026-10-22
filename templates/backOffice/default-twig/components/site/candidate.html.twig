@@ -4,6 +4,10 @@
 {% block title %}{{ title }}{% endblock %}
 {% block body_testid %}cms-site-component-candidate{% endblock %}
 
+{% block scripts_extra %}
+    <script src="{{ module_asset('TheliaCMS', 'assets/component-generator.js') }}?v={{ assets_version }}" defer></script>
+{% endblock %}
+
 {% block content %}
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: title } %}
         {% block actions %}

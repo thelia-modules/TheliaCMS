@@ -1009,4 +1009,9 @@ return [
     'Used by %count% page(s): it can be deleted once no page holds it.' => 'Used by %count% page(s): it can be deleted once no page holds it.',
     'Delete this component? It cannot be undone.' => 'Delete this component? It cannot be undone.',
     'Delete the component' => 'Delete the component',
+    'The connection to the server was lost. The call may still be running: look at the history in a moment.' => 'The connection to the server was lost. The call may still be running: look at the history in a moment.',
+    'The model answered: the site is checking the component.' => 'The model answered: the site is checking the component.',
+    'The component was refused by the site and sent back for correction.' => 'The component was refused by the site and sent back for correction.',
+    'The generator is reading the request.' => 'The generator is reading the request.',
+    'The component is written.' => 'The component is written.',
 ];

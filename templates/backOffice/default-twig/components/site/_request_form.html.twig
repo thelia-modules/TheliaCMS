@@ -2,9 +2,14 @@
     The request of a component, or of a change of one. `hidden` carries what
     the change applies to: `candidate` (a row of the ledger) or `component`
     (the code of a kept one). The call takes up to a minute: the button says
-    so once pressed, the page waits for the answer.
+    so once pressed; `component-generator.js` lists the progress under it,
+    and without the script the page waits for the answer.
 #}
 <form method="post" action="{{ path('admin.cms.components.site.generate') }}" data-testid="{{ testid }}"
+      data-cms-component-generate="{{ {
+          network: 'The connection to the server was lost. The call may still be running: look at the history in a moment.'|trans({}, 'theliacms'),
+          failed: 'The request failed (%status%). Nothing was changed.'|trans({}, 'theliacms'),
+      }|json_encode }}"
       onsubmit="this.querySelector('[data-busy]').hidden = false; this.querySelector('button[type=submit]').disabled = true;">
     <input type="hidden" name="_token" value="{{ assignToken() }}">
     {% for name, value in hidden|default({}) %}
@@ -22,4 +27,5 @@
     <span class="ms-2 text-muted small" data-busy hidden role="status">
         <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>{{ 'The generator is writing the component; it takes up to a minute.'|trans({}, 'theliacms') }}
     </span>
+    <ol class="small text-muted mt-3 mb-0" data-cms-component-steps hidden role="status" aria-live="polite"></ol>
 </form>

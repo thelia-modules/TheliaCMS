@@ -187,6 +187,26 @@ final class SiteComponentScreenTest extends AdminScreenTestCase
         self::assertStringEndsWith('/admin/cms/components', (string) $this->client->getResponse()->headers->get('Location'));
     }
 
+    public function testTheScriptOfTheScreenFollowsTheCallAsItRunsThenGoesToTheCandidate(): void
+    {
+        $this->api
+            ->answer(self::answer(PriceTable::component('<section><h2>Nos formules</h2>{{ props.title }}</section>')))
+            ->answer(self::answer(PriceTable::component()));
+        $screen = $this->screen(self::NEW);
+        self::assertStringContainsString('component-generator.js', $screen->html(), 'The screen loads the script that follows the call.');
+        $token = $this->tokenOfTheForm($screen, self::GENERATE);
+
+        $this->client->request('POST', self::GENERATE, ['_token' => $token, 'request' => 'Un tableau de prix.'], [], [...self::XHR, 'HTTP_ACCEPT' => 'text/event-stream']);
+        $all = self::events((string) $this->client->getInternalResponse()->getContent());
+        // The characters written so far come as `delta` events between the steps.
+        $events = array_values(array_filter($all, static fn (array $event): bool => 'delta' !== $event['event']));
+
+        self::assertSame(['start', 'turn', 'correction', 'turn', 'done'], array_column($events, 'event'));
+        self::assertContains('delta', array_column($all, 'event'), 'The screen sees the model write.');
+        self::assertStringContainsString('component', $events[2]['data']['message'], 'The refusal speaks of a component, not of a document.');
+        self::assertMatchesRegularExpression('#/admin/cms/components/site/candidates/\d+$#', $events[4]['data']['redirect']);
+    }
+
     public function testACallThatFailsIsShownWithWhatWentWrong(): void
     {
         $this->api->answer(FakeClaudeTransport::message([], 'refusal', [], ['type' => 'refusal', 'category' => 'general_harms', 'explanation' => 'Not this.']));
@@ -225,6 +245,31 @@ final class SiteComponentScreenTest extends AdminScreenTestCase
         self::assertSame(302, $this->send('POST', self::GENERATE, ['_token' => $token, 'request' => $text] + $hidden));
 
         return (string) $this->client->getResponse()->headers->get('Location');
+    }
+
+    /**
+     * @return list<array{event: string, data: array<string, mixed>}>
+     */
+    private static function events(string $stream): array
+    {
+        $events = [];
+
+        foreach (array_filter(array_map('trim', explode("\n\n", $stream))) as $chunk) {
+            $event = 'message';
+            $data = '';
+
+            foreach (explode("\n", $chunk) as $line) {
+                if (str_starts_with($line, 'event:')) {
+                    $event = trim(substr($line, 6));
+                } elseif (str_starts_with($line, 'data:')) {
+                    $data .= trim(substr($line, 5));
+                }
+            }
+
+            $events[] = ['event' => $event, 'data' => json_decode($data, true, 512, \JSON_THROW_ON_ERROR)];
+        }
+
+        return $events;
     }
 
     private static function idOf(string $candidateUrl): int

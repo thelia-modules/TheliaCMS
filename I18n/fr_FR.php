@@ -1009,4 +1009,9 @@ return [
     'Used by %count% page(s): it can be deleted once no page holds it.' => 'Utilisé par %count% page(s) : il pourra être supprimé quand plus aucune page ne le contiendra.',
     'Delete this component? It cannot be undone.' => 'Supprimer ce composant ? C’est définitif.',
     'Delete the component' => 'Supprimer le composant',
+    'The connection to the server was lost. The call may still be running: look at the history in a moment.' => 'La connexion au serveur a été perdue. L’appel continue peut-être : regardez l’historique dans un instant.',
+    'The model answered: the site is checking the component.' => 'Le modèle a répondu : le site vérifie le composant.',
+    'The component was refused by the site and sent back for correction.' => 'Le composant a été refusé par le site et renvoyé pour correction.',
+    'The generator is reading the request.' => 'Le générateur lit la demande.',
+    'The component is written.' => 'Le composant est écrit.',
 ];

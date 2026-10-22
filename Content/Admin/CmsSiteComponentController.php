@@ -17,6 +17,7 @@ namespace TheliaCMS\Content\Admin;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
@@ -34,6 +35,7 @@ use TheliaCMS\Content\Site\SitePropReader;
 use TheliaCMS\Generation\Component\ComponentCandidates;
 use TheliaCMS\Generation\Component\ComponentGenerator;
 use TheliaCMS\Generation\Component\ComponentRequest;
+use TheliaCMS\Generation\Admin\GenerationStream;
 use TheliaCMS\Generation\GenerationException;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Model\CmsComponentQuery;
@@ -115,6 +117,10 @@ final readonly class CmsSiteComponentController
         // back office is not meant for it.
         set_time_limit(0);
 
+        if (str_contains((string) $request->headers->get('Accept'), 'text/event-stream')) {
+            return $this->stream($generation);
+        }
+
         try {
             $result = $this->generator->generate($generation);
         } catch (GenerationException $exception) {
@@ -128,6 +134,44 @@ final readonly class CmsSiteComponentController
         }
 
         return new RedirectResponse($this->urls->generate('admin.cms.components.site.candidate', ['id' => $result->logId]));
+    }
+
+    /**
+     * The call as server-sent events, for the script of the screen: the
+     * same events as a page being written, then the address of the
+     * candidate, where the outcome is read from the ledger.
+     */
+    private function stream(ComponentRequest $generation): StreamedResponse
+    {
+        $events = new GenerationStream(
+            fn (string $message, array $parameters): string => $this->translator->trans($message, $parameters, TheliaCMS::DOMAIN_NAME),
+            [
+                'answered' => 'The model answered: the site is checking the component.',
+                'refused' => 'The component was refused by the site and sent back for correction.',
+            ],
+        );
+
+        return new StreamedResponse(function () use ($events, $generation): void {
+            // The editor closing the tab must not kill a call the site pays
+            // for: it runs to its end and is written to the ledger.
+            ignore_user_abort(true);
+
+            $events->start($this->translate('The generator is reading the request.'));
+
+            try {
+                $result = $this->generator->generate($generation, $events);
+            } catch (GenerationException $exception) {
+                $events->error($exception->getMessage(), null === $exception->logId ? null : $this->urls->generate('admin.cms.components.site.candidate', ['id' => $exception->logId]));
+
+                return;
+            }
+
+            $events->done($this->urls->generate('admin.cms.components.site.candidate', ['id' => $result->logId]), $this->translate('The component is written.'));
+        }, Response::HTTP_OK, [
+            'Content-Type' => 'text/event-stream; charset=UTF-8',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 
     #[Route('/candidates/{id}', name: 'candidate', requirements: ['id' => '\d+'], methods: ['GET'])]
@@ -359,7 +403,11 @@ final readonly class CmsSiteComponentController
      */
     private function render(string $template, array $parameters): Response
     {
-        return new Response($this->twig->render(self::TEMPLATES.$template, $parameters));
+        $script = __DIR__.'/../../templates/backOffice/default-twig/assets/component-generator.js';
+
+        return new Response($this->twig->render(self::TEMPLATES.$template, $parameters + [
+            'assets_version' => substr(hash('xxh3', (string) @filemtime($script)), 0, 12),
+        ]));
     }
 
     private function mayMake(): bool

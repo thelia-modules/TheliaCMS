@@ -202,10 +202,29 @@ renders the sample, and keeps it only when the editor says so.
   the components, the section edited by hand in its dialog (a price changed,
   saved to the document and the HTML). The toolkit page draws it too.
 
+## After the plan
+
+- **Progress.** The request is posted by `assets/component-generator.js`
+  and followed as server-sent events (`GenerationStream`, its messages
+  speaking of a component), then the screen of the candidate; without the
+  script the form waits for the answer as before.
+- **Adversarial review** by an agent that had not seen the work. Confirmed
+  by probes, then fixed with a test seen failing first: markup props and
+  what a template assembles reached the draft and the preview unfiltered
+  (the output of a component now goes through
+  `PublishedContentSanitizer::html()`, and the preview frame is sandboxed);
+  `{% use %}` threw out of the check and `{% extends %}` passed it (refused
+  by name, every Twig error caught); `range` and `1..n` had no bound
+  (removed); `:not(:scope)`, `& ~ p` reached past the component, and a comma
+  in `[title="a,b"]` split a selector (refused, split aware of brackets and
+  quotes); `url()` written with an escape and `image-set()` passed the
+  filter of the stylesheet (refused, with any backslash). Not acted on:
+  `position: fixed` is allowed (whoever makes a component holds the custom
+  code permission); `attribute()`, `_self`, `_context` print, giving back
+  strings only.
+
 ## Not done
 
-- No progress is shown while a component is generated: the page waits for
-  the answer, the button saying it takes up to a minute.
 - The `draft` status of `cms_component` is unused.
 - The stylesheet served is the one of the version kept, at once, including
   under published pages still holding the markup of the version before.

@@ -3,6 +3,10 @@
 {% block title %}{{ 'New component'|trans({}, 'theliacms') }}{% endblock %}
 {% block body_testid %}cms-site-component-new{% endblock %}
 
+{% block scripts_extra %}
+    <script src="{{ module_asset('TheliaCMS', 'assets/component-generator.js') }}?v={{ assets_version }}" defer></script>
+{% endblock %}
+
 {% block content %}
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'New component'|trans({}, 'theliacms') } %}
         {% block actions %}
