@@ -19,6 +19,8 @@ use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use Thelia\Model\Lang;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Catalogue\CatalogueItemKeys;
+use TheliaCMS\Catalogue\CatalogueItemType;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
@@ -31,6 +33,8 @@ use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormField;
 use TheliaCMS\Model\CmsFormFieldQuery;
 use TheliaCMS\Model\CmsFormQuery;
+use TheliaCMS\Model\CmsItemContent;
+use TheliaCMS\Model\CmsItemContentQuery;
 use TheliaCMS\Model\CmsMenu;
 use TheliaCMS\Model\CmsMenuItem;
 use TheliaCMS\Model\CmsMenuItemQuery;
@@ -81,6 +85,7 @@ final readonly class SiteImporter
         private PageTagWriter $tagWriter,
         private ?SiteComponentRepository $components = null,
         private SiteComponentValidator $componentValidator = new SiteComponentValidator(),
+        private CatalogueItemKeys $itemKeys = new CatalogueItemKeys(),
     ) {
     }
 
@@ -114,6 +119,7 @@ final readonly class SiteImporter
             $this->importComponents($document, $options, $report);
             $this->reportMissingComponents($document, $report);
             $pageIds = $this->importPages($document, $options, $report, $mediaMap, $connection);
+            $this->importCatalogueContents($document, $options, $report, $mediaMap, $connection);
 
             $this->importMenus($document, $options, $report, $pageIds, $connection);
             $this->importForms($document, $options, $report, $pageIds, $connection);
@@ -480,6 +486,79 @@ final readonly class SiteImporter
                 $this->index($page, $locale, $publishedHtml, $connection);
             }
         }
+    }
+
+    /**
+     * The documents of the catalogue items, each put on the item its key names
+     * here. An item this site does not have is said, not created: the module
+     * writes no product, category, content or folder.
+     *
+     * @param array<int, int> $mediaMap
+     */
+    private function importCatalogueContents(SiteDocument $document, ImportOptions $options, ImportReport $report, array $mediaMap, ConnectionInterface $connection): void
+    {
+        foreach ($document->catalogueContents() as $entry) {
+            $type = CatalogueItemType::tryFrom((string) ($entry['type'] ?? ''));
+            $key = \is_array($entry['key'] ?? null) ? $entry['key'] : [];
+            $id = null === $type ? null : $this->itemKeys->find($type, $key);
+
+            if (null === $type || null === $id) {
+                $report->warn(\sprintf(
+                    'The CMS content of the %s %s was left out: this site has no such item.',
+                    (string) ($entry['type'] ?? '?'),
+                    self::describeKey($key),
+                ));
+                $report->skipped('catalogue contents');
+
+                continue;
+            }
+
+            $existing = CmsItemContentQuery::create()->filterByItemType($type->value)->filterByItemId($id)->count($connection);
+
+            if ($existing > 0 && !$options->replace) {
+                $report->skipped('catalogue contents');
+
+                continue;
+            }
+
+            foreach (\is_array($entry['contents'] ?? null) ? $entry['contents'] : [] as $locale => $content) {
+                if (!\is_array($content)) {
+                    continue;
+                }
+
+                $locale = (string) $locale;
+                $model = CmsItemContentQuery::create()->filterByItemType($type->value)->filterByItemId($id)->filterByLocale($locale)->findOne($connection)
+                    ?? (new CmsItemContent())->setItemType($type->value)->setItemId($id)->setLocale($locale);
+
+                $model
+                    ->setDraftDocument($this->media->remap($content['draft_document'] ?? null, $mediaMap))
+                    ->setDraftHtml($this->media->remap($content['draft_html'] ?? null, $mediaMap))
+                    ->setPublishedDocument($this->media->remap($content['published_document'] ?? null, $mediaMap))
+                    ->setPublishedHtml($this->media->remap($content['published_html'] ?? null, $mediaMap))
+                    ->setPublishedAt($this->date($content['published_at'] ?? null));
+
+                // As for a page: kept, or every imported document would read
+                // "modified since publication".
+                $model->setUpdatedAt($this->date($content['updated_at'] ?? null) ?? $model->getPublishedAt() ?? new \DateTimeImmutable());
+                $model->save($connection);
+            }
+
+            $existing > 0 ? $report->replaced('catalogue contents') : $report->created('catalogue contents');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $key
+     */
+    private static function describeKey(array $key): string
+    {
+        if (\is_string($key['reference'] ?? null) && '' !== $key['reference']) {
+            return \sprintf('with the reference "%s"', $key['reference']);
+        }
+
+        $urls = \is_array($key['urls'] ?? null) ? array_filter($key['urls'], 'is_string') : [];
+
+        return [] === $urls ? 'with no reference nor address' : \sprintf('at "%s"', reset($urls));
     }
 
     private function index(CmsPage $page, string $locale, ?string $html, ConnectionInterface $connection): void

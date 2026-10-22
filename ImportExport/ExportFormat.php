@@ -44,7 +44,7 @@ final class ExportFormat
      *
      * @var list<string>
      */
-    public const array SECTIONS = ['page_types', 'components', 'pages', 'menus', 'forms', 'settings', 'media'];
+    public const array SECTIONS = ['page_types', 'components', 'pages', 'catalogue_contents', 'menus', 'forms', 'settings', 'media'];
 
     /**
      * @param list<string> $locales

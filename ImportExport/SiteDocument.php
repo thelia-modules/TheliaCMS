@@ -163,6 +163,17 @@ final readonly class SiteDocument
     }
 
     /**
+     * The documents of the catalogue items, each with the key its item is
+     * found by on this site. A file written before 2.1.0 has none.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function catalogueContents(): array
+    {
+        return $this->rowsOf('catalogue_contents');
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     public function menus(): array

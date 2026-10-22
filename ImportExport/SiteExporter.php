@@ -17,12 +17,15 @@ namespace TheliaCMS\ImportExport;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Model\LangQuery;
 use Thelia\Model\ModuleQuery;
+use TheliaCMS\Catalogue\CatalogueItemKeys;
+use TheliaCMS\Catalogue\CatalogueItemType;
+use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormFieldQuery;
 use TheliaCMS\Model\CmsFormQuery;
+use TheliaCMS\Model\CmsItemContentQuery;
 use TheliaCMS\Model\CmsMenu;
 use TheliaCMS\Model\CmsMenuItemQuery;
-use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -45,7 +48,8 @@ use TheliaLibrary\Model\LibraryImageQuery;
  *   belong;
  * - **third-party snippets**, because they carry the measurement accounts of
  *   one site, and importing them elsewhere sends that site's traffic to them;
- * - **revisions**, because they are the history of one site, not its content;
+ * - **revisions**, because they are the history of one site, not its content
+ *   (the documents of the catalogue items travel without theirs either);
  * - **image files**, whose names travel so the importing site can point at its
  *   own copies (§2.13).
  */
@@ -55,6 +59,7 @@ final readonly class SiteExporter
         private CmsSettings $settings,
         private MediaReferences $media,
         private ?SiteComponentRepository $components = null,
+        private CatalogueItemKeys $itemKeys = new CatalogueItemKeys(),
     ) {
     }
 
@@ -73,12 +78,19 @@ final readonly class SiteExporter
             $mediaIds = [...$mediaIds, ...$this->mediaOf($document)];
         }
 
+        $catalogueContents = $this->catalogueContents();
+
+        foreach ($catalogueContents as $document) {
+            $mediaIds = [...$mediaIds, ...$this->mediaOf($document)];
+        }
+
         return [
             ...ExportFormat::header($this->moduleVersion(), $locales, new \DateTimeImmutable()),
             'page_types' => $this->pageTypes($locales),
             // Before the pages: a page names the components it is made of.
             'components' => $this->siteComponents(),
             'pages' => $pages,
+            'catalogue_contents' => $catalogueContents,
             'menus' => $this->menus($locales),
             'forms' => $this->forms($locales),
             'settings' => $this->settingsDocument(),
@@ -155,6 +167,44 @@ final readonly class SiteExporter
         }
 
         return $document;
+    }
+
+    /**
+     * The documents of the catalogue items, one entry per item: its type,
+     * the key another site finds it by (CatalogueItemKeys) and its contents
+     * by locale, in the shape of the contents of a page.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function catalogueContents(): array
+    {
+        $items = [];
+
+        foreach (CmsItemContentQuery::create()->orderByItemType()->orderByItemId()->orderByLocale()->find() as $content) {
+            $type = CatalogueItemType::tryFrom((string) $content->getItemType());
+
+            if (null === $type) {
+                continue;
+            }
+
+            $index = $type->value.'-'.$content->getItemId();
+            $items[$index] ??= [
+                'type' => $type->value,
+                'key' => $this->itemKeys->keyOf($type, (int) $content->getItemId()),
+                'contents' => [],
+            ];
+
+            $items[$index]['contents'][(string) $content->getLocale()] = [
+                'draft_document' => $content->getDraftDocument(),
+                'draft_html' => $content->getDraftHtml(),
+                'published_document' => $content->getPublishedDocument(),
+                'published_html' => $content->getPublishedHtml(),
+                'published_at' => $this->date($content->getPublishedAt()),
+                'updated_at' => $this->date($content->getUpdatedAt()),
+            ];
+        }
+
+        return array_values($items);
     }
 
     /**
