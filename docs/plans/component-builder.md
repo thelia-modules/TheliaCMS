@@ -1,8 +1,7 @@
 # Plan: components made in the back office
 
-Status: steps 1 to 4 done (storage, definition, validator, generator);
-step 5 (the screen) is next. No real call of the API has been made for a
-component yet: the first one comes with the screen. The design questions are
+Status: steps 1 to 5 done (storage, definition, validator, generator,
+screen); step 6 (a change that breaks the pages using a component) is next. The design questions are
 settled (see "Decisions taken").
 
 ## What is asked
@@ -160,6 +159,21 @@ renders the sample, and keeps it only when the editor says so.
   and `GenerationTarget::TYPE_COMPONENT`. Tests:
   `Tests/Integration/Generation/Component/ComponentGeneratorTest.php`.
 
+- **Step 5.** `Content/Admin/CmsSiteComponentController.php` under
+  `/admin/cms/components/site` (new, generate, candidates/{id}, keep, {code}),
+  `templates/backOffice/default-twig/components/site/`, the list
+  (`components/list.html.twig`: "New component", origin "Made on this site",
+  "Open"). `Generation/Component/ComponentCandidates.php` reads a candidate
+  back from the ledger. `Preview/ComponentPreviewLink.php` and
+  `Preview/ComponentPreviewController.php` draw a candidate or a component
+  with its sample on a page of the theme. `Content/Site/SiteComponentStyles.php`
+  and `/cms/site-components.css`, linked by `Settings/SiteStylesThemeHook.php`
+  after the blocks and by the toolkit page. Tests:
+  `Tests/Integration/Content/SiteComponentScreenTest.php`.
+  Checked at 1440 px with a real call (a price table: one turn, 40 s,
+  0.11 USD): candidate drawn in Flexy with its accent, stacked at 375 px
+  without horizontal scroll, kept, listed, its stylesheet linked on the front.
+
 What the code settled that the plan did not say:
 
 - The prop types are text, html, integer, boolean, choice, image, url and
@@ -188,8 +202,22 @@ What the code settled that the plan did not say:
   A change is recorded under the id of the component.
 - A new component whose code is taken, or a change that renames its
   component, is sent back for correction like any other problem.
-- Until step 5, the components screen shows a component of the site with the
-  origin "module" (`CmsComponentAdminController::origin()`).
+- A candidate is a row of the ledger (its `document` holds the component):
+  nothing else stores it until it is kept. A change asked on a candidate
+  starts from it; keeping a new one files its call under the new row
+  (`ComponentCandidates::attach()`). The `draft` status of `cms_component` is
+  therefore unused so far.
+- The call is a plain POST that waits for the answer (up to a minute), the
+  button saying so: the progress stream of the content screen lives in its
+  own script, not reused here.
+- The preview is a page of the front office on an address signed for an hour,
+  its key salted apart from the links of draft pages; the stylesheet of the
+  candidate is printed in it, scoped. A stylesheet holding `<` is refused by
+  the validator, and escaped in the preview all the same.
+- `SectionCatalog` implements `ResetInterface`: a component kept in one
+  request is in the catalogue of the next, in a worker serving many.
+- `.cms-site` (the element a component is drawn in) has the width of the
+  content in `assets/blocks.css`, like the other blocks.
 
 ## Decisions taken
 

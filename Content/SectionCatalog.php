@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Content;
 
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Every component a document may use, by name.
@@ -30,7 +31,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
  * renders and validates a document. `offered()` leaves out what the site put
  * away (SectionAvailability): what the generator reads and may write.
  */
-final class SectionCatalog
+final class SectionCatalog implements ResetInterface
 {
     public const string TAG = 'thelia_cms.section';
 
@@ -50,6 +51,15 @@ final class SectionCatalog
         private readonly iterable $providers = [],
         private readonly ?SectionAvailability $availability = null,
     ) {
+    }
+
+    /**
+     * Forgets the catalogue built for a request: a component kept in the
+     * back office belongs to the next one, in a worker that serves many.
+     */
+    public function reset(): void
+    {
+        $this->byName = null;
     }
 
     public function find(string $name): ?SectionDefinitionInterface

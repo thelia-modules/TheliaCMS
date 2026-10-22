@@ -47,6 +47,9 @@ final class WriteRoutesTest extends AdminScreenTestCase
      */
     private const array SCREENS = [
         'admin.cms.components.list',
+        'admin.cms.components.site.candidate',
+        'admin.cms.components.site.new',
+        'admin.cms.components.site.show',
         'admin.cms.forms.create',
         'admin.cms.forms.edit',
         'admin.cms.forms.field_save',

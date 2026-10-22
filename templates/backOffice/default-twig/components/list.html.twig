@@ -6,6 +6,11 @@
 {% block content %}
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Components'|trans({}, 'theliacms') } %}
         {% block actions %}
+            {% if may_make %}
+                <a class="btn btn-sm btn-primary me-1" href="{{ path('admin.cms.components.site.new') }}" data-testid="cms-components-new">
+                    <i class="bi bi-stars me-1" aria-hidden="true"></i>{{ 'New component'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
             {# The toolkit shows the components offered to the generator: a
                component switched off here is not on it. It answers only in
                debug, where ToolkitLink gives an address. #}
@@ -21,7 +26,7 @@
     {% endembed %}
 
     <p class="text-muted">
-        {{ 'The components a page may be made of: those of the module, the partials of the site and the components the theme opens to pages. A component you disable is no longer offered to the generator; the pages that already use it keep displaying it, and its sections can still be edited.'|trans({}, 'theliacms') }}
+        {{ 'The components a page may be made of: those of the module, the partials of the site, the components the theme opens to pages and the ones made on this site. A component you disable is no longer offered to the generator; the pages that already use it keep displaying it, and its sections can still be edited.'|trans({}, 'theliacms') }}
     </p>
 
     <div class="card">
@@ -50,6 +55,8 @@
                                     {{ 'Theme'|trans({}, 'theliacms') }}
                                 {% elseif component.origin == 'partial' %}
                                     {{ 'Partial'|trans({}, 'theliacms') }}
+                                {% elseif component.origin == 'site' %}
+                                    {{ 'Made on this site'|trans({}, 'theliacms') }}
                                 {% else %}
                                     {{ 'Module'|trans({}, 'theliacms') }}
                                 {% endif %}
@@ -72,6 +79,11 @@
                                 {% endif %}
                             </td>
                             <td class="text-end">
+                                {% if component.site_url %}
+                                    <a class="btn btn-sm btn-outline-secondary" href="{{ component.site_url }}" data-testid="cms-component-open-{{ component.name }}">
+                                        <i class="bi bi-pencil me-1" aria-hidden="true"></i>{{ 'Open'|trans({}, 'theliacms') }}
+                                    </a>
+                                {% endif %}
                                 {# A component switched off is not on the toolkit page. #}
                                 {% if component.toolkit_url and component.offered %}
                                     <a class="btn btn-sm btn-outline-secondary" href="{{ component.toolkit_url }}" target="_blank" rel="noopener" data-testid="cms-component-see-{{ component.name }}">

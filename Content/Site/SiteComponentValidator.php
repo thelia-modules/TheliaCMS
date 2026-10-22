@@ -75,6 +75,12 @@ final readonly class SiteComponentValidator
             $problems[] = \sprintf('The template writes text of its own ("%s"): every text a component shows is a prop, so that it can be written in every language of the site.', $wording);
         }
 
+        // A stylesheet is printed inside a `style` element where a page shows
+        // it inline (the preview): a `<` could close it.
+        if (str_contains($component->css, '<')) {
+            $problems[] = 'The stylesheet holds "<", which a stylesheet never needs.';
+        }
+
         // Checked as written, so the model is told what it wrote wrong; kept
         // as filtered, so nothing in it reaches another host.
         $css = (string) $this->sanitizer->css($component->css);

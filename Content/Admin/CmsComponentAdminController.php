@@ -29,6 +29,7 @@ use TheliaCMS\Content\Partial\PartialSection;
 use TheliaCMS\Content\SectionAvailability;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\SectionDefinitionInterface;
+use TheliaCMS\Content\Site\SiteComponentSection;
 use TheliaCMS\Content\Theme\ThemeComponentSection;
 use TheliaCMS\Generation\Admin\ToolkitLink;
 use TheliaCMS\Security\CmsResources;
@@ -77,12 +78,14 @@ final readonly class CmsComponentAdminController
                 'offered' => $this->availability->isOffered($name) || !$this->availability->canBeDisabled($name),
                 'may_disable' => $this->availability->canBeDisabled($name),
                 'toolkit_url' => null === $toolkitUrl ? null : $toolkitUrl.'#'.self::toolkitAnchor($name),
+                'site_url' => $definition instanceof SiteComponentSection ? $this->urls->generate('admin.cms.components.site.show', ['code' => $definition->component->code]) : null,
             ];
         }
 
         return new Response($this->twig->render(self::LIST_TEMPLATE, [
             'components' => $components,
             'may_update' => $this->isGranted(AccessManager::UPDATE),
+            'may_make' => $this->isGranted(AccessManager::UPDATE) && $this->securityContext->isGranted(['ADMIN'], [CmsResources::CUSTOM_CODE], [], [AccessManager::UPDATE]),
             'toolkit_url' => $toolkitUrl,
         ]));
     }
@@ -136,6 +139,7 @@ final readonly class CmsComponentAdminController
         return match (true) {
             $definition instanceof ThemeComponentSection => 'theme',
             $definition instanceof PartialSection => 'partial',
+            $definition instanceof SiteComponentSection => 'site',
             default => 'module',
         };
     }

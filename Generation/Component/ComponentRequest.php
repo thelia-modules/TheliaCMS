@@ -17,7 +17,7 @@ use TheliaCMS\Content\Site\SiteComponent;
 
 /**
  * What an editor asks of the generator of components: a new one, or a change
- * of the one they are looking at.
+ * of the one they are looking at, kept already or still a candidate.
  */
 final readonly class ComponentRequest
 {
@@ -26,7 +26,8 @@ final readonly class ComponentRequest
     public const string KIND_CHANGE = 'component_change';
 
     /**
-     * @param int|null $componentId the row of the component to change; null for a new one
+     * @param SiteComponent|null $current     the component to change, kept or still a candidate; null for a new one
+     * @param int|null           $componentId the row of the component to change, when it is kept
      */
     public function __construct(
         public string $text,
@@ -38,8 +39,8 @@ final readonly class ComponentRequest
             throw new \InvalidArgumentException('A request says something.');
         }
 
-        if ((null === $current) !== (null === $componentId)) {
-            throw new \InvalidArgumentException('A change names the component and its row together.');
+        if (null === $current && null !== $componentId) {
+            throw new \InvalidArgumentException('A change of a kept component names the component.');
         }
     }
 

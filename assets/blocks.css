@@ -226,6 +226,15 @@
     width: min(75rem, 100% - 2rem);
   }
 
+  /* Components made on the site --------------------------------------------- */
+
+  /* Held at the width of the content like the other blocks: the stylesheet of
+     a component lays out what is inside, never the page around it. */
+  .cms-site {
+    margin-inline: auto;
+    width: min(75rem, 100% - 2rem);
+  }
+
   .cms-image--narrow {
     width: min(48rem, 100% - 2rem);
   }

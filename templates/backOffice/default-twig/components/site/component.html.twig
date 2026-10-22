@@ -1,0 +1,57 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ component.label }}{% endblock %}
+{% block body_testid %}cms-site-component{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: component.label } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.components.list') }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to components'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">
+        <code>Site:{{ component.code }}</code> &middot; {{ component.description }}
+        &middot; {% if pages > 0 %}{{ '%count% page(s)'|trans({ '%count%': pages }, 'theliacms') }}{% else %}{{ 'Unused'|trans({}, 'theliacms') }}{% endif %}
+        &middot; {{ offered ? 'Offered to the generator'|trans({}, 'theliacms') : 'Not offered to the generator'|trans({}, 'theliacms') }}
+    </p>
+
+    <div class="row g-3">
+        <div class="col-xl-8">
+            {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_preview.html.twig', { url: preview_url }) }}
+        </div>
+        <div class="col-xl-4">
+            {% if may_make %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_request_form.html.twig', {
+                            testid: 'cms-site-component-change',
+                            hidden: { component: component.code },
+                            label: 'Ask a change'|trans({}, 'theliacms'),
+                            rows: 3,
+                            help: 'You see the new version before it replaces this one.'|trans({}, 'theliacms'),
+                            button: 'Change it'|trans({}, 'theliacms'),
+                        }) }}
+                    </div>
+                </div>
+            {% endif %}
+            <div class="card mb-3">
+                <div class="card-header">{{ 'History'|trans({}, 'theliacms') }}</div>
+                <ul class="list-group list-group-flush" data-testid="cms-site-component-history">
+                    {% for call in history %}
+                        <li class="list-group-item small">
+                            <a href="{{ path('admin.cms.components.site.candidate', { id: call.logId }) }}">{{ call.createdAt ? call.createdAt|date('Y-m-d H:i') : '' }}</a>
+                            <span class="badge text-bg-{{ call.status == 'done' ? 'light' : 'warning' }}">{{ call.status }}</span>
+                            <div class="text-muted text-wrap">{{ call.request }}</div>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item small text-muted">{{ 'No call recorded.'|trans({}, 'theliacms') }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_definition.html.twig') }}
+{% endblock %}

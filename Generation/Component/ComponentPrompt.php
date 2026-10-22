@@ -136,7 +136,7 @@ final readonly class ComponentPrompt
             'required' => ['code', 'label', 'description', 'props', 'sample', 'template', 'css'],
             'properties' => [
                 'code' => $string('PascalCase, 2 to 40 letters and digits, saying what the component is: "PriceTable".'),
-                'label' => $string('What an editor reads in a list, in the language of the request, 120 characters at most.'),
+                'label' => $string('The name of the component in a list, in the language of the request: two to four words, such as "Price table". What it does goes in the description.'),
                 'description' => $string('One or two sentences, in English, on what the component is for and when a page uses it: what the generator of pages reads to pick it.'),
                 'props' => $string('The list of the props, as a JSON array written as a string, in the form the rules describe.'),
                 'sample' => $string('The props of the example, as a JSON object written as a string: every prop filled, in the language of the site.'),

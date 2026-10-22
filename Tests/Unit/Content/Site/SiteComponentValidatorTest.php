@@ -57,6 +57,14 @@ final class SiteComponentValidatorTest extends TestCase
         }
     }
 
+    public function testAStylesheetThatCouldCloseTheElementHoldingItIsRefused(): void
+    {
+        $this->expectException(InvalidSiteComponentException::class);
+        $this->expectExceptionMessage('"<"');
+
+        (new SiteComponentValidator())->validate(PriceTable::component(css: '.plan::after { content: "</style><script>alert(1)</script>"; }'));
+    }
+
     public function testATemplateThatWritesItsOwnTextIsRefused(): void
     {
         $this->expectException(InvalidSiteComponentException::class);

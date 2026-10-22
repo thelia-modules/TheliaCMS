@@ -1,0 +1,21 @@
+{#
+    The component drawn with its sample on a page of the theme, in a frame
+    the editor sets to the width of a phone, a tablet or a screen.
+#}
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center gap-2">
+        <span class="me-auto">{{ 'Preview'|trans({}, 'theliacms') }}</span>
+        <div class="btn-group btn-group-sm" role="group" aria-label="{{ 'Width of the preview'|trans({}, 'theliacms') }}">
+            {% for width, name in { '375px': 'Phone', '768px': 'Tablet', '100%': 'Screen' } %}
+                <button type="button" class="btn btn-outline-secondary{% if loop.last %} active{% endif %}" aria-pressed="{{ loop.last ? 'true' : 'false' }}"
+                        onclick="var f = document.querySelector('[data-testid=cms-site-component-frame]'); f.style.width = '{{ width }}'; this.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); }); this.classList.add('active'); this.setAttribute('aria-pressed', 'true');">
+                    {{ name|trans({}, 'theliacms') }}
+                </button>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="card-body p-0 bg-body-tertiary text-center">
+        <iframe src="{{ url }}" title="{{ 'Preview of the component'|trans({}, 'theliacms') }}" data-testid="cms-site-component-frame"
+                style="width: 100%; height: 42rem; border: 0; background: #fff; display: block; margin: 0 auto;"></iframe>
+    </div>
+</div>

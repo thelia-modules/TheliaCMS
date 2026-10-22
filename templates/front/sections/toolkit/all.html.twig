@@ -7,6 +7,7 @@
 #}
 {# The stylesheet of the sections, which a page of the site links and the toolkit does not. #}
 <link rel="stylesheet" href="{{ path('cms.block_styles') }}">
+<link rel="stylesheet" href="{{ path('cms.site_component_styles') }}">
 <div class="Story">
     {% for section in cms_catalogue() %}
         <div class="Story-section" id="{{ section.name|lower|replace({':': '-'}) }}">
