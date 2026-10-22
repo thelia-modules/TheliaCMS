@@ -29,6 +29,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
+use TheliaCMS\Catalogue\CatalogueItems;
 use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaCMS\Security\CmsResources;
@@ -59,6 +60,7 @@ final readonly class CmsMediaAdminController
         private MediaUsageFinder $usages,
         private CmsMediaWriter $writer,
         private EditLanguage $languages,
+        private CatalogueItems $items,
     ) {
     }
 
@@ -138,6 +140,7 @@ final readonly class CmsMediaAdminController
             'form' => $form->createView(),
             'item' => $this->catalog->item($image, $locale),
             'usages' => $this->usages->pagesUsing($id),
+            'item_usages' => $this->itemUsages($id, $locale),
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
         ]));
@@ -163,6 +166,28 @@ final readonly class CmsMediaAdminController
         $this->writer->delete($image);
 
         return $this->backToList($request, $lang, $this->translator->trans('Image deleted.', [], TheliaCMS::DOMAIN_NAME));
+    }
+
+    /**
+     * The catalogue items whose document uses the image, named in the
+     * language being edited.
+     *
+     * @return list<array{type: string, id: int, title: string, locales: list<string>}>
+     */
+    private function itemUsages(int $imageId, string $locale): array
+    {
+        $usages = [];
+
+        foreach ($this->usages->itemsUsing($imageId) as $usage) {
+            $usages[] = [
+                'type' => $usage['type']->value,
+                'id' => $usage['id'],
+                'title' => $this->items->find($usage['type'], $usage['id'], $locale)?->title ?? '',
+                'locales' => $usage['locales'],
+            ];
+        }
+
+        return $usages;
     }
 
     private function buildForm(LibraryImage $image, string $locale): FormInterface

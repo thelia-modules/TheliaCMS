@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Content\Admin;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use TheliaCMS\Model\CmsItemContentQuery;
 use TheliaCMS\Model\CmsPageContentQuery;
 
 /**
@@ -24,12 +25,14 @@ use TheliaCMS\Model\CmsPageContentQuery;
  * The documents of every page out of the bin are read once, draft and
  * published, in every language: a component an unpublished draft uses is
  * one that page will go online with. A page using a component in two
- * languages, or in both its draft and what is online, counts once.
+ * languages, or in both its draft and what is online, counts once. The
+ * document of a catalogue item counts as one page more: putting a component
+ * away would break it the same way.
  */
 final readonly class SectionUsageFinder
 {
     /**
-     * @return array<string, int> number of pages, keyed by component name; a component no page uses is absent
+     * @return array<string, int> number of pages and catalogue items, keyed by component name; a component nothing uses is absent
      */
     public function pageCounts(): array
     {
@@ -46,7 +49,20 @@ final readonly class SectionUsageFinder
         foreach ($rows as $row) {
             foreach ([$row['DraftDocument'], $row['PublishedDocument']] as $json) {
                 foreach (self::components((string) $json) as $component) {
-                    $pagesByComponent[$component][(int) $row['PageId']] = true;
+                    $pagesByComponent[$component]['page-'.$row['PageId']] = true;
+                }
+            }
+        }
+
+        $items = CmsItemContentQuery::create()
+            ->select(['ItemType', 'ItemId', 'DraftDocument', 'PublishedDocument'])
+            ->find()
+            ->toArray();
+
+        foreach ($items as $row) {
+            foreach ([$row['DraftDocument'], $row['PublishedDocument']] as $json) {
+                foreach (self::components((string) $json) as $component) {
+                    $pagesByComponent[$component][$row['ItemType'].'-'.$row['ItemId']] = true;
                 }
             }
         }

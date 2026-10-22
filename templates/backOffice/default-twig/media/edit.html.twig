@@ -59,14 +59,15 @@
             </div>
 
             <div class="card mt-3">
+                {% set used_by = usages|length + item_usages|length %}
                 <div class="card-header">
-                    {% if usages is empty %}
+                    {% if used_by == 0 %}
                         {{ 'Not used yet'|trans({}, 'theliacms') }}
                     {% else %}
-                        {{ 'Used in %count% page(s)'|trans({ '%count%': usages|length }, 'theliacms') }}
+                        {{ 'Used in %count% page(s)'|trans({ '%count%': used_by }, 'theliacms') }}
                     {% endif %}
                 </div>
-                {% if usages is empty %}
+                {% if used_by == 0 %}
                     <div class="card-body text-muted small">
                         {{ 'Deleting it now affects nothing.'|trans({}, 'theliacms') }}
                     </div>
@@ -76,6 +77,15 @@
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <a href="{{ path('admin.cms.pages.edit', { id: usage.page.id, edit_language_id: edit_language_id }) }}">
                                     {{ usage.page.setLocale(edit_locale).title|default('#' ~ usage.page.id) }}
+                                </a>
+                                <span class="text-muted small">{{ usage.locales|join(', ') }}</span>
+                            </li>
+                        {% endfor %}
+                        {% for usage in item_usages %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center" data-testid="cms-media-item-usage">
+                                <a href="{{ path('admin.cms.catalogue.content.edit', { type: usage.type, id: usage.id, edit_language_id: edit_language_id }) }}">
+                                    {{ usage.title|default('#' ~ usage.id) }}
+                                    <span class="text-muted small">({{ usage.type|trans({}, 'theliacms') }})</span>
                                 </a>
                                 <span class="text-muted small">{{ usage.locales|join(', ') }}</span>
                             </li>
@@ -109,10 +119,10 @@
                   action="{{ path('admin.cms.media.delete', { id: item.id, edit_language_id: edit_language_id }) }}"
                   onsubmit="return confirm('{{ 'Delete this image for good?'|trans({}, 'theliacms')|e('js') }}')">
                 <input type="hidden" name="_token" value="{{ assignToken() }}">
-                <button type="submit" class="btn btn-sm btn-outline-danger" {{ usages is not empty ? 'disabled' : '' }}>
+                <button type="submit" class="btn btn-sm btn-outline-danger" {{ used_by > 0 ? 'disabled' : '' }}>
                     <i class="bi bi-trash3 me-1" aria-hidden="true"></i>{{ 'Delete this image'|trans({}, 'theliacms') }}
                 </button>
-                {% if usages is not empty %}
+                {% if used_by > 0 %}
                     <span class="form-text d-block">{{ 'Remove it from the pages above before deleting it.'|trans({}, 'theliacms') }}</span>
                 {% endif %}
             </form>

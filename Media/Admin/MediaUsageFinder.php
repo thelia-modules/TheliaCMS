@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace TheliaCMS\Media\Admin;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use TheliaCMS\Catalogue\CatalogueItemType;
+use TheliaCMS\Model\CmsItemContentQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
@@ -26,7 +28,8 @@ use TheliaCMS\Model\CmsPageQuery;
  * pictures behind. An image reaches a page two ways: as a URL inside its stored
  * HTML, which has no join to make, so the contents are read once and scanned in
  * memory for every image at a time — one query for a whole grid rather than one
- * per card — and as the image of the page, read from its column.
+ * per card — and as the image of the page, read from its column. The document
+ * of a catalogue item uses an image the same way the content of a page does.
  */
 final readonly class MediaUsageFinder
 {
@@ -53,6 +56,14 @@ final readonly class MediaUsageFinder
 
         foreach ($this->pagesShowing($imageIds) as $pageId => $imageId) {
             $pagesByImage[$imageId][$pageId] = true;
+        }
+
+        foreach ($this->itemContents() as $content) {
+            foreach ($imageIds as $imageId) {
+                if ($this->references($content['html'], $imageId)) {
+                    $pagesByImage[$imageId][$content['type']->value.'-'.$content['id']] = true;
+                }
+            }
         }
 
         return array_map(\count(...), $pagesByImage);
@@ -97,11 +108,34 @@ final readonly class MediaUsageFinder
     }
 
     /**
-     * Number of live pages using an image.
+     * Catalogue items whose document uses an image, with the locales they
+     * use it in.
+     *
+     * @return list<array{type: CatalogueItemType, id: int, locales: list<string>}>
+     */
+    public function itemsUsing(int $imageId): array
+    {
+        $usages = [];
+
+        foreach ($this->itemContents() as $content) {
+            if (!$this->references($content['html'], $imageId)) {
+                continue;
+            }
+
+            $key = $content['type']->value.'-'.$content['id'];
+            $usages[$key] ??= ['type' => $content['type'], 'id' => $content['id'], 'locales' => []];
+            $usages[$key]['locales'][] = $content['locale'];
+        }
+
+        return array_values($usages);
+    }
+
+    /**
+     * Number of live pages and catalogue items using an image.
      */
     public function useCount(int $imageId): int
     {
-        return \count($this->pagesUsing($imageId));
+        return \count($this->pagesUsing($imageId)) + \count($this->itemsUsing($imageId));
     }
 
     /**
@@ -130,6 +164,39 @@ final readonly class MediaUsageFinder
         foreach ($rows as $row) {
             $contents[] = [
                 'pageId' => (int) $row['PageId'],
+                'locale' => (string) $row['Locale'],
+                'html' => (string) $row['DraftHtml'].(string) $row['PublishedHtml'].(string) $row['DraftDocument'].(string) $row['PublishedDocument'],
+            ];
+        }
+
+        return $contents;
+    }
+
+    /**
+     * Stored documents of the catalogue items, one row per locale, the four
+     * columns read as for a page.
+     *
+     * @return list<array{type: CatalogueItemType, id: int, locale: string, html: string}>
+     */
+    private function itemContents(): array
+    {
+        $rows = CmsItemContentQuery::create()
+            ->select(['ItemType', 'ItemId', 'Locale', 'DraftHtml', 'PublishedHtml', 'DraftDocument', 'PublishedDocument'])
+            ->find()
+            ->toArray();
+
+        $contents = [];
+
+        foreach ($rows as $row) {
+            $type = CatalogueItemType::tryFrom((string) $row['ItemType']);
+
+            if (null === $type) {
+                continue;
+            }
+
+            $contents[] = [
+                'type' => $type,
+                'id' => (int) $row['ItemId'],
                 'locale' => (string) $row['Locale'],
                 'html' => (string) $row['DraftHtml'].(string) $row['PublishedHtml'].(string) $row['DraftDocument'].(string) $row['PublishedDocument'],
             ];

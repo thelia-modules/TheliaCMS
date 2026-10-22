@@ -1030,4 +1030,6 @@ return [
     'Back to the category' => 'Back to the category',
     'Back to the content' => 'Back to the content',
     'Back to the folder' => 'Back to the folder',
+    'content' => 'content',
+    'folder' => 'folder',
 ];

@@ -20,12 +20,16 @@ use TheliaCMS\Catalogue\Admin\ItemContentTabHook;
 use TheliaCMS\Catalogue\Admin\ItemContentWriter;
 use TheliaCMS\Catalogue\CatalogueItemType;
 use TheliaCMS\Content\Document;
+use TheliaCMS\Content\ImageSection;
+use TheliaCMS\Content\Section;
 use TheliaCMS\Generation\ClaudeClientProviderInterface;
+use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsItemContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Preview\ItemPreviewLink;
 use TheliaCMS\Tests\Integration\Generation\FakeClaudeTransport;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaLibrary\Model\LibraryImage;
 
 /**
  * The document of a catalogue item in the back office: the tab on the edit
@@ -150,6 +154,28 @@ final class ItemContentScreenTest extends AdminScreenTestCase
 
         $this->client->request('GET', substr($url, 0, -1).('0' === substr($url, -1) ? '1' : '0'));
         self::assertSame(404, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testTheScreenOfAnImageNamesTheItemsUsingItAndKeepsItFromBeingDeleted(): void
+    {
+        $content = $this->content();
+        $image = new LibraryImage();
+        $image->setDecorative(1);
+        $image->setLocale($this->locale())->setFileName('item-screen.jpg')->setTitle('item-screen.jpg');
+        $image->save();
+        $this->getService(CmsMediaLibrary::class)->tag($image);
+
+        $this->getService(ItemContentWriter::class)->saveContent(CatalogueItemType::Content, (int) $content->getId(), $this->locale(), new Document([
+            new Section('picture', ImageSection::NAME, ['image' => (int) $image->getId(), 'alt' => '']),
+        ]));
+
+        $screen = $this->screen(\sprintf('/admin/cms/media/%d', $image->getId()));
+        $usage = $screen->filter('[data-testid="cms-media-item-usage"]');
+
+        self::assertSame(1, $usage->count());
+        self::assertStringContainsString('Notre méthode', $usage->text());
+        self::assertStringContainsString(\sprintf('/admin/cms/catalogue/content/%d/content', $content->getId()), (string) $usage->filter('a')->attr('href'));
+        self::assertNotNull($screen->filter('form[action*="/delete"] button')->attr('disabled'), 'An image in use cannot be deleted.');
     }
 
     private function content(): Content

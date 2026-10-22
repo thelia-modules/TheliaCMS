@@ -17,13 +17,15 @@ namespace TheliaCMS\Content\Site;
 use Propel\Runtime\ActiveQuery\Criteria;
 use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\PropSchema;
+use TheliaCMS\Model\CmsItemContent;
+use TheliaCMS\Model\CmsItemContentQuery;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageI18nQuery;
 
 /**
- * The pages that hold a component of the site, and what a new version of it
- * would do to them.
+ * The pages, and the documents of the catalogue items, that hold a component
+ * of the site, and what a new version of it would do to them.
  *
  * A page stores the props of its sections; a version of the component that
  * no longer takes them (a prop removed, retyped, made required) leaves the
@@ -54,6 +56,27 @@ final readonly class SiteComponentUsage
                             'The page "%s" (#%d, %s, %s) holds the section "%s", which this version refuses: %s',
                             $this->titleOf((int) $content->getPageId(), (string) $content->getLocale()),
                             $content->getPageId(),
+                            $content->getLocale(),
+                            $state,
+                            $id,
+                            implode(' ', $exception->problems),
+                        );
+                    }
+                }
+            }
+        }
+
+        // The document of a catalogue item breaks the same way.
+        foreach ($this->itemContents($name) as $content) {
+            foreach (['draft' => $content->getDraftDocument(), 'published' => $content->getPublishedDocument()] as $state => $json) {
+                foreach (self::sectionsOf((string) $json, $name) as $id => $props) {
+                    try {
+                        $schema->normalize($props);
+                    } catch (InvalidDocumentException $exception) {
+                        $breakages[] = \sprintf(
+                            'The %s #%d (%s, %s) holds the section "%s", which this version refuses: %s',
+                            $content->getItemType(),
+                            $content->getItemId(),
                             $content->getLocale(),
                             $state,
                             $id,
@@ -111,6 +134,28 @@ final readonly class SiteComponentUsage
                 ->condition('published', 'cms_page_content.published_document LIKE ?', $like)
                 ->where(['draft', 'published'], Criteria::LOGICAL_OR)
                 ->orderByPageId()
+                ->orderByLocale()
+                ->find(),
+            false,
+        );
+    }
+
+    /**
+     * The documents of the catalogue items that may name the component.
+     *
+     * @return list<CmsItemContent>
+     */
+    private function itemContents(string $name): array
+    {
+        $like = '%'.addcslashes(json_encode($name, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES), '%_\\').'%';
+
+        return iterator_to_array(
+            CmsItemContentQuery::create()
+                ->condition('draft', 'cms_item_content.draft_document LIKE ?', $like)
+                ->condition('published', 'cms_item_content.published_document LIKE ?', $like)
+                ->where(['draft', 'published'], Criteria::LOGICAL_OR)
+                ->orderByItemType()
+                ->orderByItemId()
                 ->orderByLocale()
                 ->find(),
             false,
