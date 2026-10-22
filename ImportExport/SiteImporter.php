@@ -20,6 +20,10 @@ use Propel\Runtime\Propel;
 use Thelia\Model\Lang;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
+use TheliaCMS\Content\Site\InvalidSiteComponentException;
+use TheliaCMS\Content\Site\SiteComponent;
+use TheliaCMS\Content\Site\SiteComponentRepository;
+use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Form\FieldChoices;
 use TheliaCMS\Generation\Brief;
 use TheliaCMS\Menu\MenuCache;
@@ -75,6 +79,8 @@ final readonly class SiteImporter
         private PageTypeWriter $pageTypeWriter,
         private PublishedContentSanitizer $sanitizer,
         private PageTagWriter $tagWriter,
+        private ?SiteComponentRepository $components = null,
+        private SiteComponentValidator $componentValidator = new SiteComponentValidator(),
     ) {
     }
 
@@ -105,6 +111,8 @@ final readonly class SiteImporter
         try {
             $mediaMap = $this->mediaMap($document, $report);
             $this->importPageTypes($document, $report, $connection);
+            $this->importComponents($document, $options, $report);
+            $this->reportMissingComponents($document, $report);
             $pageIds = $this->importPages($document, $options, $report, $mediaMap, $connection);
 
             $this->importMenus($document, $options, $report, $pageIds, $connection);
@@ -293,6 +301,96 @@ final readonly class SiteImporter
                     $connection,
                 );
             }
+        }
+    }
+
+    /**
+     * The components the site made, checked as if the model had just written
+     * them: a file is no reason to trust a template. One the site already has
+     * under the same code is kept unless the import replaces, and then only
+     * when the two differ.
+     */
+    private function importComponents(SiteDocument $document, ImportOptions $options, ImportReport $report): void
+    {
+        if (null === $this->components) {
+            return;
+        }
+
+        foreach ($document->components() as $row) {
+            $code = \is_string($row['code'] ?? null) ? $row['code'] : '';
+
+            try {
+                $component = $this->componentValidator->validate(new SiteComponent(
+                    $code,
+                    \is_string($row['label'] ?? null) ? $row['label'] : '',
+                    \is_string($row['description'] ?? null) ? $row['description'] : '',
+                    \is_array($row['props'] ?? null) && array_is_list($row['props']) ? array_values(array_filter($row['props'], 'is_array')) : [],
+                    \is_array($row['sample'] ?? null) ? $row['sample'] : [],
+                    \is_string($row['template'] ?? null) ? $row['template'] : '',
+                    \is_string($row['css'] ?? null) ? $row['css'] : '',
+                ));
+            } catch (InvalidSiteComponentException $exception) {
+                $report->warn(\sprintf('The component "%s" was left out: %s', $code, implode(' ', $exception->problems)));
+
+                continue;
+            }
+
+            $existing = $this->components->find($component->code);
+
+            if (null === $existing) {
+                $this->components->save($component, SiteComponentRepository::STATUS_READY);
+                $report->created('components');
+
+                continue;
+            }
+
+            if ($existing == $component || !$options->replace) {
+                if ($existing != $component) {
+                    $report->warn(\sprintf('The component "%s" of this site differs from the one of the file: the one of the site was kept.', $component->code));
+                }
+
+                $report->skipped('components');
+
+                continue;
+            }
+
+            $this->components->save($component, SiteComponentRepository::STATUS_READY, $component->code);
+            $report->replaced('components');
+        }
+    }
+
+    /**
+     * A page of the file made of a component of a site the file does not
+     * carry and this site does not have: it comes in with the HTML of the
+     * file, without the styles of that component, and cannot be saved again
+     * until such a component is made here.
+     */
+    private function reportMissingComponents(SiteDocument $document, ImportReport $report): void
+    {
+        if (null === $this->components) {
+            return;
+        }
+
+        $missing = [];
+
+        foreach ($document->pages() as $page) {
+            foreach (\is_array($page['contents'] ?? null) ? $page['contents'] : [] as $content) {
+                foreach (['draft_document', 'published_document'] as $column) {
+                    $decoded = \is_array($content) && \is_string($content[$column] ?? null) ? json_decode($content[$column], true) : null;
+
+                    foreach (\is_array($decoded) && \is_array($decoded['sections'] ?? null) ? $decoded['sections'] : [] as $section) {
+                        $name = \is_array($section) && \is_string($section['component'] ?? null) ? $section['component'] : '';
+
+                        if (str_starts_with($name, SiteComponent::PREFIX) && null === $this->components->find(substr($name, \strlen(SiteComponent::PREFIX)))) {
+                            $missing[$name] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach (array_keys($missing) as $name) {
+            $report->warn(\sprintf('Pages of the file are made of the component "%s", which neither the file nor this site has: they keep the HTML of the file, without its styles, and cannot be saved until it is made here.', $name));
         }
     }
 

@@ -1,8 +1,9 @@
 # Plan: components made in the back office
 
-Status: steps 1 to 7 done (storage, definition, validator, generator,
-screen, changes checked against the pages, deletion); step 8 (export and
-import) is next. The design questions are
+Status: steps 1 to 8 done (storage, definition, validator, generator,
+screen, changes checked against the pages, deletion, export and import);
+step 9 (docs and changelog) is next, then step 11 (a page generated with a
+component of the site). The design questions are
 settled (see "Decisions taken").
 
 ## What is asked
@@ -184,6 +185,16 @@ renders the sample, and keeps it only when the editor says so.
   the path of `thelia_cms:render`); a draft that cannot be drawn is named.
   Deleting is refused while a page holds the component; a deleted component
   leaves no name in the list of the ones switched off.
+
+- **Step 8.** `ImportExport/SiteExporter.php` writes the `ready`
+  components in a `components` section before the pages
+  (`ExportFormat::SECTIONS`); `SiteImporter` imports them before the pages,
+  each one through `SiteComponentValidator`; one the site has under the same
+  code is kept unless `--replace`, and the report says when the two differ.
+  A page of the file naming a `Site:` component that neither the file nor
+  the site has is reported: it keeps the HTML of the file, without the
+  styles of that component, and cannot be saved until it is made. Tests:
+  `Tests/Integration/ImportExport/SiteComponentImportTest.php`.
 
 What the code settled that the plan did not say:
 

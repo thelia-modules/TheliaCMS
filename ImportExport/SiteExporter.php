@@ -22,6 +22,7 @@ use TheliaCMS\Model\CmsFormFieldQuery;
 use TheliaCMS\Model\CmsFormQuery;
 use TheliaCMS\Model\CmsMenu;
 use TheliaCMS\Model\CmsMenuItemQuery;
+use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -53,6 +54,7 @@ final readonly class SiteExporter
     public function __construct(
         private CmsSettings $settings,
         private MediaReferences $media,
+        private ?SiteComponentRepository $components = null,
     ) {
     }
 
@@ -74,6 +76,8 @@ final readonly class SiteExporter
         return [
             ...ExportFormat::header($this->moduleVersion(), $locales, new \DateTimeImmutable()),
             'page_types' => $this->pageTypes($locales),
+            // Before the pages: a page names the components it is made of.
+            'components' => $this->siteComponents(),
             'pages' => $pages,
             'menus' => $this->menus($locales),
             'forms' => $this->forms($locales),
@@ -184,6 +188,25 @@ final readonly class SiteExporter
         }
 
         return $types;
+    }
+
+    /**
+     * The components the site made and kept, as written: a candidate never
+     * kept is a call of the ledger, not a component.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function siteComponents(): array
+    {
+        return array_map(static fn ($component): array => [
+            'code' => $component->code,
+            'label' => $component->label,
+            'description' => $component->description,
+            'props' => $component->props,
+            'sample' => (object) $component->sample,
+            'template' => $component->template,
+            'css' => $component->css,
+        ], $this->components?->ready() ?? []);
     }
 
     public static function pageUid(int $id): string

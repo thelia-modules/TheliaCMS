@@ -153,6 +153,16 @@ final readonly class SiteDocument
     }
 
     /**
+     * The components the site made in the back office.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function components(): array
+    {
+        return $this->rowsOf('components');
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     public function menus(): array

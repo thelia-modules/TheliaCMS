@@ -989,8 +989,9 @@ php Thelia thelia_cms:export site.json
 php Thelia thelia_cms:import site.json [--replace] [--with-settings]
 ```
 
-The file holds the page tree, the content of every language, the menus, the
-forms and their fields and the settings. It is a starter
+The file holds the page tree, the content of every language, the components
+made in the back office, the menus, the forms and their fields and the
+settings. It is a starter
 kit you build once and start the next project from, and it is a copy of the
 content to keep somewhere other than the database.
 
@@ -1005,7 +1006,9 @@ first, under the same names, and the import points the content at them; whatever
 is missing is named in the report rather than left as a silent hole.
 
 An import leaves alone whatever is already there: a page at the same address, a
-menu or a form carrying the same code. It counts them and says so. `--replace`
+menu, a form or a component carrying the same code. It counts them and says so.
+A component of the file is checked as if the generator had just written it; one
+the site refuses is left out and named. `--replace`
 overwrites them instead. Settings are only applied when asked for, so importing
 a starter kit never switches a running site into showcase mode by surprise. The
 whole thing runs in one transaction, so a file that turns out to be broken
