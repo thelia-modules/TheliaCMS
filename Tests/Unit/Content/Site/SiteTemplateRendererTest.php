@@ -50,6 +50,7 @@ final class SiteTemplateRendererTest extends TestCase
         yield 'a syntax error' => ['{% if %}'];
         yield 'a template it uses' => ['{% use "base.html.twig" %}'];
         yield 'a template it extends' => ['{% extends "base.html.twig" %}'];
+        yield 'a template it extends, trimming spaces' => ['{%~ extends "base.html.twig" %}'];
         yield 'a range without a bound' => ['{% for i in range(1, 100000000) %}{% endfor %}'];
         yield 'a range written as dots' => ['{% for i in 1..100000000 %}{% endfor %}'];
     }

@@ -202,7 +202,9 @@ final readonly class SiteCssScoper
 
     /**
      * The selectors of a list, split on the commas that are not inside
-     * parentheses (`:is(a, b)`), brackets (`[title="a,b"]`) or quotes.
+     * parentheses (`:is(a, b)`), brackets (`[title="a,b"]`) or quotes. An
+     * escaped quote is not read as one: SiteComponentValidator refuses every
+     * backslash in the stylesheet of a component, which this relies on.
      *
      * @return list<string>
      */

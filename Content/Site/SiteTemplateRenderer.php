@@ -81,7 +81,7 @@ final class SiteTemplateRenderer
             return ['The template uses what a component may not (the "constant" test).'];
         }
 
-        if (1 === preg_match('/\{%-?\s*(extends|use)\b/', $template, $match)) {
+        if (1 === preg_match('/\{%[-~]?\s*(extends|use)\b/', $template, $match)) {
             return [\sprintf('The template uses what a component may not (the "%s" tag): a component is one template.', $match[1])];
         }
 
