@@ -16,12 +16,16 @@ namespace TheliaCMS\Tests\Integration\Content;
 
 use Thelia\Core\Security\AccessManager;
 use Thelia\Test\FixtureFactory;
+use TheliaCMS\Content\Document;
+use TheliaCMS\Content\Section;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Generation\Component\ComponentPrompt;
 use TheliaCMS\Model\CmsComponentQuery;
+use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
+use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Tests\Integration\Generation\FakeClaudeTransport;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
@@ -133,6 +137,54 @@ final class SiteComponentScreenTest extends AdminScreenTestCase
         self::assertSame(302, $this->send('POST', $keep->getUri(), $keep->getPhpValues()));
         self::assertSame('.plan { color: var(--cms-color-text); }', $repository->find('PriceTable')?->css);
         self::assertSame(1, CmsComponentQuery::create()->count(), 'The component is replaced, not doubled.');
+    }
+
+    public function testAVersionThatBreaksAPageIsNotKeptAndOneThatFitsDrawsTheDraftsAgain(): void
+    {
+        $repository = $this->getService(SiteComponentRepository::class);
+        $repository->save(PriceTable::component(), SiteComponentRepository::STATUS_READY);
+        // A candidate written before a page used the component: the check
+        // runs again when it is kept, on what the pages hold then.
+        $this->api->answer(self::answer(PriceTable::renamingThePlanName()))->answer(self::answer(PriceTable::component(str_replace('class="price-table ', 'class="price-table price-table--v2 ', PriceTable::TEMPLATE))));
+        $breaking = $this->ask('Renomme le nom des formules en titre.', ['component' => 'PriceTable'], '/admin/cms/components/site/PriceTable');
+        $fitting = $this->ask('Ajoute un commentaire.', ['component' => 'PriceTable'], '/admin/cms/components/site/PriceTable');
+
+        $page = $this->createPage('Nos tarifs', published: false);
+        $writer = $this->getService(CmsPageWriter::class);
+        $writer->saveContent($page, $this->locale(), new Document([new Section('plans', 'Site:PriceTable', ['plans' => [['name' => 'Studio', 'price' => '40 €']]])]));
+
+        $keep = $this->screen($breaking)->filter('[data-testid="cms-site-component-keep"]')->form();
+        self::assertSame(302, $this->send('POST', $keep->getUri(), $keep->getPhpValues()));
+        self::assertStringEndsWith('/candidates/'.self::idOf($breaking), (string) $this->client->getResponse()->headers->get('Location'), 'The editor stays on the candidate.');
+        self::assertStringContainsString('"Nos tarifs"', $this->screen($breaking)->text(), 'The page it would break is named.');
+        self::assertSame(PriceTable::TEMPLATE, $repository->find('PriceTable')?->template, 'The kept version stays.');
+
+        $keep = $this->screen($fitting)->filter('[data-testid="cms-site-component-keep"]')->form();
+        self::assertSame(302, $this->send('POST', $keep->getUri(), $keep->getPhpValues()));
+        self::assertStringContainsString('price-table--v2', (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml(), 'The draft is drawn again with the version kept.');
+    }
+
+    public function testAComponentIsDeletedOnlyOnceNoPageHoldsIt(): void
+    {
+        $repository = $this->getService(SiteComponentRepository::class);
+        $repository->save(PriceTable::component(), SiteComponentRepository::STATUS_READY);
+        $page = $this->createPage('Nos tarifs', published: false);
+        $writer = $this->getService(CmsPageWriter::class);
+        $writer->saveContent($page, $this->locale(), new Document([new Section('plans', 'Site:PriceTable', ['plans' => [['name' => 'Studio', 'price' => '40 €']]])]));
+
+        $screen = $this->screen('/admin/cms/components/site/PriceTable');
+        self::assertSame(1, $screen->filter('[data-testid="cms-site-component-in-use"]')->count());
+        self::assertSame(0, $screen->filter('[data-testid="cms-site-component-delete"]')->count());
+
+        $token = $this->tokenOfTheScripts($screen);
+        self::assertSame(302, $this->send('POST', '/admin/cms/components/site/PriceTable/delete', ['_token' => $token]));
+        self::assertNotNull($repository->find('PriceTable'), 'A component a page holds stays.');
+
+        $writer->saveContent($page, $this->locale(), new Document([new Section('intro', 'cms:richtext', ['html' => '<h2>Tarifs</h2>'])]));
+        $delete = $this->screen('/admin/cms/components/site/PriceTable')->filter('[data-testid="cms-site-component-delete"]')->form();
+        self::assertSame(302, $this->send('POST', $delete->getUri(), $delete->getPhpValues()));
+        self::assertNull($repository->find('PriceTable'));
+        self::assertStringEndsWith('/admin/cms/components', (string) $this->client->getResponse()->headers->get('Location'));
     }
 
     public function testACallThatFailsIsShownWithWhatWentWrong(): void

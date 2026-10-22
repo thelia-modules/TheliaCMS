@@ -99,6 +99,11 @@ final readonly class SiteComponentRepository
             ->save();
     }
 
+    public function delete(string $code): void
+    {
+        CmsComponentQuery::create()->filterByCode($code)->delete();
+    }
+
     private static function fromModel(CmsComponent $model): SiteComponent
     {
         return new SiteComponent(

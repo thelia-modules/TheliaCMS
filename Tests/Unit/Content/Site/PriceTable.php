@@ -44,5 +44,18 @@ final class PriceTable
         );
     }
 
+    /**
+     * A version the pages written with the first one cannot hold: every plan
+     * now needs a `title`, and its `name` is gone.
+     */
+    public static function renamingThePlanName(): SiteComponent
+    {
+        $component = self::component('<section>{% for plan in props.plans %}<h3>{{ plan.title }}</h3>{% endfor %}</section>');
+        $props = $component->props;
+        $props[1]['items'][0] = ['name' => 'title', 'type' => 'text', 'label' => 'Title', 'required' => true, 'max' => 60];
+
+        return new SiteComponent($component->code, $component->label, $component->description, $props, ['plans' => [['title' => 'Basic'], ['title' => 'Pro']]], $component->template, $component->css);
+    }
+
     public const string TEMPLATE = '<section class="price-table price-table--{{ props.tone }}">{% if props.title is not empty %}<h2>{{ props.title }}</h2>{% endif %}<div class="price-table__plans">{% for plan in props.plans %}<article class="plan{{ plan.featured ? " plan--featured" }}"><h3>{{ plan.name }}</h3><p class="plan__price">{{ plan.price }}</p>{{ plan.details }}</article>{% endfor %}</div></section>';
 }

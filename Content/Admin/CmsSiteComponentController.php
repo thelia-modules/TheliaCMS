@@ -28,6 +28,7 @@ use TheliaCMS\Content\SectionAvailability;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentRepository;
+use TheliaCMS\Content\Site\SiteComponentUsage;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Content\Site\SitePropReader;
 use TheliaCMS\Generation\Component\ComponentCandidates;
@@ -36,6 +37,9 @@ use TheliaCMS\Generation\Component\ComponentRequest;
 use TheliaCMS\Generation\GenerationException;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Model\CmsComponentQuery;
+use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Page\Admin\CmsPageWriter;
+use TheliaCMS\Page\Admin\DraftRendering;
 use TheliaCMS\Preview\ComponentPreviewLink;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -54,6 +58,9 @@ use Twig\Environment;
 #[Route('/admin/cms/components/site', name: 'admin.cms.components.site.')]
 final readonly class CmsSiteComponentController
 {
+    /** The code of a component of the site, as its addresses carry it. */
+    private const string CODE = '[A-Z][A-Za-z0-9]{1,39}';
+
     private const string TEMPLATES = '@TheliaCMSModule/backOffice/default-twig/components/site/';
 
     public function __construct(
@@ -69,6 +76,8 @@ final readonly class CmsSiteComponentController
         private SectionAvailability $availability,
         private SectionUsageFinder $usage,
         private ComponentPreviewLink $previews,
+        private SiteComponentUsage $pagesUsing,
+        private CmsPageWriter $writer,
     ) {
     }
 
@@ -155,6 +164,13 @@ final readonly class CmsSiteComponentController
 
         try {
             $component = $this->validator->validate($candidate->component);
+
+            // The pages may have changed since the candidate was written: what
+            // they hold now is what the version must still take.
+            if (null !== $replacing && [] !== $breakages = $this->pagesUsing->breakages($component, $this->props->read($component->props))) {
+                throw InvalidSiteComponentException::because($breakages);
+            }
+
             $this->components->save($component, SiteComponentRepository::STATUS_READY, $replacing);
         } catch (InvalidSiteComponentException $exception) {
             $this->flash($request, 'danger', implode(' ', $exception->problems));
@@ -168,30 +184,103 @@ final readonly class CmsSiteComponentController
             $this->candidates->attach([$candidate->logId], $componentId);
         }
 
-        $this->flash($request, 'success', $this->translator->trans(
-            null === $replacing ? '"%label%" is a component of the site: pages may use it, and the generator is offered it.' : '"%label%" is changed. Drafts drawn with it change at their next save; published pages at their next publication.',
-            ['%label%' => $component->label],
-            TheliaCMS::DOMAIN_NAME,
-        ));
+        if (null === $replacing) {
+            $this->flash($request, 'success', $this->translator->trans('"%label%" is a component of the site: pages may use it, and the generator is offered it.', ['%label%' => $component->label], TheliaCMS::DOMAIN_NAME));
+        } else {
+            [$rendered, $left] = $this->renderDraftsUsing($component->name());
+            $this->flash($request, 'success', $this->translator->trans(
+                '"%label%" is changed: %rendered% draft(s) drawn again with it. Published pages change at their next publication.',
+                ['%label%' => $component->label, '%rendered%' => $rendered],
+                TheliaCMS::DOMAIN_NAME,
+            ));
 
-        return new RedirectResponse($this->urls->generate('admin.cms.components.site.show', ['code' => $component->code]));
+            if ([] !== $left) {
+                $this->flash($request, 'warning', $this->translator->trans('Drafts left as they were, to save from their screen: %pages%', ['%pages%' => implode(', ', $left)], TheliaCMS::DOMAIN_NAME));
+            }
+        }
+
+        return new RedirectResponse($this->urls->generate('admin.cms.components.site.show', ['component' => $component->code]));
     }
 
-    #[Route('/{code}', name: 'show', requirements: ['code' => '[A-Z][A-Za-z0-9]{1,39}'], methods: ['GET'])]
-    public function show(string $code, Request $request): Response
+    #[Route('/{component}', name: 'show', requirements: ['component' => self::CODE], methods: ['GET'])]
+    public function show(string $component, Request $request): Response
     {
-        $component = $this->components->find($code) ?? throw new NotFoundHttpException();
-        $id = (int) CmsComponentQuery::create()->findOneByCode($code)?->getId();
+        $kept = $this->components->find($component) ?? throw new NotFoundHttpException();
+        $id = (int) CmsComponentQuery::create()->findOneByCode($component)?->getId();
 
         return $this->render('component.html.twig', [
-            'component' => $component,
-            'props' => $this->propRows($component),
-            'preview_url' => $this->previews->component($code, $request->getLocale()),
+            'component' => $kept,
+            'props' => $this->propRows($kept),
+            'preview_url' => $this->previews->component($component, $request->getLocale()),
             'history' => $this->candidates->history($id),
-            'pages' => $this->usage->pageCounts()[$component->name()] ?? 0,
-            'offered' => $this->availability->isOffered($component->name()),
+            'pages' => $this->usage->pageCounts()[$kept->name()] ?? 0,
+            'offered' => $this->availability->isOffered($kept->name()),
             'may_make' => $this->mayMake(),
         ]);
+    }
+
+    /**
+     * Deleting a component no page holds. One a page holds, draft or online,
+     * in any language, stays: the page would hold a section the catalogue no
+     * longer knows. Its calls stay in the ledger, which is what the site spent.
+     */
+    #[Route('/{component}/delete', name: 'delete', requirements: ['component' => self::CODE], methods: ['POST'])]
+    public function delete(string $component, Request $request): Response
+    {
+        $this->denyUnlessMayMake();
+
+        $kept = $this->components->find($component) ?? throw new NotFoundHttpException();
+        $pages = $this->usage->pageCounts()[$kept->name()] ?? 0;
+
+        if ($pages > 0) {
+            $this->flash($request, 'danger', $this->translator->trans('"%label%" is used by %count% page(s): take it out of them before deleting it.', ['%label%' => $kept->label, '%count%' => $pages], TheliaCMS::DOMAIN_NAME));
+
+            return new RedirectResponse($this->urls->generate('admin.cms.components.site.show', ['component' => $component]));
+        }
+
+        $this->components->delete($component);
+        // A component switched off and deleted leaves no name behind in the
+        // list of the ones put away.
+        $this->availability->setOffered($kept->name(), true);
+        $this->flash($request, 'success', $this->translator->trans('"%label%" is deleted.', ['%label%' => $kept->label], TheliaCMS::DOMAIN_NAME));
+
+        return new RedirectResponse($this->urls->generate('admin.cms.components.list'));
+    }
+
+    /**
+     * Draws again the drafts that hold the component, the way
+     * `thelia_cms:render` does: a draft whose new rendering would lose custom
+     * code its author may not write, or that fails, is left as it was and
+     * named.
+     *
+     * @return array{0: int, 1: list<string>} the drafts drawn again, and the ones left
+     */
+    private function renderDraftsUsing(string $name): array
+    {
+        $rendered = 0;
+        $left = [];
+
+        foreach ($this->pagesUsing->drafts($name) as $draft) {
+            $page = CmsPageQuery::create()->findPk($draft['pageId']);
+
+            if (null === $page) {
+                continue;
+            }
+
+            try {
+                $outcome = $this->writer->renderDraftAgain($page, $draft['locale']);
+            } catch (\Throwable) {
+                $outcome = null;
+            }
+
+            if (DraftRendering::Rendered === $outcome || DraftRendering::Unchanged === $outcome) {
+                ++$rendered;
+            } else {
+                $left[] = \sprintf('#%d (%s)', $draft['pageId'], $draft['locale']);
+            }
+        }
+
+        return [$rendered, $left];
     }
 
     private function requestFor(Request $request, string $text): ComponentRequest
@@ -230,7 +319,7 @@ final readonly class CmsSiteComponentController
         $candidateId = (int) $request->request->get('candidate', 0);
 
         return match (true) {
-            1 === preg_match('/^[A-Z][A-Za-z0-9]{1,39}$/', $code) => $this->urls->generate('admin.cms.components.site.show', ['code' => $code]),
+            1 === preg_match('/^[A-Z][A-Za-z0-9]{1,39}$/', $code) => $this->urls->generate('admin.cms.components.site.show', ['component' => $code]),
             $candidateId > 0 => $this->urls->generate('admin.cms.components.site.candidate', ['id' => $candidateId]),
             default => $this->urls->generate('admin.cms.components.site.new'),
         };

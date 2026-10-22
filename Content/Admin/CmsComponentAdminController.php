@@ -78,7 +78,7 @@ final readonly class CmsComponentAdminController
                 'offered' => $this->availability->isOffered($name) || !$this->availability->canBeDisabled($name),
                 'may_disable' => $this->availability->canBeDisabled($name),
                 'toolkit_url' => null === $toolkitUrl ? null : $toolkitUrl.'#'.self::toolkitAnchor($name),
-                'site_url' => $definition instanceof SiteComponentSection ? $this->urls->generate('admin.cms.components.site.show', ['code' => $definition->component->code]) : null,
+                'site_url' => $definition instanceof SiteComponentSection ? $this->urls->generate('admin.cms.components.site.show', ['component' => $definition->component->code]) : null,
             ];
         }
 

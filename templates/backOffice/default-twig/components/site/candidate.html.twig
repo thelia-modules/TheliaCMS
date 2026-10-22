@@ -8,7 +8,7 @@
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: title } %}
         {% block actions %}
             {% if kept_code %}
-                <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.components.site.show', { code: kept_code }) }}">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.components.site.show', { component: kept_code }) }}">
                     <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to the component'|trans({}, 'theliacms') }}
                 </a>
             {% else %}
@@ -41,7 +41,7 @@
                         <p class="text-muted small">{{ component.description }}</p>
                         {% if may_make %}
                             {% if kept_code and pages > 0 %}
-                                <p class="small">{{ 'Used by %count% page(s): keeping this version changes them at their next save or publication.'|trans({ '%count%': pages }, 'theliacms') }}</p>
+                                <p class="small">{{ 'Used by %count% page(s): keeping this version draws their drafts again with it; published pages change at their next publication.'|trans({ '%count%': pages }, 'theliacms') }}</p>
                             {% endif %}
                             <form method="post" action="{{ path('admin.cms.components.site.keep', { id: candidate.logId }) }}" data-testid="cms-site-component-keep">
                                 <input type="hidden" name="_token" value="{{ assignToken() }}">

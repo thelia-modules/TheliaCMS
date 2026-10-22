@@ -18,6 +18,7 @@ use Psr\Log\NullLogger;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentRepository;
+use TheliaCMS\Content\Site\SiteComponentUsage;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Front\BlockStyles;
 use TheliaCMS\Generation\Component\ComponentGenerator;
@@ -116,6 +117,25 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
         self::assertSame([$id, ComponentRequest::KIND_CHANGE], [(int) CmsPageGenerationQuery::create()->findPk($changed->logId)?->getTargetId(), CmsPageGenerationQuery::create()->findPk($changed->logId)?->getKind()]);
     }
 
+    public function testAChangeThatBreaksThePagesUsingTheComponentGoesBackNamingThem(): void
+    {
+        $repository = $this->getService(SiteComponentRepository::class);
+        $repository->save((new SiteComponentValidator())->validate(PriceTable::component()), SiteComponentRepository::STATUS_READY);
+        $current = $repository->find('PriceTable');
+        self::assertNotNull($current);
+        $page = $this->createPage('Nos tarifs', published: false);
+        $this->writer()->saveContent($page, $this->locale(), new \TheliaCMS\Content\Document([new \TheliaCMS\Content\Section('plans', 'Site:PriceTable', ['plans' => [['name' => 'Studio', 'price' => '40 €']]])]));
+
+        $this->api->answer(self::answer(PriceTable::renamingThePlanName()))->answer(self::answer(PriceTable::component(css: '.plan { padding: 1rem; }')));
+        $result = $this->generator()->generate(new ComponentRequest('Renomme le nom des formules en titre.', $this->locale(), $current, (int) \TheliaCMS\Model\CmsComponentQuery::create()->findOneByCode('PriceTable')?->getId()));
+
+        self::assertSame(2, $result->turns);
+        $correction = $this->api->requests[1]['messages'][2]['content'];
+        self::assertStringContainsString('"Nos tarifs"', $correction, 'The page the version would break is named.');
+        self::assertStringContainsString('"plans"', $correction);
+        self::assertSame('.plan { padding: 1rem; }', $result->component->css);
+    }
+
     public function testAComponentRefusedThreeTimesIsAnErrorInTheLedger(): void
     {
         $broken = self::answer(PriceTable::component('{% include "base.html.twig" %}'));
@@ -161,6 +181,7 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
             $this->getService(GenerationLog::class),
             $this->getService(Pricing::class),
             new NullLogger(),
+            new SiteComponentUsage(),
         );
     }
 }

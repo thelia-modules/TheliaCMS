@@ -1,7 +1,8 @@
 # Plan: components made in the back office
 
-Status: steps 1 to 5 done (storage, definition, validator, generator,
-screen); step 6 (a change that breaks the pages using a component) is next. The design questions are
+Status: steps 1 to 7 done (storage, definition, validator, generator,
+screen, changes checked against the pages, deletion); step 8 (export and
+import) is next. The design questions are
 settled (see "Decisions taken").
 
 ## What is asked
@@ -174,6 +175,16 @@ renders the sample, and keeps it only when the editor says so.
   0.11 USD): candidate drawn in Flexy with its accent, stacked at 375 px
   without horizontal scroll, kept, listed, its stylesheet linked on the front.
 
+- **Steps 6 and 7.** `Content/Site/SiteComponentUsage.php` reads the
+  documents (draft and published, every language, pages out of the bin) that
+  hold a component and names every section a new version would refuse. The
+  generator sends such a version back for correction with the pages named;
+  keeping it is refused all the same, on what the pages hold then. Keeping a
+  version draws the drafts using it again (`CmsPageWriter::renderDraftAgain`,
+  the path of `thelia_cms:render`); a draft that cannot be drawn is named.
+  Deleting is refused while a page holds the component; a deleted component
+  leaves no name in the list of the ones switched off.
+
 What the code settled that the plan did not say:
 
 - The prop types are text, html, integer, boolean, choice, image, url and
@@ -216,6 +227,13 @@ What the code settled that the plan did not say:
   the validator, and escaped in the preview all the same.
 - `SectionCatalog` implements `ResetInterface`: a component kept in one
   request is in the catalogue of the next, in a worker serving many.
+- The stylesheet served is the one of the version kept, at once: a published
+  page keeps the markup of the version it was published with until it is
+  published again, under the rules of the new one. A change that renames a
+  class shows on such a page before the page is published again.
+- The routes of a component take `{component}`, not `{code}`: the other
+  `{code}` of the module are lowercase, and `WriteRoutesTest` builds one
+  sample per parameter name.
 - `.cms-site` (the element a component is drawn in) has the width of the
   content in `assets/blocks.css`, like the other blocks.
 

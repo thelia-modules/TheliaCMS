@@ -91,6 +91,8 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'format' => 'csv',
         // The code of a field of a page type starts with a letter.
         'field' => 'sample_field',
+        // The code of a component of the site is PascalCase.
+        'component' => 'SampleComponent',
     ];
 
     public function testEveryWriteIsRefusedWithoutTheToken(): void

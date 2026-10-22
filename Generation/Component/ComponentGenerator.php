@@ -22,7 +22,9 @@ use Psr\Log\LoggerInterface;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentRepository;
+use TheliaCMS\Content\Site\SiteComponentUsage;
 use TheliaCMS\Content\Site\SiteComponentValidator;
+use TheliaCMS\Content\Site\SitePropReader;
 use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Generation\GenerationException;
 use TheliaCMS\Generation\GenerationLog;
@@ -37,7 +39,8 @@ use TheliaCMS\Generation\Usage;
 /**
  * Asks the model for a component of the site and hands back one the site can
  * keep: checked by the validator, its code free (a new one) or unchanged (a
- * change). Nothing is saved here; the editor looks at it first.
+ * change), and a change still taking the props the pages using it hold.
+ * Nothing is saved here; the editor looks at it first.
  *
  * One conversation per request, without tools: the request, the component,
  * and the corrections it needs. A component the site refuses goes back with
@@ -58,6 +61,8 @@ final readonly class ComponentGenerator
         private GenerationLog $log,
         private Pricing $pricing,
         private LoggerInterface $logger,
+        private SiteComponentUsage $usage,
+        private SitePropReader $props = new SitePropReader(),
     ) {
     }
 
@@ -135,6 +140,13 @@ final readonly class ComponentGenerator
 
                 try {
                     $component = $this->validator->validate($this->componentFrom(self::textOf($message), $request));
+
+                    // A change of a kept component must still take what the
+                    // pages hold: one that breaks them is corrected like any
+                    // other refusal, the pages named.
+                    if (null !== $request->componentId && [] !== $breakages = $this->usage->breakages($component, $this->props->read($component->props))) {
+                        throw InvalidSiteComponentException::because($breakages);
+                    }
                 } catch (InvalidSiteComponentException $exception) {
                     if ($turns > self::CORRECTIONS) {
                         throw InvalidGenerationException::withProblems($exception->problems);
