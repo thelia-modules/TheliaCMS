@@ -76,7 +76,7 @@ final class SiteTemplateRenderer
         try {
             // The sandbox checks a template when it is displayed, not when it
             // is compiled: the check is run here, without rendering anything.
-            $this->twig()->createTemplate($template)->unwrap()->checkSecurity();
+            $this->twig()->createTemplate($template)->unwrap($this->twig())->checkSecurity();
         } catch (SecurityError $exception) {
             return [\sprintf('The template uses what a component may not (%s). Allowed tags: %s; filters: %s; tests: %s; functions: %s.', $exception->getRawMessage(), implode(', ', self::TAGS), implode(', ', self::FILTERS), implode(', ', self::TESTS), implode(', ', self::FUNCTIONS))];
         } catch (SyntaxError $exception) {
