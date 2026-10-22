@@ -1,0 +1,60 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Catalogue;
+
+use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Thelia\Core\Event\Category\CategoryDeleteEvent;
+use Thelia\Core\Event\Content\ContentDeleteEvent;
+use Thelia\Core\Event\Folder\FolderDeleteEvent;
+use Thelia\Core\Event\Product\ProductDeleteEvent;
+use Thelia\Core\Event\TheliaEvents;
+use TheliaCMS\Catalogue\Admin\ItemContentWriter;
+
+/**
+ * A deleted item takes its documents with it. Listened to after the core has
+ * deleted it (a negative priority), so a deletion the core refuses leaves the
+ * documents in place.
+ */
+final readonly class ItemDeletionListener
+{
+    public function __construct(
+        private ItemContentWriter $writer,
+    ) {
+    }
+
+    #[AsEventListener(event: TheliaEvents::PRODUCT_DELETE, priority: -128)]
+    public function onProductDelete(ProductDeleteEvent $event): void
+    {
+        $this->writer->forget(CatalogueItemType::Product, $event->getProductId());
+    }
+
+    #[AsEventListener(event: TheliaEvents::CATEGORY_DELETE, priority: -128)]
+    public function onCategoryDelete(CategoryDeleteEvent $event): void
+    {
+        $this->writer->forget(CatalogueItemType::Category, (int) $event->getCategoryId());
+    }
+
+    #[AsEventListener(event: TheliaEvents::CONTENT_DELETE, priority: -128)]
+    public function onContentDelete(ContentDeleteEvent $event): void
+    {
+        $this->writer->forget(CatalogueItemType::Content, (int) $event->getContentId());
+    }
+
+    #[AsEventListener(event: TheliaEvents::FOLDER_DELETE, priority: -128)]
+    public function onFolderDelete(FolderDeleteEvent $event): void
+    {
+        $this->writer->forget(CatalogueItemType::Folder, $event->getFolderId());
+    }
+}

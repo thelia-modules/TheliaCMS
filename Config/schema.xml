@@ -213,6 +213,52 @@
     </table>
 
     <!--
+        The document of a catalogue item: a product, a category, a content or a
+        folder, in one language. The same columns as the content of a page, the
+        item named by its type and its id rather than by a foreign key, since
+        four tables of the core can own one (docs/adr/0011). The theme prints it
+        on the page of the item with cms_item_content().
+    -->
+    <table name="cms_item_content" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="item_type" required="true" size="16" type="VARCHAR"/>
+        <column name="item_id" required="true" type="INTEGER"/>
+        <column name="locale" required="true" size="5" type="VARCHAR"/>
+        <column name="draft_document" type="CLOB"/>
+        <column name="draft_html" type="CLOB"/>
+        <column name="published_document" type="CLOB"/>
+        <column name="published_html" type="CLOB"/>
+        <column name="published_at" type="TIMESTAMP"/>
+        <column name="draft_updated_by" type="INTEGER"/>
+
+        <unique name="unq_cms_item_content_item_locale">
+            <unique-column name="item_type"/>
+            <unique-column name="item_id"/>
+            <unique-column name="locale"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <table name="cms_item_revision" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="item_type" required="true" size="16" type="VARCHAR"/>
+        <column name="item_id" required="true" type="INTEGER"/>
+        <column name="locale" required="true" size="5" type="VARCHAR"/>
+        <column name="document" type="CLOB"/>
+        <column name="html" type="CLOB"/>
+        <column name="created_by" type="INTEGER"/>
+
+        <index name="idx_cms_item_revision_item_locale">
+            <index-column name="item_type"/>
+            <index-column name="item_id"/>
+            <index-column name="locale"/>
+        </index>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
         Menus are addressed by code, never by id: a theme calls
         `cms_menu('main')` and must keep working on a site where the menu was
         deleted and created again.
