@@ -22,6 +22,9 @@ namespace TheliaCMS\Content\Site;
  *     .plan { … }            →  .cms-site--price-table .plan { … }
  *     :scope { … }, & { … }  →  .cms-site--price-table { … }
  *
+ * `:scope` and `&` only start a selector: anywhere else, or before `~` or
+ * `+`, they would name what is around the component, and are refused.
+ *
  * Rules may sit in `@media`, `@supports` and `@container`. Any other at-rule
  * is refused: `@import` and `@font-face` load from elsewhere, `@keyframes`
  * and `@property` are names of the whole page, which two components would
@@ -148,7 +151,21 @@ final readonly class SiteCssScoper
                 continue;
             }
 
-            $out .= implode(', ', array_map(fn (string $selector): string => $this->scoped($selector, $scope), $this->selectors($prelude))).' {'.trim($body)."}\n";
+            $selectors = [];
+
+            foreach ($this->selectors($prelude) as $selector) {
+                $scoped = $this->scoped($selector, $scope);
+
+                if (null === $scoped) {
+                    $problems[] = \sprintf('The selector "%s" reaches past the component: `:scope` and `&` only start a selector, followed by a space or `>`.', $selector);
+
+                    continue 2;
+                }
+
+                $selectors[] = $scoped;
+            }
+
+            $out .= implode(', ', $selectors).' {'.trim($body)."}\n";
         }
 
         if ($nested) {
@@ -158,14 +175,26 @@ final readonly class SiteCssScoper
         return $out;
     }
 
-    private function scoped(string $selector, string $scope): string
+    /**
+     * The selector under the class of the component; null when it would
+     * reach past it. `:scope` or `&` may only start a selector, the element
+     * itself or what is inside it: anywhere else (`:not(:scope)`), or before
+     * a sibling combinator (`& ~ p`), it names what is around the component.
+     */
+    private function scoped(string $selector, string $scope): ?string
     {
-        if (str_contains($selector, ':scope')) {
-            return str_replace(':scope', $scope, $selector);
+        if (1 === preg_match('/^(?::scope|&)(.*)$/s', $selector, $match)) {
+            $rest = $match[1];
+
+            if (str_contains($rest, ':scope') || str_contains($rest, '&') || 1 === preg_match('/^\s*[~+]/', $rest)) {
+                return null;
+            }
+
+            return $scope.$rest;
         }
 
-        if (str_starts_with($selector, '&')) {
-            return $scope.substr($selector, 1);
+        if (str_contains($selector, ':scope') || str_contains($selector, '&')) {
+            return null;
         }
 
         return $scope.' '.$selector;
@@ -173,7 +202,7 @@ final readonly class SiteCssScoper
 
     /**
      * The selectors of a list, split on the commas that are not inside
-     * parentheses (`:is(a, b)` is one).
+     * parentheses (`:is(a, b)`), brackets (`[title="a,b"]`) or quotes.
      *
      * @return list<string>
      */
@@ -181,12 +210,19 @@ final readonly class SiteCssScoper
     {
         $selectors = [];
         $depth = 0;
+        $quote = null;
         $current = '';
 
         foreach (str_split($prelude) as $character) {
-            if ('(' === $character) {
+            if (null !== $quote) {
+                if ($character === $quote) {
+                    $quote = null;
+                }
+            } elseif ('"' === $character || "'" === $character) {
+                $quote = $character;
+            } elseif ('(' === $character || '[' === $character) {
                 ++$depth;
-            } elseif (')' === $character) {
+            } elseif (')' === $character || ']' === $character) {
                 --$depth;
             } elseif (',' === $character && 0 === $depth) {
                 $selectors[] = trim($current);

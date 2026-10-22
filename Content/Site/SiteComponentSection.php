@@ -16,6 +16,7 @@ namespace TheliaCMS\Content\Site;
 
 use Psr\Log\LoggerInterface;
 use TheliaCMS\Content\ImageSource;
+use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
 use TheliaCMS\Content\Prop;
 use TheliaCMS\Content\PropSchema;
 use TheliaCMS\Content\PropType;
@@ -27,8 +28,9 @@ use Twig\Markup;
  * A component the site made in the back office, as the catalogue holds it.
  *
  * Drawn inside an element of its own class, which its stylesheet is scoped
- * to. A template that fails draws nothing and is logged: a page keeps
- * rendering whatever one of its components does.
+ * to, its markup filtered like a page that goes online. A template that
+ * fails draws nothing and is logged: a page keeps rendering whatever one of
+ * its components does.
  */
 final readonly class SiteComponentSection implements SectionDefinitionInterface
 {
@@ -37,6 +39,7 @@ final readonly class SiteComponentSection implements SectionDefinitionInterface
         private PropSchema $schema,
         private SiteTemplateRenderer $renderer,
         private ?LoggerInterface $logger = null,
+        private PublishedContentSanitizer $sanitizer = new PublishedContentSanitizer(),
     ) {
     }
 
@@ -79,6 +82,11 @@ final readonly class SiteComponentSection implements SectionDefinitionInterface
 
             return '';
         }
+
+        // Filtered here rather than only at publication: a draft and a preview
+        // are drawn in the back office before that, and what a markup prop
+        // holds or a template assembles is written by a model.
+        $html = (string) $this->sanitizer->html($html);
 
         if ('' === trim($html)) {
             return '';

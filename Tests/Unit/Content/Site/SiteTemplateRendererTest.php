@@ -28,11 +28,11 @@ final class SiteTemplateRendererTest extends TestCase
     public function testTextIsEscapedAndMarkupPrintedAsItIs(): void
     {
         $html = (new SiteTemplateRenderer())->render(
-            '{% for item in props.items %}<p class="{{ loop.last ? "last" }}">{{ item.title|upper }} {{ item.body }}</p>{% endfor %}{% for i in 1..2 %}{{ i }}{% endfor %}',
+            '{% for item in props.items %}<p class="{{ loop.last ? "last" }}">{{ item.title|upper }} {{ item.body }}</p>{% endfor %}{{ max(1, 2) }}',
             ['items' => [['title' => '<b>a</b>', 'body' => new Markup('<em>b</em>', 'UTF-8')], ['title' => 'c', 'body' => '<i>d</i>']]],
         );
 
-        self::assertSame('<p class="">&lt;B&gt;A&lt;/B&gt; <em>b</em></p><p class="last">C &lt;i&gt;d&lt;/i&gt;</p>12', $html);
+        self::assertSame('<p class="">&lt;B&gt;A&lt;/B&gt; <em>b</em></p><p class="last">C &lt;i&gt;d&lt;/i&gt;</p>2', $html);
     }
 
     /**
@@ -48,6 +48,10 @@ final class SiteTemplateRendererTest extends TestCase
         yield 'a filter running code' => ['{{ props.items|map(i => i) }}'];
         yield 'the constant test' => ['{% if props.a is constant("PHP_VERSION") %}x{% endif %}'];
         yield 'a syntax error' => ['{% if %}'];
+        yield 'a template it uses' => ['{% use "base.html.twig" %}'];
+        yield 'a template it extends' => ['{% extends "base.html.twig" %}'];
+        yield 'a range without a bound' => ['{% for i in range(1, 100000000) %}{% endfor %}'];
+        yield 'a range written as dots' => ['{% for i in 1..100000000 %}{% endfor %}'];
     }
 
     #[DataProvider('refused')]

@@ -28,14 +28,14 @@ use TheliaCMS\Content\Site\SiteTemplateRenderer;
  */
 final class SiteComponentValidatorTest extends TestCase
 {
-    public function testAComponentThatHoldsIsGivenBackWithItsSampleNormalisedAndItsStylesFiltered(): void
+    public function testAComponentThatHoldsIsGivenBackWithItsSampleNormalised(): void
     {
-        $kept = (new SiteComponentValidator())->validate(PriceTable::component(css: '.plan { background: url(https://tracker.example/p.png); }'));
+        $kept = (new SiteComponentValidator())->validate(PriceTable::component(css: '.plan { padding: 1rem; }'));
 
         self::assertSame('Site:PriceTable', $kept->name());
         self::assertSame('cms-site--price-table', $kept->scopeClass());
         self::assertSame('light', $kept->sample['tone'], 'The sample gets the defaults it left out.');
-        self::assertStringNotContainsString('tracker.example', $kept->css, 'A stylesheet reaches no other host.');
+        self::assertSame('.plan { padding: 1rem; }', $kept->css);
     }
 
     public function testEveryProblemIsListedAtOnce(): void
@@ -54,6 +54,29 @@ final class SiteComponentValidatorTest extends TestCase
             self::assertStringContainsString('"raw"', $problems);
             self::assertStringContainsString('onclick=', $problems);
             self::assertStringContainsString('@import', $problems);
+        }
+    }
+
+    public function testWhatAMarkupPropHoldsIsFilteredWhereverTheComponentIsDrawn(): void
+    {
+        $component = new SiteComponent('Probe', 'Probe', 'A probe.', [['name' => 'body', 'type' => 'html', 'label' => 'Body']], ['body' => '<p>Texte</p><img src="x" onerror="alert(1)"><script>alert(2)</script>'], '<div class="probe">{{ props.body }}</div>');
+        $kept = (new SiteComponentValidator())->validate($component);
+        $html = (new SiteComponentSection($kept, (new SitePropReader())->read($kept->props), new SiteTemplateRenderer()))->render($kept->sample, 'fr_FR');
+
+        self::assertStringContainsString('<p>Texte</p>', $html);
+        self::assertStringNotContainsString('onerror', $html, 'A draft and a preview are drawn before the publication filters a page.');
+        self::assertStringNotContainsString('<script', $html);
+    }
+
+    public function testAStylesheetReachingAnotherHostInAnyWayIsRefused(): void
+    {
+        foreach (['.a { background: url(/x.png) }', '.a { background: u\\72l(https://evil.example/x) }', '.a { background-image: image-set("https://evil.example/x.png" 1x) }'] as $css) {
+            try {
+                (new SiteComponentValidator())->validate(PriceTable::component(css: $css));
+                self::fail(\sprintf('"%s" is refused.', $css));
+            } catch (InvalidSiteComponentException $exception) {
+                self::assertNotSame([], $exception->problems);
+            }
         }
     }
 

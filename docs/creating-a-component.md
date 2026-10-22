@@ -253,16 +253,21 @@ What the generator writes, and what the site checks
   url, and items whose props are any of these but items.
 - **A Twig template** rendered in a Twig of its own with the sandbox on
   (`Content/Site/SiteTemplateRenderer.php`): `if`, `for`, `set`, a few
-  filters that shape text, `range`, `cycle`, `min`, `max`; no include, no
-  macro, no method, nothing of the site. It receives `props` alone. It holds
-  no text of its own, so a component serves every language of the site, and
-  no `script`, `style`, `iframe`, `form`, `on…` attribute or `javascript:`.
+  filters that shape text, `cycle`, `min`, `max`; no `range` (its loops go
+  over its props), no include, extends or use, no macro, nothing of the
+  site. It receives `props` alone. It holds no text of its own, so a
+  component serves every language of the site, and no `script`, `style`,
+  `iframe`, `form`, `on…` attribute or `javascript:`. What it draws is
+  filtered like a page that goes online, wherever it is drawn: a draft, the
+  preview, the toolkit.
 - **A stylesheet**, plain CSS, scoped to the component when it is served
   (`Content/Site/SiteCssScoper.php`): every selector goes under
   `.cms-site--<code>`, the class of the element the component is drawn in;
-  `:scope` or `&` is that element. Rules may sit in `@media`, `@supports`,
-  `@container`; nothing else, `@import` and `@keyframes` included; no
-  address of another host. Colours come from the tokens of `blocks.css`
+  `:scope` or `&` is that element, and only starts a selector (`:not(:scope)`
+  or `& ~ p` would reach what is around it). Rules may sit in `@media`,
+  `@supports`, `@container`; nothing else, `@import` and `@keyframes`
+  included. Nothing is loaded: no `url()`, no `image-set()`, no backslash
+  escape; the pictures of a component are props. Colours come from the tokens of `blocks.css`
   (`--cms-color-*`), so a component follows the theme. The stylesheets of the
   kept components are served together at `/cms/site-components.css`, linked
   after the one of the blocks.

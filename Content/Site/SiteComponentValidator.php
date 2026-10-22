@@ -81,6 +81,13 @@ final readonly class SiteComponentValidator
             $problems[] = 'The stylesheet holds "<", which a stylesheet never needs.';
         }
 
+        // Nothing loaded from anywhere: the pictures of a component are props.
+        // A backslash is refused with them, since an escape spells `url(` in
+        // a way no pattern reads.
+        if (1 === preg_match('/\\\\|\b(?:url|image-set|image|cross-fade|element|src)\s*\(/i', $component->css, $match)) {
+            $problems[] = \sprintf('The stylesheet holds "%s": a component loads no file and writes no escape; its pictures are props.', $match[0]);
+        }
+
         // Checked as written, so the model is told what it wrote wrong; kept
         // as filtered, so nothing in it reaches another host.
         $css = (string) $this->sanitizer->css($component->css);

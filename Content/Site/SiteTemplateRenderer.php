@@ -30,8 +30,9 @@ use Twig\Sandbox\SecurityPolicy;
  *
  * The sandbox is on for every template of this environment. A template may
  * test, loop and set a variable, print with the escaping filters and a few
- * that shape text, call a few functions of values (`range`, `min`), and
- * nothing else: no method, no property of an object, no include. It receives the props and nothing else. Markup props
+ * that shape text, call a few functions of values (`min`, `max`), and
+ * nothing else: no property of an object, no include. The only objects it
+ * receives are the markup props, whose methods give back strings and counts. It receives the props and nothing else. Markup props
  * come as Twig\Markup, printed as they are; everything else is escaped.
  */
 final class SiteTemplateRenderer
@@ -42,8 +43,13 @@ final class SiteTemplateRenderer
     /** @var list<string> */
     public const array FILTERS = ['escape', 'e', 'default', 'length', 'join', 'upper', 'lower', 'capitalize', 'title', 'trim', 'first', 'last', 'slice', 'nl2br', 'number_format', 'replace', 'split', 'keys'];
 
-    /** @var list<string> Functions of values only: `1..3` is `range`. */
-    public const array FUNCTIONS = ['range', 'cycle', 'min', 'max'];
+    /**
+     * Functions of values only. Not `range`, nor `1..3` which compiles to it:
+     * a range has no bound, and the loops of a component go over its props.
+     *
+     * @var list<string>
+     */
+    public const array FUNCTIONS = ['cycle', 'min', 'max'];
 
     /** @var list<string> */
     public const array TESTS = ['empty', 'defined', 'null', 'none', 'odd', 'even', 'iterable', 'same as', 'divisible by'];
@@ -68,9 +74,15 @@ final class SiteTemplateRenderer
         }
 
         // The `constant` test reads a constant of PHP whatever the policy says:
-        // Twig compiles it apart from the tests the sandbox checks.
+        // Twig compiles it apart from the tests the sandbox checks. `extends`
+        // and `use` load another template and are not checked by the policy
+        // either: refused by name.
         if (1 === preg_match('/\bis\s+(?:not\s+)?constant\b/', $template)) {
             return ['The template uses what a component may not (the "constant" test).'];
+        }
+
+        if (1 === preg_match('/\{%-?\s*(extends|use)\b/', $template, $match)) {
+            return [\sprintf('The template uses what a component may not (the "%s" tag): a component is one template.', $match[1])];
         }
 
         try {
@@ -81,6 +93,8 @@ final class SiteTemplateRenderer
             return [\sprintf('The template uses what a component may not (%s). Allowed tags: %s; filters: %s; tests: %s; functions: %s.', $exception->getRawMessage(), implode(', ', self::TAGS), implode(', ', self::FILTERS), implode(', ', self::TESTS), implode(', ', self::FUNCTIONS))];
         } catch (SyntaxError $exception) {
             return [\sprintf('The template does not compile, line %d: %s', $exception->getTemplateLine(), $exception->getRawMessage())];
+        } catch (Error $exception) {
+            return ['The template does not compile: '.$exception->getRawMessage()];
         }
 
         return [];

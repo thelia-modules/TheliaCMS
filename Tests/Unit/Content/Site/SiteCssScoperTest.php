@@ -46,6 +46,23 @@ final class SiteCssScoperTest extends TestCase
         }
     }
 
+    public function testASelectorCannotReachPastTheComponent(): void
+    {
+        foreach ([':not(:scope) a { color: red }', '.a:is(:scope) b { color: red }', '& ~ div { display: none }', '& + p { display: none }', ':scope~div { display: none }'] as $css) {
+            try {
+                (new SiteCssScoper())->scope($css, 'x');
+                self::fail(\sprintf('"%s" is refused.', $css));
+            } catch (InvalidSiteComponentException $exception) {
+                self::assertStringContainsString('scope', $exception->getMessage());
+            }
+        }
+    }
+
+    public function testACommaInAnAttributeSelectorOrAStringDoesNotSplitTheSelector(): void
+    {
+        self::assertSame('.x [title="a,b"], .x .c {color: red;}', (new SiteCssScoper())->scope('[title="a,b"], .c { color: red; }', 'x'));
+    }
+
     public function testABraceClosedTwiceIsRefused(): void
     {
         $this->expectException(InvalidSiteComponentException::class);
