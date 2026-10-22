@@ -24,8 +24,9 @@ both required by the theme:
   flagged as home is served on `/`.
 - **TheliaBlocks** (`thelia/thelia-blocks-module`) attaches groups of blocks to
   the shop's own items: products, categories, brands, contents and folders.
-  TheliaCMS attaches nothing to them: content on the page of a product stays
-  the business of TheliaBlocks or of the theme.
+  TheliaCMS gives products, categories, contents and folders a document of
+  their own (see [The content of a catalogue item](#the-content-of-a-catalogue-item)),
+  which a site can use instead.
 
 TheliaCMS runs alongside them, with its own tables, screens and addresses. It
 never reads what Page and TheliaBlocks store, and they ignore it in return. The
@@ -323,6 +324,33 @@ than changing a connection the whole site shares.
 
 One consequence to know about: the front-office search does not match a query
 made only of emoji, since the search index holds the written-out form.
+
+## The content of a catalogue item
+
+A product, a category, a content and a folder carry a document of sections in
+each language, written on the content screen of a page: from a brief, by
+asking, or by hand, then published (docs/adr/0011). The edit screen of the item
+in the back office has a **CMS content** tab, which says where the document
+stands in each language and leads to its screen
+(`/admin/cms/catalogue/{type}/{id}/content`). The rights are those of the pages.
+
+The generator is told which item the document is shown on, and what the theme
+already shows of it, so the document adds to the page of the item rather than
+repeating its name, its price or its description.
+
+The theme prints the published document where it wants it:
+
+```twig
+{{ cms_item_content('product', product.id) }}
+```
+
+Nothing is printed while the item has no document online in the language being
+served. A draft is shown through a signed link from the content screen, on a
+page of its own; a theme draws that page its own way with a
+`cms-item-preview.html.twig` at its root.
+
+The document of an item goes when the shop deletes the item. It counts as a
+use of the images and components it holds, and it travels in the export.
 
 ## Sections
 
@@ -938,8 +966,10 @@ to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
 | `cms_pages_of_type(type, options, locale)` | the pages online of a type, the model left out, ordered, filtered and cut by `options` (`sort`, `direction`, `filter`, `limit`, `offset`): see [Templates of pages](#templates-of-pages). |
 | `cms_page_type(type, locale)` | the `code`, `title` and `description` of a type, for the heading of a list. |
 | `cms_page_fields(page)` | the fields of a page or a card holding a value, each with its `code`, `label`, raw `value` and `text` written for a visitor ("1 h 30 min"). |
+| `cms_item_content(type, id, locale)` | the published document of a product, a category, a content or a folder, as markup, or an empty string. The locale defaults to the one being served. |
 
-They return data rather than markup, because navigation markup belongs to the
+Except for `cms_item_content()`, whose document is markup by nature, they
+return data rather than markup, because navigation markup belongs to the
 theme. A menu of any depth takes a dozen lines:
 
 ```twig
@@ -989,9 +1019,9 @@ php Thelia thelia_cms:export site.json
 php Thelia thelia_cms:import site.json [--replace] [--with-settings]
 ```
 
-The file holds the page tree, the content of every language, the components
-made in the back office, the menus, the forms and their fields and the
-settings. It is a starter
+The file holds the page tree, the content of every language, the documents of
+the catalogue items, the components made in the back office, the menus, the
+forms and their fields and the settings. It is a starter
 kit you build once and start the next project from, and it is a copy of the
 content to keep somewhere other than the database.
 
@@ -1008,7 +1038,10 @@ is missing is named in the report rather than left as a silent hole.
 An import leaves alone whatever is already there: a page at the same address, a
 menu, a form or a component carrying the same code. It counts them and says so.
 A component of the file is checked as if the generator had just written it; one
-the site refuses is left out and named. `--replace`
+the site refuses is left out and named. The document of a catalogue item goes
+on the item of the importing site with the same reference (a product) or the
+same address; an item the site does not have is named and left out, never
+created. `--replace`
 overwrites them instead. Settings are only applied when asked for, so importing
 a starter kit never switches a running site into showcase mode by surprise. The
 whole thing runs in one transaction, so a file that turns out to be broken

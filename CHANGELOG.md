@@ -7,6 +7,18 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added (2.1.0)
+
+- **A document for each catalogue item.** A product, a category, a content
+  and a folder carry a document of sections in each language, written on the
+  content screen of a page (from a brief, by asking or by hand) and reached
+  from a **CMS content** tab of the edit screen of the item. A theme prints it
+  with `cms_item_content(type, id)`. The update to 2.1.0 adds the
+  `cms_item_content` and `cms_item_revision` tables (docs/adr/0011).
+- The documents of the catalogue items count as uses of their images and
+  components, travel in the export (section `catalogue_contents`) and go back
+  on import on the item with the same reference or address.
+
 ### Changed (2.0.0)
 
 - A record or a picture the PHP class of a theme component takes
