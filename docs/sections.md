@@ -34,6 +34,7 @@ component refuses, is rejected on the way in, every problem listed at once
 | Image | `cms:image` | The module. One picture (of the media library or an `https` address) with an optional caption, at the width of the reading column (by default), of the content or of the whole screen; nothing is drawn while no image is chosen. |
 | Live content | `Partial:<name>` | Every partial of the site (`PartialDefinitionInterface`), the ones of the module and the ones other modules register. The section renders the placeholder the partial renderer substitutes when the page is served. |
 | Components of the theme | As the theme names them, `Molecules:Reinsurance:Base` | The components the active theme opens to pages in `config/theliacms.yaml` (below). |
+| Components of the site | `Site:<Code>`, `Site:PricingPlans` | Made in the back office from a prompt and kept (**CMS > Components > New component**): props as data, a sandboxed Twig template and a scoped stylesheet, stored in `cms_component` ([creating-a-component.md](creating-a-component.md#a-component-made-in-the-back-office)). |
 
 A component of another module joins the catalogue by implementing
 `TheliaCMS\Content\SectionDefinitionInterface`; implementing it is what

@@ -4,8 +4,9 @@ A page is a document: an ordered list of sections, each naming a component of
 the catalogue and carrying its props ([sections.md](sections.md)). The
 catalogue is built from every class implementing
 `TheliaCMS\Content\SectionDefinitionInterface` and from the providers that
-bring several at once. There are two ways to add to it: open a Twig component
-the theme already has, or write a class in a module.
+bring several at once. There are three ways to add to it: open a Twig
+component the theme already has, write a class in a module, or have the
+generator make one in the back office.
 
 ## A component of the theme
 
@@ -230,6 +231,51 @@ The template, at `templates/front/opening-hours.html.twig` of the module:
 Several components decided at runtime (one per row of a table, say) go
 through `SectionProviderInterface` instead, the way the partials and the
 components of the theme do.
+
+## A component made in the back office
+
+**CMS > Components > New component** asks the generator for a component in a
+prompt ("a table of two to four plans side by side, one put forward"). The
+answer is checked, drawn with its sample in the active theme, at the width of
+a phone, a tablet or a screen, and changed by asking again until the editor
+keeps it. Kept, it is `Site:<Code>` in the catalogue, like any other
+component: offered to the generator of pages, added and edited by hand on the
+content screen, on the toolkit page, switched off on the list. A page uses
+such a component; a page never makes one.
+
+What the generator writes, and what the site checks
+(`Content/Site/SiteComponentValidator.php`) before showing it:
+
+- **A code**, PascalCase, which never changes once kept: documents name it.
+- **Props**, as data: the JSON form of the constructors of `Prop`, read by
+  `Content/Site/SitePropReader.php`. The types a template can print: text,
+  html, integer, boolean, choice, image (its address reaches the template),
+  url, and items whose props are any of these but items.
+- **A Twig template** rendered in a Twig of its own with the sandbox on
+  (`Content/Site/SiteTemplateRenderer.php`): `if`, `for`, `set`, a few
+  filters that shape text, `range`, `cycle`, `min`, `max`; no include, no
+  macro, no method, nothing of the site. It receives `props` alone. It holds
+  no text of its own, so a component serves every language of the site, and
+  no `script`, `style`, `iframe`, `form`, `on…` attribute or `javascript:`.
+- **A stylesheet**, plain CSS, scoped to the component when it is served
+  (`Content/Site/SiteCssScoper.php`): every selector goes under
+  `.cms-site--<code>`, the class of the element the component is drawn in;
+  `:scope` or `&` is that element. Rules may sit in `@media`, `@supports`,
+  `@container`; nothing else, `@import` and `@keyframes` included; no
+  address of another host. Colours come from the tokens of `blocks.css`
+  (`--cms-color-*`), so a component follows the theme. The stylesheets of the
+  kept components are served together at `/cms/site-components.css`, linked
+  after the one of the blocks.
+- **A sample** that fills every prop: what the preview, the toolkit and the
+  generator of pages are shown.
+
+Making, changing and keeping a component take the settings and the custom
+code permissions. A new version of a kept component is refused while a page
+holds props it no longer takes (`Content/Site/SiteComponentUsage.php`, every
+section named, draft and published); keeping one draws the drafts using it
+again, and the published pages change at their next publication. A component
+a page holds cannot be deleted. The kept components travel with the export of
+the site and are checked again on import.
 
 ## What the generator does with it
 

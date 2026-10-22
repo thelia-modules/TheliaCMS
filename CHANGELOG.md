@@ -105,6 +105,21 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   picker sits next to each colour field and writes into it.
 - "Edit by hand" and "Rewrite this section" open in a dialog rather than
   under the section in the list.
+- **Components made in the back office.** **CMS > Components > New
+  component** asks the generator for a component in a prompt; the site checks
+  it, draws its sample in the theme at the width of a phone, a tablet or a
+  screen, and keeps it once the editor says so, after as many changes as
+  asked. A kept component is `Site:<Code>`, a component like any other:
+  offered to the generator of pages, edited by hand, on the toolkit page,
+  switched off on the list. It is props as data, a Twig template rendered in
+  a sandbox of its own and given the props alone, with no text of its own,
+  and a stylesheet scoped to the component and served at
+  `/cms/site-components.css`. A new version that would break the pages using
+  it is refused, the pages named; keeping one draws their drafts again. A
+  component in use cannot be deleted. Making one takes the settings and the
+  custom code permissions. Stored in `cms_component` (created by the update
+  to 2.0.0); the calls go in the ledger with the pages; the components
+  travel with the export of the site and are checked again on import.
 - A **Columns** section (`cms:columns`): two to four columns side by side,
   each an image over an optional heading and a short text, as many columns as
   items. The image is one of the media library or the `https` address of a

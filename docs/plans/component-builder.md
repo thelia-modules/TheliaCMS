@@ -1,9 +1,7 @@
 # Plan: components made in the back office
 
-Status: steps 1 to 8 done (storage, definition, validator, generator,
-screen, changes checked against the pages, deletion, export and import);
-step 9 (docs and changelog) is next, then step 11 (a page generated with a
-component of the site). The design questions are
+Status: done. Every step is in the code, step 10 (tests) with each of the
+others. What is left is listed under "Not done". The design questions are
 settled (see "Decisions taken").
 
 ## What is asked
@@ -196,6 +194,22 @@ renders the sample, and keeps it only when the editor says so.
   styles of that component, and cannot be saved until it is made. Tests:
   `Tests/Integration/ImportExport/SiteComponentImportTest.php`.
 
+- **Step 11.** A change asked of a page with `thelia_cms:generate --revise`
+  ("our three subscription plans, put Gourmand forward") was written with
+  `Site:PricingPlans`, picked by the generator of pages from the catalogue;
+  the buttons left out were named in `left_out` (no subscription page on the
+  site). In the browser at 1440 px: the draft drawn with the stylesheet of
+  the components, the section edited by hand in its dialog (a price changed,
+  saved to the document and the HTML). The toolkit page draws it too.
+
+## Not done
+
+- No progress is shown while a component is generated: the page waits for
+  the answer, the button saying it takes up to a minute.
+- The `draft` status of `cms_component` is unused.
+- The stylesheet served is the one of the version kept, at once, including
+  under published pages still holding the markup of the version before.
+
 What the code settled that the plan did not say:
 
 - The prop types are text, html, integer, boolean, choice, image, url and
@@ -203,7 +217,7 @@ What the code settled that the plan did not say:
   function to be of any use in a template: left out.
 - **The Twig sandbox checks a template when it is displayed, not when it is
   compiled**: `SiteTemplateRenderer::problems()` runs
-  `unwrap()->checkSecurity()` itself, and `render()` refuses a template with
+  `unwrap($twig)->checkSecurity()` itself, and `render()` refuses a template with
   problems. The `constant` test escapes the policy: refused by a pattern.
 - Functions of values are allowed (`range`, `cycle`, `min`, `max`): `1..3`
   compiles to `range`.

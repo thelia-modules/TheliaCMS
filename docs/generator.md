@@ -203,6 +203,27 @@ answer said the page leaves out is kept as a JSON list of sentences
 (`left_out`), at most ten of 300 characters. `GenerationLog::history()` is what a page screen reads;
 `spentSince()` what a budget alert reads.
 
+## Components made in the back office
+
+`Generation/Component/ComponentGenerator.php` makes a component of the site
+from a request (see [creating-a-component.md](creating-a-component.md#a-component-made-in-the-back-office)).
+Same client, model, effort and price list as the pages; no tool. The system
+prompt (`ComponentPrompt`), cached, gives the JSON form of the props, the rules
+of the sandbox and of the stylesheet, the colour tokens read from
+`assets/blocks.css`, the accessibility skill and an example; the user message
+gives the shop, the components the catalogue already has, the request and,
+for a change, the component as it is. The answer is constrained to a schema
+of seven strings (`code`, `label`, `description`, `props` and `sample` as JSON
+written as a string, `template`, `css`). A component the validator refuses,
+a new one whose code is taken, a change that renames its component or that
+breaks the pages using it goes back with every problem listed, twice at most.
+
+Its calls are in the ledger with the pages, under `target_type` `component`:
+`target_id` is the row of the component, 0 for one not kept yet, and the
+call a new component came from is filed under it once it is kept. A
+candidate is such a row, its `document` holding the component; nothing else
+stores it until it is kept.
+
 ## From the command line
 
 ```bash
