@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation;
 
+use TheliaCMS\Catalogue\CatalogueItem;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -37,6 +38,11 @@ final readonly class GenerationTargets
         $details = $this->types->details((string) $page->getPageType());
 
         return GenerationTarget::page($page, $locale, $details, $this->fields->valuesOf($page, $locale, $details->fields()), $this->modelDocument($page, $locale));
+    }
+
+    public function forItem(CatalogueItem $item): GenerationTarget
+    {
+        return GenerationTarget::item($item);
     }
 
     /**

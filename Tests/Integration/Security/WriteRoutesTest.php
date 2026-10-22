@@ -46,6 +46,7 @@ final class WriteRoutesTest extends AdminScreenTestCase
      * answers GET and POST, the POST being the submission of its form.
      */
     private const array SCREENS = [
+        'admin.cms.catalogue.content.edit',
         'admin.cms.components.list',
         'admin.cms.components.site.candidate',
         'admin.cms.components.site.new',
@@ -93,6 +94,8 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'field' => 'sample_field',
         // The code of a component of the site is PascalCase.
         'component' => 'SampleComponent',
+        // The type of a catalogue item carrying a document.
+        'type' => 'product',
     ];
 
     public function testEveryWriteIsRefusedWithoutTheToken(): void

@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation;
 
+use TheliaCMS\Catalogue\CatalogueItem;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Page\Field\FieldDefinitions;
@@ -34,6 +35,7 @@ final readonly class GenerationTarget
     /**
      * @param array<string, int|float|string|bool|null> $fieldValues   the values the page holds, by field code
      * @param Document|null                             $modelDocument the draft of the model of the type in this language, when the page is not that model
+     * @param CatalogueItem|null                        $item          the product, category, content or folder the document belongs to, for a document of the catalogue
      */
     private function __construct(
         public string $type,
@@ -45,6 +47,7 @@ final readonly class GenerationTarget
         public array $fieldValues = [],
         public string $locale = '',
         public ?Document $modelDocument = null,
+        public ?CatalogueItem $item = null,
     ) {
     }
 
@@ -66,6 +69,24 @@ final readonly class GenerationTarget
             $fieldValues,
             $locale,
             $modelDocument,
+        );
+    }
+
+    /**
+     * The document of an item of the catalogue: its type (`product`,
+     * `category`, `content`, `folder`) is the type of the target, so the
+     * ledger of the generations keeps the calls of each item apart.
+     */
+    public static function item(CatalogueItem $item): self
+    {
+        return new self(
+            $item->type->value,
+            $item->id,
+            $item->title,
+            null,
+            $item->summary,
+            locale: $item->locale,
+            item: $item,
         );
     }
 

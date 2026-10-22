@@ -16,6 +16,8 @@ namespace TheliaCMS\Generation\Admin;
 
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
+use TheliaCMS\Catalogue\CatalogueItemType;
+use TheliaCMS\Catalogue\ItemContentRepository;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPageContentQuery;
 
@@ -26,6 +28,11 @@ use TheliaCMS\Model\CmsPageContentQuery;
  */
 final readonly class TranslationSources
 {
+    public function __construct(
+        private ItemContentRepository $items,
+    ) {
+    }
+
     /**
      * @return list<array{locale: string, label: string}>
      */
@@ -43,6 +50,19 @@ final readonly class TranslationSources
     public function pageDocument(int $pageId, string $sourceLocale): ?Document
     {
         return Document::fromJson(CmsPageContentQuery::create()->filterByPageId($pageId)->filterByLocale($sourceLocale)->findOne()?->getDraftDocument());
+    }
+
+    /**
+     * @return list<array{locale: string, label: string}>
+     */
+    public function forItem(CatalogueItemType $type, int $id, string $locale): array
+    {
+        return $this->sources($this->items->draftsByLocale($type, $id), $locale);
+    }
+
+    public function itemDocument(CatalogueItemType $type, int $id, string $sourceLocale): ?Document
+    {
+        return $this->items->draftDocument($type, $id, $sourceLocale);
     }
 
     /**

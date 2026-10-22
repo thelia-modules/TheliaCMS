@@ -37,15 +37,16 @@ enum CatalogueItemType: string
     }
 
     /**
-     * The name of the item in a sentence of the back office, to translate.
+     * The link from the content screen back to the edit screen of the item,
+     * to translate: one sentence per type, so a language can agree it.
      */
-    public function label(): string
+    public function backLabel(): string
     {
         return match ($this) {
-            self::Product => 'product',
-            self::Category => 'category',
-            self::Content => 'content',
-            self::Folder => 'folder',
+            self::Product => 'Back to the product',
+            self::Category => 'Back to the category',
+            self::Content => 'Back to the content',
+            self::Folder => 'Back to the folder',
         };
     }
 }

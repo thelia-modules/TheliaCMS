@@ -1,0 +1,38 @@
+{# The tab of the CMS on the edit screen of a catalogue item: one row per
+   language, its state and the way to the content screen. #}
+<div class="card shadow-sm" data-testid="cms-item-content-tab">
+    <div class="card-body">
+        <p class="text-muted">
+            {{ 'A document of sections shown on the page of the item, under what the theme already shows of it. It is written and published language by language.'|trans({}, 'theliacms') }}
+        </p>
+
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">{{ 'Language'|trans({}, 'theliacms') }}</th>
+                    <th scope="col">{{ 'Status'|trans({}, 'theliacms') }}</th>
+                    <th scope="col" class="text-end"><span class="visually-hidden">{{ 'Actions'|trans({}, 'theliacms') }}</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for language in languages %}
+                    <tr data-testid="cms-item-content-language">
+                        <td>{{ language.title }}</td>
+                        <td><span class="badge {{ language.status.badgeClass }}">{{ language.status.label|trans({}, 'theliacms') }}</span></td>
+                        <td class="text-end">
+                            {% if may_publish and language.status.value in ['published', 'modified'] %}
+                                <form method="post" action="{{ language.unpublish_url }}" class="d-inline" data-testid="cms-item-content-unpublish">
+                                    <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">{{ 'Take offline'|trans({}, 'theliacms') }}</button>
+                                </form>
+                            {% endif %}
+                            <a class="btn btn-sm btn-primary" href="{{ language.edit_url }}" data-testid="cms-item-content-edit">
+                                {{ (language.status.value == 'empty' ? 'Write the content' : 'Edit the content')|trans({}, 'theliacms') }}
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

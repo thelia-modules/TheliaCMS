@@ -51,6 +51,8 @@ final readonly class CmsAdminGuard
      */
     private const SECTION_RESOURCES = [
         'pages' => CmsResources::PAGE,
+        // The documents of the catalogue items are written like pages.
+        'catalogue' => CmsResources::PAGE,
         // Tags label pages: whoever may edit a page may manage its labels.
         'tags' => CmsResources::PAGE,
         'menus' => CmsResources::MENU,
