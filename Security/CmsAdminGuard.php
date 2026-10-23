@@ -65,6 +65,8 @@ final readonly class CmsAdminGuard
         // So does putting a component away.
         'components' => CmsResources::SETTINGS,
         'custom-code' => CmsResources::CUSTOM_CODE,
+        // What the module does, told to whoever edits the pages.
+        'documentation' => CmsResources::PAGE,
         // Pasting a script tag onto every page of the site is the custom-code
         // permission by any other name, so it is guarded as such.
         'scripts' => CmsResources::CUSTOM_CODE,

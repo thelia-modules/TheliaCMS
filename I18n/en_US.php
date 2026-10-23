@@ -634,6 +634,8 @@ return [
     'URL' => 'URL',
     'URL slug' => 'URL slug',
     'Fixed address' => 'Fixed address',
+    'Documentation' => 'Documentation',
+    'On this page' => 'On this page',
     'The whole address, kept as typed whatever the parent page: the address a site taken over had, such as about-us.html. Leave empty for the address built from the parent pages and the slug.' => 'The whole address, kept as typed whatever the parent page: the address a site taken over had, such as about-us.html. Leave empty for the address built from the parent pages and the slug.',
     'Use at least %count% letters.' => 'Use at least %count% letters.',
     'Use lowercase letters, digits and single hyphens only, such as "recipe" or "news-item".' => 'Use lowercase letters, digits and single hyphens only, such as "recipe" or "news-item".',

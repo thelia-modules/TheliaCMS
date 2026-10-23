@@ -102,6 +102,8 @@ class CmsSideNavHook extends BaseHook
             'components_url' => $maySeeSettings ? $this->urls->generate('admin.cms.components.list') : null,
             'skills_url' => $maySeeSettings ? $this->urls->generate('admin.cms.skills.list') : null,
             'settings_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.edit') : null,
+            // Written for whoever edits the pages, who is who reads it.
+            'documentation_url' => $maySeePages ? $this->urls->generate('admin.cms.documentation') : null,
             'is_active' => $this->isOnACmsScreen(),
             // On a showcase site the content *is* the site, so its section comes
             // before the shop ones. The sidebar is a flex column, so ordering it
@@ -118,6 +120,7 @@ class CmsSideNavHook extends BaseHook
             'components_label' => $this->trans('Components', [], TheliaCMS::DOMAIN_NAME),
             'skills_label' => $this->trans('Skills', [], TheliaCMS::DOMAIN_NAME),
             'settings_label' => $this->trans('Settings', [], TheliaCMS::DOMAIN_NAME),
+            'documentation_label' => $this->trans('Documentation', [], TheliaCMS::DOMAIN_NAME),
         ]));
     }
 

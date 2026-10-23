@@ -789,6 +789,16 @@ The **page shown when an address does not exist** is a CMS page like any other,
 served with the 404 status. Answering 200 would have search engines index it
 under every wrong address ever linked to the site.
 
+## Documentation for editors
+
+**CMS > Documentation** is the same ground as this file, written for whoever
+edits the pages rather than for the developer of the site: what each screen
+does and what each setting changes, in French or in English after the
+language of the back office (`templates/backOffice/default-twig/documentation/`,
+one file per language, English for any other). Its summary is read off the
+`<section id>` and `<h2>` of the text. A change of the module that an editor
+sees belongs there too.
+
 ## Permissions
 
 Seven resources, seeded on activation with no access granted. Open them per
