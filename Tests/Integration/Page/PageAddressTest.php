@@ -16,11 +16,13 @@ namespace TheliaCMS\Tests\Integration\Page;
 
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
+use Thelia\Model\RewritingUrl;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\FixedAddressException;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 
 /**
@@ -318,6 +320,113 @@ final class PageAddressTest extends CmsIntegrationTestCase
         $this->writer()->saveDraft($page, $otherLocale, new PageDraft(title: $otherTitle));
 
         return $page;
+    }
+
+    /**
+     * A site taken over keeps the addresses search engines know: a fixed
+     * address is the address, `.html` included, whatever the parent of the
+     * page. (An address inserted anew loses its accents to the core; one a
+     * site already holds keeps them, its row being reassigned.)
+     */
+    public function testAFixedAddressIsKeptAsTypedUnderAParent(): void
+    {
+        $parent = $this->pageWithSlug('La société', 'societe');
+        $child = $this->pageWithFixedAddress('Notre suivi qualité', 'notre-suivi-qualite-fige.html', (int) $parent->getId());
+
+        self::assertSame('notre-suivi-qualite-fige.html', $child->getRewrittenUrl($this->locale()));
+    }
+
+    /**
+     * The addresses are rebuilt on every activation of the module, and on every
+     * move of an ancestor: a fixed address survives both.
+     */
+    public function testRebuildingTheAddressesOfABranchKeepsAFixedAddress(): void
+    {
+        $parent = $this->pageWithSlug('La société', 'societe');
+        $child = $this->pageWithFixedAddress('Notre histoire', 'histoire.html', (int) $parent->getId());
+
+        $this->getService(CmsUrlService::class)->rebuildSubtree($parent);
+        $this->moveUnder($parent, (int) $this->createPage('Accueil du groupe')->getId());
+
+        self::assertSame('histoire.html', $child->getRewrittenUrl($this->locale()));
+    }
+
+    /**
+     * The address a page had before it was given a fixed one answers 301 on it.
+     */
+    public function testTheBuiltAddressOfAPageGivenAFixedOneRedirectsToIt(): void
+    {
+        $parent = $this->pageWithSlug('La société', 'societe');
+        $child = $this->createPage('Notre savoir-faire', parent: (int) $parent->getId());
+
+        $this->fix($child, 'notre-savoir-faire.html');
+
+        $former = RewritingUrlQuery::create()->findOneByUrl('societe/notre-savoir-faire');
+        $target = RewritingUrlQuery::create()->findOneByUrl('notre-savoir-faire.html');
+
+        self::assertNotNull($former);
+        self::assertNotNull($target, 'The page answers on its fixed address.');
+        self::assertSame((int) $target->getId(), (int) $former->getRedirected());
+    }
+
+    /**
+     * A child of a page with a fixed address sits under the path the parent
+     * would have, not under `sopap.html/`.
+     */
+    public function testAChildOfAPageWithAFixedAddressIsAddressedFromTheSlugOfItsParent(): void
+    {
+        $parent = $this->pageWithSlug('La société', 'societe');
+        $this->fix($parent, 'sopap.html');
+
+        $child = $this->createPage('Nos engagements', parent: (int) $parent->getId());
+
+        self::assertSame('sopap.html', $parent->getRewrittenUrl($this->locale()));
+        self::assertSame('societe/nos-engagements', $child->getRewrittenUrl($this->locale()));
+    }
+
+    /**
+     * An address a redirection holds goes to the page: it is the former address
+     * of the content the page replaces.
+     */
+    public function testAFixedAddressTakesOverARedirection(): void
+    {
+        $target = $this->createPage('Cible');
+        $alias = (new RewritingUrl())
+            ->setUrl('ancienne-adresse.html')
+            ->setRedirected((int) RewritingUrlQuery::create()->findOneByUrl((string) $target->getRewrittenUrl($this->locale()))?->getId());
+        $alias->save();
+
+        $page = $this->pageWithFixedAddress('Ancienne page', 'ancienne-adresse.html');
+
+        self::assertSame('ancienne-adresse.html', $page->getRewrittenUrl($this->locale()));
+        self::assertNull(RewritingUrlQuery::create()->findOneByUrl('ancienne-adresse.html')?->getRedirected());
+    }
+
+    public function testAFixedAddressAnotherPageAnswersOnIsRefused(): void
+    {
+        $this->pageWithSlug('Contact', 'nous-contacter');
+        $page = $this->createPage('Autre contact');
+
+        $this->expectException(FixedAddressException::class);
+
+        $this->fix($page, 'nous-contacter');
+    }
+
+    private function pageWithFixedAddress(string $title, string $address, int $parent = 0): CmsPage
+    {
+        $page = $this->createPage($title, parent: $parent);
+        $this->fix($page, $address);
+
+        return $page;
+    }
+
+    private function fix(CmsPage $page, string $address): void
+    {
+        $locale = $this->locale();
+        $urls = $this->getService(CmsUrlService::class);
+
+        $page->setLocale($locale)->setFixedUrl($urls->normalizeFixedAddress($address));
+        $this->writer()->saveDraft($page, $locale, new PageDraft(title: (string) $page->getTitle(), slug: $urls->slugOf($page, $locale)));
     }
 
     private function pageWithSlug(string $title, string $slug, int $parent = 0): CmsPage

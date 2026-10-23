@@ -17,6 +17,7 @@ namespace TheliaCMS\Tests\Unit\Page;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\FixedAddressException;
 
 /**
  * Only the part of the service that needs no pages: composing a URL from a page
@@ -89,5 +90,34 @@ final class CmsUrlServiceTest extends TestCase
         // The caller falls back to `page-{id}`: refusing here would stop a page
         // being created before it has a title.
         self::assertSame('', $this->urls->normalizeSegment(''));
+    }
+
+    public function testKeepsAFixedAddressAsTypedButForItsSlashes(): void
+    {
+        self::assertSame('suivi-qualité-sopap.html', $this->urls->normalizeFixedAddress(' /suivi-qualité-sopap.html/ '));
+        self::assertSame('rubrique/page.html', $this->urls->normalizeFixedAddress('rubrique/page.html'));
+        self::assertNull($this->urls->normalizeFixedAddress('  '));
+        self::assertNull($this->urls->normalizeFixedAddress(null));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function malformedFixedAddresses(): iterable
+    {
+        yield 'space' => ['notre histoire.html'];
+        yield 'query' => ['page.html?ref=1'];
+        yield 'fragment' => ['page.html#top'];
+        yield 'empty segment' => ['rubrique//page'];
+        yield 'back office' => ['admin/page.html'];
+        yield 'reserved in capitals' => ['API/page'];
+    }
+
+    #[DataProvider('malformedFixedAddresses')]
+    public function testRefusesAFixedAddressThatCannotBeOne(string $address): void
+    {
+        $this->expectException(FixedAddressException::class);
+
+        $this->urls->normalizeFixedAddress($address);
     }
 }

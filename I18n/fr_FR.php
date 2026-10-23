@@ -633,6 +633,8 @@ return [
     'UPPERCASE' => 'MAJUSCULES',
     'URL' => 'URL',
     'URL slug' => 'Adresse de la page',
+    'Fixed address' => 'Adresse figée',
+    'The whole address, kept as typed whatever the parent page: the address a site taken over had, such as about-us.html. Leave empty for the address built from the parent pages and the slug.' => 'L’adresse entière, gardée telle quelle quelle que soit la page parente : celle d’un site repris, comme qui-sommes-nous.html. Laissez vide pour l’adresse construite à partir des pages parentes et de l’adresse de la page.',
     'Use at least %count% letters.' => 'Saisissez au moins %count% lettres.',
     'Use lowercase letters, digits and single hyphens only, such as "recipe" or "news-item".' => 'Uniquement des minuscules, des chiffres et des tirets simples, par exemple « recipe » ou « news-item ».',
     'Used in %count% page(s)' => 'Utilisée dans %count% page(s)',

@@ -65,6 +65,22 @@ final class CmsUrlService
     {
         $page->setLocale($locale);
 
+        $fixed = $this->fixedAddressOf($page, $locale);
+
+        // A fixed address is the address, as it was typed: no ancestor prefix,
+        // no slugifying. The slug is still kept, for the day it is cleared.
+        if (null !== $fixed) {
+            $this->assertFree($fixed, (int) $page->getId(), $locale);
+
+            if (null !== $requestedSlug && '' !== ($segment = $this->normalizeSegment($requestedSlug))) {
+                $page->setSlug($segment)->save();
+            }
+
+            $page->setRewrittenUrl($locale, $fixed);
+
+            return $fixed;
+        }
+
         $segment = $this->normalizeSegment($requestedSlug ?? (string) $page->getTitle());
 
         if ('' === $segment) {
@@ -252,6 +268,70 @@ final class CmsUrlService
     }
 
     /**
+     * The address the page keeps in this locale whatever its place in the tree,
+     * or null when its address is built from its ancestors and its slug.
+     */
+    public function fixedAddressOf(CmsPage $page, string $locale): ?string
+    {
+        $fixed = trim((string) $page->setLocale($locale)->getFixedUrl(), '/');
+
+        return '' === $fixed ? null : $fixed;
+    }
+
+    /**
+     * A whole address as an author typed it, kept as it is but for the slashes
+     * around it: a site taken over keeps the addresses search engines know,
+     * `.html` suffix and accented letters included.
+     *
+     * @throws FixedAddressException when the address cannot be one
+     */
+    public function normalizeFixedAddress(?string $raw): ?string
+    {
+        $address = trim(trim((string) $raw), '/');
+
+        if ('' === $address) {
+            return null;
+        }
+
+        if (1 === preg_match('#[\s?\#\\\\]|//#u', $address)) {
+            throw new FixedAddressException(\sprintf('"%s" is not an address: no space, "?", "#", backslash or empty segment.', $address));
+        }
+
+        if (\strlen($address) > PageSlugSource::MAX_URL_BYTES) {
+            throw new FixedAddressException(\sprintf('"%s" is longer than %d bytes.', $address, PageSlugSource::MAX_URL_BYTES));
+        }
+
+        $first = strtolower(explode('/', $address)[0]);
+
+        if (\in_array($first, self::RESERVED_PREFIXES, true)) {
+            throw new FixedAddressException(\sprintf('"%s" is a reserved path and cannot start the address of a page.', $first));
+        }
+
+        return $address;
+    }
+
+    /**
+     * An address another object answers on is refused; a redirection or the
+     * obsolete address of a deleted item is not an owner, and goes to the page.
+     *
+     * @throws FixedAddressException
+     */
+    private function assertFree(string $address, int $pageId, string $locale): void
+    {
+        $existing = RewritingUrlQuery::create()->findOneByUrl($address);
+
+        if (null === $existing || null !== $existing->getRedirected() || 'obsolete-rewritten-url' === $existing->getView()) {
+            return;
+        }
+
+        if (TheliaCMS::PAGE_VIEW === $existing->getView() && (string) $pageId === (string) $existing->getViewId() && $locale === $existing->getViewLocale()) {
+            return;
+        }
+
+        throw new FixedAddressException(\sprintf('"%s" is already the address of %s #%s.', $address, $existing->getView(), $existing->getViewId()));
+    }
+
+    /**
      * @throws \InvalidArgumentException when the slug would shadow a reserved path
      */
     public function normalizeSegment(string $raw): string
@@ -302,7 +382,9 @@ final class CmsUrlService
                 break;
             }
 
-            $url = trim((string) $parent->getRewrittenUrl($locale), '/');
+            // A fixed address is the parent's alone (`sopap.html`): its children
+            // are addressed from the path it would have, its slug under its ancestors.
+            $url = null === $this->fixedAddressOf($parent, $locale) ? trim((string) $parent->getRewrittenUrl($locale), '/') : '';
 
             if ('' !== $url) {
                 // That address already carries its own ancestors.

@@ -35,6 +35,7 @@ use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Notice\NativeContentNotice;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Page\Field\InvalidFieldsException;
+use TheliaCMS\Page\FixedAddressException;
 use TheliaCMS\Page\Field\PageFields;
 use TheliaCMS\Page\PageTagRepository;
 use TheliaCMS\Page\PageTypeRepository;
@@ -296,6 +297,8 @@ final readonly class CmsPageAdminController
                 foreach ($exception->problems as $problem) {
                     $form->addError(new FormError($problem));
                 }
+            } catch (FixedAddressException $exception) {
+                $form->get('fixedUrl')->addError(new FormError($exception->getMessage()));
             }
         }
 
@@ -340,6 +343,7 @@ final readonly class CmsPageAdminController
             // would fold it into the segment on the next save and move the page
             // to `parent/parent-child`.
             'slug' => $page->isNew() ? null : $this->addresses->slugOf($page, $locale),
+            'fixedUrl' => $page->isNew() ? null : $this->addresses->fixedAddressOf($page, $locale),
             'chapo' => $page->isNew() ? null : $page->getChapo(),
             'description' => $page->isNew() ? null : $page->getDescription(),
             'parent' => (int) $page->getParent(),
@@ -387,6 +391,7 @@ final readonly class CmsPageAdminController
         // The i18n columns are written on the localized object before the
         // writer saves it, so a single save() covers page + translation.
         $page->setLocale($locale)
+            ->setFixedUrl($this->addresses->normalizeFixedAddress($data['fixedUrl'] ?? null))
             ->setChapo($data['chapo'])
             ->setDescription($data['description'])
             ->setMetaTitle($data['metaTitle'])

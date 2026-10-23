@@ -7,6 +7,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added (2.2.0)
+
+- **Fixed addresses.** A page can keep, in a language, a whole address that
+  does not follow the tree (`about-us.html`), typed in the new **Fixed
+  address** field of its edit screen: a site taken over keeps the addresses
+  search engines know. Rebuilds keep it, it travels in the export, and the
+  update to 2.2.0 adds `cms_page_i18n.fixed_url`.
+
 ### Added (2.1.0)
 
 - **A document for each catalogue item.** A product, a category, a content

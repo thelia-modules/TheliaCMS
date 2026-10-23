@@ -97,6 +97,27 @@ Reserved first segments (`admin`, `api`, `assets`, `recherche`, `search`,
 router runs before the Symfony routes, so a page slugged `admin` would shadow
 the back office.
 
+### Fixed addresses
+
+A page can keep, in a language, an address that does not follow the tree: the
+**Fixed address** field of the edit screen. It is the whole address, kept as
+typed but for the slashes around it, `.html` suffix included, so a site taken
+over from Thelia 2, WordPress or Prestashop keeps the addresses search engines
+know while its pages are filed in a tree. Leave it empty and the address is
+built from the parent pages and the slug again; the fixed one then answers 301
+towards it.
+
+The fixed address is stored next to the slug (`cms_page_i18n.fixed_url`), so
+the addresses rebuilt on every activation of the module, on the move of an
+ancestor or on a save keep it. The children of a page with a fixed address are
+addressed from the path the page would have (its ancestors and its slug), not
+from `about-us.html/`. An address another object answers on is refused; one a
+redirection or an obsolete row holds goes to the page, which is how the former
+address of a content becomes the address of the page replacing it. An address
+written anew loses its accents to the core (`RewritingUrl::preInsert()`); one
+the site already holds keeps them, its row being reassigned rather than
+inserted. The update to 2.2.0 adds the column.
+
 ### Moving a page
 
 Moving a page in the tree takes the addresses of everything under it. A

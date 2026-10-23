@@ -320,6 +320,7 @@ CREATE TABLE `cms_page_i18n`
     `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
     `title` VARCHAR(255),
     `slug` VARCHAR(255),
+    `fixed_url` VARCHAR(255),
     `chapo` TEXT,
     `description` LONGTEXT,
     `meta_title` VARCHAR(255),

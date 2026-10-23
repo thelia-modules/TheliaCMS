@@ -87,6 +87,13 @@
         -->
         <column name="slug" size="255" type="VARCHAR"/>
         <!--
+            The whole address of the page in this language when it must not
+            follow the tree: the address a site taken over had, `.html` suffix
+            included. Kept here for the same reason as the slug: the addresses
+            are rebuilt from this table on every activation.
+        -->
+        <column name="fixed_url" size="255" type="VARCHAR"/>
+        <!--
             The same pair as the core content and folder: a short summary and a
             longer description, HTML from the back-office editor. Neither is
             the body of the page, which the builder owns: they are what a list
@@ -135,7 +142,7 @@
 
         <behavior name="i18n">
             <parameter name="i18n_columns"
-                       value="title, slug, chapo, description, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow, translated_fields"/>
+                       value="title, slug, fixed_url, chapo, description, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow, translated_fields"/>
         </behavior>
         <behavior name="timestampable"/>
     </table>

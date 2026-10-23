@@ -227,6 +227,7 @@ final readonly class SiteImporter
                     ->setTitle((string) ($translation['title'] ?? ''))
                     ->setChapo($this->summaryHtml($translation['chapo'] ?? null))
                     ->setDescription($this->summaryHtml($translation['description'] ?? null))
+                    ->setFixedUrl(\is_string($translation['fixed_url'] ?? null) && '' !== trim($translation['fixed_url']) ? trim($translation['fixed_url']) : null)
                     ->setMetaTitle($translation['meta_title'] ?? null)
                     ->setMetaDescription($translation['meta_description'] ?? null)
                     ->setOgTitle($translation['og_title'] ?? null)
@@ -808,12 +809,13 @@ final readonly class SiteImporter
     {
         foreach ($translations as $locale => $translation) {
             $slug = trim((string) ($translation['slug'] ?? ''));
+            $fixed = trim((string) ($translation['fixed_url'] ?? ''), " /");
 
-            if ('' === $slug) {
+            if ('' === $slug && '' === $fixed) {
                 continue;
             }
 
-            $url = $this->addressUnder($parentId, (string) $locale, $slug);
+            $url = '' !== $fixed ? $fixed : $this->addressUnder($parentId, (string) $locale, $slug);
 
             $existing = RewritingUrlQuery::create()
                 ->filterByUrl($url)
@@ -856,8 +858,10 @@ final readonly class SiteImporter
             $this->urls->refresh($page, $locale, null !== $slug && '' !== $slug ? $slug : null);
         } catch (\InvalidArgumentException $exception) {
             // A slug this site reserves — the address of its own back office,
-            // for one. The page is kept, under an address derived from its
-            // title, rather than the whole import being refused.
+            // for one — or a fixed address another object answers on. The page
+            // is kept, under an address derived from its title, rather than the
+            // whole import being refused.
+            $page->setLocale($locale)->setFixedUrl(null)->save();
             $this->urls->refresh($page, $locale);
             $report->warn(\sprintf('Page "%s" could not keep its address in %s: %s', $page->getTitle(), $locale, $exception->getMessage()));
         }

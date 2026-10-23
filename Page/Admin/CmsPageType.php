@@ -61,6 +61,12 @@ final class CmsPageType extends AbstractType
                 'required' => false,
                 'help' => 'Leave empty to derive it from the title. Parent pages prefix it automatically.',
             ])
+            ->add('fixedUrl', TextType::class, [
+                'label' => 'Fixed address',
+                'required' => false,
+                'constraints' => [new Length(max: 255)],
+                'help' => 'The whole address, kept as typed whatever the parent page: the address a site taken over had, such as about-us.html. Leave empty for the address built from the parent pages and the slug.',
+            ])
             // `wysiwyg` is the opt-in class of the back-office rich text
             // editor: the same editor as the summary and description of a
             // core content, when one is installed, a plain textarea otherwise.

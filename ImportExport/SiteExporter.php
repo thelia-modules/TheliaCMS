@@ -136,6 +136,7 @@ final readonly class SiteExporter
             $document['translations'][$locale] = [
                 'title' => $title,
                 'slug' => $this->slugOf($page, $locale),
+                'fixed_url' => $page->getFixedUrl(),
                 'chapo' => $page->getChapo(),
                 'description' => $page->getDescription(),
                 'meta_title' => $page->getMetaTitle(),
