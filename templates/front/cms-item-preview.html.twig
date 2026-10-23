@@ -1,8 +1,9 @@
 {#
-    The draft of the document of a catalogue item, opened from a signed link:
-    the name of the item as the level 1 heading, as the page of the item draws
-    it, and the document under it. A theme draws it its own way by shipping
-    `cms-item-preview.html.twig` at its root.
+    The draft of the document of a catalogue item alone, opened from a signed
+    link: the document in the layout of the theme, without its header, its
+    footer or the name of the item, which the page of the item draws. The
+    page of the item itself shows the draft from its own link. A theme draws
+    this one its own way by shipping `cms-item-preview.html.twig` at its root.
 #}
 {% extends 'base.html.twig' %}
 
@@ -12,11 +13,11 @@
 
 {% block body_class %}cms-item-preview cms-item-preview--{{ cms_item.type.value }}{% endblock %}
 
-{% block body %}
-    <header class="cms-page__header">
-        <h1 class="cms-page__title">{{ cms_item.title }}</h1>
-    </header>
+{% block header %}{% endblock %}
 
+{% block footer %}{% endblock %}
+
+{% block body %}
     <article class="cms-page__content cms-page-content">
         {{ cms_item_html|raw }}
     </article>

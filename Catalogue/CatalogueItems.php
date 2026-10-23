@@ -54,6 +54,7 @@ final readonly class CatalogueItems
             self::plainOrNull($model->getDescription()),
             $model instanceof Product ? (string) $model->getRef() : null,
             \is_string($url) && '' !== $url ? $url : null,
+            (bool) $model->getVisible(),
         );
     }
 

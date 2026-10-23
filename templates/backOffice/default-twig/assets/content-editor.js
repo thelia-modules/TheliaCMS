@@ -123,6 +123,7 @@
         var side = current.querySelector(".cms-content__panel");
         var scrolled = side ? side.scrollTop : 0;
 
+        applyPreviewChoices(next);
         current.replaceWith(next);
         running = false;
         enhance(next);
@@ -224,6 +225,103 @@
         });
     }
 
+    /* ---- What the preview shows, and at which width ------------------ */
+
+    // The draft of a catalogue item reads in the page of the item or alone,
+    // a choice kept from one visit to the next; the width is the one of a
+    // breakpoint of the theme, kept for the session like in its toolkit.
+    var MODE_KEY = "theliacms:preview-mode";
+    var WIDTH_KEY = "theliacms:preview-width";
+
+    function stored(storage, key) {
+        try {
+            return window[storage].getItem(key);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function store(storage, key, value) {
+        try {
+            if (value) {
+                window[storage].setItem(key, value);
+            } else {
+                window[storage].removeItem(key);
+            }
+        } catch (error) {
+            // A browser that keeps nothing shows the defaults next time.
+        }
+    }
+
+    /**
+     * Puts the stored choices on one copy of the screen: called on the copy
+     * the server answers before it is shown, so its preview loads once, at
+     * the right address.
+     */
+    function applyPreviewChoices(root) {
+        var frame = root.querySelector("[data-cms-frame]");
+        var link = root.querySelector("[data-cms-preview-link]");
+        var mode = stored("localStorage", MODE_KEY);
+        var choice = mode ? root.querySelector('[data-cms-preview-modes] input[value="' + mode.replace(/"/g, "") + '"]') : null;
+        var checked = choice || root.querySelector("[data-cms-preview-modes] input:checked");
+
+        if (checked) {
+            checked.checked = true;
+
+            if (frame && frame.getAttribute("src") !== checked.getAttribute("data-url")) {
+                frame.setAttribute("src", checked.getAttribute("data-url"));
+            }
+
+            if (link) {
+                link.setAttribute("href", checked.getAttribute("data-url"));
+            }
+        }
+
+        var select = root.querySelector("[data-cms-preview-width]");
+        var width = stored("sessionStorage", WIDTH_KEY);
+
+        if (select && width && select.querySelector('option[value="' + width.replace(/"/g, "") + '"]')) {
+            select.value = width;
+        }
+
+        setWidth(root);
+    }
+
+    function setWidth(root) {
+        var frame = root.querySelector("[data-cms-frame]");
+        var select = root.querySelector("[data-cms-preview-width]");
+        var preview = root.querySelector(".cms-content__preview");
+        var width = select ? select.value : "";
+
+        if (frame) {
+            frame.style.width = width ? width + "px" : "";
+        }
+
+        if (preview) {
+            preview.classList.toggle("cms-content__preview--sized", width !== "");
+        }
+    }
+
+    function bindPreviewChoices(root) {
+        root.querySelectorAll("[data-cms-preview-modes] input").forEach(function (input) {
+            input.addEventListener("change", function () {
+                store("localStorage", MODE_KEY, input.value);
+                applyPreviewChoices(root);
+            });
+        });
+
+        var select = root.querySelector("[data-cms-preview-width]");
+
+        if (select) {
+            select.addEventListener("change", function () {
+                store("sessionStorage", WIDTH_KEY, select.value);
+                setWidth(root);
+            });
+        }
+
+        applyPreviewChoices(root);
+    }
+
     /**
      * Binds the behaviour of the screen to one copy of its markup: the one
      * the page was loaded with, then each one `refresh()` puts in its place.
@@ -233,6 +331,7 @@
         var steps = root.querySelector("[data-cms-progress-steps]");
 
         root.querySelectorAll(".cms-toast").forEach(arm);
+        bindPreviewChoices(root);
 
         /* ---- Generation ------------------------------------------------ */
 

@@ -59,6 +59,7 @@ final readonly class ContentScreen
         private SectionFormBuilder $sectionForms,
         private ToolkitLink $toolkit,
         private Pricing $pricing,
+        private PreviewWidths $previewWidths,
     ) {
     }
 
@@ -83,6 +84,7 @@ final readonly class ContentScreen
             'generator_notice' => $mayGenerate ? $this->notice() : null,
             'model' => $this->settings->model(),
             'toolkit_url' => $this->toolkit->url(),
+            'preview_widths' => $this->previewWidths->widths(),
             'addable' => $mayPublish ? $this->addable() : [],
             'assets_version' => self::assetsVersion(),
         ]);

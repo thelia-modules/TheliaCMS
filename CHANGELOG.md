@@ -18,6 +18,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - The documents of the catalogue items count as uses of their images and
   components, travel in the export (section `catalogue_contents`) and go back
   on import on the item with the same reference or address.
+- The preview of the document of an item shows the **whole page** of the item
+  with the draft in place, or the **content only**, without the header and the
+  footer of the theme. A list sets the width of the preview to a breakpoint of
+  the theme, as its toolkit does.
 
 ### Changed (2.0.0)
 

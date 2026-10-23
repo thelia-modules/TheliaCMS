@@ -19,6 +19,7 @@ use Thelia\Model\Lang;
 use TheliaCMS\Catalogue\CatalogueItemType;
 use TheliaCMS\Catalogue\ItemContentRepository;
 use TheliaCMS\Partial\PartialRenderer;
+use TheliaCMS\Preview\ItemDraftRequest;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 
@@ -36,6 +37,7 @@ final class ItemContentExtension extends AbstractExtension
         private readonly ItemContentRepository $contents,
         private readonly PartialRenderer $partials,
         private readonly LangService $langService,
+        private readonly ItemDraftRequest $draftRequest,
     ) {
     }
 
@@ -51,6 +53,10 @@ final class ItemContentExtension extends AbstractExtension
      * an empty string: an unknown type, an item without a document, or one
      * whose document is offline all print nothing, so a theme calls it
      * without testing first.
+     *
+     * The page opened from the signed link to the draft of this item, in
+     * this language, prints the draft instead: the editor reads it in the
+     * page it will go online on.
      */
     public function itemContent(string $type, int|string|null $id, ?string $locale = null): string
     {
@@ -62,7 +68,9 @@ final class ItemContentExtension extends AbstractExtension
         }
 
         $locale ??= $this->langService->getLang()?->getLocale() ?? Lang::getDefaultLanguage()->getLocale();
-        $html = $this->contents->publishedHtml($itemType, $itemId, $locale);
+        $html = $this->draftRequest->opensDraftOf($itemType, $itemId, $locale)
+            ? $this->contents->find($itemType, $itemId, $locale)?->getDraftHtml()
+            : $this->contents->publishedHtml($itemType, $itemId, $locale);
 
         return null === $html ? '' : (string) $this->partials->substitute($html, $locale);
     }

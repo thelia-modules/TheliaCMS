@@ -156,6 +156,29 @@ final class ItemContentScreenTest extends AdminScreenTestCase
         self::assertSame(404, $this->client->getResponse()->getStatusCode());
     }
 
+    public function testThePreviewShowsTheWholePageOfAnItemOnlineAndTheContentAloneOtherwise(): void
+    {
+        $content = $this->content();
+        $this->getService(ItemContentWriter::class)->saveContent(CatalogueItemType::Content, (int) $content->getId(), $this->locale(), Document::richText('<h2>Brouillon</h2><p>Pas encore en ligne.</p>'));
+
+        $screen = $this->screen($this->url($content));
+        $frame = (string) $screen->filter('[data-testid="cms-content-frame"]')->attr('src');
+        $modes = $screen->filter('[data-testid="cms-content-preview-modes"] input');
+
+        self::assertSame(2, $modes->count(), 'The whole page, or the content alone.');
+        self::assertStringContainsString(ItemPreviewLink::PAGE_PARAMETER.'=', $frame, 'The page of the item first.');
+        self::assertSame($frame, $modes->eq(0)->attr('data-url'));
+        self::assertSame($frame, $screen->filter('[data-testid="cms-page-draft-preview-btn"]')->attr('href'), 'The link to share follows.');
+        self::assertStringContainsString('/cms-preview/item/content/', (string) $modes->eq(1)->attr('data-url'));
+        self::assertGreaterThan(1, $screen->filter('[data-testid="cms-content-preview-width"] option')->count(), 'Responsive, then the breakpoints of the theme.');
+
+        $content->setVisible(0)->save();
+        $offline = $this->screen($this->url($content));
+
+        self::assertSame(0, $offline->filter('[data-testid="cms-content-preview-modes"]')->count(), 'An offline item has no page to show the draft on.');
+        self::assertStringContainsString('/cms-preview/item/content/', (string) $offline->filter('[data-testid="cms-content-frame"]')->attr('src'));
+    }
+
     public function testTheScreenOfAnImageNamesTheItemsUsingItAndKeepsItFromBeingDeleted(): void
     {
         $content = $this->content();

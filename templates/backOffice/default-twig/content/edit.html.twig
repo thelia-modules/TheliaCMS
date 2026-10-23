@@ -48,7 +48,30 @@
             {{ component('BoLanguageSwitcher', { currentLanguageId: subject.languageId }) }}
 
             <div class="cms-content__actions">
-                <a class="btn btn-sm btn-outline-secondary" href="{{ subject.draftPreviewUrl }}" target="_blank" rel="noopener"
+                {# The draft of a catalogue item reads in the page of the item, or
+                   alone; the page first, when the item has one online. The script
+                   switches the preview and the link below, and remembers the choice. #}
+                {% set draft_page_url = subject.draftPagePreviewUrl %}
+                {% if draft_page_url %}
+                    <div class="btn-group btn-group-sm" role="group" aria-label="{{ 'What the preview shows'|trans({}, 'theliacms') }}" data-cms-preview-modes data-testid="cms-content-preview-modes">
+                        <input type="radio" class="btn-check" name="cms-preview-mode" id="cms-preview-mode-page" value="page" data-url="{{ draft_page_url }}" checked>
+                        <label class="btn btn-outline-secondary" for="cms-preview-mode-page">{{ 'Whole page'|trans({}, 'theliacms') }}</label>
+                        <input type="radio" class="btn-check" name="cms-preview-mode" id="cms-preview-mode-content" value="content" data-url="{{ subject.draftPreviewUrl }}">
+                        <label class="btn btn-outline-secondary" for="cms-preview-mode-content">{{ 'Content only'|trans({}, 'theliacms') }}</label>
+                    </div>
+                {% endif %}
+                {# The widths of the toolkit of the theme: the preview at the width
+                   of a breakpoint, or at the width of the screen. #}
+                {% if preview_widths is not empty %}
+                    <select class="form-select form-select-sm cms-content__width" data-cms-preview-width
+                            aria-label="{{ 'Width of the preview'|trans({}, 'theliacms') }}" data-testid="cms-content-preview-width">
+                        <option value="">{{ 'Responsive'|trans({}, 'theliacms') }}</option>
+                        {% for width in preview_widths %}
+                            <option value="{{ width.px }}">{{ width.label|trans({}, 'theliacms') }} ({{ width.px }}px)</option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+                <a class="btn btn-sm btn-outline-secondary" href="{{ draft_page_url ?: subject.draftPreviewUrl }}" target="_blank" rel="noopener" data-cms-preview-link
                    title="{{ 'Open the draft in a new tab. The link works for 72 hours and can be shared.'|trans({}, 'theliacms') }}"
                    data-testid="cms-page-draft-preview-btn">
                     <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ 'Preview the draft'|trans({}, 'theliacms') }}
@@ -345,7 +368,7 @@
 
             <div class="cms-content__preview">
                 {% if subject.hasContent %}
-                    <iframe class="cms-content__frame" src="{{ subject.draftPreviewUrl }}"
+                    <iframe class="cms-content__frame" src="{{ draft_page_url ?: subject.draftPreviewUrl }}"
                             title="{{ 'The draft, as the theme shows it'|trans({}, 'theliacms') }}"
                             data-testid="cms-content-frame" data-cms-frame></iframe>
                 {% elseif translate_form is not null %}

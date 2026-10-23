@@ -14,16 +14,22 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Twig;
 
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use TheliaCMS\Catalogue\Admin\ItemContentWriter;
+use TheliaCMS\Catalogue\CatalogueItem;
 use TheliaCMS\Catalogue\CatalogueItemType;
 use TheliaCMS\Content\Document;
+use TheliaCMS\Preview\ItemDraftRequest;
+use TheliaCMS\Preview\ItemPreviewLink;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\Twig\ItemContentExtension;
 use Twig\Environment;
 
 /**
  * What a theme prints with cms_item_content(): the published document of the
- * item, and nothing at all otherwise.
+ * item, and nothing at all otherwise; the draft on the page opened from the
+ * signed link to it.
  */
 final class ItemContentExtensionTest extends CmsIntegrationTestCase
 {
@@ -51,6 +57,65 @@ final class ItemContentExtensionTest extends CmsIntegrationTestCase
         self::assertSame('', $this->render("{{ cms_item_content('product', id) }}"), 'No document.');
         self::assertSame('', $this->render("{{ cms_item_content('brand', id) }}"), 'A type that carries no document.');
         self::assertSame('', $this->render("{{ cms_item_content('product', null) }}"), 'No item.');
+    }
+
+    public function testThePageOpenedFromTheSignedLinkToTheDraftPrintsTheDraft(): void
+    {
+        $writer = $this->getService(ItemContentWriter::class);
+        $writer->saveContent(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale(), Document::richText('<h2>Questions</h2><p>En ligne.</p>'));
+        $writer->publish(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale());
+        $writer->saveContent(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale(), Document::richText('<h2>Questions</h2><p>Pas encore.</p>'));
+
+        $links = $this->getService(ItemPreviewLink::class);
+        $item = static fn (int $id, string $locale): CatalogueItem => new CatalogueItem(CatalogueItemType::Product, $id, $locale, 'Produit', null, null, null, 'https://shop.test/produit.html');
+
+        $draft = $this->openedFrom((string) $links->pageUrlFor($item(self::PRODUCT_ID, $this->locale())));
+        $printed = $this->render("{{ cms_item_content('product', id) }}");
+        self::assertStringContainsString('Pas encore.', $printed, 'The draft, in the page it goes online on.');
+        self::assertStringContainsString('data-cms-section', $printed, 'Marked, so the editor finds each section in the page.');
+        self::assertTrue($draft->attributes->get(ItemDraftRequest::SERVED_ATTRIBUTE), 'Marked, so the answer stays out of caches.');
+
+        $refused = [
+            'another item' => (string) $links->pageUrlFor($item(self::PRODUCT_ID + 1, $this->locale())),
+            'another language' => (string) $links->pageUrlFor($item(self::PRODUCT_ID, 'xx_XX')),
+            'an expired link' => (string) $links->pageUrlFor($item(self::PRODUCT_ID, $this->locale()), new \DateTimeImmutable('-73 hours')),
+            'a tampered link' => substr((string) $links->pageUrlFor($item(self::PRODUCT_ID, $this->locale())), 0, -1).'0',
+        ];
+
+        foreach ($refused as $case => $url) {
+            $this->leave();
+            $request = $this->openedFrom($url);
+            self::assertStringContainsString('En ligne.', $this->render("{{ cms_item_content('product', id) }}"), \sprintf('The link to %s shows what visitors see.', $case));
+            self::assertNull($request->attributes->get(ItemDraftRequest::SERVED_ATTRIBUTE), $case);
+        }
+    }
+
+    protected function tearDown(): void
+    {
+        $this->leave();
+
+        parent::tearDown();
+    }
+
+    /**
+     * The page being served, as opened from `$url`: the request the test case
+     * runs under carries the query of the link.
+     */
+    private function openedFrom(string $url): Request
+    {
+        $request = $this->getService(RequestStack::class)->getMainRequest();
+        \assert($request instanceof Request);
+        parse_str((string) parse_url($url, \PHP_URL_QUERY), $query);
+        $request->query->replace($query);
+
+        return $request;
+    }
+
+    private function leave(): void
+    {
+        $request = $this->getService(RequestStack::class)->getMainRequest();
+        $request?->query->remove(ItemPreviewLink::PAGE_PARAMETER);
+        $request?->attributes->remove(ItemDraftRequest::SERVED_ATTRIBUTE);
     }
 
     private function render(string $template): string

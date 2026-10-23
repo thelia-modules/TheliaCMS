@@ -235,7 +235,11 @@ so it works without its script. With it, the forms post in the background and
 the progress of a call is shown as it runs.
 
 **Preview the draft** gives a signed link, valid 72 hours, that a client
-without a back-office account can open. It is `noindex` and never cached.
+without a back-office account can open. It is `noindex` and never cached. A
+list next to it sets the width of the preview to a breakpoint of the theme, as
+in its toolkit: the `--breakpoint-*` tokens of the nearest
+`assets/styles/variables.css` of the theme and its parents, those of Flexy
+otherwise.
 Publishing runs the rendered content through a server-side sanitizer, rewrites
 the images and extracts the text for the search index, and the heading
 structure is checked wherever a page goes online (see `heading_check_mode`).
@@ -345,9 +349,15 @@ The theme prints the published document where it wants it:
 ```
 
 Nothing is printed while the item has no document online in the language being
-served. A draft is shown through a signed link from the content screen, on a
-page of its own; a theme draws that page its own way with a
-`cms-item-preview.html.twig` at its root.
+served. The preview of the content screen shows the draft two ways:
+
+- **Whole page**: the page of the item itself, opened with a signed
+  `cms_preview` token, where `cms_item_content()` prints the draft instead of
+  the published document. The page is then `noindex`, `no-store` and sends no
+  referrer. An item without an address, or offline, has only the other way.
+- **Content only**: the draft alone on a page of the module, without the
+  header and the footer of the theme. A theme draws that page its own way with
+  a `cms-item-preview.html.twig` at its root.
 
 The document of an item goes when the shop deletes the item. It counts as a
 use of the images and components it holds, and it travels in the export.

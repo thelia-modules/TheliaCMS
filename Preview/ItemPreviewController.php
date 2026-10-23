@@ -26,9 +26,10 @@ use TheliaCMS\Partial\PartialRenderer;
 
 /**
  * Shows the draft of the document of a catalogue item to whoever holds a
- * signed link, on a page of its own: the name of the item over its document,
- * in the layout of the theme. The page of the item itself shows the published
- * document only.
+ * signed link, on a page of its own: the document alone, in the layout of
+ * the theme. The page of the item shows the draft in its place from a link of
+ * its own (ItemPreviewLink::pageUrlFor()), and the published document
+ * otherwise.
  */
 final readonly class ItemPreviewController
 {

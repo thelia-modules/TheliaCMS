@@ -352,6 +352,7 @@ final readonly class ItemContentController
             routes: $routes,
             testId: 'cms-item-content',
             translationSources: $this->translationSources->forItem($item->type, $item->id, $item->locale),
+            draftPagePreviewUrl: $this->previewLinks->pageUrlFor($item),
         );
     }
 

@@ -276,6 +276,25 @@ body:has(.cms-content) {
     background: #fff;
 }
 
+.cms-content__width {
+    width: auto;
+}
+
+/* At the width of a breakpoint, as in the toolkit of the theme: the frame
+   centred on a dark ground, scrolled sideways when it is wider than the
+   stage. A ring, never a border, which would eat into the width. */
+.cms-content__preview--sized {
+    overflow-x: auto;
+    background: #212529;
+}
+
+.cms-content__preview--sized .cms-content__frame {
+    flex: none;
+    margin-inline: auto;
+    border-radius: 0.5rem;
+    box-shadow: 0 0 0 1px #495057;
+}
+
 /* Adding a section: the components, in a dialog opened from the button the
    script writes into the preview after the last section. */
 .cms-content__add {

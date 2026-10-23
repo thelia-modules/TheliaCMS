@@ -30,6 +30,7 @@ final readonly class CatalogueItem
         public ?string $description,
         public ?string $reference,
         public ?string $url,
+        public bool $online = true,
     ) {
     }
 }
