@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Hook;
 
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Hook\BaseHook;
@@ -46,6 +47,8 @@ class CmsDashboardHook extends BaseHook
         private readonly CmsSettings $settings,
         private readonly ShowcaseStats $stats,
         private readonly SampleTextPageFinder $sampleTextPages,
+        // Read on every rendering: BaseHook keeps the first request it is given.
+        private readonly RequestStack $requests,
         ?EventDispatcherInterface $dispatcher = null,
         ?ParserResolver $parserResolver = null,
     ) {
@@ -95,7 +98,7 @@ class CmsDashboardHook extends BaseHook
 
     private function localeOfTheInterface(): string
     {
-        $requested = (string) $this->getRequest()?->getLocale();
+        $requested = (string) $this->requests->getMainRequest()?->getLocale();
 
         foreach (LangQuery::create()->filterByActive(1)->find() as $lang) {
             $locale = (string) $lang->getLocale();

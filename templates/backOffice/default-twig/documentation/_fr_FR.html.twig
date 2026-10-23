@@ -1,4 +1,4 @@
-<section id="vue-d-ensemble">
+<section id="overview">
     <h2>Vue d’ensemble</h2>
     <p>Le CMS gère les pages du site, leur contenu et tout ce qui les entoure. Tout se trouve dans la section <strong>CMS</strong> du menu de gauche. Vous n’y voyez que les écrans que votre profil autorise.</p>
     <ul>
@@ -10,6 +10,7 @@
         <li><strong>Composants</strong> et <strong>Skills</strong> : les blocs dont les pages sont faites et les consignes que suit le générateur.</li>
         <li><strong>Réglages</strong> : le mode du site, la maintenance, la page d’erreur, le générateur.</li>
     </ul>
+    <p>Sur chaque écran du CMS, le lien <em>Aide sur cet écran</em>, en haut à droite, ouvre la partie de cette documentation qui l’explique.</p>
     <p>Chaque page existe dans chaque langue du site. Le sélecteur de langue en haut des écrans choisit la langue que vous modifiez : titre, adresse, contenu et publication se règlent langue par langue.</p>
 </section>
 
@@ -33,7 +34,7 @@
     </ul>
 </section>
 
-<section id="contenu">
+<section id="content">
     <h2>Le contenu d’une page</h2>
     <p>Le contenu se modifie sur son propre écran : <em>Modifier le contenu</em>, depuis la page. Il est fait de <strong>sections</strong> posées les unes sous les autres, chacune étant un composant (un bandeau, un texte, une liste de produits, un formulaire…). À droite, l’aperçu montre le brouillon tel que le site l’affichera.</p>
     <h3>Écrire avec le générateur</h3>
@@ -51,7 +52,7 @@
     <p>Chaque langue a son propre contenu : la version française et la version anglaise d’une page sont deux brouillons indépendants, publiés séparément.</p>
 </section>
 
-<section id="gabarits">
+<section id="page-templates">
     <h2>Gabarits</h2>
     <p>Un gabarit est le modèle d’une série de pages : des recettes, des réalisations, des actualités. Chaque page a un gabarit, choisi dans son onglet <em>Général</em>. Les gabarits du site sont dans <strong>CMS &gt; Gabarits</strong> (aussi accessibles depuis les réglages). Le gabarit <code>default</code> existe toujours.</p>
     <h3>Ce que règle un gabarit</h3>
@@ -68,7 +69,7 @@
     <p>Un gabarit utilisé par une page, même dans la corbeille, ne peut pas être supprimé.</p>
 </section>
 
-<section id="etiquettes">
+<section id="tags">
     <h2>Étiquettes</h2>
     <p>Une page porte une étiquette ou aucune, choisie dans son onglet <em>Général</em>. Les étiquettes se créent, se renomment et se suppriment dans <strong>CMS &gt; Étiquettes</strong>. Le thème s’en sert pour regrouper des pages, par exemple « les autres actualités ». Supprimer une étiquette la retire des pages qui la portaient ; l’écran dit combien.</p>
 </section>
@@ -79,7 +80,7 @@
     <p>L’aperçu montre le brouillon de deux façons : dans la <em>page entière</em> de la fiche, à sa place, ou en <em>contenu seul</em>, sans l’en-tête et le pied du site.</p>
 </section>
 
-<section id="composants">
+<section id="components">
     <h2>Composants</h2>
     <p>Les sections d’une page viennent d’un catalogue de composants, de trois familles :</p>
     <ul>
@@ -100,7 +101,7 @@
     <p>Une consigne que vous voulez voir respectée sur toutes les pages (un ton, un mot à éviter, une mention obligatoire) a sa place dans une skill. Une consigne propre à une série de pages va dans le brief de son gabarit, et celle d’une seule page dans son brief.</p>
 </section>
 
-<section id="menus-formulaires-medias">
+<section id="menus-forms-media">
     <h2>Menus, formulaires, médias</h2>
     <h3>Menus</h3>
     <p><strong>CMS &gt; Menus</strong> contient au moins le menu principal (<code>main</code>) et celui du pied de page (<code>footer</code>). Une entrée pointe vers une page, un contenu, un dossier, une adresse web, ou vers rien (c’est alors un intitulé de groupe). Son libellé est facultatif : vide, c’est le titre de la cible qui s’affiche. L’arbre va jusqu’à trois niveaux ; les entrées se déplacent avec les boutons ou par glisser-déposer. Une entrée dont la cible est supprimée, hors ligne ou non publiée dans la langue lue disparaît du menu dans cette langue, et l’écran dit pourquoi.</p>
@@ -110,7 +111,7 @@
     <p><strong>CMS &gt; Médias</strong> range les images des pages (JPEG, PNG, WebP). Le texte alternatif est obligatoire dans chaque langue, sauf pour une image marquée décorative. Chaque image indique ses dimensions, son poids et les pages qui l’utilisent ; une image utilisée ne peut pas être supprimée. À la publication, les images sont servies en plusieurs tailles et au format WebP.</p>
 </section>
 
-<section id="reglages">
+<section id="settings">
     <h2>Réglages</h2>
     <p><strong>CMS &gt; Réglages</strong> rassemble les réglages du site :</p>
     <ul>
@@ -124,7 +125,7 @@
     <p>Les gabarits, les composants et les skills se règlent depuis leurs propres écrans, avec le même droit.</p>
 </section>
 
-<section id="droits">
+<section id="permissions">
     <h2>Qui peut faire quoi</h2>
     <p>Les droits se donnent par profil, dans <strong>Configuration &gt; Administrateurs</strong> :</p>
     <ul>

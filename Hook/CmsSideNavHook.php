@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Hook;
 
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Hook\BaseHook;
@@ -51,6 +52,8 @@ class CmsSideNavHook extends BaseHook
         private readonly UrlGeneratorInterface $urls,
         private readonly Environment $twig,
         private readonly CmsSettings $settings,
+        // Read on every rendering: BaseHook keeps the first request it is given.
+        private readonly RequestStack $requests,
         ?EventDispatcherInterface $dispatcher = null,
         ?ParserResolver $parserResolver = null,
     ) {
@@ -133,7 +136,7 @@ class CmsSideNavHook extends BaseHook
      */
     private function isOnACmsScreen(): bool
     {
-        $path = (string) $this->getRequest()?->getPathInfo();
+        $path = (string) $this->requests->getMainRequest()?->getPathInfo();
 
         if (self::SECTION_PATH === $path || str_starts_with($path, self::SECTION_PATH.'/')) {
             return true;

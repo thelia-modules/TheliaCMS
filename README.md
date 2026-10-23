@@ -796,8 +796,10 @@ edits the pages rather than for the developer of the site: what each screen
 does and what each setting changes, in French or in English after the
 language of the back office (`templates/backOffice/default-twig/documentation/`,
 one file per language, English for any other). Its summary is read off the
-`<section id>` and `<h2>` of the text. A change of the module that an editor
-sees belongs there too.
+`<section id>` and `<h2>` of the text, whose ids are the same in every
+language: each screen of the CMS links to the section explaining it
+(`CmsDocumentationLinkHook`, by the name of its route). A change of the module
+that an editor sees belongs there too.
 
 ## Permissions
 

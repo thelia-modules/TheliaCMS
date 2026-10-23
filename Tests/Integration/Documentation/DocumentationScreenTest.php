@@ -66,8 +66,20 @@ final class DocumentationScreenTest extends AdminScreenTestCase
         // What the language switcher of the back office sends.
         $screen = $this->screen(self::SCREEN.'?lang=fr_FR');
 
-        self::assertSame(1, $screen->filter('section#gabarits')->count(), 'The French text is served.');
-        self::assertSame(0, $screen->filter('section#page-templates')->count());
+        self::assertSame('Gabarits', trim($screen->filter('section#page-templates h2')->text()), 'The French text is served.');
+        self::assertSame('Aide sur cet écran', trim($this->screen('/admin/cms/skills?lang=fr_FR')->filter('[data-testid="cms-documentation-link"]')->text()));
+    }
+
+    public function testEachScreenLinksToTheSectionExplainingIt(): void
+    {
+        foreach (['/admin/cms/skills' => 'skills', '/admin/cms/settings/page-types' => 'page-templates', '/admin/cms/pages/trash' => 'pages', '/admin/cms/media' => 'menus-forms-media'] as $url => $section) {
+            $link = $this->screen($url)->filter('[data-testid="cms-documentation-link"]');
+
+            self::assertSame(1, $link->count(), $url.' links to its help.');
+            self::assertSame(self::SCREEN.'#'.$section, parse_url((string) $link->attr('href'), \PHP_URL_PATH).'#'.parse_url((string) $link->attr('href'), \PHP_URL_FRAGMENT), $url);
+        }
+
+        self::assertSame(0, $this->screen(self::SCREEN)->filter('[data-testid="cms-documentation-link"]')->count(), 'The documentation does not link to itself.');
     }
 
     public function testAnEditorWhoMaySeeThePagesReadsIt(): void
@@ -89,5 +101,6 @@ final class DocumentationScreenTest extends AdminScreenTestCase
 
         $menus = $this->screen('/admin/cms/menus');
         self::assertSame(0, $menus->filter('[data-testid="bo-nav-cms-documentation"]')->count());
+        self::assertSame(0, $menus->filter('[data-testid="cms-documentation-link"]')->count(), 'No help link leading to a 403.');
     }
 }

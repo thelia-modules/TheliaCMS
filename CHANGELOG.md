@@ -14,7 +14,7 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   the module lets them do: pages and their addresses, content and the
   generator, page templates, tags, the content of catalogue items, components,
   skills, menus, forms, media, settings and permissions. It takes the right to
-  see the pages.
+  see the pages. Every screen of the CMS links to the section explaining it.
 - **Fixed addresses.** A page can keep, in a language, a whole address that
   does not follow the tree (`about-us.html`), typed in the new **Fixed
   address** field of its edit screen: a site taken over keeps the addresses
