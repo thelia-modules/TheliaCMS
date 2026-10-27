@@ -12,6 +12,19 @@ inside the DDEV container. The host requires the dependencies of the module
 directly (`composer.json` of the module says which) and no longer
 `thelia/cms-module` itself.
 
+## Changing the schema
+
+`TheliaCMS::update()` plays the files of `Config/update/` whose version is
+strictly above the installed one, up to the new one. A change appended to the
+file of a version some site already runs never reaches that site: the column
+of the writing instructions, first added to `2.2.0.sql`, had to move to
+`2.2.1.sql`. Every schema change therefore goes in a new
+`Config/update/<version>.sql`, with the same version in `Config/module.xml`,
+and in `Config/TheliaMain.sql` for a fresh install. Write the file to be
+replayable (an `information_schema` check before an `ALTER`): a fresh install
+plays it after `TheliaMain.sql`. `Tests/Integration/Module/PageTypeMigrationTest.php`
+shows how to test an update, outside a transaction.
+
 ## Caches that outlive a change
 
 - **Propel models** (`var/propel/<env>/model`) are built once and kept while
