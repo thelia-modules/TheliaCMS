@@ -68,23 +68,10 @@ and leave out what you would have to make up. A section that says nothing —
 Say what you left out in `left_out`, one sentence each: the editor reads it
 and can add the image or the product, then ask again.
 
-## Counts come from the brief
-
-- One `<h2>` per subject the brief names, in its order: a legal notice
-  that names the publisher, the host and the contact has three. Never a
-  heading the brief gives no subject for.
-- Questions and answers: one `faq` section, every question an `<h3>` in the
-  order of the brief. A second section only when the brief itself sorts the
-  questions into groups.
-- One column, one card, one row per item the brief lists; never a number of
-  your choosing.
-- Say each fact once. A date, a figure or a name already written in one
-  section is not written again in another.
-
 ## Length
 
 - Under the title, one or two lines that say what the page is about.
 - A section of text: two to four short paragraphs. A paragraph: three
   sentences.
-- At most three reviews, three figures, six questions, taken from what the
-  brief gives: enough to convince, not enough to tire.
+- Three reviews, three figures, three to six questions: enough to
+  convince, not enough to tire.
