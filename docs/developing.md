@@ -39,7 +39,15 @@ shows how to test an update, outside a transaction.
   tests run; `--env=test` alone rebuilds only the debug one, and a new listener
   stays unknown to the tests. That container does not check the templates
   either: a screen test keeps rendering the compiled copy of a template changed
-  since, so the same command is due after editing one.
+  since, so the same command is due after editing one. When the constructor of
+  a console command changed, that command fails too: it boots the stale
+  container, which cannot build the command. Move `var/cache/test` aside,
+  then run it.
+- **The prompt reads translated words.** The catalogue sheet sent to the
+  generator gives the label of each component and prop through the
+  translator (`Generation/CatalogSheet.php`): a new or changed key of `I18n/`
+  that matches one of them changes the prompt in that language. Keep such a
+  change out of a round of the determinism corpus, or measure it as one.
 - **Compiled Twig** is invalidated on the mtime of the template. A template
   restored within the same second as it was changed keeps the compiled copy of
   the change: `touch` the template, then remove `var/cache/test`.

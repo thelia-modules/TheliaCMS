@@ -119,6 +119,7 @@ titre).
 | `round-2-ids` | vocabulaire fixe d'ids de section (`catalogue`) | 11 / 16 | 12 / 16 | 7 / 16 | 7,7 (min. 7) | 2,51 USD |
 | `round-2-asked` | pas de section non demandée (`page-structure`) | 13 / 16 | 14 / 16 | 7 / 16 | 7,8 (min. 7) | 2,42 USD |
 | `round-2-tiebreak` | départage des composants (`catalogue`) | 15 / 16 | 15 / 16 | 7 / 16 | 7,9 (min. 7) | 2,30 USD |
+| `round-2-counts` | nombres tirés du brief (`page-structure`), **non gardée** | 15 / 16 | — | 6 / 16 | non notée | 2,37 USD |
 
 - **Ids (2a).** Les sections portent `intro`, `features`, `offer`,
   `practical`, `contact`, `form`… dans tous les runs : la structure stable
@@ -134,6 +135,12 @@ titre).
   ronde), il est en texte dans les cinq runs, sans la note de 0/5. Les
   moyens d'accès de 10 et les atouts de 14 prennent les colonnes. La
   structure stable passe à 15 briefs.
+- **Nombres tirés du brief (2d), non gardée.** Un `<h2>` par sujet du brief,
+  toutes les questions dans une seule section, un élément par point listé,
+  chaque fait dit une fois. Elle règle le découpage des questions de 05
+  (forme 4/5 au lieu de 1/5), mais la forme stable recule de 12 à 9 briefs
+  (02, 08, 13 et 16 se dérèglent) et les briefs stables de 7 à 6 : la règle
+  est retirée, la rubrique n'a pas été notée.
 - **Ce qui reste instable** : la forme et la longueur. Le nombre de h2 dans un
   texte (02, 08), le découpage des questions de 05 en une, deux ou trois
   sections, et des écarts de longueur au-delà de 30 % sur une section (01,
