@@ -9,6 +9,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.2.0)
 
+- **Two skills: translation and the design system.** `translation`, always
+  read: a page written from another language keeps its meaning, its order,
+  its names and its figures as written, and follows the typography of its
+  language. `design-system`, always read: every page uses the components of
+  the catalogue rather than free text imitating them, with no style of its
+  own. Existing sites receive them on the next read of the skills.
+- **Reordering the skills from their list.** **CMS > Skills** shows arrows
+  that move a skill one slot up or down, and numbers the positions again from
+  1; the generator reads the skills in that order.
 - **Documentation in the back office.** **CMS > Documentation** tells an
   editor, in French or in English after the language of the back office, what
   the module lets them do: pages and their addresses, content and the

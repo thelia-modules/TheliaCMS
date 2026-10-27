@@ -121,6 +121,22 @@ final readonly class CmsSkillAdminController
         return $this->backToList();
     }
 
+    /**
+     * One slot up or down in the order the generator reads the skills in,
+     * from the arrows of the list.
+     */
+    #[Route('/{code}/move/{direction}', name: 'move', requirements: ['code' => '[a-z0-9-]+', 'direction' => 'up|down'], methods: ['POST'])]
+    public function move(Request $request, string $code, string $direction): Response
+    {
+        $this->denyUnlessUpdate();
+        $this->skillOrFail($code);
+
+        $this->skills->move($code, 'up' === $direction ? -1 : 1);
+        $this->flash($request, 'success', $this->translate('The order of the skills has been saved.'));
+
+        return $this->backToList();
+    }
+
     private function skillOrFail(string $code): Skill
     {
         $skill = $this->skills->find($code);

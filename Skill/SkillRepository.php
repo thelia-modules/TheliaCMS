@@ -88,6 +88,37 @@ final readonly class SkillRepository
     }
 
     /**
+     * Moves the skill one slot up (`$direction` < 0) or down among all the
+     * skills, then numbers every position again from 1: positions typed in the
+     * edit form may repeat or leave gaps, and a swap needs one slot per skill.
+     *
+     * @throws \InvalidArgumentException when the code names no skill
+     */
+    public function move(string $code, int $direction): void
+    {
+        $this->sow();
+        $models = iterator_to_array(CmsSkillQuery::create()->orderByPosition()->orderByCode()->find(), false);
+        $codes = array_map(static fn (CmsSkill $model): string => (string) $model->getCode(), $models);
+        $offset = array_search($code, $codes, true);
+
+        if (!\is_int($offset)) {
+            throw new \InvalidArgumentException(\sprintf('No skill is called "%s".', $code));
+        }
+
+        $target = $offset + ($direction < 0 ? -1 : 1);
+
+        if ($target >= 0 && $target < \count($models)) {
+            [$models[$offset], $models[$target]] = [$models[$target], $models[$offset]];
+        }
+
+        foreach ($models as $index => $model) {
+            if ($model->getPosition() !== $index + 1) {
+                $model->setPosition($index + 1)->save();
+            }
+        }
+    }
+
+    /**
      * Puts the shipped text back.
      *
      * @throws \InvalidArgumentException when the code names no skill, or one the files never shipped

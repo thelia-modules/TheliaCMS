@@ -752,15 +752,17 @@ export, a key must not. It is read from `ANTHROPIC_API_KEY` in the environment.
 
 A skill is a piece of instructions the generator reads before it writes: how a
 page is structured here, how text is written, what accessibility asks, what
-search engines read. The module ships five under `skills/<code>/SKILL.md`
-(`catalogue`, `page-structure`, `copywriting`, `accessibility`, `seo`), and a
+search engines read, how a page is translated, how it stays within the design
+system. The module ships seven under `skills/<code>/SKILL.md` (`catalogue`,
+`page-structure`, `copywriting`, `accessibility`, `seo`, `translation`,
+`design-system`), and a
 theme ships its own under `skills/` with the same layout; a theme skill with
 the code of a module skill replaces it.
 
 The files are a seed. The first read sows them into the `cms_skill` table, and
 the site edits them there, under **CMS > Skills**, which takes the settings
-right: a skill is rewritten, switched off, reordered, and put back to the
-shipped text with one button. A shipped file that changes afterwards updates
+right: a skill is rewritten, switched off, moved up or down from the arrows
+of the list, and put back to the shipped text with one button. A shipped file that changes afterwards updates
 the stored text unless the site rewrote it. The generator reads the table,
 never the files. The front matter of a skill and how it reaches the prompt:
 [docs/generator.md](docs/generator.md).

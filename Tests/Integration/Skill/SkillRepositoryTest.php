@@ -103,6 +103,35 @@ final class SkillRepositoryTest extends CmsIntegrationTestCase
         self::assertSame(['alpha'], array_map(static fn ($skill) => $skill->code, $repository->enabled()));
     }
 
+    public function testASkillMovesOneSlotAndThePositionsAreNumberedAgain(): void
+    {
+        mkdir($this->directory.'/gamma', 0o777, true);
+        file_put_contents($this->directory.'/gamma/SKILL.md', "---\nname: gamma\ndescription: Third.\n---\nGamma rules.");
+
+        $repository = $this->repository();
+        $repository->all();
+        // Two skills typed at the same position in the edit form, a gap after them.
+        $repository->save('alpha', 'Alpha rules.', enabled: true, position: 4);
+        $repository->save('beta', 'Beta rules.', enabled: true, position: 4);
+        $repository->save('gamma', 'Gamma rules.', enabled: true, position: 9);
+
+        $repository->move('gamma', -1);
+
+        $order = static fn (): array => array_map(static fn ($skill) => [$skill->code, $skill->position], $repository->all());
+        self::assertSame([['alpha', 1], ['gamma', 2], ['beta', 3]], $order());
+
+        $repository->move('alpha', -1);
+        $repository->move('beta', 1);
+        self::assertSame([['alpha', 1], ['gamma', 2], ['beta', 3]], $order(), 'The first cannot go up, nor the last down.');
+    }
+
+    public function testMovingASkillNobodyShippedIsRefused(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->repository()->move('nope', 1);
+    }
+
     public function testASkillTheFilesNeverShippedCannotBeRestored(): void
     {
         $this->expectException(\InvalidArgumentException::class);

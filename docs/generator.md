@@ -77,14 +77,17 @@ none: its source is the document of the other language.
 
 A skill is a piece of instructions the generator reads before writing: how a
 page is structured here, how text is written, what accessibility asks, what
-search engines read. The module ships five under `skills/<code>/SKILL.md`
-(`catalogue`, `page-structure`, `copywriting`, `accessibility`, `seo`), a
+search engines read, how a page is translated, how it stays within the design
+system. The module ships seven under `skills/<code>/SKILL.md` (`catalogue`,
+`page-structure`, `copywriting`, `accessibility`, `seo`, `translation`,
+`design-system`), a
 theme may ship its own under `skills/` with the same layout, and a theme skill
 with the code of a module skill replaces it.
 
 The files are a seed: the first read sows them into `cms_skill`, and the
 site edits them there, under **CMS > Skills** (the settings right). A skill
-can be rewritten, switched off, reordered, and put back to the shipped text;
+can be rewritten, switched off, moved up or down from the arrows of the list,
+and put back to the shipped text;
 a shipped file that changes updates the stored text unless the site rewrote
 it. The generator reads the table, never the files.
 

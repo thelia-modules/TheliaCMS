@@ -39,7 +39,7 @@ final class SkillScreenTest extends AdminScreenTestCase
     {
         $screen = $this->screen(self::SCREEN);
 
-        foreach (['accessibility', 'catalogue', 'copywriting', 'page-structure', self::CODE] as $code) {
+        foreach (['accessibility', 'catalogue', 'copywriting', 'design-system', 'page-structure', self::CODE, 'translation'] as $code) {
             self::assertSame(1, $screen->filter(\sprintf('[data-testid="cms-skill-row-%s"]', $code))->count(), $code.' is listed.');
             self::assertSame(0, $screen->filter(\sprintf('[data-testid="cms-skill-edited-%s"]', $code))->count(), $code.' is as shipped.');
         }
@@ -107,7 +107,9 @@ final class SkillScreenTest extends AdminScreenTestCase
             CmsResources::SETTINGS => [AccessManager::VIEW],
         ]));
 
-        self::assertSame(5, $this->screen(self::SCREEN)->filter('[data-testid^="cms-skill-row-"]')->count(), 'The list is readable.');
+        $list = $this->screen(self::SCREEN);
+        self::assertSame(7, $list->filter('[data-testid^="cms-skill-row-"]')->count(), 'The list is readable.');
+        self::assertSame(0, $list->filter('[data-testid^="cms-skill-up-"]')->count(), 'No arrow to reorder is offered.');
 
         $form = $this->editForm();
         $form['cms_skill[body]'] = 'Rewritten without the right to.';
@@ -116,7 +118,33 @@ final class SkillScreenTest extends AdminScreenTestCase
         $token = $this->tokenOfTheScripts($this->screen(self::SCREEN));
         self::assertSame(403, $this->send('POST', self::SCREEN.'/'.self::CODE.'/restore', [], [...self::XHR, 'HTTP_X_CSRF_TOKEN' => $token]));
 
+        $position = $this->row()['position'];
+        self::assertSame(403, $this->send('POST', self::SCREEN.'/'.self::CODE.'/move/up', [], [...self::XHR, 'HTTP_X_CSRF_TOKEN' => $token]));
+
         self::assertSame($before, $this->row()['body']);
+        self::assertSame($position, $this->row()['position']);
+    }
+
+    public function testTheArrowsOfTheListMoveASkillOneSlot(): void
+    {
+        $screen = $this->screen(self::SCREEN);
+        $codes = $screen->filter('[data-testid^="cms-skill-row-"]')->each(static fn ($row): string => substr((string) $row->attr('data-testid'), \strlen('cms-skill-row-')));
+        $offset = array_search(self::CODE, $codes, true);
+        self::assertIsInt($offset);
+        self::assertGreaterThan(0, $offset, 'The test moves a skill that is not first.');
+
+        self::assertNotNull($screen->filter(\sprintf('[data-testid="cms-skill-up-%s"]', $codes[0]))->attr('disabled'), 'The first cannot go up.');
+        self::assertNotNull($screen->filter(\sprintf('[data-testid="cms-skill-down-%s"]', end($codes)))->attr('disabled'), 'The last cannot go down.');
+
+        $action = self::SCREEN.'/'.self::CODE.'/move/up';
+        self::assertSame(302, $this->send('POST', $action, ['_token' => $this->tokenOfTheForm($screen, $action)]));
+
+        $list = $this->client->followRedirect();
+        $after = $list->filter('[data-testid^="cms-skill-row-"]')->each(static fn ($row): string => substr((string) $row->attr('data-testid'), \strlen('cms-skill-row-')));
+        [$codes[$offset - 1], $codes[$offset]] = [$codes[$offset], $codes[$offset - 1]];
+        self::assertSame($codes, $after, 'The skill took the place of the one above it.');
+        self::assertSame($offset, $this->row()['position'], 'Positions are numbered from 1.');
+        self::assertStringContainsString('order', $list->filter('[role="alert"]')->text(''));
     }
 
     public function testACodeNobodyShippedAnswers404(): void
@@ -125,6 +153,7 @@ final class SkillScreenTest extends AdminScreenTestCase
 
         $token = $this->tokenOfTheScripts($this->screen(self::SCREEN));
         self::assertSame(404, $this->send('POST', self::SCREEN.'/nope/restore', [], [...self::XHR, 'HTTP_X_CSRF_TOKEN' => $token]));
+        self::assertSame(404, $this->send('POST', self::SCREEN.'/nope/move/down', [], [...self::XHR, 'HTTP_X_CSRF_TOKEN' => $token]));
     }
 
     private function editForm(): Form

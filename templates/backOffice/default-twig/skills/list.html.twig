@@ -34,7 +34,29 @@
                 <tbody>
                     {% for skill in skills %}
                         <tr data-testid="cms-skill-row-{{ skill.code }}">
-                            <td data-testid="cms-skill-position-{{ skill.code }}">{{ skill.position }}</td>
+                            <td data-testid="cms-skill-position-{{ skill.code }}">
+                                {% if may_update %}
+                                    <div class="d-inline-flex align-items-center gap-1">
+                                        <form method="post" action="{{ path('admin.cms.skills.move', { code: skill.code, direction: 'up' }) }}">
+                                            <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                            <button class="btn btn-sm btn-outline-secondary" type="submit" data-testid="cms-skill-up-{{ skill.code }}"
+                                                    aria-label="{{ 'Move %name% up'|trans({ '%name%': skill.name }, 'theliacms') }}" {{ loop.first ? 'disabled' : '' }}>
+                                                <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                        <form method="post" action="{{ path('admin.cms.skills.move', { code: skill.code, direction: 'down' }) }}">
+                                            <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                            <button class="btn btn-sm btn-outline-secondary" type="submit" data-testid="cms-skill-down-{{ skill.code }}"
+                                                    aria-label="{{ 'Move %name% down'|trans({ '%name%': skill.name }, 'theliacms') }}" {{ loop.last ? 'disabled' : '' }}>
+                                                <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                        <span class="ms-1">{{ skill.position }}</span>
+                                    </div>
+                                {% else %}
+                                    {{ skill.position }}
+                                {% endif %}
+                            </td>
                             <td>
                                 <span class="fw-medium">{{ skill.name }}</span>
                                 <div class="text-muted small"><code>{{ skill.code }}</code></div>
