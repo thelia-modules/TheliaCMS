@@ -75,11 +75,16 @@ final class ItemContentExtensionTest extends CmsIntegrationTestCase
         self::assertStringContainsString('data-cms-section', $printed, 'Marked, so the editor finds each section in the page.');
         self::assertTrue($draft->attributes->get(ItemDraftRequest::SERVED_ATTRIBUTE), 'Marked, so the answer stays out of caches.');
 
+        $signed = (string) $links->pageUrlFor($item(self::PRODUCT_ID, $this->locale()));
+        // The signature is hexadecimal: its last character is changed to
+        // another one, never to a fixed one it may already be.
+        $tampered = substr($signed, 0, -1).('0' === substr($signed, -1) ? '1' : '0');
+
         $refused = [
             'another item' => (string) $links->pageUrlFor($item(self::PRODUCT_ID + 1, $this->locale())),
             'another language' => (string) $links->pageUrlFor($item(self::PRODUCT_ID, 'xx_XX')),
             'an expired link' => (string) $links->pageUrlFor($item(self::PRODUCT_ID, $this->locale()), new \DateTimeImmutable('-73 hours')),
-            'a tampered link' => substr((string) $links->pageUrlFor($item(self::PRODUCT_ID, $this->locale())), 0, -1).'0',
+            'a tampered link' => $tampered,
         ];
 
         foreach ($refused as $case => $url) {
