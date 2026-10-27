@@ -14,8 +14,10 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Menu;
 
+use Thelia\Model\CategoryQuery;
 use Thelia\Model\ContentQuery;
 use Thelia\Model\FolderQuery;
+use Thelia\Model\ProductQuery;
 use Thelia\Tools\URL;
 use TheliaCMS\Model\CmsMenuItem;
 use TheliaCMS\Model\CmsPage;
@@ -50,6 +52,8 @@ final readonly class MenuTargetResolver
             MenuTargetType::Page => $this->page($targetId, $locale, $label),
             MenuTargetType::Content => $this->content($targetId, $locale, $label),
             MenuTargetType::Folder => $this->folder($targetId, $locale, $label),
+            MenuTargetType::Category => $this->category($targetId, $locale, $label),
+            MenuTargetType::Product => $this->product($targetId, $locale, $label),
             MenuTargetType::Url => $this->address($item, $label),
             MenuTargetType::None => $this->heading($label),
         };
@@ -119,6 +123,42 @@ final readonly class MenuTargetResolver
         }
 
         return $this->linked($label, $title, $this->rewrittenUrl('folder', $folderId, $locale));
+    }
+
+    private function category(int $categoryId, string $locale, string $label): ResolvedTarget
+    {
+        $category = CategoryQuery::create()->findPk($categoryId);
+
+        if (null === $category) {
+            return new ResolvedTarget($label, null, MenuTargetIssue::TargetMissing);
+        }
+
+        $category->setLocale($locale);
+        $title = trim((string) $category->getTitle());
+
+        if (1 !== $category->getVisible()) {
+            return new ResolvedTarget($label ?: $title, null, MenuTargetIssue::TargetOffline, $title);
+        }
+
+        return $this->linked($label, $title, $this->rewrittenUrl('category', $categoryId, $locale));
+    }
+
+    private function product(int $productId, string $locale, string $label): ResolvedTarget
+    {
+        $product = ProductQuery::create()->findPk($productId);
+
+        if (null === $product) {
+            return new ResolvedTarget($label, null, MenuTargetIssue::TargetMissing);
+        }
+
+        $product->setLocale($locale);
+        $title = trim((string) $product->getTitle());
+
+        if (1 !== $product->getVisible()) {
+            return new ResolvedTarget($label ?: $title, null, MenuTargetIssue::TargetOffline, $title);
+        }
+
+        return $this->linked($label, $title, $this->rewrittenUrl('product', $productId, $locale));
     }
 
     private function address(CmsMenuItem $item, string $label): ResolvedTarget

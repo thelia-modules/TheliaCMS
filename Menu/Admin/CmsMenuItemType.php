@@ -45,6 +45,8 @@ final class CmsMenuItemType extends AbstractType
                     MenuTargetType::Page->label() => MenuTargetType::Page->value,
                     MenuTargetType::Content->label() => MenuTargetType::Content->value,
                     MenuTargetType::Folder->label() => MenuTargetType::Folder->value,
+                    MenuTargetType::Category->label() => MenuTargetType::Category->value,
+                    MenuTargetType::Product->label() => MenuTargetType::Product->value,
                     MenuTargetType::Url->label() => MenuTargetType::Url->value,
                     MenuTargetType::None->label() => MenuTargetType::None->value,
                 ],
@@ -70,6 +72,21 @@ final class CmsMenuItemType extends AbstractType
                 'placeholder' => 'Choose a folder',
                 'choices' => $options['folder_choices'],
                 'row_attr' => ['data-cms-menu-target-field' => MenuTargetType::Folder->value],
+            ])
+            ->add('categoryId', ChoiceType::class, [
+                'label' => 'Category',
+                'required' => true,
+                'placeholder' => 'Choose a category',
+                'choices' => $options['category_choices'],
+                'row_attr' => ['data-cms-menu-target-field' => MenuTargetType::Category->value],
+            ])
+            ->add('productId', ChoiceType::class, [
+                'label' => 'Product',
+                'required' => true,
+                'placeholder' => 'Choose a product',
+                'help' => 'Products are grouped by their default category. Type the start of a title to reach it in the list.',
+                'choices' => $options['product_choices'],
+                'row_attr' => ['data-cms-menu-target-field' => MenuTargetType::Product->value],
             ])
             // Not a UrlType: a menu entry legitimately points at a path of the
             // site, at an anchor, or at a mailto: address.
@@ -113,11 +130,15 @@ final class CmsMenuItemType extends AbstractType
                 'page_choices' => [],
                 'content_choices' => [],
                 'folder_choices' => [],
+                'category_choices' => [],
+                'product_choices' => [],
                 'parent_choices' => [],
             ])
             ->setAllowedTypes('page_choices', 'array')
             ->setAllowedTypes('content_choices', 'array')
             ->setAllowedTypes('folder_choices', 'array')
+            ->setAllowedTypes('category_choices', 'array')
+            ->setAllowedTypes('product_choices', 'array')
             ->setAllowedTypes('parent_choices', 'array');
     }
 
@@ -136,6 +157,8 @@ final class CmsMenuItemType extends AbstractType
             MenuTargetType::Page => $this->requireField($form, 'pageId', $data, 'Choose the page this entry points at.'),
             MenuTargetType::Content => $this->requireField($form, 'contentId', $data, 'Choose the content this entry points at.'),
             MenuTargetType::Folder => $this->requireField($form, 'folderId', $data, 'Choose the folder this entry points at.'),
+            MenuTargetType::Category => $this->requireField($form, 'categoryId', $data, 'Choose the category this entry points at.'),
+            MenuTargetType::Product => $this->requireField($form, 'productId', $data, 'Choose the product this entry points at.'),
             MenuTargetType::Url => $this->checkAddress($form, $data),
             // A heading has nothing to link to, so its label is all it has.
             MenuTargetType::None => $this->requireField($form, 'label', $data, 'An entry with no link needs a label.'),

@@ -7,6 +7,22 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added (2.3.0)
+
+- **Menu entries pointing at a category or a product.** An entry of a menu
+  can point at a category or a product of the catalogue (`target_type`
+  `category` or `product`, `target_id` the id of the item). It links to the
+  address the shop serves the item on in the language being read and, with no
+  label of its own, shows the title of the item in that language. A hidden or
+  deleted item, or one with no title or address in that language, is left out
+  of the menu and reported on the menu screen with the reason. The entry form
+  lists the categories as their tree and the products grouped by their default
+  category. The cached menus are dropped when a category or a product is
+  created, changed, hidden, given a new address or deleted. The export keeps
+  the id of the item, and the import reports it, the way it does for contents
+  and folders. `cms_menu()` is unchanged; `source` says `category` or
+  `product`. No schema change.
+
 ### Fixed (2.2.1)
 
 - **The column of the writing instructions reaches a site already on 2.2.0.**

@@ -311,9 +311,9 @@ final readonly class SiteExporter
                 'position' => (int) $item->getPosition(),
                 'target_type' => (string) $item->getTargetType(),
                 // A menu entry pointing at a CMS page travels as the page it
-                // points at; one pointing at a core content or folder keeps the
-                // raw id, which only means something on a site holding the same
-                // catalogue.
+                // points at; one pointing at a content, a folder, a category or
+                // a product of the core keeps the raw id, which only means
+                // something on a site holding the same catalogue.
                 'target' => 'page' === $item->getTargetType() && null !== $targetId
                     ? self::pageUid((int) $targetId)
                     : null,

@@ -33,8 +33,13 @@ shows how to test an update, outside a transaction.
   alone rebuilds nothing.
 - **The test container** (`var/cache/test`) is compiled by the bootstrap of
   the integration tests, not by `cache:clear`. After a change to the
-  constructor of a service, a new route or a new controller, remove it; the
-  first test recompiles.
+  constructor of a service, a new route, a new controller or a new event
+  listener, remove it; the first test recompiles. Without removing anything,
+  `php Thelia cache:clear --env=test --no-debug` rebuilds the container the
+  tests run; `--env=test` alone rebuilds only the debug one, and a new listener
+  stays unknown to the tests. That container does not check the templates
+  either: a screen test keeps rendering the compiled copy of a template changed
+  since, so the same command is due after editing one.
 - **Compiled Twig** is invalidated on the mtime of the template. A template
   restored within the same second as it was changed keeps the compiled copy of
   the change: `touch` the template, then remove `var/cache/test`.

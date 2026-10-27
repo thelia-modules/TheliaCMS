@@ -463,10 +463,14 @@ At publication every image becomes a `<picture>` with a WebP alternative, a
 Menus live under **CMS > Menus** and a theme calls them by code. `main` and
 `footer` exist from the first activation.
 
-An entry points at a CMS page, a content, a folder, a web address, or at nothing
-at all. An entry with no target is a label on its own, which is how a group
-heading is made. Its own label is optional: left empty, the title of the target
-is shown, in the language being read.
+An entry points at a CMS page, a content, a folder, a category or a product of
+the catalogue, a web address, or at nothing at all. An entry with no target is a
+label on its own, which is how a group heading is made. Its own label is
+optional: left empty, the title of the target is shown, in the language being
+read. An entry pointing at an item of the shop links to the address the shop
+serves it on in that language, so renaming the item or changing its address
+never leaves the menu behind. In the form, categories are listed as their tree
+and products grouped by their default category.
 
 The tree goes three levels deep. Entries are reordered with the move buttons or
 by dragging a row, and nested either by picking a parent in the form or by
@@ -474,8 +478,8 @@ dropping a row onto the right-hand third of another one. Dragging is a shortcut.
 It cannot be done with a keyboard, so it is never the only way to reorder a
 menu.
 
-An entry whose target has been deleted, taken offline, or left unpublished in
-the language being read is **left out of the menu** in that language, and listed
+An entry whose target has been deleted, taken offline (a hidden category or
+product included), or left unpublished in the language being read is **left out of the menu** in that language, and listed
 in the back office with the reason. A heading that still has usable children
 stays as a heading, rather than let its children move up a level.
 
@@ -737,7 +741,7 @@ Most of them are edited under **CMS > Settings**.
 | `axeptio_client_id` | none | Axeptio project. Without it no banner shows, and every snippet waiting for consent stays off. |
 | `axeptio_cookies_version` | none | Which Axeptio configuration to load, when a project has several. |
 | `axeptio_consent_map` | the two Google products | JSON: vendor to the Consent Mode signals it grants. |
-| `cache_ttl` | `3600` | Seconds a resolved menu is cached for. It is also dropped on every change that affects it, the changes made to contents and folders from the screens of the shop included. |
+| `cache_ttl` | `3600` | Seconds a resolved menu is cached for. It is also dropped on every change that affects it, the changes made to contents, folders, categories and products from the screens of the shop included. |
 | `footer_menu_hook` | off | Renders the `footer` menu into the `layout.footer.top` hook of the theme. For a theme that does not call `cms_menu('footer')` itself: without it, a CMS page is reachable only by its address. Leave it off on a theme that already renders the menu, or it appears twice. |
 | `heading_check_mode` | `warn` | `warn` reports heading problems and publishes anyway; `block` refuses to publish. Checked wherever a page goes online: the content screen, the settings screen, `thelia_cms:publish`. |
 | `native_content_notice_dismissed` | `0` | `1` once the notice about existing contents has been closed on the Pages screen. |
