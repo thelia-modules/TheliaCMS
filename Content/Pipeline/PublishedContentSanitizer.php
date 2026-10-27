@@ -64,7 +64,24 @@ final readonly class PublishedContentSanitizer
             return $html;
         }
 
-        return $this->sanitizerFor($allowCustomCode)->sanitize($html);
+        return $this->filterStyleAttributes($this->sanitizerFor($allowCustomCode)->sanitize($html));
+    }
+
+    /**
+     * A `style` attribute is CSS too: what `css()` keeps out of a stylesheet
+     * is kept out of it, so that markup cannot load from another host what a
+     * stylesheet may not. The sanitizer quotes every attribute with `"` and
+     * escapes its value, so the attribute is read back from its output.
+     */
+    private function filterStyleAttributes(string $html): string
+    {
+        return (string) preg_replace_callback(
+            '/(\sstyle=")([^"]*)(")/i',
+            fn (array $match): string => $match[1]
+                .htmlspecialchars((string) $this->css(html_entity_decode($match[2], \ENT_QUOTES | \ENT_HTML5, 'UTF-8')), \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8')
+                .$match[3],
+            $html,
+        );
     }
 
     /**

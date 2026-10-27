@@ -7,6 +7,19 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Security (2.3.1)
+
+- **A `style` attribute is filtered like a stylesheet.** The published
+  content and every drawing of a component made for the site kept `style`
+  attributes as they were: a component whose template prints a text prop in
+  one, or a markup prop holding one, could load a picture from another host
+  (a tracker that bypasses the consent of the visitor), which a stylesheet
+  may not. What `css()` takes out of a stylesheet, a `url()` to another
+  host, `expression()` and `behavior`, is now taken out of every `style`
+  attribute as well. Tests cover what a template of a component can put
+  together when it runs: tags, event handlers and schemes named at run time
+  are all taken out of what it draws.
+
 ### Changed (2.3.1)
 
 - **The components to add a section from read better.** The dialog groups

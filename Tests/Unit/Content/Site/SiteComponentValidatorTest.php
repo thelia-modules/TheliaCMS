@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Unit\Content\Site;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TheliaCMS\Content\PropType;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
@@ -66,6 +67,40 @@ final class SiteComponentValidatorTest extends TestCase
         self::assertStringContainsString('<p>Texte</p>', $html);
         self::assertStringNotContainsString('onerror', $html, 'A draft and a preview are drawn before the publication filters a page.');
         self::assertStringNotContainsString('<script', $html);
+    }
+
+    /**
+     * A template the patterns of the validator cannot read: the tag, the
+     * attribute or the scheme is put together when it runs, or comes from a
+     * prop. Whatever it assembles, what is drawn runs nothing and loads
+     * nothing from another host.
+     *
+     * @return iterable<string, array{string, string}>
+     */
+    public static function assembledAttacks(): iterable
+    {
+        yield 'a script element named at run time' => ["<div><{{ 'scr' ~ 'ipt' }}>{{ props.title }}</{{ 'scr' ~ 'ipt' }}>{{ props.title }}</div>", '<script'];
+        yield 'an event handler named at run time' => ["<div {{ 'on' ~ 'click' }}=\"alert(1)\">{{ props.title }}</div>", 'onclick'];
+        yield 'an error handler named at run time' => ["<img src=\"x\" {{ 'one' ~ 'rror' }}=\"alert(1)\"><p>{{ props.title }}</p>", 'onerror'];
+        yield 'a javascript scheme split by an expression' => ["<a href=\"java{{ '' }}script:alert(1)\">{{ props.title }}</a>", 'script:'];
+        yield 'a javascript scheme written as an entity' => ['<a href="&#106;avascript:alert(1)">{{ props.title }}</a>', 'avascript'];
+        yield 'a javascript scheme from a text prop' => ['<a href="{{ props.look }}">{{ props.title }}</a>', 'javascript'];
+        yield 'an iframe named at run time' => ["<{{ 'ifr' ~ 'ame' }} srcdoc=\"x\"></{{ 'ifr' ~ 'ame' }}><p>{{ props.title }}</p>", 'iframe'];
+        yield 'a form named at run time' => ["<{{ 'fo' ~ 'rm' }} action=\"https://evil.test\"><button>{{ props.title }}</button></{{ 'fo' ~ 'rm' }}><p>{{ props.title }}</p>", 'evil.test'];
+        yield 'a picture of another host from a text prop in a style attribute' => ['<div style="{{ props.remote }}">{{ props.title }}</div>', 'evil.test'];
+    }
+
+    #[DataProvider('assembledAttacks')]
+    public function testWhatATemplateAssemblesWhenItRunsIsFilteredToo(string $template, string $forbidden): void
+    {
+        $props = [['name' => 'title', 'type' => 'text', 'label' => 'Title'], ['name' => 'look', 'type' => 'text', 'label' => 'Look'], ['name' => 'remote', 'type' => 'text', 'label' => 'Remote']];
+        $sample = ['title' => 'Un titre', 'look' => 'javascript:alert(1)', 'remote' => 'background:url(https://evil.test/t.png)'];
+        $kept = (new SiteComponentValidator())->validate(new SiteComponent('Probe', 'Probe', 'A probe.', $props, $sample, $template));
+
+        $html = (new SiteComponentSection($kept, (new SitePropReader())->read($kept->props), new SiteTemplateRenderer()))->render($kept->sample, 'fr_FR');
+
+        self::assertStringContainsString('Un titre', $html, 'The component is drawn.');
+        self::assertStringNotContainsStringIgnoringCase($forbidden, $html);
     }
 
     public function testAStylesheetReachingAnotherHostInAnyWayIsRefused(): void

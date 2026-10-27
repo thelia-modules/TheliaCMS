@@ -51,6 +51,10 @@ final class PublishedContentSanitizerTest extends TestCase
         yield 'meta refresh' => ['<meta http-equiv="refresh" content="0;url=https://evil.test">', 'evil.test'];
         yield 'style element' => ['<style>body{background:url(https://evil.test/x)}</style>', 'evil.test'];
         yield 'srcdoc iframe' => ['<iframe srcdoc="<script>alert(1)</script>"></iframe>', 'srcdoc'];
+        yield 'style attribute loading a picture from another host' => ['<p style="background:url(https://evil.test/t.png)">x</p>', 'evil.test'];
+        yield 'style attribute loading from another host without a scheme' => ['<p style="background-image:url(&quot;//evil.test/t.png&quot;)">x</p>', 'evil.test'];
+        yield 'style attribute with the legacy expression vector' => ['<p style="width:expression(alert(1))">x</p>', 'expression('];
+        yield 'style attribute with the legacy behaviour vector' => ['<p style="behavior:url(x.htc)">x</p>', 'behavior'];
     }
 
     #[DataProvider('hostileHtml')]
