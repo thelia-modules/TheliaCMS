@@ -1,0 +1,368 @@
+{
+  "format": "thelia-cms",
+  "version": 2,
+  "module_version": "2.3.0",
+  "locales": [
+    "fr_FR"
+  ],
+  "page_types": [
+    {
+      "code": "eval-workshop",
+      "brief": "Chaque page présente un atelier de céramique de l’association : ce que l’on y apprend, qui l’anime, quand, combien de places, à quel prix, et comment s’inscrire.",
+      "brief_tone": "chaleureux, concret",
+      "brief_audience": "adultes débutants",
+      "instructions": "- Suivre l’ordre du modèle : titre, présentation, en pratique, inscription.\n- La section « En pratique » est une liste de quatre points, dans cet ordre : animateur, jour et horaire, places, tarif.\n- Pas de témoignage, pas de FAQ.\n- Vouvoiement.",
+      "fields": [],
+      "translations": {
+        "fr_FR": {
+          "title": "Atelier (évaluation)",
+          "description": "Gabarit du corpus d’évaluation."
+        }
+      }
+    }
+  ],
+  "components": [],
+  "pages": [
+    {
+      "uid": "eval-01",
+      "parent": null,
+      "position": 100,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Location de studios photo",
+          "slug": "eval-01"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-02",
+      "parent": null,
+      "position": 101,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Mentions légales (évaluation)",
+          "slug": "eval-02"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-03",
+      "parent": null,
+      "position": 102,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "À propos de la boulangerie",
+          "slug": "eval-03"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-04",
+      "parent": null,
+      "position": 103,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Nos best-sellers",
+          "slug": "eval-04"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-05",
+      "parent": null,
+      "position": 104,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Questions sur la location",
+          "slug": "eval-05"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-06",
+      "parent": null,
+      "position": 105,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Notre atelier",
+          "slug": "eval-06"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-07",
+      "parent": null,
+      "position": 106,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Pourquoi nous choisir",
+          "slug": "eval-07"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-08",
+      "parent": null,
+      "position": 107,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Contact",
+          "slug": "eval-08"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-09",
+      "parent": null,
+      "position": 108,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "À propos de la boutique de thés",
+          "slug": "eval-09"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-10",
+      "parent": null,
+      "position": 109,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Accès au studio",
+          "slug": "eval-10"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-11",
+      "parent": null,
+      "position": 110,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Avant de s'inscrire",
+          "slug": "eval-11"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-12",
+      "parent": null,
+      "position": 111,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Formats et horaires du dépôt",
+          "slug": "eval-12"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-16",
+      "parent": null,
+      "position": 112,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Nos engagements",
+          "slug": "eval-16"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-13-model",
+      "parent": null,
+      "position": 113,
+      "visible": false,
+      "page_type": "eval-workshop",
+      "model": true,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Atelier modèle",
+          "slug": "eval-13-model"
+        }
+      },
+      "contents": {
+        "fr_FR": {
+          "draft_document": "{\"version\": 1, \"sections\": [{\"id\": \"titre\", \"component\": \"Layouts:Subheader:Base\", \"props\": {\"title\": \"Atelier modèle\", \"tag\": \"h1\", \"container\": \"single-3\", \"centered\": false, \"breadcrumb\": []}}, {\"id\": \"presentation\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>L’atelier</h2><p>Ce que l’on y apprend, en deux phrases.</p>\"}}, {\"id\": \"pratique\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>En pratique</h2><ul><li>Animé par : …</li><li>Jour et horaire : …</li><li>Places : …</li><li>Tarif : …</li></ul>\"}}, {\"id\": \"inscription\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>S’inscrire</h2><p>Comment réserver sa place.</p>\"}}]}",
+          "draft_html": null,
+          "published_document": null,
+          "published_html": null,
+          "published_at": null
+        }
+      }
+    },
+    {
+      "uid": "eval-13",
+      "parent": null,
+      "position": 114,
+      "visible": false,
+      "page_type": "eval-workshop",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Atelier de tournage",
+          "slug": "eval-13"
+        }
+      },
+      "contents": {}
+    },
+    {
+      "uid": "eval-15",
+      "parent": null,
+      "position": 115,
+      "visible": false,
+      "page_type": "default",
+      "model": false,
+      "fields": [],
+      "tag": null,
+      "image_id": null,
+      "publish_at": null,
+      "unpublish_at": null,
+      "translations": {
+        "fr_FR": {
+          "title": "Studios photo (traduction)",
+          "slug": "eval-15"
+        }
+      },
+      "contents": {
+        "fr_FR": {
+          "draft_document": "{\"version\": 1, \"sections\": [{\"id\": \"titre\", \"component\": \"Layouts:Subheader:Base\", \"props\": {\"title\": \"Nos studios photo à Lyon\", \"tag\": \"h1\", \"container\": \"single-3\", \"centered\": false, \"breadcrumb\": []}}, {\"id\": \"plateaux\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>Trois plateaux</h2><ul><li><strong>Plateau A</strong> : 120 m², cyclorama de 6 m.</li><li><strong>Plateau B</strong> : 80 m².</li><li><strong>Plateau C</strong> : 40 m², lumière naturelle plein nord.</li></ul>\"}}, {\"id\": \"location\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>Louer à l’heure ou à la journée</h2><p>La location se fait à l’heure, deux heures minimum, ou à la journée. Les flashs et les fonds sont inclus ; les objectifs sont en option.</p>\"}}, {\"id\": \"acces\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>Venir en voiture</h2><p>Un parking gratuit de 12 places vous attend devant l’entrée.</p>\"}}]}",
+          "draft_html": null,
+          "published_document": null,
+          "published_html": null,
+          "published_at": null
+        }
+      }
+    }
+  ],
+  "catalogue_contents": [],
+  "menus": [],
+  "forms": [],
+  "settings": {},
+  "media": []
+}

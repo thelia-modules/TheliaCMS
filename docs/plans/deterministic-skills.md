@@ -1,7 +1,9 @@
 # Plan: skills that give the same page for the same brief
 
-Status: planned, not started. The open questions at the end must be settled
-before the first paid run.
+Status: started 2026-10-27. The command additions, the corpus, the bench and
+the script are done; rounds 0 and 1 are the next step. Settled on 2026-10-27:
+the runs stay out of the repository (only their summary goes in), and the bar
+for structure and shape is 4 runs out of 5.
 
 ## Why
 
@@ -50,28 +52,42 @@ under 5 on the ten briefs, at every step.
 
 - The ten briefs of `docs/evaluation/briefs/`, unchanged, on the same bench
   pages.
-- Six briefs added for what the ten do not reach, under
+- Six briefs added for what the ten do not reach, numbered on from them under
   `docs/evaluation/determinism/briefs/`:
-  1. a brief that fits two components equally (questions and answers that
-     could be a list or the questions component);
-  2. tabular data (pack sizes, opening hours) with and without a component
-     made for it in the catalogue;
-  3. a page of a type that has a brief, instructions and a model page;
-  4. the content of a catalogue item (a product with a summary and a
-     description);
-  5. a translation of a finished page into a second language;
-  6. a brief of two lines, the minimum the skills must turn into a short page.
+  - 11: a brief that fits two components equally (questions and answers that
+    could be a list or the questions component);
+  - 12: tabular data (pack sizes, opening hours), measured with the catalogue
+    the bench has; the same brief without a component made for it waits for
+    a bench that offers one;
+  - 13: a page of a type that has a brief, instructions and a model page
+    (`eval-workshop`);
+  - 14: the content of a catalogue item (the product `PROD001` of the bench,
+    with its summary and description);
+  - 15: a translation into English of a finished French page, held as the
+    draft of `eval-15` (no brief file);
+  - 16: a brief of two lines, the minimum the skills must turn into a short
+    page.
+- **The bench**: `docs/evaluation/determinism/bench.json`, imported once with
+  `php Thelia thelia_cms:import`. It holds a page per brief (`eval-01` to
+  `eval-16`, hidden, slugs as their uid), the type `eval-workshop` with its
+  brief, instructions and model page, and the French draft brief 15
+  translates. The data is made up.
 
 ## The runs
 
 - **Five runs per brief and per version of the skills**, same model, same
   effort, same catalogue and same bench data, one after the other.
-- Each run kept as `runs/<round>/<brief>/<n>.json` with its cost line, out of
-  the repository (they hold the bench data); only the summary goes in.
-- **Two additions to the command**, so that the corpus runs without a
-  browser: `--item <type>:<id>` to write the document of a catalogue item, and
-  `--translate-from <locale>` to write a language from another one. Both reuse
-  `GenerationRequest` as the back office does; neither saves with `--dry-run`.
+- `docs/evaluation/determinism/run-round.sh <round> [effort] [brief…]`, run
+  from the root of the host, plays the round and keeps each run as
+  `var/eval/runs/<round>/<brief>/<n>.txt` of the host, with its cost line, out
+  of the repository; only the summary goes in. A run already kept is not
+  played again, so an interrupted round resumes where it stopped.
+- **Three additions to the command**, so that the corpus runs without a
+  browser: `--item <type>:<id>` to write the document of a catalogue item,
+  `--translate-from <locale>` to write a language from another one, and
+  `--effort` to play round 1 without touching the settings of the site. They
+  reuse `GenerationRequest` as the back office does; nothing is saved with
+  `--dry-run`.
 - **A comparison command** (`php Thelia thelia_cms:compare-runs <round>
   [--details]`, `Evaluation/`, no API call) reads the runs of a round and
   prints, per brief: the structures met and how many runs
@@ -123,10 +139,6 @@ additions and the script included.
 
 ## Open questions
 
-- Are the runs kept in the repository (anonymised bench data), or only their
-  summary?
-- Is the target of 4 runs out of 5 the right bar, or does an editor expect
-  5 out of 5 on structure?
 - Does a site get a setting to choose between a predictable writer and a
   freer one (the effort, or a skill switched on), or do the shipped skills
   aim for predictable only?
