@@ -20,6 +20,17 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   together when it runs: tags, event handlers and schemes named at run time
   are all taken out of what it draws.
 
+### Added (2.3.1)
+
+- **The draft a generation replaces can be put back.** Before a brief, a
+  change, a section rewrite or a translation writes the draft of a page or of
+  a catalogue item, the draft as it was is kept as a revision labelled
+  "draft" (the last five, apart from the twenty publications). The content
+  screen lists them under *Previous drafts*, with the date and the number of
+  sections; *Put it back* makes one the draft again and keeps the one it
+  replaces in its place, so a restore is undone the same way. The update to
+  2.3.1 gives `cms_item_revision` the `label` column `cms_page_revision` had.
+
 ### Changed (2.3.1)
 
 - **The props of the components of the theme read in the language of the

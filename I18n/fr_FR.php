@@ -1155,4 +1155,11 @@ return [
     'Center the title text. Defaults to false' => 'Centrer le titre.',
     'Breadcrumb items, forwarded to Molecules:Breadcrumb:Base. Defaults to empty (no breadcrumb rendered)' => 'Les étapes du fil d’Ariane ; aucun fil si vide.',
     'Which container-* utility wraps the title: - \'large\' (default): container-l, generic full-width pages - \'medium\'/\'small\': container-m/container-s, narrower pages - \'single-3\': container-single-3, single-column text-content pages (e.g. FAQ) — matches the body when it\'s not wrapped in container-l (no split needed) Note: \'double-3\' isn\'t offered here — a content page with a container-double-3 body (2-column, ToC optional) still spans the same box as container-l, so its Subheader uses \'large\', not \'double-3\'. A 2-column category listing needs its own file (Subheader/Category), not a container value: the text goes in the container\'s second slot to align with the product grid.' => 'La largeur du bandeau : large, medium, small ou single-3 (colonne de texte).',
+    'Previous drafts' => 'Brouillons précédents',
+    'The drafts the generator replaced, the latest first. Putting one back keeps the current draft here in turn.' => 'Les brouillons que le générateur a remplacés, le plus récent en premier. En rétablir un garde à son tour le brouillon actuel ici.',
+    '%count% section(s)' => '%count% section(s)',
+    'Put it back' => 'Rétablir',
+    'Put this draft back? The current draft is kept in its place.' => 'Rétablir ce brouillon ? Le brouillon actuel est gardé à sa place.',
+    'The previous draft is back. The one it replaces is kept in its place.' => 'Le brouillon précédent est rétabli. Celui qu’il remplace est gardé à sa place.',
+    'This draft is no longer available.' => 'Ce brouillon n’est plus disponible.',
 ];

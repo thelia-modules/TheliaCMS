@@ -50,6 +50,12 @@ final readonly class ItemContentWriter
     /** Revisions kept per item and locale before the oldest ones are dropped. */
     private const int REVISION_RETENTION = 20;
 
+    /** Drafts a generation replaced, kept per item and locale to put one back. */
+    private const int DRAFT_RETENTION = 5;
+
+    /** The label of a revision holding a draft, rather than a publication. */
+    public const string DRAFT_LABEL = 'draft';
+
     public function __construct(
         private SecurityContext $securityContext,
         private CmsActivityLog $activityLog,
@@ -87,6 +93,110 @@ final readonly class ItemContentWriter
             ->save();
 
         $this->activityLog->record('UPDATE', $id, \sprintf('CMS content of the %s #%d edited in %s', $type->value, $id, $locale));
+    }
+
+    /**
+     * Keeps the draft as it is before a generation replaces it: a revision
+     * labelled "draft", which `restoreDraft()` puts back. An empty draft is
+     * not worth keeping.
+     */
+    public function keepDraft(CatalogueItemType $type, int $id, string $locale): void
+    {
+        $content = CmsItemContentQuery::create()->filterByItemType($type->value)->filterByItemId($id)->filterByLocale($locale)->findOne();
+        $document = $content instanceof CmsItemContent ? $this->documentOf($content->getDraftDocument()) : null;
+
+        if (!$document instanceof Document || $document->isEmpty()) {
+            return;
+        }
+
+        (new CmsItemRevision())
+            ->setItemType($type->value)
+            ->setItemId($id)
+            ->setLocale($locale)
+            ->setDocument($content->getDraftDocument())
+            ->setHtml($content->getDraftHtml())
+            ->setLabel(self::DRAFT_LABEL)
+            ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
+            ->save();
+
+        $this->prune($type, $id, $locale, self::DRAFT_LABEL, self::DRAFT_RETENTION);
+    }
+
+    /**
+     * The drafts kept for this item in this language, the latest first.
+     *
+     * @return list<array{id: int, date: \DateTimeInterface|null, sections: int}>
+     */
+    public function previousDrafts(CatalogueItemType $type, int $id, string $locale): array
+    {
+        $drafts = [];
+
+        foreach ($this->draftRevisions($type, $id, $locale)->orderByCreatedAt(Criteria::DESC)->orderById(Criteria::DESC)->find() as $revision) {
+            $document = $this->documentOf($revision->getDocument());
+            $drafts[] = ['id' => (int) $revision->getId(), 'date' => $revision->getCreatedAt(), 'sections' => $document instanceof Document ? \count($document->sections) : 0];
+        }
+
+        return $drafts;
+    }
+
+    /**
+     * Puts a kept draft back as the draft, the current one kept in its
+     * place: a restore is undone the same way.
+     *
+     * @throws \InvalidArgumentException when the revision is not a kept draft of this item in this language
+     * @throws InvalidDocumentException  when the kept document no longer passes
+     */
+    public function restoreDraft(CatalogueItemType $type, int $id, string $locale, int $revisionId): void
+    {
+        $revision = $this->draftRevisions($type, $id, $locale)->filterById($revisionId)->findOne();
+        $document = $revision instanceof CmsItemRevision ? Document::fromJson($revision->getDocument()) : null;
+
+        if (!$document instanceof Document) {
+            throw new \InvalidArgumentException(\sprintf('Revision #%d is not a kept draft of the %s #%d in %s.', $revisionId, $type->value, $id, $locale));
+        }
+
+        $this->keepDraft($type, $id, $locale);
+        $this->saveContent($type, $id, $locale, $document);
+    }
+
+    private function draftRevisions(CatalogueItemType $type, int $id, string $locale): CmsItemRevisionQuery
+    {
+        return CmsItemRevisionQuery::create()->filterByItemType($type->value)->filterByItemId($id)->filterByLocale($locale)->filterByLabel(self::DRAFT_LABEL);
+    }
+
+    /**
+     * The document a revision holds; null when it no longer reads, which
+     * only an older row could.
+     */
+    private function documentOf(?string $json): ?Document
+    {
+        try {
+            return Document::fromJson($json);
+        } catch (InvalidDocumentException) {
+            return null;
+        }
+    }
+
+    /**
+     * Drops the oldest revisions of one kind beyond what is kept: the
+     * publications and the drafts are counted apart.
+     */
+    private function prune(CatalogueItemType $type, int $id, string $locale, ?string $label, int $keep, ?ConnectionInterface $connection = null): void
+    {
+        $obsolete = CmsItemRevisionQuery::create()
+            ->filterByItemType($type->value)
+            ->filterByItemId($id)
+            ->filterByLocale($locale)
+            ->filterByLabel($label, null === $label ? Criteria::ISNULL : Criteria::EQUAL)
+            ->orderByCreatedAt(Criteria::DESC)
+            ->orderById(Criteria::DESC)
+            ->offset($keep)
+            ->limit(1000)
+            ->find($connection);
+
+        foreach ($obsolete as $revision) {
+            $revision->delete($connection);
+        }
     }
 
     /**
@@ -210,18 +320,6 @@ final readonly class ItemContentWriter
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
             ->save($connection);
 
-        $obsolete = CmsItemRevisionQuery::create()
-            ->filterByItemType($content->getItemType())
-            ->filterByItemId($content->getItemId())
-            ->filterByLocale($content->getLocale())
-            ->orderByCreatedAt(Criteria::DESC)
-            ->orderById(Criteria::DESC)
-            ->offset(self::REVISION_RETENTION)
-            ->limit(1000)
-            ->find($connection);
-
-        foreach ($obsolete as $revision) {
-            $revision->delete($connection);
-        }
+        $this->prune(CatalogueItemType::from((string) $content->getItemType()), (int) $content->getItemId(), (string) $content->getLocale(), null, self::REVISION_RETENTION, $connection);
     }
 }

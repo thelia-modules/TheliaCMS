@@ -232,6 +232,14 @@ duration and its cost. Asking it takes the right `admin.cms.generate`; the
 model, the effort and the length of an answer are settings. How it is
 prompted, what it may read and what it costs: [docs/generator.md](docs/generator.md).
 
+Every generation that writes the draft keeps the draft it replaces as a
+revision labelled `draft`, the last five apart from the twenty publications
+(`cms_page_revision` and `cms_item_revision`, column `label`). **Previous
+drafts** on the content screen lists them; **Put it back** makes one the
+draft again and keeps the current one in turn, so a restore is undone the
+same way. Sections edited by hand are not snapshotted: a word changed by hand
+is cheap to change back.
+
 Each section is also **edited by hand**, on the same screen, in a form read
 from the schema of its component: a field per prop, rows added and removed for
 a list, a picker on the media library for an image. A `html` prop is edited in

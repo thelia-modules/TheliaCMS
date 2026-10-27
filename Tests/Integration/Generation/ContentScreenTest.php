@@ -26,6 +26,7 @@ use TheliaCMS\Content\SectionAppearance;
 use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
+use TheliaCMS\Model\CmsPageRevisionQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
@@ -78,6 +79,43 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(0, $screen->filter('[data-testid="cms-content-brief-dialog"]')->count(), 'Without a brief, the form is in the screen, the first thing to fill.');
         self::assertSame(0, $screen->filter('[data-testid="cms-content-notice"]')->count(), 'With a client at hand, nothing warns about the key.');
         self::assertNotNull($screen->filter('[data-testid="cms-content-publish"] button')->attr('disabled'), 'Nothing to publish yet.');
+    }
+
+    public function testTheDraftABriefReplacesIsKeptAndCanBePutBack(): void
+    {
+        $page = $this->createPage('Nos services', published: false);
+        $url = $this->url($page->getId());
+        $writer = $this->getService(CmsPageWriter::class);
+        $writer->saveContent($page, $this->locale(), Document::richText('<h2>Avant</h2><p>Écrit à la main.</p>'));
+
+        self::assertSame(0, $this->screen($url)->filter('[data-testid="cms-content-previous-drafts"]')->count(), 'Nothing replaced yet.');
+
+        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([
+            ['id' => 'intro', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Après</h2><p>Écrit par le générateur.</p>']],
+        ]))], 'end_turn', ['input_tokens' => 100, 'output_tokens' => 50]));
+        $form = $this->screen($url)->filter('[data-testid="cms-content-brief"] form')->form();
+        $form['cms_brief[text]'] = 'Une page qui présente nos services.';
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $screen = $this->screen($url);
+        $drafts = $screen->filter('[data-testid="cms-content-previous-drafts"] form[data-cms-restore]');
+        self::assertCount(1, $drafts, 'The draft the brief replaced is kept.');
+        self::assertStringContainsString('Après', (string) $this->draftHtml($page->getId()));
+
+        $restore = $drafts->first()->form();
+        self::assertSame(302, $this->send('POST', $restore->getUri(), $restore->getPhpValues()));
+
+        self::assertStringContainsString('Écrit à la main.', (string) $this->draftHtml($page->getId()), 'The previous draft is the draft again.');
+        self::assertCount(2, $this->screen($url)->filter('[data-testid="cms-content-previous-drafts"] form[data-cms-restore]'), 'The draft it replaced is kept in turn.');
+        self::assertSame(0, CmsPageRevisionQuery::create()->filterByPageId($page->getId())->filterByLabel(null, Criteria::ISNULL)->count(), 'A kept draft is no publication.');
+
+        self::assertSame(302, $this->send('POST', $restore->getUri(), ['revision' => 999999999] + $restore->getPhpValues()));
+        self::assertStringContainsString('Écrit à la main.', (string) $this->draftHtml($page->getId()), 'An unknown revision changes nothing.');
+    }
+
+    private function draftHtml(int $pageId): ?string
+    {
+        return CmsPageContentQuery::create()->filterByPageId($pageId)->filterByLocale($this->locale())->findOne()?->getDraftHtml();
     }
 
     public function testABriefWritesTheDraftAndTheScreenShowsTheOutcome(): void

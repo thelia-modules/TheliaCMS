@@ -35,14 +35,18 @@ shows how to test an update, outside a transaction.
   the integration tests, not by `cache:clear`. After a change to the
   constructor of a service, a new route, a new controller or a new event
   listener, remove it; the first test recompiles. Without removing anything,
-  `php Thelia cache:clear --env=test --no-debug` rebuilds the container the
-  tests run; `--env=test` alone rebuilds only the debug one, and a new listener
+  `env -u DATABASE_NAME php Thelia cache:clear --env=test --no-debug`
+  rebuilds the container the tests run (without unsetting the variable, see
+  below, the container built under DDEV connects the tests to the
+  development database); `--env=test` alone rebuilds only the debug one, and a new listener
   stays unknown to the tests. That container does not check the templates
   either: a screen test keeps rendering the compiled copy of a template changed
   since, so the same command is due after editing one. When the constructor of
   a console command changed, that command fails too: it boots the stale
   container, which cannot build the command. Move `var/cache/test` aside,
-  then run it.
+  then run it. The same goes for `var/propel/test` after a change to
+  `Config/schema.xml`: moved aside, it is rebuilt by the next boot, with the
+  database the shell names at that moment.
 - **The prompt reads translated words.** The catalogue sheet sent to the
   generator gives the label of each component and prop through the
   translator (`Generation/CatalogSheet.php`): a new or changed key of `I18n/`

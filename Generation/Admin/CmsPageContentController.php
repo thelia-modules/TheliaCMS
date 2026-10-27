@@ -28,6 +28,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Content\Document;
+use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\Pipeline\HeadingChecker;
 use TheliaCMS\Generation\Brief;
 use TheliaCMS\Generation\GenerationRequest;
@@ -197,6 +198,27 @@ final readonly class CmsPageContentController
 
         foreach ($problems as $problem) {
             $this->flash($request, 'danger', $problem);
+        }
+
+        return $this->back($page, $lang);
+    }
+
+    /**
+     * A kept draft put back, by whoever may change pages: the draft it
+     * replaces is kept in its turn.
+     */
+    #[Route('/restore', name: 'restore', methods: ['POST'])]
+    public function restore(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayPublish();
+
+        try {
+            $this->writer->restoreDraft($page, $lang->getLocale(), $request->request->getInt('revision'));
+            $this->flash($request, 'success', $this->translate('The previous draft is back. The one it replaces is kept in its place.'));
+        } catch (\InvalidArgumentException|InvalidDocumentException) {
+            $this->flash($request, 'danger', $this->translate('This draft is no longer available.'));
         }
 
         return $this->back($page, $lang);
@@ -392,6 +414,8 @@ final readonly class CmsPageContentController
             $request,
             $generation,
             function (Document $document, ?array $fields = null) use ($page, $locale): void {
+                // The draft the answer replaces is kept first: it can be put back.
+                $this->writer->keepDraft($page, $locale);
                 $this->writer->saveContent($page, $locale, $document);
 
                 if (null !== $fields && [] !== $fields) {
@@ -428,6 +452,7 @@ final readonly class CmsPageContentController
                 'section' => $this->urls->generate('admin.cms.pages.content.section', $parameters),
                 'update' => $this->urls->generate('admin.cms.pages.content.update', $parameters),
                 'remove' => $this->urls->generate('admin.cms.pages.content.remove', $parameters),
+                'restore' => $this->urls->generate('admin.cms.pages.content.restore', $parameters),
                 'move' => $this->urls->generate('admin.cms.pages.content.move', $parameters),
                 'add' => $this->urls->generate('admin.cms.pages.content.add', $parameters),
                 'translate' => $this->urls->generate('admin.cms.pages.content.translate', $parameters),
@@ -438,6 +463,7 @@ final readonly class CmsPageContentController
             publishable: 1 !== $page->getModel(),
             draftPagePreviewUrl: $this->previewLinks->urlFor((int) $page->getId(), $locale),
             template: $this->template($page, $locale),
+            previousDrafts: $this->writer->previousDrafts($page, $locale),
         );
     }
 

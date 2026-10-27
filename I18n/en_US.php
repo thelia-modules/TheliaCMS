@@ -1155,4 +1155,11 @@ return [
     'Center the title text. Defaults to false' => 'Center the title.',
     'Breadcrumb items, forwarded to Molecules:Breadcrumb:Base. Defaults to empty (no breadcrumb rendered)' => 'The steps of the breadcrumb; none when empty.',
     'Which container-* utility wraps the title: - \'large\' (default): container-l, generic full-width pages - \'medium\'/\'small\': container-m/container-s, narrower pages - \'single-3\': container-single-3, single-column text-content pages (e.g. FAQ) — matches the body when it\'s not wrapped in container-l (no split needed) Note: \'double-3\' isn\'t offered here — a content page with a container-double-3 body (2-column, ToC optional) still spans the same box as container-l, so its Subheader uses \'large\', not \'double-3\'. A 2-column category listing needs its own file (Subheader/Category), not a container value: the text goes in the container\'s second slot to align with the product grid.' => 'The width of the band: large, medium, small or single-3 (a column of text).',
+    'Previous drafts' => 'Previous drafts',
+    'The drafts the generator replaced, the latest first. Putting one back keeps the current draft here in turn.' => 'The drafts the generator replaced, the latest first. Putting one back keeps the current draft here in turn.',
+    '%count% section(s)' => '%count% section(s)',
+    'Put it back' => 'Put it back',
+    'Put this draft back? The current draft is kept in its place.' => 'Put this draft back? The current draft is kept in its place.',
+    'The previous draft is back. The one it replaces is kept in its place.' => 'The previous draft is back. The one it replaces is kept in its place.',
+    'This draft is no longer available.' => 'This draft is no longer available.',
 ];

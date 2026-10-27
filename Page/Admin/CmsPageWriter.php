@@ -62,6 +62,12 @@ final readonly class CmsPageWriter
     /** Revisions kept per (page, locale) before the oldest ones are dropped. */
     private const int REVISION_RETENTION = 20;
 
+    /** Drafts a generation replaced, kept per (page, locale) to put one back. */
+    private const int DRAFT_RETENTION = 5;
+
+    /** The label of a revision holding a draft, rather than a publication. */
+    public const string DRAFT_LABEL = 'draft';
+
     public function __construct(
         private CmsUrlService $urls,
         private SecurityContext $securityContext,
@@ -185,6 +191,108 @@ final readonly class CmsPageWriter
             ->save();
 
         $this->activityLog->record('UPDATE', (int) $page->getId(), \sprintf('CMS page #%d content edited in %s', $page->getId(), $locale));
+    }
+
+    /**
+     * Keeps the draft as it is before a generation replaces it: a revision
+     * labelled "draft", which `restoreDraft()` puts back. An empty draft is
+     * not worth keeping.
+     */
+    public function keepDraft(CmsPage $page, string $locale): void
+    {
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($locale)->findOne();
+        $document = $content instanceof CmsPageContent ? $this->documentOf($content->getDraftDocument()) : null;
+
+        if (!$document instanceof Document || $document->isEmpty()) {
+            return;
+        }
+
+        (new CmsPageRevision())
+            ->setPageId($page->getId())
+            ->setLocale($locale)
+            ->setDocument($content->getDraftDocument())
+            ->setHtml($content->getDraftHtml())
+            ->setLabel(self::DRAFT_LABEL)
+            ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
+            ->save();
+
+        $this->prune($page, $locale, self::DRAFT_LABEL, self::DRAFT_RETENTION);
+    }
+
+    /**
+     * The drafts kept for this page in this language, the latest first.
+     *
+     * @return list<array{id: int, date: \DateTimeInterface|null, sections: int}>
+     */
+    public function previousDrafts(CmsPage $page, string $locale): array
+    {
+        $drafts = [];
+
+        foreach ($this->draftRevisions($page, $locale)->orderByCreatedAt(Criteria::DESC)->orderById(Criteria::DESC)->find() as $revision) {
+            $document = $this->documentOf($revision->getDocument());
+            $drafts[] = ['id' => (int) $revision->getId(), 'date' => $revision->getCreatedAt(), 'sections' => $document instanceof Document ? \count($document->sections) : 0];
+        }
+
+        return $drafts;
+    }
+
+    /**
+     * Puts a kept draft back as the draft, the current one kept in its
+     * place: a restore is undone the same way.
+     *
+     * @throws \InvalidArgumentException when the revision is not a kept draft of this page in this language
+     * @throws InvalidDocumentException  when the kept document no longer passes
+     */
+    public function restoreDraft(CmsPage $page, string $locale, int $revisionId): void
+    {
+        $revision = $this->draftRevisions($page, $locale)->filterById($revisionId)->findOne();
+        $document = $revision instanceof CmsPageRevision ? Document::fromJson($revision->getDocument()) : null;
+
+        if (!$document instanceof Document) {
+            throw new \InvalidArgumentException(\sprintf('Revision #%d is not a kept draft of page #%d in %s.', $revisionId, $page->getId(), $locale));
+        }
+
+        $this->keepDraft($page, $locale);
+        $this->saveContent($page, $locale, $document);
+    }
+
+    private function draftRevisions(CmsPage $page, string $locale): CmsPageRevisionQuery
+    {
+        return CmsPageRevisionQuery::create()->filterByPageId($page->getId())->filterByLocale($locale)->filterByLabel(self::DRAFT_LABEL);
+    }
+
+    /**
+     * The document a revision holds; null when it no longer reads, which
+     * only an older row could.
+     */
+    private function documentOf(?string $json): ?Document
+    {
+        try {
+            return Document::fromJson($json);
+        } catch (InvalidDocumentException) {
+            return null;
+        }
+    }
+
+    /**
+     * Drops the oldest revisions of one kind beyond what is kept: the
+     * publications and the drafts are counted apart.
+     */
+    private function prune(CmsPage $page, string $locale, ?string $label, int $keep, ?ConnectionInterface $connection = null): void
+    {
+        $obsolete = CmsPageRevisionQuery::create()
+            ->filterByPageId($page->getId())
+            ->filterByLocale($locale)
+            ->filterByLabel($label, null === $label ? Criteria::ISNULL : Criteria::EQUAL)
+            ->orderByCreatedAt(Criteria::DESC)
+            ->orderById(Criteria::DESC)
+            ->offset($keep)
+            ->limit(1000)
+            ->find($connection);
+
+        foreach ($obsolete as $revision) {
+            $revision->delete($connection);
+        }
     }
 
     /**
@@ -808,7 +916,7 @@ final readonly class CmsPageWriter
             ->save($connection);
     }
 
-    private function snapshot(CmsPage $page, string $locale, CmsPageContent $content, $connection): void
+    private function snapshot(CmsPage $page, string $locale, CmsPageContent $content, ConnectionInterface $connection): void
     {
         (new CmsPageRevision())
             ->setPageId($page->getId())
@@ -818,16 +926,6 @@ final readonly class CmsPageWriter
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
             ->save($connection);
 
-        $obsolete = CmsPageRevisionQuery::create()
-            ->filterByPageId($page->getId())
-            ->filterByLocale($locale)
-            ->orderByCreatedAt(Criteria::DESC)
-            ->offset(self::REVISION_RETENTION)
-            ->limit(1000)
-            ->find();
-
-        foreach ($obsolete as $revision) {
-            $revision->delete($connection);
-        }
+        $this->prune($page, $locale, null, self::REVISION_RETENTION, $connection);
     }
 }

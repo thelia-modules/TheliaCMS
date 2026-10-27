@@ -37,6 +37,7 @@
              add: 'Add a section'|trans({}, 'theliacms'),
              edit: 'Edit'|trans({}, 'theliacms'),
              delete: 'Delete'|trans({}, 'theliacms'),
+             restore: 'Put this draft back? The current draft is kept in its place.'|trans({}, 'theliacms'),
          }|json_encode }}">
         <header class="cms-content__bar">
             <a class="btn btn-sm btn-outline-secondary" href="{{ subject.backUrl }}" data-testid="cms-content-back">
@@ -312,6 +313,30 @@
                                 </li>
                             {% endfor %}
                         </ol>
+                    </section>
+                {% endif %}
+
+                {# The drafts a generation replaced: one is put back from here,
+                   the current draft kept in its place. #}
+                {% if subject.previousDrafts is not empty and may_publish %}
+                    <section class="cms-content__section" data-testid="cms-content-previous-drafts">
+                        <h2 class="cms-content__heading">{{ 'Previous drafts'|trans({}, 'theliacms') }}</h2>
+                        <p class="text-muted small">{{ 'The drafts the generator replaced, the latest first. Putting one back keeps the current draft here in turn.'|trans({}, 'theliacms') }}</p>
+                        <ul class="list-unstyled mb-0 cms-content__drafts">
+                            {% for draft in subject.previousDrafts %}
+                                <li class="cms-content__draft">
+                                    <time datetime="{{ draft.date|date('c') }}">{{ draft.date|date('d/m/Y H:i') }}</time>
+                                    <span class="text-muted">{{ '%count% section(s)'|trans({ '%count%': draft.sections }, 'theliacms') }}</span>
+                                    <form method="post" action="{{ subject.url('restore') }}" data-cms-restore data-testid="cms-content-restore-{{ draft.id }}">
+                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                        <input type="hidden" name="revision" value="{{ draft.id }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> {{ 'Put it back'|trans({}, 'theliacms') }}
+                                        </button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
                     </section>
                 {% endif %}
 

@@ -32,6 +32,7 @@ use TheliaCMS\Catalogue\CatalogueItems;
 use TheliaCMS\Catalogue\CatalogueItemType;
 use TheliaCMS\Catalogue\ItemContentRepository;
 use TheliaCMS\Content\Document;
+use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\Pipeline\HeadingChecker;
 use TheliaCMS\Generation\Admin\BriefType;
 use TheliaCMS\Generation\Admin\ChangeType;
@@ -197,6 +198,27 @@ final readonly class ItemContentController
         return $this->afterHand($request, $item, $lang, $problems, 'The section is added at the end of the draft, with example text: edit it by hand.');
     }
 
+    /**
+     * A kept draft put back, by whoever may change the content: the draft it
+     * replaces is kept in its turn.
+     */
+    #[Route('/restore', name: 'restore', methods: ['POST'])]
+    public function restore(Request $request, string $type, int $id): Response
+    {
+        $lang = $this->languages->resolve($request);
+        $item = $this->itemOrFail($type, $id, $lang);
+        $this->denyUnlessMayPublish();
+
+        try {
+            $this->writer->restoreDraft($item->type, $item->id, $item->locale, $request->request->getInt('revision'));
+            $this->flash($request, 'success', $this->translate('The previous draft is back. The one it replaces is kept in its place.'));
+        } catch (\InvalidArgumentException|InvalidDocumentException) {
+            $this->flash($request, 'danger', $this->translate('This draft is no longer available.'));
+        }
+
+        return $this->back($item, $lang);
+    }
+
     #[Route('/translate', name: 'translate', methods: ['POST'])]
     public function writeFromAnotherLanguage(Request $request, string $type, int $id): Response
     {
@@ -321,8 +343,12 @@ final readonly class ItemContentController
             $request,
             $generation,
             // An item has no fields of a page type: whatever the answer
-            // writes besides the document is left out.
-            fn (Document $document) => $this->writer->saveContent($item->type, $item->id, $item->locale, $document),
+            // writes besides the document is left out. The draft the answer
+            // replaces is kept first: it can be put back.
+            function (Document $document) use ($item): void {
+                $this->writer->keepDraft($item->type, $item->id, $item->locale);
+                $this->writer->saveContent($item->type, $item->id, $item->locale, $document);
+            },
             $this->screenUrl($item, $lang),
         );
     }
@@ -333,7 +359,7 @@ final readonly class ItemContentController
         $parameters = ['type' => $item->type->value, 'id' => $item->id, EditLanguage::PARAMETER => $lang->getId()];
         $routes = ['screen' => $this->screenUrl($item, $lang)];
 
-        foreach (['generate', 'revise', 'section', 'update', 'remove', 'move', 'add', 'translate', 'publish'] as $action) {
+        foreach (['generate', 'revise', 'section', 'update', 'remove', 'restore', 'move', 'add', 'translate', 'publish'] as $action) {
             $routes[$action] = $this->urls->generate('admin.cms.catalogue.content.'.$action, $parameters);
         }
 
@@ -353,6 +379,7 @@ final readonly class ItemContentController
             testId: 'cms-item-content',
             translationSources: $this->translationSources->forItem($item->type, $item->id, $item->locale),
             draftPagePreviewUrl: $this->previewLinks->pageUrlFor($item),
+            previousDrafts: $this->writer->previousDrafts($item->type, $item->id, $item->locale),
         );
     }
 

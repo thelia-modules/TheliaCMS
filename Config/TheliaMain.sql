@@ -153,6 +153,7 @@ CREATE TABLE `cms_item_revision`
     `locale` VARCHAR(5) NOT NULL,
     `document` LONGTEXT,
     `html` LONGTEXT,
+    `label` VARCHAR(60),
     `created_by` INTEGER,
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,

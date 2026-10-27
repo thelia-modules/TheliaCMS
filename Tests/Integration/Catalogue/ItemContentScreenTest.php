@@ -25,6 +25,7 @@ use TheliaCMS\Content\Section;
 use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsItemContentQuery;
+use TheliaCMS\Model\CmsItemRevisionQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Preview\ItemPreviewLink;
 use TheliaCMS\Tests\Integration\Generation\FakeClaudeTransport;
@@ -139,6 +140,31 @@ final class ItemContentScreenTest extends AdminScreenTestCase
         self::assertStringContainsString('- Name: Notre méthode', $prompt);
         self::assertStringContainsString('repeat none of it', $prompt);
         self::assertStringNotContainsString('# The page', $prompt, 'An item is not a page of the CMS.');
+    }
+
+    public function testTheDraftOfAnItemABriefReplacesIsKeptAndCanBePutBack(): void
+    {
+        $content = $this->content();
+        $id = (int) $content->getId();
+        $writer = $this->getService(ItemContentWriter::class);
+        $writer->saveContent(CatalogueItemType::Content, $id, $this->locale(), Document::richText('<h2>Avant</h2><p>Écrit à la main.</p>'));
+
+        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(json_encode(['version' => 1, 'sections' => [
+            ['id' => 'intro', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Après</h2><p>Écrit par le générateur.</p>']],
+        ]], \JSON_THROW_ON_ERROR))], 'end_turn', ['input_tokens' => 100, 'output_tokens' => 50]));
+        $form = $this->screen($this->url($content))->filter('[data-testid="cms-content-brief"] form')->form();
+        $form['cms_brief[text]'] = 'Les questions fréquentes.';
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $drafts = $this->screen($this->url($content))->filter('[data-testid="cms-content-previous-drafts"] form[data-cms-restore]');
+        self::assertCount(1, $drafts, 'The draft the brief replaced is kept.');
+
+        $restore = $drafts->first()->form();
+        self::assertSame(302, $this->send('POST', $restore->getUri(), $restore->getPhpValues()));
+
+        $row = CmsItemContentQuery::create()->filterByItemType('content')->filterByItemId($id)->filterByLocale($this->locale())->findOne();
+        self::assertStringContainsString('Écrit à la main.', (string) $row?->getDraftHtml(), 'The previous draft is the draft again.');
+        self::assertSame(2, CmsItemRevisionQuery::create()->filterByItemType('content')->filterByItemId($id)->filterByLabel(ItemContentWriter::DRAFT_LABEL)->count(), 'The draft it replaced is kept in turn.');
     }
 
     public function testTheSignedLinkShowsTheDraftAndATamperedOneIsNotFound(): void

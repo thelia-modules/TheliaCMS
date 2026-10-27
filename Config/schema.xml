@@ -254,6 +254,7 @@
         <column name="locale" required="true" size="5" type="VARCHAR"/>
         <column name="document" type="CLOB"/>
         <column name="html" type="CLOB"/>
+        <column name="label" size="60" type="VARCHAR"/>
         <column name="created_by" type="INTEGER"/>
 
         <index name="idx_cms_item_revision_item_locale">

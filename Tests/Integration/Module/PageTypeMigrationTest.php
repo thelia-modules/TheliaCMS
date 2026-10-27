@@ -141,6 +141,25 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
         $this->assertTheTypesHaveTheirInstructions();
     }
 
+    public function testTheUpdateTo231GivesTheRevisionsOfItemsTheirLabelAndCanBePlayedTwice(): void
+    {
+        // A test database prepared before 2.3.1 has no column to drop.
+        if ([] !== $this->rows("SHOW COLUMNS FROM cms_item_revision LIKE 'label'")) {
+            $this->getPropelConnection()->exec('ALTER TABLE cms_item_revision DROP COLUMN label');
+        }
+
+        self::assertSame([], $this->rows("SHOW COLUMNS FROM cms_item_revision LIKE 'label'"));
+
+        $module = new TheliaCMS();
+        $module->update('2.3.0', '2.3.1', $this->getPropelConnection());
+        $module->update('2.3.0', '2.3.1', $this->getPropelConnection());
+
+        $column = $this->rows("SHOW COLUMNS FROM cms_item_revision LIKE 'label'");
+        self::assertCount(1, $column);
+        self::assertSame('varchar(60)', strtolower((string) $column[0]['Type']));
+        self::assertSame('YES', $column[0]['Null']);
+    }
+
     private function withoutInstructions(): void
     {
         $this->getPropelConnection()->exec('ALTER TABLE cms_page_type DROP COLUMN instructions');

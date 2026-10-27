@@ -316,6 +316,19 @@ body:has(.cms-content) {
     flex: 0 0 3rem;
 }
 
+/* The drafts a generation replaced, one line each with its button. */
+.cms-content__draft {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 0.8125rem;
+}
+
+.cms-content__draft form {
+    margin-left: auto;
+}
+
 .cms-content__history {
     font-size: 0.8125rem;
 }

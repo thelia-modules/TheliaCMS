@@ -24,11 +24,12 @@ use TheliaCMS\Generation\GenerationTarget;
 final readonly class ContentSubject
 {
     /**
-     * @param array<string, string>                      $routes              the screen, generate, revise, section, update, remove, translate and publish routes, with their parameters
-     * @param list<array{locale: string, label: string}> $translationSources  the languages the target holds a draft in, to write this one from
-     * @param bool                                       $publishable         false for the model of a page type, which is never published
-     * @param string|null                                $draftPagePreviewUrl the whole page showing the draft: the page itself, or the page of a catalogue item when the item has one online
-     * @param array{label: string, url: string}|null     $template            the template of pages the page belongs to, when it is not the default one
+     * @param array<string, string>                                              $routes              the screen, generate, revise, section, update, remove, translate and publish routes, with their parameters
+     * @param list<array{locale: string, label: string}>                         $translationSources  the languages the target holds a draft in, to write this one from
+     * @param bool                                                               $publishable         false for the model of a page type, which is never published
+     * @param string|null                                                        $draftPagePreviewUrl the whole page showing the draft: the page itself, or the page of a catalogue item when the item has one online
+     * @param array{label: string, url: string}|null                             $template            the template of pages the page belongs to, when it is not the default one
+     * @param list<array{id: int, date: \DateTimeInterface|null, sections: int}> $previousDrafts      the drafts a generation replaced, the latest first, which the restore route puts back
      */
     public function __construct(
         public GenerationTarget $target,
@@ -48,6 +49,7 @@ final readonly class ContentSubject
         public bool $publishable = true,
         public ?string $draftPagePreviewUrl = null,
         public ?array $template = null,
+        public array $previousDrafts = [],
     ) {
     }
 
