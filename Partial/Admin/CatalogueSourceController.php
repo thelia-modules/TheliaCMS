@@ -57,7 +57,7 @@ final readonly class CatalogueSourceController
     }
 
     /**
-     * @param \Closure(int, string): ?PickableItem          $find
+     * @param \Closure(int, string): ?PickableItem         $find
      * @param \Closure(string, string): list<PickableItem> $search
      */
     private function answer(Request $request, \Closure $find, \Closure $search): Response

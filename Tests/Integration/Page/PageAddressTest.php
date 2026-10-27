@@ -326,7 +326,7 @@ final class PageAddressTest extends CmsIntegrationTestCase
      * A site taken over keeps the addresses search engines know: a fixed
      * address is the address, `.html` included, whatever the parent of the
      * page. (An address inserted anew loses its accents to the core; one a
-     * site already holds keeps them, its row being reassigned.)
+     * site already holds keeps them, its row being reassigned.).
      */
     public function testAFixedAddressIsKeptAsTypedUnderAParent(): void
     {

@@ -45,7 +45,6 @@ final readonly class ConsoleRequest
         private RequestStack $requests,
         private RequestContext $context,
         // Taken for its creation alone, which sets the singleton.
-        // @phpstan-ignore property.onlyWritten
         private URL $url,
     ) {
     }

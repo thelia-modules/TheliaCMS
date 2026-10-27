@@ -76,7 +76,7 @@ final readonly class SiteFonts
      */
     public function store(UploadedFile $file): string
     {
-        $handle = fopen($file->getPathname(), 'rb');
+        $handle = fopen($file->getPathname(), 'r');
         $opening = false !== $handle ? (string) fread($handle, 4) : '';
 
         if (false !== $handle) {
@@ -90,7 +90,7 @@ final readonly class SiteFonts
         $name = $this->nameFor($file->getClientOriginalName());
 
         if (!is_dir($this->directory)) {
-            mkdir($this->directory, 0755, true);
+            mkdir($this->directory, 0o755, true);
         }
 
         $file->move($this->directory, $name);
@@ -121,7 +121,7 @@ final readonly class SiteFonts
 
         $name = $base.'.'.self::FORMAT;
 
-        for ($suffix = 2; $this->has($name); $suffix++) {
+        for ($suffix = 2; $this->has($name); ++$suffix) {
             $name = $base.'-'.$suffix.'.'.self::FORMAT;
         }
 

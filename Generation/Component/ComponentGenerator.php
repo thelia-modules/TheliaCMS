@@ -223,12 +223,15 @@ final readonly class ComponentGenerator
             throw InvalidSiteComponentException::because($problems);
         }
 
-        /** @var list<array<string, mixed>> $props */
+        // Both are read by now: a missing one was a problem, thrown above.
+        /** @var list<array<string, mixed>> $propList */
+        $propList = $props ?? [];
+
         return new SiteComponent(
             $code,
             \is_string($answer['label'] ?? null) ? $answer['label'] : '',
             \is_string($answer['description'] ?? null) ? $answer['description'] : '',
-            $props ?? [],
+            $propList,
             $sample ?? [],
             \is_string($answer['template'] ?? null) ? $answer['template'] : '',
             \is_string($answer['css'] ?? null) ? $answer['css'] : '',

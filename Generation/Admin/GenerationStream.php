@@ -30,7 +30,7 @@ final class GenerationStream implements GenerationObserverInterface
 
     /**
      * @param \Closure(string, array<string, string>): string $translate
-     * @param array{answered?: string, refused?: string}       $messages what the model answering and a refusal of the site are called, for what is written: a document by default
+     * @param array{answered?: string, refused?: string}      $messages  what the model answering and a refusal of the site are called, for what is written: a document by default
      */
     public function __construct(
         private readonly \Closure $translate,

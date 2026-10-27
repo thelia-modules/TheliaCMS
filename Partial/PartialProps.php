@@ -51,11 +51,7 @@ final readonly class PartialProps
             if ((null === $value || [] === $value) && $prop->required) {
                 // Read by an editor in the canvas, so it names the setting the
                 // way the settings panel does rather than by its key.
-                throw new MissingPartialPropException($this->translator->trans(
-                    'Choose a value for "%setting%" to show this block.',
-                    ['%setting%' => $prop->label],
-                    TheliaCMS::DOMAIN_NAME,
-                ));
+                throw new MissingPartialPropException($this->translator->trans('Choose a value for "%setting%" to show this block.', ['%setting%' => $prop->label], TheliaCMS::DOMAIN_NAME));
             }
 
             $values[$prop->name] = $value;
