@@ -3,8 +3,9 @@
 Status: started 2026-10-27. The command additions, the corpus, the bench and
 the script are done, and rounds 0 and 1 are played: the effort is not the
 lever, the section ids are the largest source of variance
-(`docs/evaluation/determinism/results.md`). Round 2 is the next step, from the
-fixed vocabulary of section ids. Settled on 2026-10-27:
+(`docs/evaluation/determinism/results.md`). Rounds 2a (fixed section ids)
+and 2b (no section the brief does not ask for) are kept; 2c (which component
+when two fit) is being measured. Settled on 2026-10-27:
 the runs stay out of the repository (only their summary goes in), and the bar
 for structure and shape is 4 runs out of 5.
 

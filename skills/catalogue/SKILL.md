@@ -56,8 +56,15 @@ anything else is refused.
   address the brief gives. Never a path you did not get from a tool, however
   likely it looks: a button to a page the site does not have is a dead end.
   When no page fits, leave the button out (its label and its address empty).
-- Every section has an `id`: short, lowercase, unique in the page, saying
-  what the section is (`intro`, `faq`, `reviews`).
+- Every section has an `id`, taken from this list by what the section does,
+  never from the words of the brief: `intro` (the lines under the title),
+  `story`, `team`, `figures`, `features` (the points, arguments or benefits
+  the brief lists), `offer` (prices, formulas, what is included),
+  `products`, `categories`, `reviews`, `faq`, `practical` (address, hours,
+  access, parking), `contact` (the text that asks the visitor to get in
+  touch), `form`, `legal`, `content` (anything else). When two sections do
+  the same thing, number the later ones: `faq`, `faq-2`. A page written from
+  a model page, or translated, keeps the ids of the page it follows.
 
 ## Output
 

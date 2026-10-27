@@ -19,9 +19,13 @@ always: true
 
 ## What a page of each kind holds
 
+The orders below list every step a page of each kind may have. A step
+the brief gives no material for is left out; a step marked *(asked)* is
+written only when the brief asks for it in so many words.
+
 **Landing or service page**: under the title, what and for whom → the one
 thing that matters most → proof, reviews or reassurance → questions and
-answers that remove the last doubts → what to do next.
+answers that remove the last doubts → what to do next *(asked)*.
 
 **Selection or collection page** (a theme, a season, the products of a
 story): under the title, what ties them together in a short text →
@@ -32,7 +36,7 @@ heading each, never one card per product.
 
 **About page**: under the title, the sentence that says who you are →
 the story or the team → figures → partners or clients when the brief names
-them → how to get in touch.
+them → how to get in touch *(asked)*.
 
 **Legal or informational page** (legal notice, terms, privacy, accessibility,
 access): free text in `<h2>` sections, nothing decorative, no
@@ -45,6 +49,14 @@ if the brief gives an address and the catalogue offers one.
 **News or article**: free text in `<h2>` sections, dated facts in the order they
 matter, one picture when the library has one, no call to action unless the
 brief asks.
+
+## Sections nobody asked for
+
+A form, a text inviting the visitor to get in touch, a call to action: each
+one only when the brief asks for it — a button, a form, a way to contact,
+"invite people to visit". A brief that asks for none of them gets none,
+however naturally a page would end on one. When the brief asks for a button
+to a page the site does not have, the form of the site may take its place.
 
 ## When the brief gives little
 

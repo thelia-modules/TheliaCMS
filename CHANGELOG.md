@@ -32,6 +32,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - **Ask for a change comes before the sections of the draft** on the content
   screen, right under the brief: the change of the whole page is offered
   before the list that changes one section at a time.
+- **The generator gives the same page for the same brief more often.** Two
+  rules of the shipped skills, measured on the determinism corpus
+  (`docs/evaluation/determinism/results.md`): every section takes its id from
+  a fixed list (`intro`, `features`, `offer`, `practical`, `contact`,
+  `form`…), and a page carries a form, a contact text or a call to action
+  only when the brief asks for one. The same structure in four runs out of
+  five went from 7 briefs of 16 to 13, the quality of the evaluation
+  unchanged. A site that edited these skills keeps its own text.
 - **The content screen names the template of the page.** Next to the status
   of a page of a template, the bar shows the template and links to its
   settings.
