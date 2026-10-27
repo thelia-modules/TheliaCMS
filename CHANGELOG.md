@@ -16,6 +16,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   brief, whether it writes, revises, rewrites a section or translates; they
   travel in the export. The update to 2.2.0 adds `cms_page_type.instructions`;
   `PageTypeWriter::describe()` takes them as a last, optional argument.
+- **Claude Code and Chrome.** `docs/claude-code-and-chrome.md` tells how to
+  let Claude Code work in the back office through a Chrome window and check
+  the pages as a visitor; `docs/plans/deterministic-skills.md` plans how to
+  measure and tighten the skills so one brief gives one page.
+- **Comparing runs of the generator.** `thelia_cms:compare-runs <round>`
+  reads the outputs of `thelia_cms:generate --dry-run` kept per brief and says,
+  in Markdown, how much the runs of each brief agree: structure, shape,
+  length of each section, figures. It calls no API.
 - **Two skills: translation and the design system.** `translation`, always
   read: a page written from another language keeps its meaning, its order,
   its names and its figures as written, and follows the typography of its

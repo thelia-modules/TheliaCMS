@@ -1113,6 +1113,10 @@ the editable 404, the ACL, and the activity log.
 
 Working on the module inside a Thelia host, with the caches and the test
 pitfalls met on the way: [docs/developing.md](docs/developing.md).
+Letting Claude Code work in the back office through a Chrome window, and
+checking pages as a visitor: [docs/claude-code-and-chrome.md](docs/claude-code-and-chrome.md).
+Making the generator give the same page for the same brief:
+[docs/plans/deterministic-skills.md](docs/plans/deterministic-skills.md).
 
 The unit tests need neither a database nor an installed shop, only the
 autoloader of the project the module sits in:

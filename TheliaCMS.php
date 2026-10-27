@@ -338,6 +338,8 @@ class TheliaCMS extends BaseModule
                 // Value objects: instantiated by the services that build them,
                 // never wired by the container.
                 __DIR__.'/Catalogue/CatalogueItem.php',
+                __DIR__.'/Evaluation/Run.php',
+                __DIR__.'/Evaluation/BriefReport.php',
                 __DIR__.'/Content/Document.php',
                 __DIR__.'/Content/Section.php',
                 __DIR__.'/Content/Prop.php',
