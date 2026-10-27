@@ -3,7 +3,7 @@
 Date: 2026-10-21. Status: accepted.
 
 Amended 2026-10-27: a type also carries writing instructions
-(`instructions`, free markdown, added by the update to 2.2.0): how every
+(`instructions`, free markdown, added by the update to 2.2.1): how every
 page of it is written, read by the generator after the brief of the type as
 rules that win over a brief, like a skill only that type loads. A series
 gets its rules there rather than through skills attached to the type.

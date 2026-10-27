@@ -125,6 +125,24 @@ final class SkillRepositoryTest extends CmsIntegrationTestCase
         self::assertSame([['alpha', 1], ['gamma', 2], ['beta', 3]], $order(), 'The first cannot go up, nor the last down.');
     }
 
+    public function testASkillShippedOnASiteThatHasSkillsGoesAfterTheLastOne(): void
+    {
+        $repository = $this->repository();
+        $repository->all();
+        $repository->move('beta', -1);
+
+        // Both sort before the files already sown: their rank among the files
+        // is a position the site has given away.
+        foreach (['aardvark', 'abacus'] as $code) {
+            mkdir($this->directory.'/'.$code, 0o777, true);
+            file_put_contents($this->directory.'/'.$code.'/SKILL.md', "---\nname: {$code}\ndescription: New.\n---\nNew rules.");
+        }
+
+        $order = array_map(static fn ($skill) => [$skill->code, $skill->position], $repository->all());
+
+        self::assertSame([['beta', 1], ['alpha', 2], ['aardvark', 3], ['abacus', 4]], $order);
+    }
+
     public function testMovingASkillNobodyShippedIsRefused(): void
     {
         $this->expectException(\InvalidArgumentException::class);

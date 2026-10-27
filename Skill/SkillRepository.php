@@ -142,14 +142,22 @@ final readonly class SkillRepository
      * Writes the shipped files into the table: new rows for new files, a new
      * `shipped_body` where a file changed, and the body too unless the site
      * rewrote it.
+     *
+     * An empty table takes the order of the files. Once it holds skills, their
+     * positions are the site's: a new file goes after the last one, the rank
+     * it has among the files being already taken.
      */
     public function sow(): void
     {
         $existing = [];
+        $lastPosition = 0;
 
         foreach (CmsSkillQuery::create()->find() as $model) {
             $existing[(string) $model->getCode()] = $model;
+            $lastPosition = max($lastPosition, (int) $model->getPosition());
         }
+
+        $sowingAnEmptyTable = [] === $existing;
 
         foreach ($this->files->all() as $shipped) {
             $model = $existing[$shipped->code] ?? null;
@@ -162,7 +170,7 @@ final readonly class SkillRepository
                     ->setBody($shipped->body)
                     ->setShippedBody($shipped->body)
                     ->setOrigin($shipped->origin)
-                    ->setPosition($shipped->position)
+                    ->setPosition($sowingAnEmptyTable ? $shipped->position : ++$lastPosition)
                     ->setEnabled(1)
                     ->setAlways($shipped->always ? 1 : 0)
                     ->save();

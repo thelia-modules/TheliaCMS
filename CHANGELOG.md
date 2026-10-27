@@ -7,6 +7,22 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Fixed (2.2.1)
+
+- **The column of the writing instructions reaches a site already on 2.2.0.**
+  `cms_page_type.instructions` was added by `update/2.2.0.sql`, which a site
+  already on 2.2.0 never plays again: reading a page template then failed.
+  The column moves to `update/2.2.1.sql`, replayable, so a site on 2.1.0 or on
+  2.2.0 gets it, and one that already has it is left alone.
+- **A new skill goes after the site's skills.** On a site that already has
+  skills, a newly shipped skill took its rank among the files, a position
+  another skill already held (two skills shown at the same position). It now
+  goes after the last position, in the order of the files when several
+  arrive; an empty table still takes the order of the files.
+- **The intro of a page template mentions its writing instructions.** The
+  sentence above the form says the pages follow the writing instructions of
+  the template, next to its brief and fields.
+
 ### Added (2.2.0)
 
 - **Writing instructions for a page template.** A page template gains
@@ -14,7 +30,7 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   written (tone, length, expected sections, mandatory mentions). The
   generator reads them as rules for every page of the template, after its
   brief, whether it writes, revises, rewrites a section or translates; they
-  travel in the export. The update to 2.2.0 adds `cms_page_type.instructions`;
+  travel in the export. The update to 2.2.1 adds `cms_page_type.instructions`;
   `PageTypeWriter::describe()` takes them as a last, optional argument.
 - **Claude Code and Chrome.** `docs/claude-code-and-chrome.md` tells how to
   let Claude Code work in the back office through a Chrome window and check

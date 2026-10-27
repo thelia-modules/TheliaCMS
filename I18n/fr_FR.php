@@ -887,7 +887,7 @@ return [
     'Model page' => 'Page modèle',
     'Delete this page type? Its model page goes with it.' => 'Supprimer ce type de page ? Sa page modèle part avec lui.',
     'Back to page types' => 'Retour aux types de page',
-    'Pages of this type are displayed with %template%, are written from the brief below before their own, and carry the fields listed here. A new page of the type starts as a copy of its model.' => 'Les pages de ce type s’affichent avec %template%, sont écrites à partir du brief ci-dessous avant le leur, et portent les champs listés ici. Une nouvelle page du type part d’une copie de son modèle.',
+    'Pages of this type are displayed with %template%, are written from the brief below before their own, following the writing instructions, and carry the fields listed here. A new page of the type starts as a copy of its model.' => 'Les pages de ce type s’affichent avec %template%, sont écrites à partir du brief ci-dessous avant le leur, en suivant les consignes de rédaction, et portent les champs listés ici. Une nouvelle page du type part d’une copie de son modèle.',
     '%count% page(s) of this type, the bin included.' => '%count% page(s) de ce type, corbeille comprise.',
     'The demo content new pages of this type are copied from. It is never published, and is not listed with the other pages.' => 'Le contenu de démonstration que copient les nouvelles pages de ce type. Il n’est jamais publié et n’apparaît pas avec les autres pages.',
     'Edit the content of the model' => 'Modifier le contenu du modèle',

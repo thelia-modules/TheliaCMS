@@ -887,7 +887,7 @@ return [
     'Model page' => 'Model page',
     'Delete this page type? Its model page goes with it.' => 'Delete this page type? Its model page goes with it.',
     'Back to page types' => 'Back to page types',
-    'Pages of this type are displayed with %template%, are written from the brief below before their own, and carry the fields listed here. A new page of the type starts as a copy of its model.' => 'Pages of this type are displayed with %template%, are written from the brief below before their own, and carry the fields listed here. A new page of the type starts as a copy of its model.',
+    'Pages of this type are displayed with %template%, are written from the brief below before their own, following the writing instructions, and carry the fields listed here. A new page of the type starts as a copy of its model.' => 'Pages of this type are displayed with %template%, are written from the brief below before their own, following the writing instructions, and carry the fields listed here. A new page of the type starts as a copy of its model.',
     '%count% page(s) of this type, the bin included.' => '%count% page(s) of this type, the bin included.',
     'The demo content new pages of this type are copied from. It is never published, and is not listed with the other pages.' => 'The demo content new pages of this type are copied from. It is never published, and is not listed with the other pages.',
     'Edit the content of the model' => 'Edit the content of the model',

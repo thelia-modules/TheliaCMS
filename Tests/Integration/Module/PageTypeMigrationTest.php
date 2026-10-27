@@ -20,7 +20,8 @@ use TheliaCMS\TheliaCMS;
 /**
  * A site on 1.1.0 moving to page types: the `layout` of each page becomes its
  * type, and the update can be played twice. Then a site on 2.1.0 moving to
- * the instructions of a type, replayable as well.
+ * the instructions of a type, replayable as well, and a site already on 2.2.0,
+ * whose update to 2.2.0 did not carry them yet.
  *
  * Runs outside a transaction: an ALTER TABLE commits on its own, so a rollback
  * would undo nothing and the test would prove nothing. The schema is put back
@@ -60,7 +61,7 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
             $connection->exec('ALTER TABLE cms_page_type ADD COLUMN brief LONGTEXT AFTER code, ADD COLUMN brief_tone VARCHAR(200) AFTER brief, ADD COLUMN brief_audience VARCHAR(200) AFTER brief_tone, ADD COLUMN fields LONGTEXT AFTER brief_audience');
         }
 
-        // The shape 2.2.0 gives it.
+        // The shape 2.2.1 gives it.
         if (!$this->typeColumnExists('instructions')) {
             $connection->exec('ALTER TABLE cms_page_type ADD COLUMN instructions LONGTEXT DEFAULT NULL AFTER brief_audience');
         }
@@ -116,16 +117,38 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
         self::assertSame(['default', 'full-width', 'landing', 'recette'], $codes, 'Each type exists once, the former layouts included.');
     }
 
-    public function testTheUpdateTo220GivesTheTypesTheirInstructionsAndCanBePlayedTwice(): void
+    public function testTheUpdateTo221GivesTheTypesTheirInstructionsAndCanBePlayedTwice(): void
     {
-        // A 2.1.0 site has no instructions on its types.
-        $this->getPropelConnection()->exec('ALTER TABLE cms_page_type DROP COLUMN instructions');
-        self::assertFalse($this->typeColumnExists('instructions'));
+        $this->withoutInstructions();
 
         $module = new TheliaCMS();
-        $module->update('2.1.0', '2.2.0', $this->getPropelConnection());
-        $module->update('2.1.0', '2.2.0', $this->getPropelConnection());
+        $module->update('2.1.0', '2.2.1', $this->getPropelConnection());
+        $module->update('2.1.0', '2.2.1', $this->getPropelConnection());
 
+        $this->assertTheTypesHaveTheirInstructions();
+    }
+
+    public function testASiteAlreadyOn220GetsTheInstructionsOfItsTypesAndTheUpdateCanBePlayedTwice(): void
+    {
+        // A site that reached 2.2.0 before the column moved to 2.2.1 has none,
+        // and the update from 2.2.0 is the only one it plays.
+        $this->withoutInstructions();
+
+        $module = new TheliaCMS();
+        $module->update('2.2.0', '2.2.1', $this->getPropelConnection());
+        $module->update('2.2.0', '2.2.1', $this->getPropelConnection());
+
+        $this->assertTheTypesHaveTheirInstructions();
+    }
+
+    private function withoutInstructions(): void
+    {
+        $this->getPropelConnection()->exec('ALTER TABLE cms_page_type DROP COLUMN instructions');
+        self::assertFalse($this->typeColumnExists('instructions'));
+    }
+
+    private function assertTheTypesHaveTheirInstructions(): void
+    {
         $column = $this->rows("SHOW COLUMNS FROM cms_page_type LIKE 'instructions'");
         self::assertCount(1, $column);
         self::assertSame('longtext', strtolower((string) $column[0]['Type']));
