@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Generation;
 
 use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Model\Lang;
 use Thelia\Test\FixtureFactory;
@@ -28,8 +29,10 @@ use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\PageDraft;
+use TheliaCMS\Page\PageTypeWriter;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaCMS\TheliaCMS;
 
 /**
  * A section changed by hand on the content screen: a form read from the
@@ -220,6 +223,83 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $screen = $this->screen($this->url($page));
         self::assertSame(0, $screen->filter('[data-cms-reorder]')->count());
         self::assertSame(0, $screen->filter('[data-cms-grip]')->count());
+    }
+
+    public function testTheComponentsToAddAreGroupedEachWithAnIconAndWordsForAnEditor(): void
+    {
+        $page = $this->pageWith([new Section('intro', 'cms:richtext', ['html' => '<h2>Avant</h2>'])]);
+
+        $dialog = $this->screen($this->url($page))->filter('dialog[data-cms-add-dialog]');
+        $families = $dialog->filter('.cms-content__add-family')->each(static fn (Crawler $heading): string => trim($heading->text()));
+
+        self::assertGreaterThanOrEqual(2, \count($families), 'The components come in families.');
+        self::assertSame(\count($families), \count(array_unique($families)), 'Each family is listed once.');
+        self::assertSame(
+            $dialog->filter('.cms-content__add-choice')->count(),
+            $dialog->filter('.cms-content__add-choice .cms-content__add-icon i.bi')->count(),
+            'Every component has its icon.',
+        );
+
+        self::assertSame('cms-content-add-cms:richtext', $dialog->filter('.cms-content__add-list form')->first()->attr('data-testid'), 'Free text opens the list.');
+
+        $freeText = $dialog->filter('[data-testid="cms-content-add-cms:richtext"] .cms-content__add-choice');
+        self::assertSame('bi bi-text-paragraph', $freeText->filter('.cms-content__add-icon i')->attr('class'));
+        self::assertStringNotContainsString('cms:richtext', $freeText->text(), 'The name of the component is not shown to an editor.');
+        self::assertSame(
+            $this->getService(TranslatorInterface::class)->trans('Paragraphs, headings and lists.', [], TheliaCMS::DOMAIN_NAME),
+            trim($freeText->filter('.cms-content__add-description')->text()),
+        );
+    }
+
+    public function testTheFormOfASectionFoldsWhatIsSeldomChangedAndKeepsItsSaveButtonInView(): void
+    {
+        $page = $this->pageWith([new Section('picture', 'cms:image', ['image' => null, 'alt' => '', 'caption' => 'Une légende', 'width' => 'narrow'])]);
+
+        $dialog = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-picture"]');
+
+        self::assertStringNotContainsString('cms:image', $dialog->filter('h2')->text(), 'The title names the section, not its component.');
+
+        $sources = $dialog->filter('details.cms-content__more')->reduce(static fn (Crawler $details): bool => 0 < $details->filter('[data-cms-image-url]')->count());
+        self::assertCount(1, $sources, 'The other sources of the picture are folded together.');
+        self::assertNull($sources->attr('open'), 'Closed while no address is set.');
+
+        $appearance = $dialog->filter('[data-testid="cms-section-appearance"]');
+        self::assertSame('details', $appearance->nodeName());
+        self::assertNull($appearance->attr('open'), 'Closed while the section has no look of its own.');
+
+        self::assertSame(1, $dialog->filter('.cms-content__edit-actions [data-testid="cms-section-save"]')->count(), 'The save button sits in the bar that stays in view.');
+    }
+
+    public function testABriefOnADraftThatHoldsSectionsSaysItReplacesThemAndAsksFirst(): void
+    {
+        $page = $this->pageWith([
+            new Section('intro', 'cms:richtext', ['html' => '<h2>Un</h2>']),
+            new Section('story', 'cms:richtext', ['html' => '<h2>Deux</h2>']),
+        ]);
+
+        $screen = $this->screen($this->url($page));
+
+        self::assertStringContainsString('2', $screen->filter('[data-testid="cms-content-brief-replaces"]')->text(), 'The warning counts the sections that go.');
+        self::assertNotEmpty($screen->filter('form[data-cms-generate][data-cms-confirm]')->attr('data-cms-confirm'), 'The brief form asks before it replaces the draft.');
+        self::assertSame(0, $screen->filter('[data-testid="cms-content-template"]')->count(), 'A page of the default type names no template.');
+
+        $blank = $this->screen($this->url($this->pageWith([])));
+        self::assertSame(0, $blank->filter('[data-testid="cms-content-brief-replaces"]')->count(), 'A blank page has nothing to lose.');
+        self::assertSame(0, $blank->filter('form[data-cms-confirm]')->count());
+    }
+
+    public function testAPageOfATemplateNamesItAndLinksToItsSettings(): void
+    {
+        $types = $this->getService(PageTypeWriter::class);
+        $types->add('screen-template');
+        $types->describe('screen-template', $this->locale(), 'Fiche atelier', null, null);
+        $page = $this->pageWith([new Section('intro', 'cms:richtext', ['html' => '<h2>Un</h2>'])]);
+        $page->setPageType('screen-template')->save();
+
+        $template = $this->screen($this->url($page))->filter('[data-testid="cms-content-template"]');
+
+        self::assertStringContainsString('Fiche atelier', $template->text());
+        self::assertStringEndsWith('/admin/cms/settings/page-types/screen-template', (string) $template->attr('href'));
     }
 
     public function testASectionIsAddedAtTheEndWithItsExampleProps(): void

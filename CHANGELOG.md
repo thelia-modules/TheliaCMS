@@ -7,6 +7,42 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Changed (2.3.1)
+
+- **The components to add a section from read better.** The dialog groups
+  them by what they are for (text and media, shop, reviews and reassurance,
+  content of the site, blocks of the site), gives each an icon, a name and
+  one line in the language of the back office, and no longer shows the name
+  a document refers to them by (it stays in the tooltip). The components of
+  the theme the module does not know keep their own label and description,
+  under the icon of their family. What the generator reads of a component
+  does not change.
+- **The form of a section reads better.** Its title names the section the
+  way the list does, with no component name. A prop of the theme with no
+  label of its own reads as words (`max_note` is "Highest score",
+  `product_ids` "Products"). The file and the address that can replace a
+  picture of the library fold under one line, the appearance of the section
+  under its heading; both open by themselves when they hold a value. The
+  rows of a list are numbered, number fields are narrow, "(optional)" is no
+  longer written on every field, and a product or a category is picked by
+  its name, the number field behind the picker showing again only when the
+  list cannot be read. The title, the close button and the save button stay
+  in view while the form scrolls, and Escape closes it, from the rich-text
+  editor too.
+- **Ask for a change comes before the sections of the draft** on the content
+  screen, right under the brief: the change of the whole page is offered
+  before the list that changes one section at a time.
+- **The content screen names the template of the page.** Next to the status
+  of a page of a template, the bar shows the template and links to its
+  settings.
+- **Writing from a brief says it replaces the draft.** When the draft holds
+  sections, a warning above the brief counts them and says nothing of them
+  is kept, the button reads *Replace the draft*, and the screen asks once
+  more before sending.
+- **A section is deleted from the preview.** Hovering a section shows
+  *Delete* next to *Edit*; it asks for the same confirmation as the bin of
+  the list.
+
 ### Added (2.3.0)
 
 - **The generate command writes items, translations and at an effort of its

@@ -60,6 +60,7 @@ final readonly class ContentScreen
         private ToolkitLink $toolkit,
         private Pricing $pricing,
         private PreviewWidths $previewWidths,
+        private SectionChoices $sectionChoices,
     ) {
     }
 
@@ -85,7 +86,7 @@ final readonly class ContentScreen
             'model' => $this->settings->model(),
             'toolkit_url' => $this->toolkit->url(),
             'preview_widths' => $this->previewWidths->widths(),
-            'addable' => $mayPublish ? $this->addable() : [],
+            'addable' => $mayPublish ? $this->sectionChoices->groups() : [],
             'assets_version' => self::assetsVersion(),
         ]);
     }
@@ -124,23 +125,6 @@ final readonly class ContentScreen
     }
 
     /**
-     * The components a section may be added from by hand: the ones the site
-     * offers, as the generator sees them.
-     *
-     * @return list<array{name: string, label: string, description: string}>
-     */
-    private function addable(): array
-    {
-        $components = [];
-
-        foreach ($this->catalog->offered() as $name => $definition) {
-            $components[] = ['name' => $name, 'label' => $definition->label(), 'description' => $definition->description()];
-        }
-
-        return $components;
-    }
-
-    /**
      * Changes with the script and the stylesheet of the screen, so an updated
      * module is not shadowed by what the browser already holds.
      */
@@ -167,7 +151,7 @@ final readonly class ContentScreen
                 'id' => $section->id,
                 'rank' => $index + 1,
                 'component' => $section->component,
-                'label' => $definition?->label() ?? $section->component,
+                'label' => $this->sectionChoices->label($section->component, $definition?->label() ?? $section->component),
                 'excerpt' => self::excerpt($section),
                 // Changing a word by hand costs nothing: the right to change
                 // the page is enough, where the generator takes its own.

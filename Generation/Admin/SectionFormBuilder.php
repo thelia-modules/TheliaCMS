@@ -65,6 +65,19 @@ final readonly class SectionFormBuilder
     /** The child holding the appearance of the section, a name no prop takes. */
     public const string APPEARANCE = 'cms_appearance';
 
+    /** Names of props whose plain reading would mislead an editor. */
+    private const array LABELS = [
+        'href' => 'Link',
+        'alt' => 'Text of the picture',
+        'note' => 'Score',
+        'max_note' => 'Highest score',
+        'embed_url' => 'Address of the video',
+        'file_url' => 'Address of the file',
+        'thumbnail_image_id' => 'Poster image',
+        'tag' => 'Heading level',
+        'container' => 'Width',
+    ];
+
     public function __construct(
         private FormFactoryInterface $forms,
         private CmsMediaLibrary $library,
@@ -240,6 +253,14 @@ final readonly class SectionFormBuilder
             'translation_domain' => false,
         ];
 
+        // A prop of the theme labelled by its bare name gets words of its
+        // own, translated like the rest of the screen.
+        if ($prop->label === $prop->name || '' === $prop->label) {
+            $common['label'] = self::humanize($prop->name);
+            $common['label_translation_parameters'] = [];
+            $common['translation_domain'] = 'theliacms';
+        }
+
         match ($prop->type) {
             PropType::Html => $builder->add($prop->name, TextareaType::class, $common + [
                 'attr' => ['rows' => 8, 'class' => 'wysiwyg', 'data-cms-html' => ''],
@@ -282,6 +303,30 @@ final readonly class SectionFormBuilder
                     )),
             ),
         };
+    }
+
+    /**
+     * `max_note` reads "Highest score", `product_ids` "Products": the name of
+     * a prop, said the way an editor would.
+     */
+    public static function humanize(string $name): string
+    {
+        $words = array_values(array_filter(explode(' ', strtolower((string) preg_replace(['/([a-z])([A-Z])/', '/[_\-]+/'], ['$1 $2', ' '], $name)))));
+        $key = implode('_', $words);
+
+        if (isset(self::LABELS[$key])) {
+            return self::LABELS[$key];
+        }
+
+        $last = array_pop($words);
+
+        if ('ids' === $last && [] !== $words) {
+            $words[\count($words) - 1] .= 's';
+        } elseif ('id' !== $last || [] === $words) {
+            $words[] = $last;
+        }
+
+        return ucfirst(implode(' ', $words));
     }
 
     /**

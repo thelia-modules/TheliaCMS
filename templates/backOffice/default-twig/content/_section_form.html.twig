@@ -6,18 +6,32 @@
 #}
 {% macro fields(form) %}
     {% for child in form.children %}
-        {% if child.vars.name == 'section' %}
+        {% if child.rendered %}
+            {# Already drawn with the field it goes with. #}
+        {% elseif child.vars.name == 'section' %}
             {{ form_widget(child) }}
+        {% elseif child.vars.name ends with '__file' or child.vars.name ends with '__url' %}
+            {# The other sources of a picture, folded under its choice: open
+               when an address is already there. #}
+            {% set base = child.vars.name|split('__')|first %}
+            {% set file = form.children[base ~ '__file'] ?? null %}
+            {% set address = form.children[base ~ '__url'] ?? null %}
+            <details class="cms-content__more" {{ address and address.vars.value ? 'open' }}>
+                <summary>{{ 'Another source: a file or an address'|trans({}, 'theliacms') }}</summary>
+                {% if file %}{{ form_row(file) }}{% endif %}
+                {% if address %}{{ form_row(address) }}{% endif %}
+            </details>
         {% elseif child.vars.name == 'cms_appearance' %}
-            {# How the section stands out, besides its props. #}
-            <fieldset class="cms-content__appearance" data-testid="cms-section-appearance">
-                <legend class="cms-content__items-legend">{{ child.vars.label|trans({}, 'theliacms') }}</legend>
+            {# How the section stands out, besides its props: folded, open
+               when the section already has a look of its own. #}
+            <details class="cms-content__appearance cms-content__more" data-testid="cms-section-appearance" {{ child.vars.value|filter(value => value is not empty)|length > 0 ? 'open' }}>
+                <summary>{{ child.vars.label|trans({}, 'theliacms') }}</summary>
                 <div class="cms-content__appearance-fields">
                     {% for setting in child %}
                         {{ form_row(setting) }}
                     {% endfor %}
                 </div>
-            </fieldset>
+            </details>
             {% do child.setRendered %}
         {% elseif child.vars.prototype is defined %}
             <fieldset class="cms-content__items" data-cms-items
@@ -58,7 +72,9 @@
 {{ form_start(form, { attr: { 'data-cms-section-form': '', novalidate: 'novalidate' } }) }}
     <input type="hidden" name="_token" value="{{ assignToken() }}">
     {{ _self.fields(form) }}
-    <button type="submit" class="btn btn-sm btn-primary" data-testid="cms-section-save">
-        {{ 'Save this section'|trans({}, 'theliacms') }}
-    </button>
+    <div class="cms-content__edit-actions">
+        <button type="submit" class="btn btn-sm btn-primary" data-testid="cms-section-save">
+            {{ 'Save this section'|trans({}, 'theliacms') }}
+        </button>
+    </div>
 {{ form_end(form, { render_rest: false }) }}

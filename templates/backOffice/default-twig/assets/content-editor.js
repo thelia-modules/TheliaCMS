@@ -422,6 +422,16 @@
 
         root.querySelectorAll("form[data-cms-generate]").forEach(function (form) {
             form.addEventListener("submit", function (event) {
+                // A brief that replaces a draft holding sections asks first,
+                // with or without the script's own sending.
+                var warning = form.getAttribute("data-cms-confirm");
+
+                if (warning && !running && !window.confirm(warning)) {
+                    event.preventDefault();
+
+                    return;
+                }
+
                 if (!window.fetch || !window.ReadableStream || running) {
                     return;
                 }
@@ -484,9 +494,13 @@
                 "[data-cms-section][data-cms-rank]::before{content:attr(data-cms-rank);position:absolute;top:0.25rem;left:0.25rem;z-index:10;min-width:1.5rem;padding:0 0.4rem;border-radius:1rem;background:#0d6efd;color:#fff;font:600 0.75rem/1.5rem system-ui,sans-serif;text-align:center;opacity:0;transition:opacity .15s}" +
                 "[data-cms-section].cms-section--hover{outline:2px solid #0d6efd;outline-offset:2px}" +
                 "[data-cms-section].cms-section--hover::before{opacity:1}" +
-                ".cms-content-edit{position:absolute;top:0.25rem;right:0.25rem;z-index:11;padding:0.25rem 0.75rem;border:0;border-radius:0.375rem;background:" + accent() + ";color:#fff;font:600 0.8125rem/1.5 system-ui,sans-serif;cursor:pointer;opacity:0;transition:opacity .15s}" +
-                "[data-cms-section]:hover>.cms-content-edit,.cms-section--hover>.cms-content-edit,.cms-content-edit:focus-visible{opacity:1}" +
-                "[data-cms-section]:has(>.cms-content-edit):hover{outline:2px solid " + accent() + ";outline-offset:2px}";
+                ".cms-content-tools{position:absolute;top:0.25rem;right:0.25rem;z-index:11;display:flex;gap:0.25rem;opacity:0;transition:opacity .15s}" +
+                ".cms-content-tools button{padding:0.25rem 0.75rem;border:0;border-radius:0.375rem;font:600 0.8125rem/1.5 system-ui,sans-serif;cursor:pointer}" +
+                ".cms-content-edit{background:" + accent() + ";color:#fff}" +
+                ".cms-content-delete{background:#fff;color:#b02a37;box-shadow:inset 0 0 0 1px #b02a37}" +
+                ".cms-content-delete:hover,.cms-content-delete:focus-visible{background:#b02a37;color:#fff}" +
+                "[data-cms-section]:hover>.cms-content-tools,.cms-section--hover>.cms-content-tools,.cms-content-tools:focus-within{opacity:1}" +
+                "[data-cms-section]:has(>.cms-content-tools):hover{outline:2px solid " + accent() + ";outline-offset:2px}";
             inner.head.appendChild(style);
 
             items.forEach(function (item) {
@@ -498,8 +512,12 @@
                     section.addEventListener("mouseenter", function () { item.classList.add("is-hover"); });
                     section.addEventListener("mouseleave", function () { item.classList.remove("is-hover"); });
 
-                    // Hovering a section of the preview offers to edit it: the
-                    // button opens its form in the list, where it is edited.
+                    // Hovering a section of the preview offers to edit it, which
+                    // opens its form in the list, and to delete it, which sends
+                    // the remove form of the list, confirmation included.
+                    var tools = inner.createElement("div");
+                    tools.className = "cms-content-tools";
+
                     if (item.querySelector("[data-cms-edit]")) {
                         var button = inner.createElement("button");
                         button.type = "button";
@@ -511,7 +529,27 @@
                             event.stopPropagation();
                             editSection(item);
                         });
-                        section.appendChild(button);
+                        tools.appendChild(button);
+                    }
+
+                    var remove = item.querySelector("form[data-cms-remove]");
+
+                    if (remove) {
+                        var deleteButton = inner.createElement("button");
+                        deleteButton.type = "button";
+                        deleteButton.className = "cms-content-delete";
+                        deleteButton.setAttribute("data-testid", "cms-content-delete-" + item.getAttribute("data-section"));
+                        deleteButton.textContent = labels.delete || "Delete";
+                        deleteButton.addEventListener("click", function (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            remove.requestSubmit();
+                        });
+                        tools.appendChild(deleteButton);
+                    }
+
+                    if (tools.firstChild) {
+                        section.appendChild(tools);
                     }
                 }
             });
@@ -843,6 +881,21 @@
             adoptOverlays(dialog);
         }
 
+        // Escape closes a dialog of the screen even from inside the rich-text
+        // editor, which keeps the key for itself: heard first, on the way
+        // down. A window of the editor open in the dialog closes first.
+        root.querySelectorAll("dialog.cms-content__edit, dialog.cms-content__add").forEach(function (dialog) {
+            dialog.addEventListener("keydown", function (event) {
+                if (event.key !== "Escape" || !dialog.open || dialog.querySelector(".modal.show")) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                dialog.close();
+            }, true);
+        });
+
         // The editor opens its special characters and its preview in windows
         // it adds to the body, which an open dialog leaves inert behind it:
         // they are moved into the dialog while it is open.
@@ -1018,14 +1071,18 @@
         });
 
         // A reference is picked from the list its source answers: a select for a
-        // short list, a search box for a long one. The number field stays
-        // underneath for whoever wants to type an id.
+        // short list, a search box for a long one. The number field, which
+        // the form sends, is hidden behind it; it shows again when the list
+        // cannot be read.
         root.querySelectorAll("input[data-cms-picker]").forEach(function (input) {
             var source = input.getAttribute("data-cms-picker");
             var searchable = input.hasAttribute("data-cms-picker-searchable");
             var picker = document.createElement(searchable ? "input" : "select");
-            picker.className = "form-select form-select-sm mb-1";
+            picker.className = "form-select";
             picker.setAttribute("aria-label", input.labels && input.labels[0] ? input.labels[0].textContent.trim() : "");
+            // The label of the field names the picker, which takes its place.
+            picker.id = input.id + "_picker";
+            Array.prototype.forEach.call(input.labels || [], function (label) { label.htmlFor = picker.id; });
 
             function fill(rows) {
                 picker.replaceChildren();
@@ -1046,7 +1103,7 @@
                 var datalist = document.createElement("datalist");
                 datalist.id = input.id + "_options";
                 picker.setAttribute("list", datalist.id);
-                picker.className = "form-control form-control-sm mb-1";
+                picker.className = "form-control";
                 picker.placeholder = labels.search || "Search…";
                 var found = {};
                 picker.addEventListener("input", function () {
@@ -1078,8 +1135,17 @@
                 });
                 input.insertAdjacentElement("beforebegin", picker);
                 input.insertAdjacentElement("beforebegin", datalist);
+                input.hidden = true;
+                picker.addEventListener("change", function () {
+                    if (picker.value.trim() === "") {
+                        input.value = "";
+                    }
+                });
 
-                if (input.value) {
+                if (input.value && input.value !== "0") {
+                    // Until the name comes back, and if it never does, the
+                    // number held is what the field shows.
+                    picker.placeholder = "#" + input.value;
                     fetch(source + "?id=" + encodeURIComponent(input.value), { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
                         .then(function (response) { return response.json(); })
                         .then(function (row) { if (row && row.name) { picker.value = row.name; found[row.name] = row.id; } })
@@ -1090,10 +1156,11 @@
                     input.value = picker.value;
                 });
                 input.insertAdjacentElement("beforebegin", picker);
+                input.hidden = true;
                 fetch(source, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
                     .then(function (response) { return response.json(); })
                     .then(fill)
-                    .catch(function () { picker.remove(); });
+                    .catch(function () { picker.remove(); input.hidden = false; });
             }
         });
 

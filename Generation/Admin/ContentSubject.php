@@ -28,6 +28,7 @@ final readonly class ContentSubject
      * @param list<array{locale: string, label: string}> $translationSources  the languages the target holds a draft in, to write this one from
      * @param bool                                       $publishable         false for the model of a page type, which is never published
      * @param string|null                                $draftPagePreviewUrl the page of a catalogue item showing the draft, when the item has one online
+     * @param array{label: string, url: string}|null     $template            the template of pages the page belongs to, when it is not the default one
      */
     public function __construct(
         public GenerationTarget $target,
@@ -46,6 +47,7 @@ final readonly class ContentSubject
         public array $translationSources = [],
         public bool $publishable = true,
         public ?string $draftPagePreviewUrl = null,
+        public ?array $template = null,
     ) {
     }
 

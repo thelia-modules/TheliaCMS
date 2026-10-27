@@ -43,6 +43,8 @@ use TheliaCMS\Page\Admin\HeadingStructureException;
 use TheliaCMS\Page\Admin\MissingPageFieldsException;
 use TheliaCMS\Page\Admin\ModelPagePublicationException;
 use TheliaCMS\Page\Admin\PlaceholderPageContentException;
+use TheliaCMS\Page\PageTypeCode;
+use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Preview\PreviewLink;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -73,6 +75,7 @@ final readonly class CmsPageContentController
         private SectionUpdate $sectionUpdate,
         private TranslationSources $translationSources,
         private GenerationTargets $targets,
+        private PageTypeRepository $pageTypes,
     ) {
     }
 
@@ -433,7 +436,28 @@ final readonly class CmsPageContentController
             testId: 'cms-page-content',
             translationSources: $this->translationSources->forPage((int) $page->getId(), $locale),
             publishable: 1 !== $page->getModel(),
+            template: $this->template($page, $locale),
         );
+    }
+
+    /**
+     * The template of pages the page belongs to, named and linked to its
+     * settings; nothing for a page of the default type.
+     *
+     * @return array{label: string, url: string}|null
+     */
+    private function template(CmsPage $page, string $locale): ?array
+    {
+        $code = (string) $page->getPageType();
+
+        if ('' === $code || PageTypeCode::DEFAULT === $code || !$this->pageTypes->exists($code)) {
+            return null;
+        }
+
+        return [
+            'label' => $this->pageTypes->details($code)->title($locale),
+            'url' => $this->urls->generate('admin.cms.settings.page_types.edit', ['code' => $code]),
+        ];
     }
 
     private function target(CmsPage $page, Lang $lang): GenerationTarget

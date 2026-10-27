@@ -36,6 +36,7 @@
              remove: 'Remove this section from the draft? Its text is lost unless the draft is written again.'|trans({}, 'theliacms'),
              add: 'Add a section'|trans({}, 'theliacms'),
              edit: 'Edit'|trans({}, 'theliacms'),
+             delete: 'Delete'|trans({}, 'theliacms'),
          }|json_encode }}">
         <header class="cms-content__bar">
             <a class="btn btn-sm btn-outline-secondary" href="{{ subject.backUrl }}" data-testid="cms-content-back">
@@ -44,6 +45,13 @@
 
             <p class="cms-content__title">{{ subject.target.title|default('')|trim ?: 'Untitled page'|trans({}, 'theliacms') }}</p>
             <span class="badge {{ subject.statusBadgeClass }}">{{ subject.statusLabel|trans({}, 'theliacms') }}</span>
+            {% if subject.template %}
+                <a class="cms-content__template" href="{{ subject.template.url }}" data-testid="cms-content-template"
+                   title="{{ 'Open the settings of this template'|trans({}, 'theliacms') }}">
+                    <i class="bi bi-layout-text-window" aria-hidden="true"></i>
+                    {{ 'Page template'|trans({}, 'theliacms') }} : <strong>{{ subject.template.label }}</strong>
+                </a>
+            {% endif %}
 
             {{ component('BoLanguageSwitcher', { currentLanguageId: subject.languageId }) }}
 
@@ -114,8 +122,15 @@
 
                 {% set brief_heading = (not subject.hasContent ? 'Write it from a brief' : 'Write it again from a brief')|trans({}, 'theliacms') %}
                 {% set brief_body %}
-                    {% if subject.hasContent %}
-                        <p class="text-muted small">{{ 'A new brief replaces the whole draft. To keep it and change parts of it, use the sections below.'|trans({}, 'theliacms') }}</p>
+                    {% set replaces_draft = subject.hasContent %}
+                    {% if replaces_draft %}
+                        {# Writing from a brief throws the draft away: said where
+                           nobody misses it, and asked again before it happens. #}
+                        <div class="alert alert-warning small" role="note" data-testid="cms-content-brief-replaces">
+                            <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+                            <strong>{{ 'The draft and its %count% section(s) will be replaced.'|trans({ '%count%': subject.document.sections|length }, 'theliacms') }}</strong>
+                            {{ 'Writing from a brief starts the page over: nothing of the current draft is kept. To change parts of it, ask for a change or edit its sections.'|trans({}, 'theliacms') }}
+                        </div>
                     {% endif %}
                     {% if toolkit_url %}
                         <p class="text-muted small">
@@ -134,7 +149,7 @@
                         </p>
                     {% endif %}
                     {% form_theme brief_form with bo_form_themes only %}
-                    {{ form_start(brief_form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' } }) }}
+                    {{ form_start(brief_form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' }|merge(replaces_draft ? { 'data-cms-confirm': 'Replace the whole draft? Its %count% section(s) will be lost.'|trans({ '%count%': subject.document.sections|length }, 'theliacms') } : {}) }) }}
                         <input type="hidden" name="_token" value="{{ assignToken() }}">
                         {{ form_row(brief_form.text) }}
                         <div class="row g-2">
@@ -142,7 +157,7 @@
                             <div class="col-6">{{ form_row(brief_form.audience) }}</div>
                         </div>
                         <button type="submit" class="btn btn-primary" data-testid="cms-content-generate"{% if not may_generate or generator_notice %} disabled{% endif %}>
-                            <i class="bi bi-stars" aria-hidden="true"></i> {{ 'Write the draft'|trans({}, 'theliacms') }}
+                            <i class="bi bi-stars" aria-hidden="true"></i> {{ (replaces_draft ? 'Replace the draft' : 'Write the draft')|trans({}, 'theliacms') }}
                         </button>
                     {{ form_end(brief_form) }}
                 {% endset %}
@@ -179,6 +194,21 @@
                 </section>
 
                 {% if sections is not empty %}
+                    {% if may_generate %}
+                        <section class="cms-content__section" data-testid="cms-content-change">
+                            <h2 class="cms-content__heading">{{ 'Ask for a change'|trans({}, 'theliacms') }}</h2>
+                            <p class="text-muted small">{{ 'On the whole draft: the sections the change does not concern are kept as they are.'|trans({}, 'theliacms') }}</p>
+                            {% form_theme change_form with bo_form_themes only %}
+                            {{ form_start(change_form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' } }) }}
+                                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                {{ form_row(change_form.text, { label: false }) }}
+                                <button type="submit" class="btn btn-outline-primary" data-testid="cms-content-revise"{% if generator_notice %} disabled{% endif %}>
+                                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i> {{ 'Apply the change'|trans({}, 'theliacms') }}
+                                </button>
+                            {{ form_end(change_form) }}
+                        </section>
+                    {% endif %}
+
                     <section class="cms-content__section" data-testid="cms-content-sections">
                         <h2 class="cms-content__heading">{{ 'The sections of the draft'|trans({}, 'theliacms') }}</h2>
                         {% set reorderable = may_publish and sections|length > 1 %}
@@ -196,9 +226,8 @@
                                                 title="{{ 'Show this section in the preview'|trans({}, 'theliacms') }}"
                                                 aria-label="{{ 'Show section %rank% in the preview'|trans({ '%rank%': section.rank }, 'theliacms') }}">
                                             <span class="cms-content__item-rank" aria-hidden="true">{{ section.rank }}</span>
-                                            <span class="cms-content__item-label">{{ section.label }}</span>
+                                            <span class="cms-content__item-label" title="{{ section.component }}">{{ section.label }}</span>
                                         </button>
-                                        <code class="cms-content__item-component">{{ section.component }}</code>
                                         {% if may_publish %}
                                             <div class="cms-content__item-actions">
                                                 {# The first section has nowhere to go up to, the last nowhere down to. #}
@@ -244,7 +273,7 @@
                                         <dialog class="cms-content__edit" id="cms-section-edit-{{ section.id }}" aria-labelledby="cms-section-edit-title-{{ section.id }}" data-cms-edit data-testid="cms-section-edit-{{ section.id }}">
                                             <div class="cms-content__add-head">
                                                 <h2 class="cms-content__heading mb-0" id="cms-section-edit-title-{{ section.id }}">
-                                                    {{ section.rank }}. {{ section.label }} <code class="cms-content__item-component">{{ section.component }}</code>
+                                                    {{ section.rank }}. {{ section.label }}
                                                 </h2>
                                                 <form method="dialog">
                                                     <button type="submit" class="btn-close" aria-label="{{ 'Close'|trans({}, 'theliacms') }}"></button>
@@ -260,7 +289,7 @@
                                         <dialog class="cms-content__edit" id="cms-section-rewrite-{{ section.id }}" aria-labelledby="cms-section-rewrite-title-{{ section.id }}" data-cms-rewrite data-testid="cms-section-rewrite-{{ section.id }}">
                                             <div class="cms-content__add-head">
                                                 <h2 class="cms-content__heading mb-0" id="cms-section-rewrite-title-{{ section.id }}">
-                                                    {{ section.rank }}. {{ section.label }} <code class="cms-content__item-component">{{ section.component }}</code>
+                                                    {{ section.rank }}. {{ section.label }}
                                                 </h2>
                                                 <form method="dialog">
                                                     <button type="submit" class="btn-close" aria-label="{{ 'Close'|trans({}, 'theliacms') }}"></button>
@@ -282,21 +311,6 @@
                             {% endfor %}
                         </ol>
                     </section>
-
-                    {% if may_generate %}
-                        <section class="cms-content__section" data-testid="cms-content-change">
-                            <h2 class="cms-content__heading">{{ 'Ask for a change'|trans({}, 'theliacms') }}</h2>
-                            <p class="text-muted small">{{ 'On the whole draft: the sections the change does not concern are kept as they are.'|trans({}, 'theliacms') }}</p>
-                            {% form_theme change_form with bo_form_themes only %}
-                            {{ form_start(change_form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' } }) }}
-                                <input type="hidden" name="_token" value="{{ assignToken() }}">
-                                {{ form_row(change_form.text, { label: false }) }}
-                                <button type="submit" class="btn btn-outline-primary" data-testid="cms-content-revise"{% if generator_notice %} disabled{% endif %}>
-                                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i> {{ 'Apply the change'|trans({}, 'theliacms') }}
-                                </button>
-                            {{ form_end(change_form) }}
-                        </section>
-                    {% endif %}
                 {% endif %}
 
                 <section class="cms-content__section" data-testid="cms-content-history">
@@ -415,20 +429,26 @@
                             </form>
                         </div>
                         <p class="cms-content__add-hint">{{ 'The section is added at the end of the draft with example text, which you then edit by hand.'|trans({}, 'theliacms') }}</p>
-                        <ul class="cms-content__add-list">
-                            {% for component in addable %}
-                                <li>
-                                    <form method="post" action="{{ subject.url('add') }}" data-cms-add data-testid="cms-content-add-{{ component.name }}">
-                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
-                                        <input type="hidden" name="component" value="{{ component.name }}">
-                                        <button type="submit" class="cms-content__add-choice">
-                                            <span class="cms-content__add-label">{{ component.label }} <code>{{ component.name }}</code></span>
-                                            <span class="cms-content__add-description">{{ component.description }}</span>
-                                        </button>
-                                    </form>
-                                </li>
-                            {% endfor %}
-                        </ul>
+                        {% for group in addable %}
+                            <h3 class="cms-content__add-family">{{ group.label }}</h3>
+                            <ul class="cms-content__add-list">
+                                {% for component in group.choices %}
+                                    <li>
+                                        <form method="post" action="{{ subject.url('add') }}" data-cms-add data-testid="cms-content-add-{{ component.name }}">
+                                            <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                            <input type="hidden" name="component" value="{{ component.name }}">
+                                            <button type="submit" class="cms-content__add-choice" title="{{ component.name }}">
+                                                <span class="cms-content__add-icon" aria-hidden="true"><i class="bi bi-{{ component.icon }}"></i></span>
+                                                <span class="cms-content__add-text">
+                                                    <span class="cms-content__add-label">{{ component.label }}</span>
+                                                    <span class="cms-content__add-description">{{ component.summary }}</span>
+                                                </span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endfor %}
                     </dialog>
                 {% endif %}
 

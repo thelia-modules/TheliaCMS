@@ -29,6 +29,27 @@ body:has(.cms-content) {
     border-bottom: 1px solid var(--bs-border-color, #dee2e6);
 }
 
+/* The template of pages the page belongs to, next to its status. */
+.cms-content__template {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    color: #495057;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.cms-content__template:hover,
+.cms-content__template:focus-visible {
+    border-color: var(--bs-primary, #0d6efd);
+    color: var(--bs-primary, #0d6efd);
+}
+
 .cms-content__title {
     font-size: 1rem;
     font-weight: 600;
@@ -239,6 +260,52 @@ body:has(.cms-content) {
     border-top: 1px solid var(--bs-border-color, #dee2e6);
 }
 
+/* Folded parts of a section form: the other sources of a picture, the
+   appearance. Closed, they take one line. */
+.cms-content__more {
+    margin: -0.5rem 0 1rem;
+}
+
+.cms-content__more > summary {
+    width: fit-content;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--bs-primary, #0d6efd);
+    cursor: pointer;
+}
+
+.cms-content__more[open] > summary {
+    margin-bottom: 0.75rem;
+}
+
+.cms-content__appearance.cms-content__more {
+    margin-top: 0;
+}
+
+.cms-content__appearance > summary {
+    color: inherit;
+}
+
+/* The save button stays in view at the bottom of a long form. */
+.cms-content__edit-actions {
+    position: sticky;
+    bottom: -1rem;
+    margin: 0 -1.25rem -1rem;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-body-bg, #fff);
+}
+
+/* Most props are optional: the mark says nothing in this form. */
+.cms-content__edit .bo-form-label__optional {
+    display: none;
+}
+
+/* A number is a few digits: its field needs no full line. */
+.cms-content__edit input[type="number"] {
+    max-width: 10rem;
+}
+
 .cms-content__appearance-fields {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
@@ -316,10 +383,31 @@ body:has(.cms-content) {
     gap: 1rem;
 }
 
+/* The title and the close button of a dialog stay in view while its form
+   scrolls. */
+.cms-content__edit > .cms-content__add-head,
+.cms-content__add > .cms-content__add-head {
+    position: sticky;
+    top: -1rem;
+    z-index: 2;
+    margin: -1rem -1.25rem 0.5rem;
+    padding: 1rem 1.25rem 0.5rem;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-body-bg, #fff);
+}
+
 .cms-content__add-hint {
-    margin: 0.5rem 0 1rem;
+    margin: 0.5rem 0 0;
     font-size: 0.8125rem;
     color: #495057;
+}
+
+.cms-content__add-family {
+    margin: 1rem 0 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #5c636a;
 }
 
 .cms-content__add-list {
@@ -331,13 +419,17 @@ body:has(.cms-content) {
     list-style: none;
 }
 
+.cms-content__add-list form {
+    height: 100%;
+}
+
 .cms-content__add-choice {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    align-items: flex-start;
+    gap: 0.75rem;
     width: 100%;
     height: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: 0.625rem 0.75rem;
     border: 1px solid var(--bs-border-color, #dee2e6);
     border-radius: 0.375rem;
     background: #fff;
@@ -351,18 +443,37 @@ body:has(.cms-content) {
     border-color: var(--bs-primary, #0d6efd);
 }
 
+.cms-content__add-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.375rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: var(--bs-primary, #0d6efd);
+    font-size: 1.125rem;
+}
+
+.cms-content__add-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
 .cms-content__add-label {
     font-weight: 600;
     font-size: 0.875rem;
 }
 
-.cms-content__add-label code {
-    font-weight: 400;
-    font-size: 0.75rem;
-    color: #5c636a;
-}
-
 .cms-content__add-description {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     font-size: 0.8125rem;
     color: #495057;
 }
@@ -423,6 +534,26 @@ body:has(.cms-content) {
     border-radius: 0.375rem;
     background: #fff;
     object-fit: contain;
+}
+
+.cms-content__items-list {
+    counter-reset: cms-item;
+}
+
+/* Each row carries its number, so "the second column" is easy to find. */
+.cms-content__item-row::before {
+    counter-increment: cms-item;
+    content: counter(cms-item);
+    flex: 0 0 auto;
+    min-width: 1.5rem;
+    padding: 0 0.4rem;
+    border-radius: 1rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.75rem;
+    line-height: 1.5rem;
+    text-align: center;
 }
 
 .cms-content__item-row {
