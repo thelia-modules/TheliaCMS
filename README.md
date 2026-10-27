@@ -260,7 +260,11 @@ without a back-office account can open. It is `noindex` and never cached. A
 list next to it sets the width of the preview to a breakpoint of the theme, as
 in its toolkit: the `--breakpoint-*` tokens of the nearest
 `assets/styles/variables.css` of the theme and its parents, those of Flexy
-otherwise.
+otherwise. Two buttons switch the preview, and the link, between the **whole
+page** (header, footer, title and fields of the page) and the **content
+only** (the sections alone, the same signed link with `?content=1`); a theme
+draws the latter its own way with a `cms-page-content-preview.html.twig` at
+its root. The choice is kept from one screen to the next.
 Publishing runs the rendered content through a server-side sanitizer, rewrites
 the images and extracts the text for the search index, and the heading
 structure is checked wherever a page goes online (see `heading_check_mode`).

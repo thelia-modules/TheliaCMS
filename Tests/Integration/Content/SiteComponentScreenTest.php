@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Content;
 
+use Symfony\Component\DomCrawler\Crawler;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Content\Document;
@@ -83,6 +84,14 @@ final class SiteComponentScreenTest extends AdminScreenTestCase
         self::assertStringContainsString('class="cms-site cms-site--price-table"', $page, 'The sample is drawn in the theme.');
         self::assertStringContainsString('.cms-site--price-table .plan--featured', $page, 'Its stylesheet is printed scoped.');
         self::assertSame('noindex, nofollow', $this->client->getResponse()->headers->get('X-Robots-Tag'));
+
+        $alone = (string) $screen->filter('[data-testid="cms-site-component-preview-modes"] input[value="content"]')->attr('data-url');
+        self::assertSame($preview.'?content=1', $alone, 'The preview offers the component alone, as the content screen does.');
+        $this->client->request('GET', $alone);
+        $content = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('class="cms-site cms-site--price-table"', $content);
+        self::assertSame(1, (new Crawler($page))->filter('h1')->count(), 'The whole page draws the name of the component as its title.');
+        self::assertSame(0, (new Crawler($content))->filter('h1')->count(), 'The component alone does not.');
 
         $this->client->request('GET', substr($preview, 0, -1).('0' === substr($preview, -1) ? '1' : '0'));
         self::assertSame(404, $this->client->getResponse()->getStatusCode(), 'A preview answers its signature only.');

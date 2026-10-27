@@ -64,6 +64,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   sections, a warning above the brief counts them and says nothing of them
   is kept, the button reads *Replace the draft*, and the screen asks once
   more before sending.
+- **The preview of a CMS page shows the whole page or the content only**, as
+  it did for the catalogue: the content only draws the sections in the layout
+  of the theme, without the header, the footer, the title or the fields of
+  the page. Its signed link is the one of the whole page with `?content=1`;
+  a theme draws it its own way with `cms-page-content-preview.html.twig`.
+  The screen of a component made for the site, and of a candidate, offers
+  the same choice for its preview; both screens share the choice.
 - **A section is deleted from the preview.** Hovering a section shows
   *Delete* next to *Edit*; it asks for the same confirmation as the bin of
   the list.

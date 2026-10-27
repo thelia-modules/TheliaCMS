@@ -11,8 +11,10 @@ declare(strict_types=1);
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace TheliaCMS\Preview;
 
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
@@ -54,7 +56,7 @@ final readonly class ComponentPreviewController
         requirements: ['subject' => ComponentPreviewLink::SUBJECT_PATTERN, 'locale' => '[a-z]{2}_[A-Z]{2}', 'expires' => '\d+', 'signature' => '[a-f0-9]{64}'],
         methods: ['GET'],
     )]
-    public function __invoke(string $subject, string $locale, int $expires, string $signature): Response
+    public function __invoke(Request $request, string $subject, string $locale, int $expires, string $signature): Response
     {
         if (!$this->links->isValid($subject, $locale, $expires, $signature)) {
             throw new NotFoundHttpException();
@@ -78,7 +80,7 @@ final readonly class ComponentPreviewController
         $css = str_replace('<', '\\3c ', $this->styles->scoped($component));
         $html = ('' === $css ? '' : '<style>'.$css.'</style>').$section->render($section->normalizeProps($component->sample), $locale);
 
-        $response = new Response($this->pages->render(new PublishedPage(
+        $page = new PublishedPage(
             id: 0,
             locale: $locale,
             title: $component->label,
@@ -86,7 +88,13 @@ final readonly class ComponentPreviewController
             html: '<div class="cms-page-content">'.$html.'</div>',
             noindex: true,
             nofollow: true,
-        )));
+        );
+
+        // The component in a whole page of the theme, or alone, as the
+        // preview of a page draft offers.
+        $response = new Response($request->query->getBoolean(PreviewLink::CONTENT_ONLY)
+            ? $this->pages->renderContent($page)
+            : $this->pages->render($page));
         $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
         $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
 

@@ -56,9 +56,11 @@
             {{ component('BoLanguageSwitcher', { currentLanguageId: subject.languageId }) }}
 
             <div class="cms-content__actions">
-                {# The draft of a catalogue item reads in the page of the item, or
-                   alone; the page first, when the item has one online. The script
-                   switches the preview and the link below, and remembers the choice. #}
+                {# The draft reads in its whole page, or alone: a CMS page with its
+                   header, footer and title, or without; a catalogue item in its
+                   own page, when it has one online, or alone. The page first. The
+                   script switches the preview and the link below, and remembers
+                   the choice. #}
                 {% set draft_page_url = subject.draftPagePreviewUrl %}
                 {% if draft_page_url %}
                     <div class="btn-group btn-group-sm" role="group" aria-label="{{ 'What the preview shows'|trans({}, 'theliacms') }}" data-cms-preview-modes data-testid="cms-content-preview-modes">

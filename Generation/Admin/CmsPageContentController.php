@@ -417,7 +417,7 @@ final readonly class CmsPageContentController
             statusBadgeClass: $status->badgeClass(),
             backUrl: $this->urls->generate('admin.cms.pages.edit', $parameters),
             backLabel: $this->translate('Back to settings'),
-            draftPreviewUrl: $this->previewLinks->urlFor((int) $page->getId(), $locale),
+            draftPreviewUrl: $this->previewLinks->contentUrlFor((int) $page->getId(), $locale),
             previewUrl: $page->getUrl($locale) ?: null,
             document: $this->documentOf($page, $locale),
             publishHint: $this->translate('Publishing puts the draft online at the address of the page.'),
@@ -436,6 +436,7 @@ final readonly class CmsPageContentController
             testId: 'cms-page-content',
             translationSources: $this->translationSources->forPage((int) $page->getId(), $locale),
             publishable: 1 !== $page->getModel(),
+            draftPagePreviewUrl: $this->previewLinks->urlFor((int) $page->getId(), $locale),
             template: $this->template($page, $locale),
         );
     }

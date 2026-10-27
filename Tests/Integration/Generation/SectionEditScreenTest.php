@@ -30,6 +30,7 @@ use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Page\PageTypeWriter;
+use TheliaCMS\Preview\PreviewLink;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
 use TheliaCMS\TheliaCMS;
@@ -286,6 +287,31 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $blank = $this->screen($this->url($this->pageWith([])));
         self::assertSame(0, $blank->filter('[data-testid="cms-content-brief-replaces"]')->count(), 'A blank page has nothing to lose.');
         self::assertSame(0, $blank->filter('form[data-cms-confirm]')->count());
+    }
+
+    public function testThePreviewOfAPageShowsTheWholePageOrItsSectionsAlone(): void
+    {
+        $page = $this->pageWith([new Section('intro', 'cms:richtext', ['html' => '<h2>Les sections seules</h2>'])]);
+
+        $screen = $this->screen($this->url($page));
+        $modes = $screen->filter('[data-testid="cms-content-preview-modes"] input');
+        $frame = (string) $screen->filter('[data-testid="cms-content-frame"]')->attr('src');
+
+        self::assertSame(2, $modes->count(), 'The whole page, or the content alone.');
+        self::assertSame($frame, $modes->eq(0)->attr('data-url'), 'The whole page first.');
+        self::assertStringNotContainsString(PreviewLink::CONTENT_ONLY.'=', $frame);
+        self::assertStringContainsString(PreviewLink::CONTENT_ONLY.'=1', (string) $modes->eq(1)->attr('data-url'));
+
+        $this->client->request('GET', $frame);
+        $whole = (string) $this->client->getResponse()->getContent();
+        $this->client->request('GET', (string) $modes->eq(1)->attr('data-url'));
+        $alone = (string) $this->client->getResponse()->getContent();
+
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+        self::assertStringContainsString('Les sections seules', $alone);
+        self::assertSame(1, (new Crawler($whole))->filter('h1')->count(), 'The whole page draws its title.');
+        self::assertSame(0, (new Crawler($alone))->filter('h1')->count(), 'The content alone does not.');
+        self::assertSame('noindex, nofollow', $this->client->getResponse()->headers->get('X-Robots-Tag'), 'A draft stays out of the indexes.');
     }
 
     public function testAPageOfATemplateNamesItAndLinksToItsSettings(): void

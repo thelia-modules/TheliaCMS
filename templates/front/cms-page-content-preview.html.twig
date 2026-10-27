@@ -1,0 +1,24 @@
+{#
+    The sections of the draft of a CMS page alone, opened from a signed link
+    asking for the content only: the sections in the layout of the theme,
+    without its header, its footer, or the title and fields the template of
+    the page draws. A theme draws this one its own way by shipping
+    `cms-page-content-preview.html.twig` at its root.
+#}
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ cms_page.title }}{% endblock %}
+
+{% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block body_class %}cms-page-content-preview cms-page--{{ cms_page.pageType }}{% endblock %}
+
+{% block header %}{% endblock %}
+
+{% block footer %}{% endblock %}
+
+{% block body %}
+    <article class="cms-page__content cms-page-content">
+        {{ cms_page.html|raw }}
+    </article>
+{% endblock %}

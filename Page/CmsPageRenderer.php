@@ -32,6 +32,10 @@ final readonly class CmsPageRenderer
     /** @deprecated since 1.2.0, removed in 2.0.0: the template depends on the type of the page, see PageTemplateResolver */
     public const string MODULE_TEMPLATE = '@TheliaCMSModule/front/cmspage.html.twig';
 
+    public const string CONTENT_THEME_TEMPLATE = 'cms-page-content-preview';
+
+    public const string CONTENT_MODULE_TEMPLATE = '@TheliaCMSModule/front/cms-page-content-preview.html.twig';
+
     public function __construct(
         private ThemeTemplateRenderer $templates,
         private PageTemplateResolver $templateResolver,
@@ -44,6 +48,20 @@ final readonly class CmsPageRenderer
         $html = $this->partials->substitute($page->html, $page->locale);
 
         return $this->templates->renderTemplate($this->templateResolver->resolve($page->pageType)->name, [
+            'cms_page' => $page->withHtml((string) $html),
+        ]);
+    }
+
+    /**
+     * The sections of the page alone, in the layout of the theme: what the
+     * preview shows when asked for the content only. A theme draws it its own
+     * way by shipping `cms-page-content-preview.html.twig` at its root.
+     */
+    public function renderContent(PublishedPage $page): string
+    {
+        $html = $this->partials->substitute($page->html, $page->locale);
+
+        return $this->templates->render(self::CONTENT_THEME_TEMPLATE, self::CONTENT_MODULE_TEMPLATE, [
             'cms_page' => $page->withHtml((string) $html),
         ]);
     }
