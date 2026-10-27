@@ -118,6 +118,7 @@ titre).
 | `round-0` | aucune | 7 / 16 | 11 / 16 | 6 / 16 | 7,8 (min. 7) | 2,47 USD |
 | `round-2-ids` | vocabulaire fixe d'ids de section (`catalogue`) | 11 / 16 | 12 / 16 | 7 / 16 | 7,7 (min. 7) | 2,51 USD |
 | `round-2-asked` | pas de section non demandée (`page-structure`) | 13 / 16 | 14 / 16 | 7 / 16 | 7,8 (min. 7) | 2,42 USD |
+| `round-2-tiebreak` | départage des composants (`catalogue`) | 15 / 16 | 15 / 16 | 7 / 16 | 7,9 (min. 7) | 2,30 USD |
 
 - **Ids (2a).** Les sections portent `intro`, `features`, `offer`,
   `practical`, `contact`, `form`… dans tous les runs : la structure stable
@@ -127,13 +128,20 @@ titre).
   « À propos » et la page de service sur un contact : un formulaire non
   demandé paraissait dans 6 des 15 runs des briefs 05, 09 et 11 en 2a, dans
   aucun en 2b. La structure stable passe à 13 briefs.
+- **Départage des composants (2c).** Un témoignage sans note va en texte
+  cité, des points de même nature côte à côte en colonnes : le témoignage de
+  07 passait par une carte ou une rangée d'avis (3 contre 2 dans chaque
+  ronde), il est en texte dans les cinq runs, sans la note de 0/5. Les
+  moyens d'accès de 10 et les atouts de 14 prennent les colonnes. La
+  structure stable passe à 15 briefs.
 - **Ce qui reste instable** : la forme et la longueur. Le nombre de h2 dans un
   texte (02, 08), le découpage des questions de 05 en une, deux ou trois
   sections, et des écarts de longueur au-delà de 30 % sur une section (01,
   08, 09, 12, 13) tiennent encore 9 briefs sous la barre.
-- **Rubrique.** Les points perdus en 2a et 2b : la note de 0/5 sous le
-  témoignage de 07, un formulaire non demandé (05 et 09 en 2a, corrigé en
-  2b), et en 2b une page 06 réduite à une phrase sans contenu.
+- **Rubrique.** Les points perdus : la note de 0/5 sous le témoignage de 07
+  (corrigé en 2c), un formulaire non demandé (05 et 09 en 2a, corrigé en
+  2b), et depuis 2b une page 06 réduite à une phrase sans contenu (« Cette
+  page présente l'atelier de Thelia. »), le brief ne donnant rien d'autre.
 
 ## Défauts relevés en marge
 
@@ -142,8 +150,8 @@ titre).
   `Layouts:Review:Base` passe par cette carte : un témoignage sans note
   s'affiche avec cinq étoiles vides, quel que soit le composant d'avis choisi.
   Le modèle écrit `note: 0`, ou rien, dans tous les runs du brief 07. Les
-  composants sont ceux du thème Flexy, hors du module ; la ronde 2c réserve
-  côté skills les composants d'avis aux avis notés.
+  composants sont ceux du thème Flexy, hors du module ; depuis la ronde 2c,
+  les skills réservent les composants d'avis aux avis notés.
 - **Bandeau de titre dans le banc.** La page modèle du type `eval-workshop`
   et le brouillon de `eval-15` ouvraient sur `Layouts:Subheader:Base` en h1,
   ce que l'ADR 0010 interdit ; les briefs 13 et 15 l'ont recopié dans les
