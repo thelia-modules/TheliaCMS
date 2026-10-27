@@ -303,7 +303,7 @@
       },
       "contents": {
         "fr_FR": {
-          "draft_document": "{\"version\": 1, \"sections\": [{\"id\": \"titre\", \"component\": \"Layouts:Subheader:Base\", \"props\": {\"title\": \"Atelier modèle\", \"tag\": \"h1\", \"container\": \"single-3\", \"centered\": false, \"breadcrumb\": []}}, {\"id\": \"presentation\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>L’atelier</h2><p>Ce que l’on y apprend, en deux phrases.</p>\"}}, {\"id\": \"pratique\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>En pratique</h2><ul><li>Animé par : …</li><li>Jour et horaire : …</li><li>Places : …</li><li>Tarif : …</li></ul>\"}}, {\"id\": \"inscription\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>S’inscrire</h2><p>Comment réserver sa place.</p>\"}}]}",
+          "draft_document": "{\"version\": 1, \"sections\": [{\"id\": \"presentation\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>L’atelier</h2><p>Ce que l’on y apprend, en deux phrases.</p>\"}}, {\"id\": \"pratique\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>En pratique</h2><ul><li>Animé par : …</li><li>Jour et horaire : …</li><li>Places : …</li><li>Tarif : …</li></ul>\"}}, {\"id\": \"inscription\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>S’inscrire</h2><p>Comment réserver sa place.</p>\"}}]}",
           "draft_html": null,
           "published_document": null,
           "published_html": null,
@@ -351,7 +351,7 @@
       },
       "contents": {
         "fr_FR": {
-          "draft_document": "{\"version\": 1, \"sections\": [{\"id\": \"titre\", \"component\": \"Layouts:Subheader:Base\", \"props\": {\"title\": \"Nos studios photo à Lyon\", \"tag\": \"h1\", \"container\": \"single-3\", \"centered\": false, \"breadcrumb\": []}}, {\"id\": \"plateaux\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>Trois plateaux</h2><ul><li><strong>Plateau A</strong> : 120 m², cyclorama de 6 m.</li><li><strong>Plateau B</strong> : 80 m².</li><li><strong>Plateau C</strong> : 40 m², lumière naturelle plein nord.</li></ul>\"}}, {\"id\": \"location\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>Louer à l’heure ou à la journée</h2><p>La location se fait à l’heure, deux heures minimum, ou à la journée. Les flashs et les fonds sont inclus ; les objectifs sont en option.</p>\"}}, {\"id\": \"acces\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>Venir en voiture</h2><p>Un parking gratuit de 12 places vous attend devant l’entrée.</p>\"}}]}",
+          "draft_document": "{\"version\": 1, \"sections\": [{\"id\": \"plateaux\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>Trois plateaux</h2><ul><li><strong>Plateau A</strong> : 120 m², cyclorama de 6 m.</li><li><strong>Plateau B</strong> : 80 m².</li><li><strong>Plateau C</strong> : 40 m², lumière naturelle plein nord.</li></ul>\"}}, {\"id\": \"location\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>Louer à l’heure ou à la journée</h2><p>La location se fait à l’heure, deux heures minimum, ou à la journée. Les flashs et les fonds sont inclus ; les objectifs sont en option.</p>\"}}, {\"id\": \"acces\", \"component\": \"cms:richtext\", \"props\": {\"html\": \"<h2>Venir en voiture</h2><p>Un parking gratuit de 12 places vous attend devant l’entrée.</p>\"}}]}",
           "draft_html": null,
           "published_document": null,
           "published_html": null,
