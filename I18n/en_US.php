@@ -1162,4 +1162,5 @@ return [
     'Put this draft back? The current draft is kept in its place.' => 'Put this draft back? The current draft is kept in its place.',
     'The previous draft is back. The one it replaces is kept in its place.' => 'The previous draft is back. The one it replaces is kept in its place.',
     'This draft is no longer available.' => 'This draft is no longer available.',
+    'Double-click to edit this text where it stands' => 'Double-click to edit this text where it stands',
 ];

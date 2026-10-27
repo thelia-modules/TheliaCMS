@@ -481,6 +481,210 @@
             return inner ? inner.querySelector('[data-cms-section="' + id.replace(/"/g, '\\"') + '"]') : null;
         }
 
+        // A section of free text is edited where it stands: a double click
+        // mounts the editor of the back office on its text, in the frame,
+        // and Save posts the form of the section with what the editor
+        // holds, the appearance and the token included. Without the Tiptap
+        // module, the text is edited as it is.
+        function editableInPlace(item) {
+            return item.getAttribute("data-component") === "cms:richtext"
+                && item.querySelector("form[data-cms-section-form] textarea[data-cms-html]") !== null;
+        }
+
+        // The editor of the back office, loaded once into the frame from the
+        // files of the screen; null when the module is not there.
+        function withEditor(inner, then) {
+            var frameWindow = inner.defaultView;
+
+            if (frameWindow.TiptapEditor) {
+                then(frameWindow.TiptapEditor);
+
+                return;
+            }
+
+            var script = document.querySelector('script[src*="tiptap-editor.js"]');
+
+            if (!script || inner.cmsEditorFailed) {
+                then(null);
+
+                return;
+            }
+
+            if (!inner.cmsEditorLoading) {
+                inner.cmsEditorLoading = [];
+                var link = document.querySelector('link[href*="tiptap-editor.css"]');
+                var config = document.getElementById("tiptap-editor-config");
+
+                if (link) {
+                    var css = inner.createElement("link");
+                    css.rel = "stylesheet";
+                    css.href = link.href;
+                    inner.head.appendChild(css);
+                }
+
+                // The settings of the editor, with a toolbar of plain buttons:
+                // its menus need the scripts of the back office, which the
+                // frame of the theme does not load.
+                var settings = {};
+
+                try {
+                    settings = JSON.parse(config ? config.textContent || "{}" : "{}");
+                } catch (error) {
+                    settings = {};
+                }
+
+                settings.toolbarItems = "undo,redo,|,bold,italic,underline,|,bulletlist,orderedlist,|,link,unlink";
+                var json = inner.createElement("script");
+                json.id = "tiptap-editor-config";
+                json.type = "application/json";
+                json.textContent = JSON.stringify(settings);
+                inner.head.appendChild(json);
+
+                var loader = inner.createElement("script");
+                loader.src = script.src;
+                loader.onload = function () {
+                    var api = frameWindow.TiptapEditor || null;
+                    var waiting = inner.cmsEditorLoading || [];
+                    inner.cmsEditorLoading = null;
+                    waiting.forEach(function (callback) { callback(api); });
+                };
+                loader.onerror = function () {
+                    inner.cmsEditorFailed = true;
+                    var waiting = inner.cmsEditorLoading || [];
+                    inner.cmsEditorLoading = null;
+                    waiting.forEach(function (callback) { callback(null); });
+                };
+                inner.head.appendChild(loader);
+            }
+
+            inner.cmsEditorLoading.push(then);
+        }
+
+        function frameButton(inner, className, label) {
+            var button = inner.createElement("button");
+            button.type = "button";
+            button.className = className;
+            button.textContent = label;
+
+            return button;
+        }
+
+        function editInPlace(item, section) {
+            var inner = section.ownerDocument;
+            var text = section.matches(".cms-richtext") ? section : section.querySelector(".cms-richtext");
+
+            if (!text || text.querySelector("[data-cms-inline]")) {
+                return;
+            }
+
+            // The text of the section, the buttons of the preview left out.
+            var kept = Array.prototype.filter.call(text.childNodes, function (node) {
+                return !(node.nodeType === 1 && node.classList.contains("cms-content-tools"));
+            });
+            var holder = inner.createElement("div");
+            kept.forEach(function (node) { holder.appendChild(node); });
+            var html = holder.innerHTML;
+
+            var box = inner.createElement("div");
+            box.className = "cms-inline";
+            box.setAttribute("data-cms-inline", "");
+            box.setAttribute("data-testid", "cms-inline-" + item.getAttribute("data-section"));
+            var field = inner.createElement("textarea");
+            field.className = "wysiwyg";
+            field.value = html;
+            box.appendChild(field);
+            var bar = inner.createElement("div");
+            bar.className = "cms-inline__bar";
+            var save = frameButton(inner, "cms-inline__save", labels.save || "Save");
+            var cancel = frameButton(inner, "cms-inline__cancel", labels.cancel || "Cancel");
+            bar.appendChild(save);
+            bar.appendChild(cancel);
+            box.appendChild(bar);
+            text.insertBefore(box, text.firstChild);
+            section.classList.add("cms-section--editing");
+
+            var plain = null;
+
+            function leave() {
+                box.remove();
+                var tools = text.querySelector(".cms-content-tools");
+                kept.forEach(function (node) { text.insertBefore(node, tools); });
+                section.classList.remove("cms-section--editing");
+            }
+
+            function value() {
+                return plain ? plain.innerHTML : field.value;
+            }
+
+            function send() {
+                var form = item.querySelector("form[data-cms-section-form]");
+                var textarea = form.querySelector("textarea[data-cms-html]");
+                var data = new FormData(form);
+                data.set(textarea.name, value());
+                save.disabled = true;
+
+                fetch(form.action, {
+                    method: "POST",
+                    body: data,
+                    credentials: "same-origin",
+                    redirect: "follow",
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                }).then(function (response) {
+                    if (!response.ok) {
+                        throw new Error(String(response.status));
+                    }
+
+                    return response.text();
+                }).then(swap).catch(function () {
+                    save.disabled = false;
+                    notify("danger", labels.network);
+                });
+            }
+
+            cancel.addEventListener("click", function (event) {
+                event.preventDefault();
+                leave();
+            });
+            save.addEventListener("click", function (event) {
+                event.preventDefault();
+                send();
+            });
+            box.addEventListener("keydown", function (event) {
+                if (event.key === "Escape") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    leave();
+                } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+                    event.preventDefault();
+                    send();
+                }
+            });
+
+            withEditor(inner, function (editor) {
+                if (editor && !box.isConnected) {
+                    return;
+                }
+
+                if (editor) {
+                    // The editor keeps the textarea up to date as the text changes.
+                    editor.mount(field);
+                    var prose = box.querySelector(".ProseMirror");
+
+                    if (prose) {
+                        prose.focus();
+                    }
+                } else {
+                    plain = inner.createElement("div");
+                    plain.className = "cms-inline__plain";
+                    plain.contentEditable = "true";
+                    plain.innerHTML = html;
+                    box.insertBefore(plain, bar);
+                    field.hidden = true;
+                    plain.focus();
+                }
+            });
+        }
+
         function markPreview() {
             var inner = previewDocument();
 
@@ -500,7 +704,22 @@
                 ".cms-content-delete{background:#fff;color:#b02a37;box-shadow:inset 0 0 0 1px #b02a37}" +
                 ".cms-content-delete:hover,.cms-content-delete:focus-visible{background:#b02a37;color:#fff}" +
                 "[data-cms-section]:hover>.cms-content-tools,.cms-section--hover>.cms-content-tools,.cms-content-tools:focus-within{opacity:1}" +
-                "[data-cms-section]:has(>.cms-content-tools):hover{outline:2px solid " + accent() + ";outline-offset:2px}";
+                "[data-cms-section]:has(>.cms-content-tools):hover{outline:2px solid " + accent() + ";outline-offset:2px}" +
+                ".cms-section--editing>.cms-content-tools{display:none}" +
+                ".cms-inline{position:relative;outline:2px solid " + accent() + ";outline-offset:4px;border-radius:.25rem}" +
+                ".cms-inline__plain{min-height:3rem;outline:0}" +
+                ".cms-inline .tiptap-toolbar{display:flex;flex-wrap:wrap;gap:.25rem;margin-bottom:.5rem}" +
+                ".cms-inline .tiptap-toolbar button{padding:.25rem .5rem;border:1px solid #ccc;border-radius:.25rem;background:#fff;color:#1c1f22;font:.8125rem/1.5 system-ui,sans-serif;cursor:pointer}" +
+                ".cms-inline .tiptap-toolbar button.is-active{background:#e9ecef}" +
+                ".cms-inline .tiptap-toolbar .bi::before{font-style:normal}" +
+                ".cms-inline .bi-arrow-counterclockwise::before{content:'\\21B6'}.cms-inline .bi-arrow-clockwise::before{content:'\\21B7'}" +
+                ".cms-inline .bi-type-bold::before{content:'B';font-weight:700}.cms-inline .bi-type-italic::before{content:'I';font-style:italic}.cms-inline .bi-type-underline::before{content:'U';text-decoration:underline}" +
+                ".cms-inline .bi-list-ul::before{content:'\\2022 \\2261'}.cms-inline .bi-list-ol::before{content:'1.'}" +
+                ".cms-inline .bi-link-45deg::before{content:'a';text-decoration:underline}.cms-inline [data-tiptap-action=unlink] .bi::before{content:'\\2298'}" +
+                ".cms-inline .tiptap-content{min-height:3rem}" +
+                ".cms-inline__bar{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.5rem}" +
+                ".cms-inline__bar button{padding:.25rem .75rem;border:1px solid " + accent() + ";border-radius:.375rem;background:#fff;color:" + accent() + ";font:600 .8125rem/1.5 system-ui,sans-serif;cursor:pointer}" +
+                ".cms-inline__save{background:" + accent() + " !important;color:#fff !important}";
             inner.head.appendChild(style);
 
             items.forEach(function (item) {
@@ -550,6 +769,19 @@
 
                     if (tools.firstChild) {
                         section.appendChild(tools);
+                    }
+
+                    if (editableInPlace(item)) {
+                        section.setAttribute("data-cms-inline-editable", "");
+                        section.title = labels.inline || "Double-click to edit this text where it stands";
+                        section.addEventListener("dblclick", function (event) {
+                            if (section.querySelector("[data-cms-inline]") || event.target.closest(".cms-content-tools")) {
+                                return;
+                            }
+
+                            event.preventDefault();
+                            editInPlace(item, section);
+                        });
                     }
                 }
             });

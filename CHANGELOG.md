@@ -31,6 +31,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   replaces in its place, so a restore is undone the same way. The update to
   2.3.1 gives `cms_item_revision` the `label` column `cms_page_revision` had.
 
+- **Free text is edited where it stands.** A double click on a section of
+  free text in the preview mounts the editor of the back office on it, in
+  the page, with its toolbar; *Save* (or Ctrl+Enter) posts the section the
+  way its form does, appearance included, and *Cancel* (or Escape) puts the
+  text back. Without the Tiptap module the text is edited as it is, with no
+  toolbar. The other components keep their form.
+
 ### Changed (2.3.1)
 
 - **The props of the components of the theme read in the language of the

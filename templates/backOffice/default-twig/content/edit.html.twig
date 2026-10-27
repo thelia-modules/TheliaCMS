@@ -38,6 +38,9 @@
              edit: 'Edit'|trans({}, 'theliacms'),
              delete: 'Delete'|trans({}, 'theliacms'),
              restore: 'Put this draft back? The current draft is kept in its place.'|trans({}, 'theliacms'),
+             save: 'Save'|trans({}, 'theliacms'),
+             cancel: 'Cancel'|trans({}, 'theliacms'),
+             inline: 'Double-click to edit this text where it stands'|trans({}, 'theliacms'),
          }|json_encode }}">
         <header class="cms-content__bar">
             <a class="btn btn-sm btn-outline-secondary" href="{{ subject.backUrl }}" data-testid="cms-content-back">
@@ -220,7 +223,7 @@
                            travels in the body, never in a URL. #}
                         <ol class="cms-content__sections"{% if reorderable %} data-cms-reorder="{{ subject.url('move') }}" data-cms-reorder-token="{{ assignToken() }}"{% endif %}>
                             {% for section in sections %}
-                                <li class="cms-content__item" data-section="{{ section.id }}" data-cms-section-item>
+                                <li class="cms-content__item" data-section="{{ section.id }}" data-component="{{ section.component }}" data-cms-section-item>
                                     <div class="cms-content__item-head">
                                         {% if reorderable %}
                                             <span class="cms-content__item-grip" data-cms-grip title="{{ 'Drag to move this section'|trans({}, 'theliacms') }}" aria-hidden="true"><i class="bi bi-grip-vertical"></i></span>

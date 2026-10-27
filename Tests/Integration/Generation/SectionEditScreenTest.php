@@ -269,6 +269,7 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         self::assertNull($appearance->attr('open'), 'Closed while the section has no look of its own.');
 
         self::assertSame(1, $dialog->filter('.cms-content__edit-actions [data-testid="cms-section-save"]')->count(), 'The save button sits in the bar that stays in view.');
+        self::assertSame('cms:image', $this->screen($this->url($page))->filter('[data-cms-section-item]')->attr('data-component'), 'The list says which component a section is, for the script to edit free text in place.');
     }
 
     public function testABriefOnADraftThatHoldsSectionsSaysItReplacesThemAndAsksFirst(): void

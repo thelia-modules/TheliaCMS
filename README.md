@@ -255,7 +255,11 @@ published. **Add a section**, in the preview right after the last section
 (or on the screen of a page holding nothing yet), lists the components the site
 offers: the one picked is added at the end of the draft with the example
 props of its component, and its text is then edited by hand. A page holding
-nothing yet starts its draft that way, without the generator. Hovering a
+nothing yet starts its draft that way, without the generator. A double click
+on a free text section in the preview edits it where it stands: the editor
+of the Tiptap module is loaded into the frame (a plain editable text without
+it), and saving posts the form of the section with the text, so the schema,
+the sanitizer and the appearance apply as from the form. Hovering a
 section in the preview outlines it and shows **Edit**, which opens its form in
 the list with the focus on its first field.
 

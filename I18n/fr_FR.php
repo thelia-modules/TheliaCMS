@@ -1162,4 +1162,5 @@ return [
     'Put this draft back? The current draft is kept in its place.' => 'Rétablir ce brouillon ? Le brouillon actuel est gardé à sa place.',
     'The previous draft is back. The one it replaces is kept in its place.' => 'Le brouillon précédent est rétabli. Celui qu’il remplace est gardé à sa place.',
     'This draft is no longer available.' => 'Ce brouillon n’est plus disponible.',
+    'Double-click to edit this text where it stands' => 'Double-cliquez pour modifier ce texte sur place',
 ];
