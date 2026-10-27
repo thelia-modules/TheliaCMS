@@ -149,7 +149,7 @@ final readonly class PageGenerator
                         messages: $messages,
                         container: $container,
                         model: $model,
-                        outputConfig: ['effort' => $this->settings->effort(), 'format' => $format],
+                        outputConfig: ['effort' => $request->effort ?? $this->settings->effort(), 'format' => $format],
                         system: $system,
                         toolChoice: ['type' => 'auto'],
                         tools: $tools,

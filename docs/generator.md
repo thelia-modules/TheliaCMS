@@ -243,12 +243,20 @@ stores it until it is kept.
 php Thelia thelia_cms:generate --page 12 --locale fr_FR --brief "Une page qui présente nos services…"
 php Thelia thelia_cms:generate --page 12 --locale fr_FR --brief brief.md --revise
 php Thelia thelia_cms:generate --page 12 --locale fr_FR --brief brief.md --dry-run
+php Thelia thelia_cms:generate --item product:42 --locale fr_FR --brief brief.md
+php Thelia thelia_cms:generate --page 12 --locale en_US --translate-from fr_FR
+php Thelia thelia_cms:generate --page 12 --locale fr_FR --brief brief.md --effort medium --dry-run
 ```
 
 The brief is a text or the path of a file. `--revise` reads it as a change on
 the document the page holds; `--dry-run` prints the document and saves
-nothing. The draft is saved through the writer, like a save from the back
-office; `thelia_cms:publish` puts it online.
+nothing. `--item <type>:<id>` writes the document of a product, a category, a
+content or a folder instead of a page. `--translate-from <locale>` writes the
+language from the draft the target holds in another one, as the button of the
+back office does, and takes no brief. `--effort` sets the effort of this call
+over the one of the settings, which stay as they are. The draft is saved
+through the writer, like a save from the back office; `thelia_cms:publish` puts
+a page online.
 
 ## Tests
 

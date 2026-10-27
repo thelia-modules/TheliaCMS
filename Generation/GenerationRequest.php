@@ -39,7 +39,15 @@ final readonly class GenerationRequest
         public ?Document $current = null,
         public ?string $sectionId = null,
         public ?string $sourceLocale = null,
+        // Over the effort of the settings, for one call: what an evaluation
+        // compares, with the site left as it is.
+        public ?string $effort = null,
     ) {
+    }
+
+    public function withEffort(string $effort): self
+    {
+        return new self($this->target, $this->locale, $this->kind, $this->brief, $this->current, $this->sectionId, $this->sourceLocale, $effort);
     }
 
     public static function fromBrief(GenerationTarget $target, string $locale, Brief $brief): self

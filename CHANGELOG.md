@@ -9,6 +9,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.3.0)
 
+- **The generate command writes items, translations and at an effort of its
+  own.** `thelia_cms:generate` takes `--item <type>:<id>` to write the
+  document of a product, a category, a content or a folder, `--translate-from
+  <locale>` to write a language from the draft of another, and `--effort` to
+  set the effort of one call without changing the settings. What the
+  evaluation of the generator runs without a browser.
 - **Menu entries pointing at a category or a product.** An entry of a menu
   can point at a category or a product of the catalogue (`target_type`
   `category` or `product`, `target_id` the id of the item). It links to the
