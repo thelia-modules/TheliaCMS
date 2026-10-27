@@ -120,6 +120,7 @@ titre).
 | `round-2-asked` | pas de section non demandée (`page-structure`) | 13 / 16 | 14 / 16 | 7 / 16 | 7,8 (min. 7) | 2,42 USD |
 | `round-2-tiebreak` | départage des composants (`catalogue`) | 15 / 16 | 15 / 16 | 7 / 16 | 7,9 (min. 7) | 2,30 USD |
 | `round-2-counts` | nombres tirés du brief (`page-structure`), **non gardée** | 15 / 16 | — | 6 / 16 | non notée | 2,37 USD |
+| `round-2-headings` | un seul `<h2>` par section de texte (`page-structure`), **non gardée** | 14 / 16 | — | 5 / 16 | non notée | 2,34 USD |
 
 - **Ids (2a).** Les sections portent `intro`, `features`, `offer`,
   `practical`, `contact`, `form`… dans tous les runs : la structure stable
@@ -141,6 +142,15 @@ titre).
   (forme 4/5 au lieu de 1/5), mais la forme stable recule de 12 à 9 briefs
   (02, 08, 13 et 16 se dérèglent) et les briefs stables de 7 à 6 : la règle
   est retirée, la rubrique n'a pas été notée.
+- **Un seul `<h2>` par section de texte (2e), non gardée.** Visait le brief
+  08 (la section `practical` en un `<h2>` et des `<h3>`, ou en trois `<h2>`)
+  et 09 (`story` en un ou trois `<h2>`). 08 reste à 1 run sur 5 en forme ;
+  la forme stable passe de 12 à 11 briefs, les briefs stables de 7 à 5.
+- **Le bruit de cinq runs.** D'une ronde à l'autre, sans que la règle visée
+  les touche, des briefs gagnent ou perdent un run sur cinq : un écart d'un
+  ou deux briefs entre deux rondes ne départage pas deux règles. Les gains de
+  2a à 2c (7, 11, 13, 15 briefs de structure stable) dépassent ce bruit ;
+  ceux qu'on cherche maintenant, sur la forme et la longueur, non.
 - **Ce qui reste instable** : la forme et la longueur. Le nombre de h2 dans un
   texte (02, 08), le découpage des questions de 05 en une, deux ou trois
   sections, et des écarts de longueur au-delà de 30 % sur une section (01,
