@@ -314,6 +314,25 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         self::assertSame('noindex, nofollow', $this->client->getResponse()->headers->get('X-Robots-Tag'), 'A draft stays out of the indexes.');
     }
 
+    public function testThePropsOfAThemeComponentReadInTheLanguageOfTheBackOffice(): void
+    {
+        if (null === $this->getService(SectionCatalog::class)->find('Layouts:Subheader:Base')) {
+            self::markTestSkipped('The theme offers no heading band.');
+        }
+
+        $page = $this->pageWith([new Section('bandeau', 'Layouts:Subheader:Base', ['title' => 'Titre', 'tag' => 'h2', 'container' => 'large', 'centered' => false, 'breadcrumb' => []])]);
+        $translator = $this->getService(TranslatorInterface::class);
+        $themeWords = "HTML tag for the heading. Defaults to 'h1'";
+
+        $dialog = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-bandeau"]');
+        $help = $dialog->filter('.bo-form-label__help')->each(static fn (Crawler $node): string => trim($node->text()));
+
+        self::assertNotSame($themeWords, $translator->trans($themeWords, [], TheliaCMS::DOMAIN_NAME), 'The module says it in its own words, in every language.');
+        self::assertContains($translator->trans($themeWords, [], TheliaCMS::DOMAIN_NAME), $help, 'The help of a prop of the theme goes through the translator.');
+        self::assertNotContains($themeWords, $help);
+        self::assertStringContainsString($translator->trans('Heading level', [], TheliaCMS::DOMAIN_NAME), $dialog->text(), 'The label of a prop reads as words.');
+    }
+
     public function testAPageOfATemplateNamesItAndLinksToItsSettings(): void
     {
         $types = $this->getService(PageTypeWriter::class);

@@ -22,6 +22,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed (2.3.1)
 
+- **The props of the components of the theme read in the language of the
+  back office.** Their labels and help come from the comments of the theme,
+  in English and sometimes in the words of a developer. The form of a section
+  passes them through the translator, and the module ships the French and a
+  plainer English for the components of Flexy it offers. The sheet the
+  generator reads keeps the words of the theme: the prompt does not change.
+  A theme of its own gets the same by adding the keys to `I18n/`.
+
 - **The components to add a section from read better.** The dialog groups
   them by what they are for (text and media, shop, reviews and reassurance,
   content of the site, blocks of the site), gives each an icon, a name and

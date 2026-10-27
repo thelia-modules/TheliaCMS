@@ -91,7 +91,9 @@ final readonly class SectionChoices
                 'name' => $name,
                 'icon' => $known['icon'] ?? self::iconOf($family),
                 'label' => null !== $known ? $this->trans($known['label']) : $definition->label(),
-                'summary' => null !== $known ? $this->trans($known['summary']) : $definition->description(),
+                // A component the module does not know keeps its own words,
+                // translated when the site ships a key for them.
+                'summary' => $this->trans(null !== $known ? $known['summary'] : $definition->description()),
             ];
         }
 
