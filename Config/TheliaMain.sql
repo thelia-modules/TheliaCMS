@@ -434,6 +434,7 @@ CREATE TABLE `cms_page_type`
     `brief` LONGTEXT,
     `brief_tone` VARCHAR(200),
     `brief_audience` VARCHAR(200),
+    `instructions` LONGTEXT,
     `fields` LONGTEXT,
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,

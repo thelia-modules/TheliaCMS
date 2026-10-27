@@ -103,8 +103,8 @@ final readonly class PageTypeWriter
 
     /**
      * Describes the type as a template: its name and description in this
-     * language and the brief of its pages, and its fields when they are
-     * given. The default type gets its row here the first time it is
+     * language, the brief of its pages and the instructions they are written
+     * by, and its fields when they are given. The default type gets its row here the first time it is
      * described.
      *
      * @throws \InvalidArgumentException when the code is not a valid one
@@ -117,6 +117,7 @@ final readonly class PageTypeWriter
         ?Brief $brief,
         ?FieldDefinitions $fields = null,
         ?ConnectionInterface $connection = null,
+        ?string $instructions = null,
     ): void {
         if (!PageTypeCode::isValid($code)) {
             throw new \InvalidArgumentException(\sprintf('"%s" is not a valid page type code.', $code));
@@ -131,6 +132,7 @@ final readonly class PageTypeWriter
         $type->setBrief($brief?->text)
             ->setBriefTone($brief?->tone)
             ->setBriefAudience($brief?->audience)
+            ->setInstructions(self::blankToNull($instructions))
             ->setLocale($locale)
             ->setTitle(self::blankToNull($title))
             ->setDescription(self::blankToNull($description))

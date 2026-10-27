@@ -173,6 +173,7 @@ final readonly class PageTypeAdminController
                 $data['title'] ?? null,
                 $data['description'] ?? null,
                 '' === $text ? null : new Brief($text, self::blankToNull($data['briefTone'] ?? null), self::blankToNull($data['briefAudience'] ?? null)),
+                instructions: $data['instructions'] ?? null,
             );
             $this->flash($request, 'success', $this->translate('The page template is saved.'));
 
@@ -308,6 +309,7 @@ final readonly class PageTypeAdminController
             'briefText' => $details->briefText,
             'briefTone' => $details->briefTone,
             'briefAudience' => $details->briefAudience,
+            'instructions' => $details->instructions,
         ], [
             'action' => $this->urls->generate('admin.cms.settings.page_types.edit', ['code' => $details->code, EditLanguage::PARAMETER => $lang->getId()]),
         ]);

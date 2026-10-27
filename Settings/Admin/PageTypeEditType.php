@@ -49,7 +49,7 @@ final class PageTypeEditType extends AbstractType
                 'required' => false,
                 'attr' => ['rows' => 6],
                 'constraints' => [new Length(max: 20000)],
-                'help' => 'What every page of this type is about and how it is built. The generator reads it before the brief of the page.',
+                'help' => 'What every page of this type is about. The generator reads it before the brief of the page; how the pages are written goes in the writing instructions.',
             ])
             ->add('briefTone', TextType::class, [
                 'label' => 'Tone',
@@ -60,6 +60,13 @@ final class PageTypeEditType extends AbstractType
                 'label' => 'Audience',
                 'required' => false,
                 'constraints' => [new Length(max: 200)],
+            ])
+            ->add('instructions', TextareaType::class, [
+                'label' => 'Writing instructions',
+                'required' => false,
+                'attr' => ['rows' => 8, 'data-testid' => 'cms-page-type-instructions'],
+                'constraints' => [new Length(max: 20000)],
+                'help' => 'How every page of this template is written: tone, length, sections expected, mandatory mentions. In markdown. The generator applies them as rules to every page of the template; the brief says what the pages are about.',
             ]);
     }
 

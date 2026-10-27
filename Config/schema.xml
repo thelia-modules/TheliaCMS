@@ -513,6 +513,12 @@
         <column name="brief_tone" size="200" type="VARCHAR"/>
         <column name="brief_audience" size="200" type="VARCHAR"/>
         <!--
+            How every page of the type is written (tone, length, sections
+            expected, mandatory mentions), free markdown read by the generator
+            as rules that win over the brief: a skill read for this type only.
+        -->
+        <column name="instructions" type="CLOB"/>
+        <!--
             The definition of the fields, a JSON list read by
             TheliaCMS\Page\Field\FieldDefinitions. JSON rather than a table:
             a definition is read whole, and travels whole through an export.

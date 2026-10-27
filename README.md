@@ -912,7 +912,11 @@ studies, events), described on its screen under **CMS > Page templates**
 
 - a **name** and a description in each language;
 - a **brief**, with a tone and an audience, that the generator reads before
-  the brief of every page of the type;
+  the brief of every page of the type: what its pages are about;
+- **writing instructions**, free markdown on how every page of the type is
+  written (tone, length, sections expected, mandatory mentions), read by the
+  generator for each page of the type as rules that win over a brief, like
+  a skill only that type loads;
 - **fields**, the values each page of the type carries: a whole number, a
   decimal, a duration in minutes, a short or long text, yes or no, a word from
   a list, a date. A field has a code, which a template reads it by and which

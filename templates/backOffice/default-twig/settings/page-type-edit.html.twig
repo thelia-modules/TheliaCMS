@@ -131,7 +131,7 @@
             </div>
 
             <div class="card">
-                <div class="card-header">{{ 'Name and brief'|trans({}, 'theliacms') }}</div>
+                <div class="card-header">{{ 'Name, brief and instructions'|trans({}, 'theliacms') }}</div>
                 <div class="card-body">
                     {{ form_start(settings_form) }}
                         <input type="hidden" name="_token" value="{{ assignToken() }}">
@@ -142,6 +142,7 @@
                             <div class="col-md-6">{{ form_row(settings_form.briefTone) }}</div>
                             <div class="col-md-6">{{ form_row(settings_form.briefAudience) }}</div>
                         </div>
+                        {{ form_row(settings_form.instructions) }}
                         {% if may_update %}
                             <button type="submit" class="btn btn-primary" data-testid="cms-page-type-save">{{ 'Save'|trans({}, 'theliacms') }}</button>
                         {% endif %}

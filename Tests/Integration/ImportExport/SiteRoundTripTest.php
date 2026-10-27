@@ -282,7 +282,7 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
     {
         $types = $this->getService(PageTypeWriter::class);
         $types->add('recipe-round-trip');
-        $types->describe('recipe-round-trip', $this->locale(), 'Recette', 'Les recettes.', new Brief('Une recette de saison.', 'chaleureux'));
+        $types->describe('recipe-round-trip', $this->locale(), 'Recette', 'Les recettes.', new Brief('Une recette de saison.', 'chaleureux'), instructions: '- 300 mots au plus.');
         $types->saveField('recipe-round-trip', null, $this->locale(), ['code' => 'servings', 'kind' => 'integer', 'label' => 'Personnes']);
         $types->saveField('recipe-round-trip', null, $this->locale(), ['code' => 'tip', 'kind' => 'text', 'label' => 'Astuce', 'translated' => true]);
         $model = $this->writer()->createModel('recipe-round-trip', $this->locale(), 'Recette (modèle)');
@@ -305,6 +305,7 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
         $details = $repository->details('recipe-round-trip');
         self::assertSame('Recette', $details->title($this->locale()));
         self::assertSame('chaleureux', $details->brief()?->tone);
+        self::assertSame('- 300 mots au plus.', $details->instructions(), 'The instructions travel with the type.');
         self::assertSame(['servings', 'tip'], array_map(static fn ($field): string => $field->code, $details->fields()->fields));
 
         $importedModel = $repository->modelOf('recipe-round-trip');
@@ -314,6 +315,25 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
         $imported = CmsPageQuery::create()->filterByPageType('recipe-round-trip')->filterByModel(0)->findOne();
         self::assertNotNull($imported);
         self::assertSame(['servings' => 6, 'tip' => 'Servir tiède.'], $this->getService(PageFields::class)->valuesOf($imported, $this->locale()));
+    }
+
+    /**
+     * A file written before the types had instructions: the type comes in
+     * with its brief, and without instructions.
+     */
+    public function testATypeOfAFileWithoutInstructionsImports(): void
+    {
+        $document = [
+            ...ExportFormat::header('test', [$this->locale()], new \DateTimeImmutable()),
+            'page_types' => [['code' => 'recipe-before-instructions', 'brief' => 'Une recette de saison.', 'brief_tone' => null, 'brief_audience' => null, 'fields' => [], 'translations' => []]],
+        ];
+
+        $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions());
+
+        self::assertSame([], $report->warnings());
+        $details = $this->getService(PageTypeRepository::class)->details('recipe-before-instructions');
+        self::assertSame('Une recette de saison.', $details->brief()?->text);
+        self::assertNull($details->instructions());
     }
 
     public function testATypeTheSiteDescribedAlreadyKeepsItsFields(): void

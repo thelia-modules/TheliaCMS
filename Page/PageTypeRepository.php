@@ -209,6 +209,7 @@ final readonly class PageTypeRepository
             briefTone: $type->getBriefTone(),
             briefAudience: $type->getBriefAudience(),
             fields: FieldDefinitions::fromJson($type->getFields()),
+            instructions: $type->getInstructions(),
         );
     }
 }

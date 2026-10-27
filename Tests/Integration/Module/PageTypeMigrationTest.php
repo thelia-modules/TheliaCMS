@@ -19,7 +19,8 @@ use TheliaCMS\TheliaCMS;
 
 /**
  * A site on 1.1.0 moving to page types: the `layout` of each page becomes its
- * type, and the update can be played twice.
+ * type, and the update can be played twice. Then a site on 2.1.0 moving to
+ * the instructions of a type, replayable as well.
  *
  * Runs outside a transaction: an ALTER TABLE commits on its own, so a rollback
  * would undo nothing and the test would prove nothing. The schema is put back
@@ -57,6 +58,11 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
         // nothing of.
         if ([] === $this->rows("SHOW COLUMNS FROM cms_page_type LIKE 'brief'")) {
             $connection->exec('ALTER TABLE cms_page_type ADD COLUMN brief LONGTEXT AFTER code, ADD COLUMN brief_tone VARCHAR(200) AFTER brief, ADD COLUMN brief_audience VARCHAR(200) AFTER brief_tone, ADD COLUMN fields LONGTEXT AFTER brief_audience');
+        }
+
+        // The shape 2.2.0 gives it.
+        if (!$this->typeColumnExists('instructions')) {
+            $connection->exec('ALTER TABLE cms_page_type ADD COLUMN instructions LONGTEXT DEFAULT NULL AFTER brief_audience');
         }
 
         $connection->exec("CREATE TABLE IF NOT EXISTS cms_page_type_i18n (id INTEGER NOT NULL, locale VARCHAR(5) DEFAULT 'en_US' NOT NULL, title VARCHAR(255), description TEXT, PRIMARY KEY (id, locale), CONSTRAINT cms_page_type_i18n_fk_7b1d2a FOREIGN KEY (id) REFERENCES cms_page_type (id) ON DELETE CASCADE) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC");
@@ -110,6 +116,22 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
         self::assertSame(['default', 'full-width', 'landing', 'recette'], $codes, 'Each type exists once, the former layouts included.');
     }
 
+    public function testTheUpdateTo220GivesTheTypesTheirInstructionsAndCanBePlayedTwice(): void
+    {
+        // A 2.1.0 site has no instructions on its types.
+        $this->getPropelConnection()->exec('ALTER TABLE cms_page_type DROP COLUMN instructions');
+        self::assertFalse($this->typeColumnExists('instructions'));
+
+        $module = new TheliaCMS();
+        $module->update('2.1.0', '2.2.0', $this->getPropelConnection());
+        $module->update('2.1.0', '2.2.0', $this->getPropelConnection());
+
+        $column = $this->rows("SHOW COLUMNS FROM cms_page_type LIKE 'instructions'");
+        self::assertCount(1, $column);
+        self::assertSame('longtext', strtolower((string) $column[0]['Type']));
+        self::assertSame('YES', $column[0]['Null']);
+    }
+
     /**
      * @param array<int, string> $layouts the layout of some pages, by id
      */
@@ -134,6 +156,11 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
     private function columnExists(string $column): bool
     {
         return [] !== $this->rows(\sprintf("SHOW COLUMNS FROM cms_page LIKE '%s'", $column));
+    }
+
+    private function typeColumnExists(string $column): bool
+    {
+        return [] !== $this->rows(\sprintf("SHOW COLUMNS FROM cms_page_type LIKE '%s'", $column));
     }
 
     /**

@@ -306,6 +306,7 @@ final readonly class SiteImporter
                     $brief,
                     $fields,
                     $connection,
+                    self::stringOrNull($row['instructions'] ?? null),
                 );
             }
         }
@@ -809,7 +810,7 @@ final readonly class SiteImporter
     {
         foreach ($translations as $locale => $translation) {
             $slug = trim((string) ($translation['slug'] ?? ''));
-            $fixed = trim((string) ($translation['fixed_url'] ?? ''), " /");
+            $fixed = trim((string) ($translation['fixed_url'] ?? ''), ' /');
 
             if ('' === $slug && '' === $fixed) {
                 continue;

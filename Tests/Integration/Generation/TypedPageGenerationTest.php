@@ -74,6 +74,31 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
         self::assertStringContainsString('- `tip`: Astuce (one line of plain text)', $message);
     }
 
+    public function testTheInstructionsOfTheTypeAreReadAsRulesAfterItsBrief(): void
+    {
+        $this->getService(PageTypeWriter::class)->describe('recipe-generated', $this->locale(), 'Recette', null, new Brief('Une recette de saison, pas à pas.'), instructions: "- 300 mots au plus.\n- Mentionner les allergènes.");
+        $page = $this->givenARecipe('Tarte aux pommes');
+
+        $this->api->answer(self::answer(['servings' => 6]));
+
+        $this->generator()->generate(GenerationRequest::fromBrief($this->targets()->forPage($page, $this->locale()), $this->locale(), new Brief('La tarte de grand-mère.')));
+
+        $message = $this->api->requests[0]['messages'][0]['content'];
+        self::assertStringContainsString("Rules for every page of this type, read as a skill: follow them in everything you write for this page, and where a brief says otherwise, these rules win.\n\n- 300 mots au plus.\n- Mentionner les allergènes.", $message);
+        self::assertGreaterThan(strpos($message, 'Une recette de saison, pas à pas.'), strpos($message, 'Rules for every page of this type'), 'The rules come after what the pages are about.');
+    }
+
+    public function testATypeWithoutInstructionsAddsNoRules(): void
+    {
+        $page = $this->givenARecipe('Tarte aux pommes');
+
+        $this->api->answer(self::answer(['servings' => 6]));
+
+        $this->generator()->generate(GenerationRequest::fromBrief($this->targets()->forPage($page, $this->locale()), $this->locale(), new Brief('La tarte de grand-mère.')));
+
+        self::assertStringNotContainsString('Rules for every page of this type', $this->api->requests[0]['messages'][0]['content']);
+    }
+
     public function testWrongFieldsGoBackToTheModelWithTheDocument(): void
     {
         $page = $this->givenARecipe('Tarte aux pommes');

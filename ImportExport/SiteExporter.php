@@ -224,7 +224,7 @@ final readonly class SiteExporter
             $fields = FieldDefinitions::fromJson($type->getFields());
             $translations = $this->translationsOf($type, $locales, ['title' => 'getTitle', 'description' => 'getDescription']);
 
-            if ($fields->isEmpty() && null === $type->getBrief() && [] === $translations) {
+            if ($fields->isEmpty() && null === $type->getBrief() && null === $type->getInstructions() && [] === $translations) {
                 continue;
             }
 
@@ -233,6 +233,7 @@ final readonly class SiteExporter
                 'brief' => $type->getBrief(),
                 'brief_tone' => $type->getBriefTone(),
                 'brief_audience' => $type->getBriefAudience(),
+                'instructions' => $type->getInstructions(),
                 'fields' => $fields->toArray(),
                 'translations' => $translations,
             ];

@@ -9,6 +9,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.2.0)
 
+- **Writing instructions for a page template.** A page template gains
+  **Writing instructions** next to its brief: how every page of it is
+  written (tone, length, expected sections, mandatory mentions). The
+  generator reads them as rules for every page of the template, after its
+  brief, whether it writes, revises, rewrites a section or translates; they
+  travel in the export. The update to 2.2.0 adds `cms_page_type.instructions`;
+  `PageTypeWriter::describe()` takes them as a last, optional argument.
 - **Two skills: translation and the design system.** `translation`, always
   read: a page written from another language keeps its meaning, its order,
   its names and its figures as written, and follows the typography of its

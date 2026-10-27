@@ -64,6 +64,7 @@ final class PageTemplateScreenTest extends AdminScreenTestCase
         $form['page_type_edit[title]'] = 'Recette';
         $form['page_type_edit[briefText]'] = 'Une recette de saison, pas à pas.';
         $form['page_type_edit[briefTone]'] = 'chaleureux';
+        $form['page_type_edit[instructions]'] = "- 300 mots au plus.\n- Une section « Ingrédients » avant les étapes.";
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
 
@@ -71,6 +72,8 @@ final class PageTemplateScreenTest extends AdminScreenTestCase
         self::assertSame('Recette', $details->title($this->locale()));
         self::assertSame('Une recette de saison, pas à pas.', $details->brief()?->text);
         self::assertSame('chaleureux', $details->brief()?->tone);
+        self::assertSame("- 300 mots au plus.\n- Une section « Ingrédients » avant les étapes.", $details->instructions());
+        self::assertStringContainsString('300 mots au plus.', $this->screen($this->typeUrl())->filter('[data-testid="cms-page-type-instructions"]')->text(), 'The screen shows the instructions saved.');
 
         $list = $this->screen('/admin/cms/settings/page-types');
         self::assertStringContainsString('Recette', $list->filter('[data-testid="cms-page-type-edit-'.self::TYPE.'"]')->text());

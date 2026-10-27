@@ -29,6 +29,16 @@ it says about itself, the language of the page, the currency, the title and
 type of the page, the summary the editor typed, then the brief; for a change
 on an existing page, the document the page holds and the change asked.
 
+When the page type is a template of pages
+([ADR 9](adr/0009-a-page-type-is-a-template-of-pages.md)), a block on the
+type comes before the brief of the page: the brief of the type (what every
+page of it is about), then its **writing instructions** when it has some,
+introduced as "Rules for every page of this type, read as a skill: follow
+them in everything you write for this page, and where a brief says
+otherwise, these rules win." They are read for every request on a page of
+the type (brief, change, section, translation), like a skill only that type
+loads; a type without instructions leaves the message as it was.
+
 The answer is constrained by a structured output to the envelope of a
 document: a list of sections, each naming a component of the catalogue
 (an enum) and carrying its props as a JSON object written as a string. The

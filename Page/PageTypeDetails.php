@@ -19,8 +19,8 @@ use TheliaCMS\Page\Field\FieldDefinitions;
 
 /**
  * A page type as a template of pages (docs/adr/0009): its name, what its
- * pages are about, and the fields they carry. A type that is only a code
- * has none of it.
+ * pages are about, how they are written, and the fields they carry. A type
+ * that is only a code has none of it.
  */
 final readonly class PageTypeDetails
 {
@@ -36,6 +36,7 @@ final readonly class PageTypeDetails
         public ?string $briefTone = null,
         public ?string $briefAudience = null,
         public ?FieldDefinitions $fields = null,
+        public ?string $instructions = null,
     ) {
     }
 
@@ -67,16 +68,29 @@ final readonly class PageTypeDetails
         return new Brief(trim($this->briefText), $this->briefTone, $this->briefAudience);
     }
 
+    /**
+     * The rules every page of the type is written by, as markdown; none when
+     * the type has no instructions.
+     */
+    public function instructions(): ?string
+    {
+        if (null === $this->instructions || '' === trim($this->instructions)) {
+            return null;
+        }
+
+        return trim($this->instructions);
+    }
+
     public function fields(): FieldDefinitions
     {
         return $this->fields ?? FieldDefinitions::none();
     }
 
     /**
-     * Whether the type is more than a code: a brief or fields.
+     * Whether the type is more than a code: a brief, instructions or fields.
      */
     public function isTemplate(): bool
     {
-        return null !== $this->brief() || !$this->fields()->isEmpty();
+        return null !== $this->brief() || null !== $this->instructions() || !$this->fields()->isEmpty();
     }
 }

@@ -98,6 +98,14 @@ final readonly class GenerationTarget
         return $this->typeDetails?->brief();
     }
 
+    /**
+     * The rules every page of the type is written by, as markdown.
+     */
+    public function typeInstructions(): ?string
+    {
+        return $this->typeDetails?->instructions();
+    }
+
     public function fields(): FieldDefinitions
     {
         return $this->typeDetails?->fields() ?? FieldDefinitions::none();

@@ -192,8 +192,8 @@ final readonly class PromptBuilder
     }
 
     /**
-     * What the type of the page says about every page of it, and the fields
-     * the answer writes. Nothing for a type that is only a code: the request
+     * What the type of the page says about every page of it, the rules they
+     * are written by, and the fields the answer writes. Nothing for a type that is only a code: the request
      * of such a page stays the one it was.
      *
      * @return list<string>
@@ -202,11 +202,12 @@ final readonly class PromptBuilder
     {
         $target = $request->target;
         $brief = $target->typeBrief();
+        $instructions = $target->typeInstructions();
         $fields = $request->fieldsAsked();
 
         $model = GenerationRequest::KIND_BRIEF === $request->kind ? $target->modelDocument : null;
 
-        if (null === $brief && $fields->isEmpty() && null === $model) {
+        if (null === $brief && null === $instructions && $fields->isEmpty() && null === $model) {
             return [];
         }
 
@@ -216,6 +217,16 @@ final readonly class PromptBuilder
             $lines[] = 'Every page of this type is written from this brief, before the brief of the page itself:';
             $lines[] = '';
             $lines[] = $brief->text;
+            $lines[] = '';
+        }
+
+        // How the pages are written, after what they are about: rules the
+        // editor set once for the whole series, read like a skill that only
+        // this type loads, and kept over the brief when the two disagree.
+        if (null !== $instructions) {
+            $lines[] = 'Rules for every page of this type, read as a skill: follow them in everything you write for this page, and where a brief says otherwise, these rules win.';
+            $lines[] = '';
+            $lines[] = $instructions;
             $lines[] = '';
         }
 
