@@ -40,6 +40,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   only when the brief asks for one. The same structure in four runs out of
   five went from 7 briefs of 16 to 13, the quality of the evaluation
   unchanged. A site that edited these skills keeps its own text.
+- **The skills say which component to take when two fit.** A testimonial
+  with no score goes in free text, since the review components draw a score
+  and an empty one reads as zero; points of the same kind side by side go in
+  columns when there are two to four short ones, in free text otherwise.
 - **The content screen names the template of the page.** Next to the status
   of a page of a template, the bar shows the template and links to its
   settings.

@@ -27,6 +27,15 @@ anything else is refused.
 - Three to seven sections make a page. One idea per section.
 - Read the description of each component to pick the one made for the
   content; never bend a component to say something it is not made for.
+- When two components could hold the same content, these choices settle it:
+  - A review or a testimonial the brief gives **no score** for goes in free
+    text, quoted, with its author: the review components draw a score out
+    of five, and an empty one reads as zero. Reviews with a score: the row
+    of reviews for several, the card for one.
+  - Points of the same kind listed side by side — rooms, arguments, ways
+    to get there, commitments — go in columns, one column each, when there
+    are two to four of them and each fits in two sentences. More, or longer,
+    go in free text, one `<h3>` each.
 - When the page asks the visitor to do something, close with that request: a
   component of the theme made for it, or a short free text ending on the link.
 - Live content (`Partial:*`) shows what the site holds today — a form, for
