@@ -41,7 +41,7 @@ use TheliaCMS\Page\Admin\CmsPageWriter;
  */
 #[AsCommand(
     name: 'thelia_cms:generate',
-    description: 'Writes the draft of a CMS page from a brief, with the generator.',
+    description: 'Writes the draft of a CMS page or the document of a catalogue item from a brief, or a language from another, with the generator.',
 )]
 final class GenerateCommand extends Command
 {
@@ -147,8 +147,11 @@ final class GenerateCommand extends Command
         }
 
         $io->newLine();
-        $io->comment(\sprintf(
-            '%s, %d turn(s), %d in / %d out tokens (%d cached), %.4f USD, %.1f s',
+        // One line whatever the width of the terminal: `compare-runs` reads
+        // the cost of a run from it, and SymfonyStyle wraps a comment at 80
+        // columns when the output is not a terminal.
+        $output->writeln(\sprintf(
+            '<comment>// %s, %d turn(s), %d in / %d out tokens (%d cached), %.4f USD, %.1f s</comment>',
             $result->model,
             $result->turns,
             $result->usage->inputTokens,

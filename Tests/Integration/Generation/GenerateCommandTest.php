@@ -66,6 +66,7 @@ final class GenerateCommandTest extends CmsIntegrationTestCase
 
         self::assertSame(Command::SUCCESS, $dryRun->getStatusCode(), $dryRun->getDisplay());
         self::assertStringContainsString('Mat, pour parquet.', $dryRun->getDisplay());
+        self::assertMatchesRegularExpression('/^\/\/ .*\d+ turn\(s\).*USD, [\d.]+ s$/m', $dryRun->getDisplay(), 'The cost of the run stays on one line, where compare-runs reads it.');
         self::assertSame('medium', $this->api->requests[0]['output_config']['effort'] ?? null);
         self::assertStringContainsString('Vernis mat pour parquet', json_encode($this->api->requests[0]['messages'], \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR), 'The generator is told which item it writes for.');
         self::assertNull($this->getService(ItemContentRepository::class)->draftDocument(CatalogueItemType::Product, $id, $this->locale()), 'A dry run saves nothing.');
