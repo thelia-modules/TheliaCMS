@@ -7,6 +7,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-27
+
+### Added
+
+- Twig function `cms_is_home(id)`: tells whether a page is the one the module
+  shows as the home page.
+
 ## [1.5.0] - 2026-10-20
 
 The versions 1.1 to 1.4 were developed on the way but not tagged: this release carries all of them.
