@@ -228,6 +228,25 @@ final class CatalogueMenuTargetTest extends CmsIntegrationTestCase
         );
     }
 
+    public function testAnImportedEntryWhoseItemThisSiteDoesNotHaveIsKeptAndReported(): void
+    {
+        $product = $this->product(['fr_FR' => 'Produit exporté']);
+        $this->onlyEntryOfMain($this->entry('product', (int) $product->getId()));
+        $document = $this->getService(SiteExporter::class)->export();
+        $missing = (int) $product->getId();
+        $product->delete();
+
+        $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
+
+        $menu = CmsMenuQuery::create()->findOneByCode('main');
+        self::assertInstanceOf(CmsMenu::class, $menu);
+        self::assertSame(1, CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->filterByTargetId($missing)->count(), 'The entry is kept.');
+        self::assertContains(
+            \sprintf('A menu entry points at a product of the catalogue by its number (%d), which this site does not have: the entry was kept, and the menu screen lists it as having no target.', $missing),
+            $report->warnings(),
+        );
+    }
+
     /**
      * @param array<string, string> $titles by locale
      */

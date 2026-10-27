@@ -17,7 +17,11 @@ namespace TheliaCMS\ImportExport;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
+use Thelia\Model\CategoryQuery;
+use Thelia\Model\ContentQuery;
+use Thelia\Model\FolderQuery;
 use Thelia\Model\Lang;
+use Thelia\Model\ProductQuery;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Catalogue\CatalogueItemKeys;
 use TheliaCMS\Catalogue\CatalogueItemType;
@@ -619,7 +623,7 @@ final readonly class SiteImporter
 
             foreach ($menu['items'] ?? [] as $item) {
                 $targetType = (string) ($item['target_type'] ?? 'page');
-                $targetId = $this->menuTarget($item, $targetType, $pageIds, $report);
+                $targetId = $this->menuTarget($item, $targetType, $pageIds, $report, $connection);
 
                 if ('page' === $targetType && null === $targetId) {
                     $report->skipped('menu entries');
@@ -654,12 +658,21 @@ final readonly class SiteImporter
      * @param array<string, mixed> $item
      * @param array<string, int>   $pageIds
      */
-    private function menuTarget(array $item, string $targetType, array $pageIds, ImportReport $report): ?int
+    private function menuTarget(array $item, string $targetType, array $pageIds, ImportReport $report, ConnectionInterface $connection): ?int
     {
         if ('page' !== $targetType) {
             $rawId = $item['target_id'] ?? null;
+            $catalogueType = CatalogueItemType::tryFrom($targetType);
 
-            if (null !== $rawId) {
+            // The entry is kept either way: the menu screen lists it with the
+            // reason it is not shown, and the item may be created afterwards.
+            if (null !== $rawId && null !== $catalogueType && !self::catalogueItemExists($catalogueType, (int) $rawId, $connection)) {
+                $report->warn(\sprintf(
+                    'A menu entry points at a %s of the catalogue by its number (%d), which this site does not have: the entry was kept, and the menu screen lists it as having no target.',
+                    $targetType,
+                    (int) $rawId,
+                ));
+            } elseif (null !== $rawId) {
                 $report->warn(\sprintf(
                     'A menu entry points at a %s of the catalogue by its number (%d): check that it is the right one on this site.',
                     $targetType,
@@ -683,6 +696,16 @@ final readonly class SiteImporter
         }
 
         return $pageId;
+    }
+
+    private static function catalogueItemExists(CatalogueItemType $type, int $id, ConnectionInterface $connection): bool
+    {
+        return match ($type) {
+            CatalogueItemType::Product => null !== ProductQuery::create()->findPk($id, $connection),
+            CatalogueItemType::Category => null !== CategoryQuery::create()->findPk($id, $connection),
+            CatalogueItemType::Content => null !== ContentQuery::create()->findPk($id, $connection),
+            CatalogueItemType::Folder => null !== FolderQuery::create()->findPk($id, $connection),
+        };
     }
 
     /**

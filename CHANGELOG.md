@@ -20,7 +20,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   category. The cached menus are dropped when a category or a product is
   created, changed, hidden, given a new address or deleted. The export keeps
   the id of the item, and the import reports it, the way it does for contents
-  and folders. `cms_menu()` is unchanged; `source` says `category` or
+  and folders.
+- **The import says when a menu entry points at an item this site does not
+  have.** An entry pointing at a content, a folder, a category or a product
+  whose id the importing site lacks is kept, and the report says so rather
+  than asking to check that the id is the right one. `cms_menu()` is unchanged; `source` says `category` or
   `product`. No schema change.
 
 ### Fixed (2.2.1)
