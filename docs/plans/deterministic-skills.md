@@ -1,6 +1,6 @@
 # Plan: skills that give the same page for the same brief
 
-Status: started 2026-10-27. The command additions, the corpus, the bench and
+Status: paused on 2026-10-27, after round 2e. The command additions, the corpus, the bench and
 the script are done, and rounds 0 and 1 are played: the effort is not the
 lever, the section ids are the largest source of variance
 (`docs/evaluation/determinism/results.md`). Rounds 2a (fixed section ids)
@@ -150,3 +150,33 @@ additions and the script included.
 - Does a site get a setting to choose between a predictable writer and a
   freer one (the effort, or a skill switched on), or do the shipped skills
   aim for predictable only?
+
+## Resuming
+
+Read, in this order: this plan, `docs/evaluation/determinism/results.md`,
+`docs/evaluation/README.md` (the rubric), then the rules of
+`skills/catalogue/SKILL.md` and `skills/page-structure/SKILL.md`.
+
+Frozen: the rules of rounds 2a, 2b and 2c stay; 2d and 2e are not tried
+again as they were written; effort `high` stays the default; the runs stay
+out of the repository; the bar is 4 runs out of 5.
+
+Before playing anything:
+
+1. The bench must be on the site (`bench.json` imported once, pages `eval-*`
+   hidden, type `eval-workshop`), and its copy must match `bench.json`.
+2. No key of `I18n/` changes during a round: the prompt reads translated
+   labels (`docs/developing.md`).
+3. The first round to play is a control: the skills of round 2c, unchanged,
+   five runs per brief. How many briefs move between it and `round-2-tiebreak`
+   is the noise; a rule is kept only when it moves more than that.
+
+Prompt for a new session:
+
+> Resume the determinism plan of TheliaCMS (`docs/plans/deterministic-skills.md`,
+> section Resuming). Play the control round first with
+> `docs/evaluation/determinism/run-round.sh round-3-control`, compare it with
+> `thelia_cms:compare-runs` against `round-2-tiebreak`, write the noise in
+> `results.md`, then propose the next rule (the length of the `intro` is the
+> first candidate) with its expected effect and cost before playing it.
+
