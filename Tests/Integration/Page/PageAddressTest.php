@@ -371,16 +371,16 @@ final class PageAddressTest extends CmsIntegrationTestCase
 
     /**
      * A child of a page with a fixed address sits under the path the parent
-     * would have, not under `sopap.html/`.
+     * would have, not under `about-us.html/`.
      */
     public function testAChildOfAPageWithAFixedAddressIsAddressedFromTheSlugOfItsParent(): void
     {
         $parent = $this->pageWithSlug('La société', 'societe');
-        $this->fix($parent, 'sopap.html');
+        $this->fix($parent, 'about-us.html');
 
         $child = $this->createPage('Nos engagements', parent: (int) $parent->getId());
 
-        self::assertSame('sopap.html', $parent->getRewrittenUrl($this->locale()));
+        self::assertSame('about-us.html', $parent->getRewrittenUrl($this->locale()));
         self::assertSame('societe/nos-engagements', $child->getRewrittenUrl($this->locale()));
     }
 

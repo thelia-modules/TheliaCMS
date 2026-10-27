@@ -94,7 +94,7 @@ final class CmsUrlServiceTest extends TestCase
 
     public function testKeepsAFixedAddressAsTypedButForItsSlashes(): void
     {
-        self::assertSame('suivi-qualité-sopap.html', $this->urls->normalizeFixedAddress(' /suivi-qualité-sopap.html/ '));
+        self::assertSame('suivi-qualité-atelier.html', $this->urls->normalizeFixedAddress(' /suivi-qualité-atelier.html/ '));
         self::assertSame('rubrique/page.html', $this->urls->normalizeFixedAddress('rubrique/page.html'));
         self::assertNull($this->urls->normalizeFixedAddress('  '));
         self::assertNull($this->urls->normalizeFixedAddress(null));

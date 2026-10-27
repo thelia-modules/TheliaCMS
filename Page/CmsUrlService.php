@@ -382,7 +382,7 @@ final class CmsUrlService
                 break;
             }
 
-            // A fixed address is the parent's alone (`sopap.html`): its children
+            // A fixed address is the parent's alone (`about-us.html`): its children
             // are addressed from the path it would have, its slug under its ancestors.
             $url = null === $this->fixedAddressOf($parent, $locale) ? trim((string) $parent->getRewrittenUrl($locale), '/') : '';
 
