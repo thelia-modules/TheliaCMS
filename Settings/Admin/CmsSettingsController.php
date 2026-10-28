@@ -75,11 +75,9 @@ final readonly class CmsSettingsController
             'maintenanceAllowlist' => implode("\n", $this->settings->maintenanceAllowlist()),
             'trashRetentionDays' => $this->settings->trashRetentionDays(),
             'httpCacheTtl' => $this->settings->httpCacheTtl(),
-            'generatorModel' => $this->generator->model(),
             'generatorEffort' => $this->generator->effort(),
             'generatorMaxTokens' => $this->generator->maxTokens(),
             'generatorWebFetch' => $this->generator->webFetch(),
-            'textModel' => $this->generator->textModelAsSet(),
             'textEffort' => $this->generator->textEffort(),
             'textMaxTokens' => $this->generator->textMaxTokens(),
         ], [
@@ -124,13 +122,13 @@ final readonly class CmsSettingsController
         );
 
         $this->generator->save(
-            model: (string) $data['generatorModel'],
+            model: $this->generator->model(),
             effort: (string) $data['generatorEffort'],
             maxTokens: (int) $data['generatorMaxTokens'],
             webFetch: (bool) $data['generatorWebFetch'],
         );
         $this->generator->saveText(
-            model: (string) $data['textModel'],
+            model: $this->generator->textModelAsSet(),
             effort: (string) $data['textEffort'],
             maxTokens: (int) $data['textMaxTokens'],
         );
