@@ -81,18 +81,40 @@ final class CmsUrlService
             return $fixed;
         }
 
-        $segment = $this->normalizeSegment($requestedSlug ?? (string) $page->getTitle());
+        $proposal = $this->propose((int) $page->getId(), (int) $page->getParent(), $locale, (string) $page->getTitle(), $requestedSlug);
+
+        $page->setRewrittenUrl($locale, $proposal->address);
+        $this->remember($page, $locale, $proposal->segment);
+
+        return $proposal->address;
+    }
+
+    /**
+     * The address a page would get in this locale, from a title and a slug
+     * that may not be saved yet, and without writing anything: what `refresh()`
+     * writes, and what the edit screen offers before the form is saved.
+     *
+     * `$pageId` is 0 for a page not created yet. The slug wins over the title
+     * when it is given; a page whose slug and title both come out empty is
+     * named after its id.
+     *
+     * @throws \InvalidArgumentException when the slug would shadow a reserved path
+     */
+    public function propose(int $pageId, int $parentId, string $locale, string $title, ?string $requestedSlug = null): AddressProposal
+    {
+        $segment = $this->normalizeSegment($requestedSlug ?? $title);
 
         if ('' === $segment) {
-            $segment = 'page-'.$page->getId();
+            $segment = 'page-'.$pageId;
         }
 
-        $url = $this->makeUnique($this->prefixWithAncestors($page, $locale, $segment), $page->getId(), $locale);
+        $prefix = $this->ancestorPath($parentId, $locale);
+        $base = $this->slugSource->truncate('' === $prefix ? $segment : $prefix.'/'.$segment);
+        $address = $this->makeUnique($base, $pageId, $locale);
 
-        $page->setRewrittenUrl($locale, $url);
-        $this->remember($page, $locale, $url);
-
-        return $url;
+        // The segment the address really ends on, cut down with it when the
+        // whole path was too long; the uniqueness suffix is left out of it.
+        return new AddressProposal($this->lastSegment($base) ?? $segment, $address, $address !== $base);
     }
 
     /**
@@ -142,6 +164,31 @@ final class CmsUrlService
 
         foreach ([$page, ...$this->descendantsOf($page)] as $node) {
             foreach ($this->addressedLocales($node) as $locale) {
+                $this->rebuild($node, $locale);
+                ++$rewritten;
+            }
+        }
+
+        return $rewritten;
+    }
+
+    /**
+     * Puts the pages under this one back under its address in one locale, the
+     * ones that already answer in it.
+     *
+     * What a page given its first address in a locale needs: a child translated
+     * before it had no parent address to sit under in that language, and answers
+     * at the root until this runs. The other locales are not touched, nothing in
+     * them moved.
+     *
+     * @return int the number of addresses rewritten
+     */
+    public function rebuildDescendants(CmsPage $page, string $locale): int
+    {
+        $rewritten = 0;
+
+        foreach ($this->descendantsOf($page) as $node) {
+            if (\in_array($locale, $this->addressedLocales($node), true)) {
                 $this->rebuild($node, $locale);
                 ++$rewritten;
             }
@@ -237,17 +284,18 @@ final class CmsUrlService
     }
 
     /**
-     * Stores the segment the address ends on, alongside the address itself.
+     * Stores the segment of the page alongside its address.
      *
      * The two are written together on purpose: `rewriting_url` is a core table
      * the module clears when it is deactivated, so it cannot be the only place
-     * an edited address exists.
+     * an edited address exists. The suffix that keeps the address unique is not
+     * part of the segment: the same title in two languages answers on `cookies`
+     * and `cookies-2`, and a slug that kept the `-2` would bring it back on every
+     * rebuild, after the address it dodged is gone.
      */
-    private function remember(CmsPage $page, string $locale, string $url): void
+    private function remember(CmsPage $page, string $locale, string $slug): void
     {
-        $slug = $this->lastSegment($url);
-
-        if (null === $slug || $slug === $page->setLocale($locale)->getSlug()) {
+        if ('' === $slug || $slug === $page->setLocale($locale)->getSlug()) {
             return;
         }
 
@@ -345,13 +393,6 @@ final class CmsUrlService
         }
 
         return $segment;
-    }
-
-    private function prefixWithAncestors(CmsPage $page, string $locale, string $segment): string
-    {
-        $prefix = $this->ancestorPath((int) $page->getParent(), $locale);
-
-        return $this->slugSource->truncate('' === $prefix ? $segment : $prefix.'/'.$segment);
     }
 
     /**

@@ -148,6 +148,10 @@ final readonly class CmsPageWriter
             // site where some pages answer and others do not.
             if (null !== $formerAddress && $formerAddress !== $address) {
                 $this->urls->rebuildSubtree($page);
+            } elseif (null === $formerAddress && !$wasNew) {
+                // A first address in this locale: the pages under it translated
+                // before it answer at the root of that language until then.
+                $this->urls->rebuildDescendants($page, $locale);
             }
 
             $connection->commit();

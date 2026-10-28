@@ -296,6 +296,87 @@ final class PageAddressTest extends CmsIntegrationTestCase
     }
 
     /**
+     * An address is unique across the languages of the shop, so a page titled
+     * alike in two of them answers on `cookies` in one and `cookies-2` in the
+     * other. The suffix belongs to the address: stored as the slug, it shows in
+     * the field of the screen and comes back on every rebuild, long after the
+     * address it dodged is gone.
+     */
+    public function testTheSuffixThatKeepsAnAddressUniqueIsNotKeptAsTheSlug(): void
+    {
+        $second = $this->secondLocale();
+        $urls = $this->getService(CmsUrlService::class);
+
+        $page = $this->bilingualPage('Témoins de connexion', 'Témoins de connexion', $second);
+
+        self::assertSame('temoins-de-connexion', $page->getRewrittenUrl($this->locale()));
+        self::assertSame('temoins-de-connexion-2', $page->getRewrittenUrl($second));
+        self::assertSame(
+            'temoins-de-connexion',
+            $urls->slugOf($page, $second),
+            'The slug is the segment asked for; the suffix is only in the address.',
+        );
+    }
+
+    /**
+     * A child translated before its parent has no parent address to sit under
+     * in that language, and answers at the root. Once the parent is translated,
+     * the child moves under it, in that language only, and a sibling never
+     * written in that language is given no address in it.
+     */
+    public function testTranslatingAParentAfterItsChildPutsTheChildUnderIt(): void
+    {
+        $second = $this->secondLocale();
+
+        $parent = $this->createPage('Our workshops');
+        $child = $this->bilingualPage('Pottery', 'Poterie', $second, (int) $parent->getId());
+        $untranslated = $this->createPage('Weaving', parent: (int) $parent->getId());
+
+        self::assertSame('poterie', $child->getRewrittenUrl($second), 'Before the parent is translated, the child answers at the root.');
+
+        $this->writer()->saveDraft($parent, $second, new PageDraft(title: 'Nos ateliers'));
+
+        self::assertSame('nos-ateliers', $parent->getRewrittenUrl($second));
+        self::assertSame(
+            'nos-ateliers/poterie',
+            $child->getRewrittenUrl($second),
+            'A child sits under the address its parent was given in its language.',
+        );
+        self::assertSame('our-workshops/pottery', $child->getRewrittenUrl($this->locale()));
+        self::assertNull(
+            $untranslated->getRewrittenUrl($second),
+            'Translating a parent gives no address to a child never written in that language.',
+        );
+    }
+
+    /**
+     * What the edit screen offers before the form is saved: the address a new
+     * title would give, under the parent, suffixed when another page holds it,
+     * and nothing written.
+     */
+    public function testAProposedAddressIsComputedWithoutBeingWritten(): void
+    {
+        $urls = $this->getService(CmsUrlService::class);
+        $parent = $this->pageWithSlug('Nos ateliers du soir', 'ateliers-soir');
+        $page = $this->createPage('Céramique', parent: (int) $parent->getId());
+        $this->createPage('Raku', parent: (int) $parent->getId());
+
+        $proposal = $urls->propose((int) $page->getId(), (int) $parent->getId(), $this->locale(), 'Raku');
+
+        self::assertSame('raku', $proposal->segment);
+        self::assertSame('ateliers-soir/raku-2', $proposal->address);
+        self::assertTrue($proposal->suffixed, 'The address of the sibling is taken: the proposal says so.');
+        self::assertSame('ateliers-soir/ceramique', $page->getRewrittenUrl($this->locale()), 'A proposal moves no page.');
+        self::assertSame('ceramique', $urls->slugOf($page, $this->locale()));
+        self::assertNull(RewritingUrlQuery::create()->findOneByUrl('ateliers-soir/raku-2'));
+
+        $new = $urls->propose(0, 0, $this->locale(), 'Céramique');
+
+        self::assertSame('ceramique', $new->address, 'A page not created yet is offered an address at the root.');
+        self::assertFalse($new->suffixed);
+    }
+
+    /**
      * Another active language of the shop, whichever it is.
      */
     private function secondLocale(): string
