@@ -19,6 +19,8 @@ use Psr\Log\NullLogger;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Domain\Ai\AiFinishReason;
 use Thelia\Domain\Ai\AiJurisdiction;
+use Thelia\Domain\Ai\AiRequest;
+use Thelia\Domain\Ai\AiToolCall;
 use Thelia\Domain\Ai\Exception\AiBudgetExceededException;
 use Thelia\Domain\Ai\Exception\AiExceptionInterface;
 use Thelia\Domain\Ai\Exception\AiGuardrailBlockedException;
@@ -175,6 +177,42 @@ final class GatewayRefusalsTest extends CmsIntegrationTestCase
 
         self::assertSame(\TheliaCMS\Generation\InvalidGenerationException::class, $failure::class, 'A refused answer, with the module wording and a row in the ledger, not an exception of the core.');
         self::assertSame(GenerationLog::STATUS_INVALID, CmsPageGenerationQuery::create()->findPk($failure->logId)?->getStatus());
+    }
+
+    public function testTheRequestsOfOneCallShareACorrelationIdAndAnotherCallHasItsOwn(): void
+    {
+        $page = $this->createPage('Nos services', published: false);
+        $request = GenerationRequest::fromBrief(GenerationTarget::page($page, $this->locale()), $this->locale(), new Brief('Une page de services.'));
+        $document = json_encode(['version' => 1, 'sections' => [['id' => 'hero', 'component' => 'cms:richtext', 'props' => json_encode(['html' => '<h1>Nos services</h1>'])]]], \JSON_THROW_ON_ERROR);
+
+        $this->api
+            ->streamed([], FakeAiGateway::response('', toolCalls: [new AiToolCall('toolu_1', 'search_pages', ['query' => 'tarif'])]))
+            ->streamed([], FakeAiGateway::response('{"not":"a document"'))
+            ->streamed([], FakeAiGateway::response($document))
+            ->streamed([], FakeAiGateway::response($document));
+
+        $this->pages()->generate($request);
+        $this->pages()->generate($request);
+
+        $ids = array_map(static fn (AiRequest $sent): ?string => $sent->correlationId, $this->api->requests);
+
+        self::assertCount(4, $ids);
+        self::assertSame(1, \count(array_unique(\array_slice($ids, 0, 3))), 'The tool turn and the correction belong to the same task.');
+        self::assertMatchesRegularExpression('/^theliacms\.page\.'.$page->getId().'\.[0-9a-f]{8}$/', (string) $ids[0]);
+        self::assertNotSame($ids[0], $ids[3], 'The next task on the same page is another one.');
+    }
+
+    public function testTheTextAndTheComponentHaveTheirOwnCorrelationIds(): void
+    {
+        $this->api->answer(FakeAiGateway::response(json_encode(['html' => '<p>Un bol.</p>'], \JSON_THROW_ON_ERROR)));
+        $this->api->answer(new InactiveAiUsageException('theliacms.component'));
+        $target = GenerationTarget::field('product', 42, 'Bol en grès', $this->locale());
+
+        $this->texts()->generate(new TextRequest(GenerationRequest::text($target, $this->locale(), new Brief('Décris le bol.')), TextField::Description, ''));
+        $this->catch(fn () => $this->components()->generate(new ComponentRequest('Un tableau de prix.', $this->locale())));
+
+        self::assertMatchesRegularExpression('/^theliacms\.text\.product\.42\.[0-9a-f]{8}$/', (string) $this->api->requests[0]->correlationId);
+        self::assertMatchesRegularExpression('/^theliacms\.component\.0\.[0-9a-f]{8}$/', (string) $this->api->requests[1]->correlationId);
     }
 
     /**

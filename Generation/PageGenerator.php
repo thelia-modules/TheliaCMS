@@ -32,6 +32,7 @@ use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentSchema;
 use TheliaCMS\Content\DocumentValidator;
 use TheliaCMS\Content\InvalidDocumentException;
+use TheliaCMS\Generation\Ai\CorrelationId;
 use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
 use TheliaCMS\Generation\Ai\ObservedStream;
@@ -127,6 +128,7 @@ final readonly class PageGenerator
             tools: $tools,
             maxOutputTokens: $this->settings->maxTokens(),
             providerOptions: ['anthropic' => ['effort' => $request->effort ?? $this->settings->effort()]],
+            correlationId: CorrelationId::new('theliacms', $request->target->type, $request->target->id),
         );
         $usage = new Usage();
         $costUsd = 0.0;

@@ -26,6 +26,7 @@ use Thelia\Domain\Ai\AiToolCall;
 use Thelia\Domain\Ai\AiTransparency;
 use Thelia\Domain\Ai\AsAiUsage;
 use Thelia\Domain\Ai\Exception\AiExceptionInterface;
+use TheliaCMS\Generation\Ai\CorrelationId;
 use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
 use TheliaCMS\Generation\Ai\SentBackAnswer;
@@ -98,6 +99,7 @@ final readonly class TextGenerator
             tools: $this->definitions->of(self::TOOLS),
             maxOutputTokens: $this->settings->textMaxTokens(),
             providerOptions: ['anthropic' => ['effort' => $this->settings->textEffort()]],
+            correlationId: CorrelationId::new('theliacms', 'text', $request->target->type, $request->target->id),
         );
         $usage = new Usage();
         $costUsd = 0.0;

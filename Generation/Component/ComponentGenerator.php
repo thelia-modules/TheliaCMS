@@ -31,6 +31,7 @@ use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentUsage;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Content\Site\SitePropReader;
+use TheliaCMS\Generation\Ai\CorrelationId;
 use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Generation\Ai\ObservedStream;
 use TheliaCMS\Generation\Ai\SentBackAnswer;
@@ -97,6 +98,7 @@ final readonly class ComponentGenerator
             outputSchema: new AiOutputSchema('site_component', ComponentPrompt::schema()),
             maxOutputTokens: $this->settings->maxTokens(),
             providerOptions: ['anthropic' => ['effort' => $this->settings->effort()]],
+            correlationId: CorrelationId::new('theliacms', 'component', $request->componentId ?? 0),
         );
         $usage = new Usage();
         $costUsd = 0.0;
