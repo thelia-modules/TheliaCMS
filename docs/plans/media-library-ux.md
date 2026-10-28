@@ -74,7 +74,7 @@ copied in), viewport 1862 px:
   when used, with a message that says "page(s)" while the count includes
   catalogue items (`CmsMediaAdminController.php:160`).
 - **Pickers**: two implementations. The image of a page is a grid of radio
-  cards (`Page/Admin/PageImageChoices.php:43`), the image prop of a section is
+  cards (`Page/Admin/PageImageChoices.php:43`, removed since), the image prop of a section is
   a native `<select>` of titles (`Generation/Admin/SectionFormBuilder.php:422`).
   Both list the 200 newest, without search. The page picker adds the current
   image when it is older (`PageImageChoices.php:46-52`); **the section picker
