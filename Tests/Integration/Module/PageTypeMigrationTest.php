@@ -27,6 +27,10 @@ use TheliaCMS\TheliaCMS;
  * would undo nothing and the test would prove nothing. The schema is put back
  * the way 1.1.0 left it, the update is played, then the table and the column
  * are restored by hand to what the shop had before the test.
+ *
+ * A column is dropped with ALGORITHM=COPY: MariaDB drops it instantly
+ * otherwise and keeps it in the rows, so about thirty runs leave the table
+ * refusing the column back ("Row size too large").
  */
 final class PageTypeMigrationTest extends CmsIntegrationTestCase
 {
@@ -145,7 +149,7 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
     {
         // A test database prepared before 2.3.1 has no column to drop.
         if ([] !== $this->rows("SHOW COLUMNS FROM cms_item_revision LIKE 'label'")) {
-            $this->getPropelConnection()->exec('ALTER TABLE cms_item_revision DROP COLUMN label');
+            $this->getPropelConnection()->exec('ALTER TABLE cms_item_revision DROP COLUMN label, ALGORITHM=COPY');
         }
 
         self::assertSame([], $this->rows("SHOW COLUMNS FROM cms_item_revision LIKE 'label'"));
@@ -162,7 +166,7 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
 
     private function withoutInstructions(): void
     {
-        $this->getPropelConnection()->exec('ALTER TABLE cms_page_type DROP COLUMN instructions');
+        $this->getPropelConnection()->exec('ALTER TABLE cms_page_type DROP COLUMN instructions, ALGORITHM=COPY');
         self::assertFalse($this->typeColumnExists('instructions'));
     }
 

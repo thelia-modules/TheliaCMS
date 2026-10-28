@@ -28,6 +28,10 @@ use TheliaCMS\TheliaCMS;
  * would undo nothing and the test would prove nothing. The tables are put back
  * the way 1.5.0 left them, the update is played, and the shop ends up on the
  * shape it had before the test.
+ *
+ * A column is dropped with ALGORITHM=COPY: MariaDB drops it instantly
+ * otherwise and keeps it in the rows, so about thirty runs leave the table
+ * refusing the column back ("Row size too large").
  */
 final class ContentMigrationTest extends CmsIntegrationTestCase
 {
@@ -106,7 +110,7 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
     {
         $connection = $this->getPropelConnection();
 
-        $connection->exec('ALTER TABLE cms_page_content DROP COLUMN draft_document, DROP COLUMN published_document, ADD COLUMN draft_project_data LONGTEXT AFTER locale, ADD COLUMN draft_css LONGTEXT AFTER draft_html, ADD COLUMN published_css LONGTEXT AFTER published_html');
+        $connection->exec('ALTER TABLE cms_page_content DROP COLUMN draft_document, DROP COLUMN published_document, ADD COLUMN draft_project_data LONGTEXT AFTER locale, ADD COLUMN draft_css LONGTEXT AFTER draft_html, ADD COLUMN published_css LONGTEXT AFTER published_html, ALGORITHM=COPY');
 
         // The tables of the blocks and of the saved templates as 1.5.0 had
         // them, with a block of a product in them.
@@ -116,7 +120,7 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
         $connection->exec("INSERT INTO cms_block_content (block_id, locale, draft_html) VALUES (LAST_INSERT_ID(), 'fr_FR', '<p>Bloc</p>')");
         $connection->exec("INSERT INTO cms_item_block (item_type, item_id, block_id, created_at, updated_at) SELECT 'product', 1, id, NOW(), NOW() FROM cms_block WHERE code = 'product-1'");
 
-        $connection->exec('ALTER TABLE cms_page_revision DROP COLUMN document, ADD COLUMN project_data LONGTEXT AFTER locale, ADD COLUMN css LONGTEXT AFTER html');
+        $connection->exec('ALTER TABLE cms_page_revision DROP COLUMN document, ADD COLUMN project_data LONGTEXT AFTER locale, ADD COLUMN css LONGTEXT AFTER html, ALGORITHM=COPY');
 
         $connection->prepare('UPDATE cms_page_content SET draft_project_data = ?, draft_css = ?, published_css = ? WHERE page_id = ? AND locale = ?')
             ->execute(['{"pages":[{"frames":[]}]}', 'body{color:red}', '.cms-page-content{color:red}', $pageId, $locale]);
