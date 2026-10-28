@@ -118,6 +118,23 @@ final class ItemContentScreenTest extends AdminScreenTestCase
         self::assertNull($row->getPublishedAt(), 'Taken offline from the tab.');
     }
 
+    public function testADraftTheValidatorRefusesIsReportedRatherThanPublished(): void
+    {
+        $content = $this->content();
+
+        $form = $this->screen($this->url($content))->filter('[data-testid="cms-content-add-cms:richtext"]')->form();
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        $row = CmsItemContentQuery::create()->filterByItemType('content')->filterByItemId($content->getId())->filterByLocale($this->locale())->findOne();
+        $row?->setDraftDocument(Document::richText('<p>Écrit par un script.</p>', 'Not an id')->toJson())->save();
+
+        $publish = $this->screen($this->url($content))->filter('form[data-testid="cms-content-publish"]')->form();
+        self::assertSame(302, $this->send('POST', $publish->getUri(), $publish->getPhpValues()), 'The screen says why, it does not fail.');
+
+        $row?->reload();
+        self::assertNull($row?->getPublishedAt(), 'Nothing went online.');
+    }
+
     public function testABriefWritesTheDraftOfTheItemAndIsFiledUnderIt(): void
     {
         $content = $this->content();

@@ -364,6 +364,7 @@ final readonly class CmsPageWriter
      * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
      * @throws ModelPagePublicationException   when the page is the model of its type
      * @throws MissingPageFieldsException      when a field the type requires is empty
+     * @throws InvalidDocumentException        when the draft is not a document the catalogue accepts
      */
     public function publish(CmsPage $page, string $locale): void
     {
@@ -415,6 +416,7 @@ final readonly class CmsPageWriter
      * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
      * @throws ModelPagePublicationException   when the page is the model of its type
      * @throws MissingPageFieldsException      when a field the type requires is empty
+     * @throws InvalidDocumentException        when the draft is not a document the catalogue accepts
      */
     public function assertPublishable(CmsPage $page, string $locale): void
     {
@@ -435,6 +437,7 @@ final readonly class CmsPageWriter
      * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
      * @throws ModelPagePublicationException   when the page is the model of its type
      * @throws MissingPageFieldsException      when a field the type requires is empty
+     * @throws InvalidDocumentException        when the draft is not a document the catalogue accepts
      */
     private function publishableHtml(CmsPage $page, string $locale, CmsPageContent $content, bool $withCustomCode): string
     {
@@ -457,8 +460,12 @@ final readonly class CmsPageWriter
             throw EmptyPageContentException::for((int) $page->getId(), $locale);
         }
 
+        // Validated here as on every other path that renders a document: a
+        // draft written by a script or an import never went through the
+        // editor, and the renderer is only meant to meet what the validator
+        // let through.
         $html = $this->images->rewrite(
-            $this->sanitizer->html($this->normalizer->html($this->renderer->render($document, $locale)), $withCustomCode),
+            $this->sanitizer->html($this->normalizer->html($this->renderer->render($this->validator->validate($document), $locale)), $withCustomCode),
         );
 
         // Refused rather than stored: the column would be null, the front would
