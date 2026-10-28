@@ -205,6 +205,7 @@ final readonly class ItemContentWriter
      *
      * @throws EmptyItemContentException     when the draft would put nothing online
      * @throws ItemHeadingStructureException when the headings are broken and the site keeps such a document offline
+     * @throws InvalidDocumentException      when the draft is not a document the catalogue accepts
      */
     public function publish(CatalogueItemType $type, int $id, string $locale): void
     {
@@ -278,8 +279,11 @@ final readonly class ItemContentWriter
             throw EmptyItemContentException::for($type, $id, $locale);
         }
 
+        // Validated here as on every other path that renders a document, as
+        // for a page: a draft written by a script or an import never went
+        // through the editor.
         $html = $this->images->rewrite(
-            $this->sanitizer->html($this->normalizer->html($this->renderer->render($document, $locale)), $withCustomCode),
+            $this->sanitizer->html($this->normalizer->html($this->renderer->render($this->validator->validate($document), $locale)), $withCustomCode),
         );
 
         if ($this->emptiness->isEmpty($html)) {

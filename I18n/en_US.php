@@ -1062,6 +1062,7 @@ return [
     'No content' => 'No content',
     'Publishing puts the draft online on the page of the item, under what the theme shows of it.' => 'Publishing puts the draft online on the page of the item, under what the theme shows of it.',
     'The content was not published: fix the heading structure first.' => 'The content was not published: fix the heading structure first.',
+    'The content was not published: it is no longer valid. Open it in the editor to see what to fix.' => 'The content was not published: it is no longer valid. Open it in the editor to see what to fix.',
     'This content is empty: write it before publishing it.' => 'This content is empty: write it before publishing it.',
     'The content is online on the page of the item.' => 'The content is online on the page of the item.',
     'The content is offline: the draft is kept.' => 'The content is offline: the draft is kept.',

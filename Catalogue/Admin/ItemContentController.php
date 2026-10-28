@@ -266,6 +266,14 @@ final readonly class ItemContentController
             $this->flash($request, 'danger', $this->translate('The content was not published: fix the heading structure first.'));
 
             return $this->back($item, $lang);
+        } catch (InvalidDocumentException $exception) {
+            foreach ($exception->problems as $problem) {
+                $this->flash($request, 'danger', $problem);
+            }
+
+            $this->flash($request, 'danger', $this->translate('The content was not published: it is no longer valid. Open it in the editor to see what to fix.'));
+
+            return $this->back($item, $lang);
         } catch (EmptyItemContentException) {
             $this->flash($request, 'danger', $this->translate('This content is empty: write it before publishing it.'));
 

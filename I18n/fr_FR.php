@@ -1062,6 +1062,7 @@ return [
     'No content' => 'Aucun contenu',
     'Publishing puts the draft online on the page of the item, under what the theme shows of it.' => 'Publier met le brouillon en ligne sur la page de l’élément, sous ce que le thème en montre.',
     'The content was not published: fix the heading structure first.' => 'Le contenu n’a pas été publié : corrigez d’abord la structure des intertitres.',
+    'The content was not published: it is no longer valid. Open it in the editor to see what to fix.' => 'Le contenu n’a pas été publié : il n’est plus valide. Ouvrez-le dans l’éditeur pour voir ce qu’il faut corriger.',
     'This content is empty: write it before publishing it.' => 'Ce contenu est vide : écrivez-le avant de le publier.',
     'The content is online on the page of the item.' => 'Le contenu est en ligne sur la page de l’élément.',
     'The content is offline: the draft is kept.' => 'Le contenu est retiré du site : le brouillon est conservé.',

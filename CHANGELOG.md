@@ -251,7 +251,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   `thelia_cms:publish --dry-run` and put online by a real run. It is now
   validated before it is rendered, and what is rendered is the validated
   document. The command reports the page under "Refused", and the editor
-  buttons name the problems.
+  buttons name the problems. The CMS content of a product, a category, a
+  content or a folder is validated the same way before it goes online.
 - **A long page goes online whole.** The published content went through the
   sanitizer of Symfony with its default limit of 20 000 bytes, and whatever
   came after was dropped without a warning: terms of sale, a long FAQ, or a

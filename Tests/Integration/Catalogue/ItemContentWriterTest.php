@@ -100,6 +100,28 @@ final class ItemContentWriterTest extends CmsIntegrationTestCase
         $this->itemWriter()->saveContent(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale(), new Document([new Section('a', 'Nope:Missing', [])]));
     }
 
+    /**
+     * A draft written by a script or an import never went through the editor,
+     * and the editor is where the document is validated. The id below is one
+     * the validator refuses and the renderer does not notice.
+     */
+    public function testADraftWrittenOutsideTheEditorThatTheValidatorRefusesIsNotPublished(): void
+    {
+        $this->itemWriter()->saveContent(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale(), Document::richText('<h2>Titre</h2><p>Texte</p>'));
+        $this->contents()->find(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale())
+            ?->setDraftDocument(Document::richText('<h2>Titre</h2><p>Texte</p>', 'Not an id')->toJson())
+            ->save();
+
+        try {
+            $this->itemWriter()->publish(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale());
+            self::fail('A draft the validator refuses is not published.');
+        } catch (InvalidDocumentException) {
+        }
+
+        self::assertNull($this->contents()->find(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale())?->getPublishedAt());
+        self::assertSame(0, CmsItemRevisionQuery::create()->filterByItemType('product')->filterByItemId(self::PRODUCT_ID)->count());
+    }
+
     public function testAnItemWithNothingOnItIsNotPublishedAndLeavesNoRevision(): void
     {
         try {
