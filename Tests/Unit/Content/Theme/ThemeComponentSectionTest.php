@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Unit\Content\Theme;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Translation\LocaleSwitcher;
+use Symfony\Component\Translation\Translator;
 use Symfony\UX\TwigComponent\ComponentRendererInterface;
 use TheliaCMS\Content\Prop;
 use TheliaCMS\Content\PropSchema;
@@ -23,7 +25,8 @@ use TheliaCMS\Content\Theme\ThemeComponentSection;
 /**
  * A component of the theme that takes several records gets their ids as a
  * list, the way a template of the theme would hand them over, while the
- * document stores rows an editor picks one by one.
+ * document stores rows an editor picks one by one. It is drawn in the
+ * language of the page, whoever saves it.
  */
 final class ThemeComponentSectionTest extends TestCase
 {
@@ -63,5 +66,23 @@ final class ThemeComponentSectionTest extends TestCase
             $section->sample(),
             'The theme fills what it gives, the defaults the rest, and a prop the component does not take is left out.',
         );
+    }
+
+    public function testTheComponentIsDrawnInTheLanguageOfThePage(): void
+    {
+        $translator = new Translator('en_US');
+        $drawnIn = null;
+        $renderer = $this->createStub(ComponentRendererInterface::class);
+        $renderer->method('createAndRender')->willReturnCallback(static function () use ($translator, &$drawnIn): string {
+            $drawnIn = $translator->getLocale();
+
+            return '<div></div>';
+        });
+        $section = new ThemeComponentSection('Organisms:RecipeSteps:Base', '', new PropSchema([Prop::text('title', 'title')]), ['title' => 'title'], $renderer, localeSwitcher: new LocaleSwitcher('en_US', [$translator]));
+
+        $section->render(['title' => 'Préparation'], 'fr_FR');
+
+        self::assertSame('fr_FR', $drawnIn, 'A page in French is drawn in French, whatever the language of the one saving it.');
+        self::assertSame('en_US', $translator->getLocale(), 'The language of the request is given back.');
     }
 }
