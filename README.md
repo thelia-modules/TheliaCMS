@@ -467,6 +467,11 @@ whether an image was described or simply forgotten, so the choice is recorded.
 Each image shows its dimensions, weight, format and the pages using it, in their
 content or as their image. One still in use cannot be deleted.
 
+The list shows 48 images a page. It narrows to the images still to describe
+in the language edited, the unused ones, the decorative ones or one tag, and
+orders them newest, oldest, by title or heaviest first. The search reads the
+title, the alternative text, the caption and the tags.
+
 Uploads accept JPEG, PNG and WebP. SVG is refused: it is a document that can
 carry script.
 

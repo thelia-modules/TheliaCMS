@@ -16,6 +16,7 @@ namespace TheliaCMS\Media\Admin;
 
 use Thelia\Model\Lang;
 use TheliaCMS\Media\CmsMediaLibrary;
+use TheliaCMS\Media\MediaFilter;
 use TheliaLibrary\Model\LibraryImage;
 
 /**
@@ -33,14 +34,25 @@ final readonly class MediaCatalog
     }
 
     /**
-     * @return list<MediaItem>
+     * The page of the library a query asks for. Past the last page, the last
+     * one: an address kept from a larger library still shows images.
      */
-    public function grid(string $locale, ?string $search = null): array
+    public function browse(MediaQuery $query, string $locale): MediaGrid
     {
-        $images = $this->library->images($search);
+        $imageIds = $this->library->selection($locale, $query->search, $query->filter, $query->tag);
+
+        if ([] !== $imageIds && MediaFilter::Unused === $query->filter) {
+            // What uses an image is read from the content of every page and
+            // item, once for all of them.
+            $imageIds = array_keys(array_filter($this->usages->countsFor($imageIds), static fn (int $count): bool => 0 === $count));
+        }
+
+        $total = \count($imageIds);
+        $page = min($query->page, max(1, (int) ceil($total / MediaQuery::PER_PAGE)));
+        $images = $this->library->sorted($imageIds, $query->order, $locale, ($page - 1) * MediaQuery::PER_PAGE, MediaQuery::PER_PAGE);
 
         if ([] === $images) {
-            return [];
+            return new MediaGrid([], $total, $page, MediaQuery::PER_PAGE);
         }
 
         $counts = $this->usages->countsFor(array_map(static fn (LibraryImage $image): int => (int) $image->getId(), $images));
@@ -55,7 +67,7 @@ final readonly class MediaCatalog
             }
         }
 
-        return $items;
+        return new MediaGrid($items, $total, $page, MediaQuery::PER_PAGE);
     }
 
     /**

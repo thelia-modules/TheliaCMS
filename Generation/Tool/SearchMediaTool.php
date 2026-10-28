@@ -37,14 +37,14 @@ final readonly class SearchMediaTool implements GeneratorToolInterface
 
     public function description(): string
     {
-        return 'Finds the images of the media library of the site, by a part of their title or a tag; an empty query lists the latest. The id is what an image prop takes; never use an id that did not come from here.';
+        return 'Finds the images of the media library of the site, by a part of their title, their description, their caption or a tag; an empty query lists the latest. The id is what an image prop takes; never use an id that did not come from here.';
     }
 
     public function inputSchema(): array
     {
         return [
             'type' => 'object',
-            'properties' => ['query' => ['type' => 'string', 'description' => 'A word of the title or a tag, or empty for the latest images.']],
+            'properties' => ['query' => ['type' => 'string', 'description' => 'A word of the title, the description, the caption or a tag, or empty for the latest images.']],
             'required' => ['query'],
             'additionalProperties' => false,
         ];

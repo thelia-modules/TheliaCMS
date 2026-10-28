@@ -22,6 +22,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.3.1)
 
+- **The media list is paged, filtered and ordered.** 48 images a page, the
+  last page when the address asks for one past it. It shows what is still to
+  describe in the language edited, what no page and no item uses, the
+  decorative images, or one tag (offered with its count); newest, oldest, by
+  title or heaviest first. The list is an address: a filtered list can be
+  bookmarked and shared. The search reads the alternative text and the
+  caption as well as the title and the tags, and so does `search_media` for
+  the generator. It replaces the list of the 200 newest images, past which an
+  image could only be found by searching.
 - **The images of the catalogue can be copied into the media library.**
   `thelia_cms:media:import-catalogue` copies the images of products,
   categories, brands, folders and contents with their titles, alternative
@@ -146,6 +155,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed (2.3.1)
 
+- **An image with no row in the language edited is counted as still to
+  describe.** It showed the "no alternative text" badge and was left out of
+  the count above the list: an image uploaded in one language was never
+  counted in the others.
 - **The number that keeps an address unique stays out of the slug.** A page
   titled alike in two languages answers on `cookies` in one and `cookies-2` in
   the other, and the `-2` was stored as the slug of the second: shown in the

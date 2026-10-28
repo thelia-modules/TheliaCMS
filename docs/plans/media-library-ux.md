@@ -1,6 +1,11 @@
 # Plan: a media library that holds a catalogue
 
-Status: proposed (2026-10-28), nothing started. The import of the catalogue
+Status: lot 1 done (2026-10-28): `MediaQuery`, `MediaGrid`,
+`MediaFilter`, `MediaOrder`, `CmsMediaLibrary::selection()`, `sorted()`,
+`tagCounts()`, `MediaCatalog::browse()`; tests in
+`Tests/Integration/Media/MediaListScreenTest.php`. Found on the way and
+fixed: an image with no row in the language edited was left out of the
+count to describe. Lots 2 to 6 not started. The import of the catalogue
 images it starts from is done: `thelia_cms:media:import-catalogue`
 (`Media/CatalogueImageImporter.php`), a copy, run again without duplicates.
 
@@ -64,7 +69,8 @@ at the end, not in the lots.
   (in the edited language), unused, decorative, a tag (a list of the tags with
   their counts, the tags of the import included: Product, Category, a
   category name).
-- Search also in the alternative text, the caption and the file name.
+- Search also in the alternative text and the caption (not the file name:
+  the stored one is random, the uploaded one is the first title).
 - Usage computed for the page of images shown only, as today, but for 48
   instead of 200.
 - Tests: pagination, each filter, search fields, order.

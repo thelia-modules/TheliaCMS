@@ -31,6 +31,8 @@ use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Catalogue\CatalogueItems;
 use TheliaCMS\Media\CmsMediaLibrary;
+use TheliaCMS\Media\MediaFilter;
+use TheliaCMS\Media\MediaOrder;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -68,13 +70,17 @@ final readonly class CmsMediaAdminController
     public function list(Request $request): Response
     {
         $lang = $this->editLang($request);
-        $search = trim($request->query->getString('search'));
+        $query = MediaQuery::fromRequest($request);
+        $tally = $this->catalog->tally($lang->getLocale());
 
         return new Response($this->twig->render(self::LIST_TEMPLATE, [
-            'items' => $this->catalog->grid($lang->getLocale(), '' !== $search ? $search : null),
-            'tally' => $this->catalog->tally($lang->getLocale(), '' !== $search ? $search : null),
-            'search' => $search,
-            'has_library' => [] !== $this->library->images(),
+            'grid' => $this->catalog->browse($query, $lang->getLocale()),
+            'tally' => $tally,
+            'query' => $query,
+            'filters' => MediaFilter::cases(),
+            'orders' => MediaOrder::cases(),
+            'tags' => $this->library->tagCounts(),
+            'has_library' => $tally->total > 0,
             'accepted_mime_types' => implode(',', CmsMediaType::ACCEPTED_MIME_TYPES),
             'edit_locale' => $lang->getLocale(),
             'edit_language_id' => $lang->getId(),
