@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Content\Theme;
 
 use Symfony\UX\TwigComponent\ComponentRendererInterface;
+use TheliaCMS\Content\ImageSource;
 use TheliaCMS\Content\PropSchema;
 use TheliaCMS\Content\PropType;
 use TheliaCMS\Content\SectionDefinitionInterface;
@@ -99,8 +100,22 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
     public function render(array $props, string $locale): string
     {
         $forComponent = [];
+        $images = [];
+
+        foreach ($this->schema->props as $prop) {
+            if (PropType::Image === $prop->type) {
+                $images[] = $prop->name;
+            }
+        }
 
         foreach ($props as $name => $value) {
+            // A picture is stored as an id of the media library; the component
+            // prints what it is given in a src, as a template of the theme
+            // hands it an address.
+            if (\in_array($name, $images, true)) {
+                $value = ImageSource::of($value);
+            }
+
             // A prop left empty is left to the default of the component, which
             // may be an expression the reader could not evaluate.
             if ('' === $value || null === $value) {

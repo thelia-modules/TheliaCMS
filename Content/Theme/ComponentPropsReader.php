@@ -32,11 +32,13 @@ use Twig\Environment;
  * component takes (`mount()`): optional, except a record or a picture not
  * documented as nullable.
  *
- * Besides the scalar types, a prop may name what the site holds: `image` for
- * a picture of the media library, `product`, `category`, `folder`, `form` or
- * `menu` for one record picked by its id, and `product[]` or
- * `category[]` for several, in the order they were picked. The component
- * receives the ids, as it would from a template of the theme.
+ * Besides the scalar types, `html` is markup, filtered by the writer on the
+ * rendered page, and a prop may name what the site holds: `image`
+ * for a picture of the media library, handed to the component as its address,
+ * `product`, `category`, `folder`, `form` or `menu` for one record picked by
+ * its id, and `product[]` or `category[]` for several, in the order they were
+ * picked. The component receives the ids, as it would from a template of the
+ * theme.
  *
  * Read at every call rather than cached: the theme is edited while the site
  * runs, and the schema has to follow the template.
@@ -318,6 +320,10 @@ final readonly class ComponentPropsReader
 
         if (array_intersect($kinds, ['array', 'list', 'iterable', 'object']) || preg_grep('/^(array|list)</', $kinds)) {
             return Prop::json($name, $name, \is_array($default) ? $default : [], $description);
+        }
+
+        if (\in_array('html', $kinds, true)) {
+            return Prop::html($name, $name, \is_string($default) ? $default : '', $required, $description);
         }
 
         return Prop::text($name, $name, \is_scalar($default) ? (string) $default : '', $required, 500, $description);
