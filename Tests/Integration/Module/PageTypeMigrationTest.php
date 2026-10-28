@@ -164,6 +164,33 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
         self::assertSame('YES', $column[0]['Null']);
     }
 
+    public function testTheUpdateTo240GivesTheLedgerTheRowOfTheLogOfTheCoreAndCanBePlayedTwice(): void
+    {
+        $connection = $this->getPropelConnection();
+
+        // A test database prepared before 2.4.0 has no column to drop.
+        if ([] !== $this->rows("SHOW COLUMNS FROM cms_page_generation LIKE 'log_id'")) {
+            $connection->exec('ALTER TABLE cms_page_generation DROP COLUMN log_id');
+        }
+
+        self::assertSame([], $this->rows("SHOW COLUMNS FROM cms_page_generation LIKE 'log_id'"));
+        $connection->exec("INSERT INTO cms_page_generation (target_type, target_id, locale, kind, status, cost_usd, created_at, updated_at) VALUES ('page', 1, 'en_US', 'brief', 'done', 0.123456, NOW(), NOW())");
+
+        $module = new TheliaCMS();
+        $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+        $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+
+        $column = $this->rows("SHOW COLUMNS FROM cms_page_generation LIKE 'log_id'");
+        self::assertCount(1, $column);
+        self::assertMatchesRegularExpression('/^int/', strtolower((string) $column[0]['Type']));
+        self::assertSame('YES', $column[0]['Null']);
+        self::assertCount(1, $this->rows("SHOW INDEX FROM cms_page_generation WHERE Key_name = 'idx_cms_page_generation_log'"));
+        self::assertNull($this->rows('SELECT log_id FROM cms_page_generation ORDER BY id DESC LIMIT 1')[0]['log_id'], 'A call written before 2.4.0 has no row in the log of the core.');
+        self::assertSame('0.123456', $this->rows('SELECT cost_usd FROM cms_page_generation ORDER BY id DESC LIMIT 1')[0]['cost_usd'], 'The update keeps what the ledger holds.');
+
+        $connection->exec('DELETE FROM cms_page_generation WHERE target_id = 1 AND cost_usd = 0.123456');
+    }
+
     private function withoutInstructions(): void
     {
         $this->getPropelConnection()->exec('ALTER TABLE cms_page_type DROP COLUMN instructions, ALGORITHM=COPY');

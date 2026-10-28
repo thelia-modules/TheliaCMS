@@ -526,6 +526,7 @@ CREATE TABLE `cms_page_generation`
     `brief` LONGTEXT,
     `model` VARCHAR(60),
     `request_id` VARCHAR(80),
+    `log_id` INTEGER,
     `status` VARCHAR(20) DEFAULT 'done' NOT NULL,
     `stop_reason` VARCHAR(30),
     `stop_category` VARCHAR(60),
@@ -544,7 +545,8 @@ CREATE TABLE `cms_page_generation`
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
-    INDEX `idx_cms_page_generation_target` (`target_type`, `target_id`, `locale`)
+    INDEX `idx_cms_page_generation_target` (`target_type`, `target_id`, `locale`),
+    INDEX `idx_cms_page_generation_log` (`log_id`)
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------

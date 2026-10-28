@@ -101,11 +101,12 @@ final readonly class TextGenerator
         );
         $usage = new Usage();
         $costUsd = 0.0;
+        $coreLogId = null;
         $turns = 0;
         $corrections = 0;
         $finishReason = null;
 
-        $record = function (string $status, ?string $error = null, ?string $html = null) use ($request, $prompt, &$model, $started, &$usage, &$turns, &$finishReason): int {
+        $record = function (string $status, ?string $error = null, ?string $html = null) use ($request, $prompt, &$model, $started, &$usage, &$costUsd, &$coreLogId, &$turns, &$finishReason): int {
             return $this->log->record(
                 $request,
                 $status,
@@ -114,6 +115,8 @@ final readonly class TextGenerator
                 $usage,
                 $turns,
                 (int) ((hrtime(true) - $started) / 1_000_000),
+                $costUsd,
+                $coreLogId,
                 null,
                 $finishReason,
                 null,
@@ -138,6 +141,7 @@ final readonly class TextGenerator
                 $finishReason = $response->finishReason->value;
                 $usage = $usage->plusTokens($response->tokenUsage);
                 $costUsd += (float) $response->cost;
+                $coreLogId = $response->logId;
                 $this->finishReasons->assertUsable($response->finishReason, $this->settings->textMaxTokens(), 'raise the limit of the texts in the settings or ask for a shorter text.');
 
                 if ($response->hasToolCalls()) {

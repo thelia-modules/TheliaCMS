@@ -613,7 +613,9 @@
         cost. It is the history of a page an editor iterates on, and the
         ledger the site reads its spend from. `target_type` and `target_id`
         carry no foreign key: a generation for a page the site later deleted
-        is still a cost.
+        is still a cost. `log_id` is the row of `ai_usage_log` of the core that
+        holds the last request of the call, and carries no foreign key either:
+        the core may purge its log.
     -->
     <table name="cms_page_generation" namespace="TheliaCMS\Model">
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
@@ -625,6 +627,7 @@
         <column name="brief" type="CLOB"/>
         <column name="model" size="60" type="VARCHAR"/>
         <column name="request_id" size="80" type="VARCHAR"/>
+        <column name="log_id" type="INTEGER"/>
         <column defaultValue="done" name="status" required="true" size="20" type="VARCHAR"/>
         <column name="stop_reason" size="30" type="VARCHAR"/>
         <column name="stop_category" size="60" type="VARCHAR"/>
@@ -645,6 +648,9 @@
             <index-column name="target_type"/>
             <index-column name="target_id"/>
             <index-column name="locale"/>
+        </index>
+        <index name="idx_cms_page_generation_log">
+            <index-column name="log_id"/>
         </index>
 
         <behavior name="timestampable"/>

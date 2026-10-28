@@ -388,12 +388,12 @@
                                                                 {% elseif page.tokens is null %}
                                                                     <span class="text-muted">{{ 'not counted'|trans({}, 'theliacms') }}</span>
                                                                 {% else %}
-                                                                    <span class="text-muted">{{ '%tokens% tokens, about %cost% USD a reading'|trans({ '%tokens%': page.tokens|number_format(0, '.', ' '), '%cost%': page.cost }, 'theliacms') }}</span>
+                                                                    <span class="text-muted">{{ '%tokens% tokens a reading'|trans({ '%tokens%': page.tokens|number_format(0, '.', ' ') }, 'theliacms') }}</span>
                                                                 {% endif %}
                                                             </li>
                                                         {% endfor %}
                                                     </ul>
-                                                    <p class="text-muted mb-0">{{ 'Included in the cost of the call. A page read at several turns is billed each time, at the cache price after the first.'|trans({}, 'theliacms') }}</p>
+                                                    <p class="text-muted mb-0">{{ 'Included in the tokens and the cost of the call. The text of a page read stays in the conversation and is sent again at each following turn.'|trans({}, 'theliacms') }}</p>
                                                 </details>
                                             {% endif %}
                                         </td>

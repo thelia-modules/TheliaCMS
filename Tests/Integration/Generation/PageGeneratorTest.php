@@ -71,6 +71,25 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         parent::tearDown();
     }
 
+    public function testTheLedgerKeepsTheCostOfTheCoreAndTheRowOfItsLog(): void
+    {
+        $page = $this->createPage('Nos services', published: false);
+        $locale = $this->locale();
+
+        $this->api
+            ->streamed([], FakeAiGateway::response('', toolCalls: [new AiToolCall('toolu_1', 'search_pages', ['query' => 'tarif'])], logId: 4100))
+            ->streamed([], FakeAiGateway::response(self::document([
+                ['id' => 'hero', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Nos services</h1>']],
+            ]), logId: 4101));
+
+        $result = $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Une page qui présente nos services de conseil.')));
+
+        $row = CmsPageGenerationQuery::create()->findPk($result->logId);
+
+        self::assertSame('0.002000', $row?->getCostUsd(), 'The ledger sums what the core announced for each request.');
+        self::assertSame(4101, $row->getLogId(), 'The row points at the last request of the call in the log of the core.');
+    }
+
     public function testABriefBecomesADocumentThroughTheToolsAndTheSchema(): void
     {
         $linked = $this->createPage('Nos tarifs');

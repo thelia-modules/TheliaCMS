@@ -130,6 +130,7 @@ final readonly class PageGenerator
         );
         $usage = new Usage();
         $costUsd = 0.0;
+        $coreLogId = null;
         $turns = 0;
         $corrections = 0;
         $finishReason = null;
@@ -141,7 +142,7 @@ final readonly class PageGenerator
         // A closure over references: the tokens, the turns and the pages read
         // are what they are when the outcome is written, not when the call
         // started.
-        $record = function (string $status, ?string $error = null, ?string $document = null, array $leftOut = []) use ($request, $prompt, &$model, $started, &$usage, &$turns, &$finishReason, &$reads): int {
+        $record = function (string $status, ?string $error = null, ?string $document = null, array $leftOut = []) use ($request, $prompt, &$model, $started, &$usage, &$costUsd, &$coreLogId, &$turns, &$finishReason, &$reads): int {
             return $this->log->record(
                 $request,
                 $status,
@@ -150,6 +151,8 @@ final readonly class PageGenerator
                 $usage,
                 $turns,
                 (int) ((hrtime(true) - $started) / 1_000_000),
+                $costUsd,
+                $coreLogId,
                 null,
                 $finishReason,
                 null,
@@ -178,6 +181,7 @@ final readonly class PageGenerator
                 $finishReason = $response->finishReason->value;
                 $usage = $usage->plusTokens($response->tokenUsage);
                 $costUsd += (float) $response->cost;
+                $coreLogId = $response->logId;
                 $this->finishReasons->assertUsable($response->finishReason, $this->settings->maxTokens(), 'raise the limit of the generator or ask for a shorter page.');
 
                 if ($response->hasToolCalls()) {

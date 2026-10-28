@@ -99,10 +99,11 @@ final readonly class ComponentGenerator
         );
         $usage = new Usage();
         $costUsd = 0.0;
+        $coreLogId = null;
         $turns = 0;
         $finishReason = null;
 
-        $record = function (string $status, ?string $error = null, ?string $component = null) use ($request, &$model, $started, &$usage, &$turns, &$finishReason): int {
+        $record = function (string $status, ?string $error = null, ?string $component = null) use ($request, &$model, $started, &$usage, &$costUsd, &$coreLogId, &$turns, &$finishReason): int {
             return $this->log->recordComponent(
                 $request->componentId ?? 0,
                 $request->locale,
@@ -113,6 +114,8 @@ final readonly class ComponentGenerator
                 $usage,
                 $turns,
                 (int) ((hrtime(true) - $started) / 1_000_000),
+                $costUsd,
+                $coreLogId,
                 null,
                 $finishReason,
                 null,
@@ -135,6 +138,7 @@ final readonly class ComponentGenerator
                 $finishReason = $response->finishReason->value;
                 $usage = $usage->plusTokens($response->tokenUsage);
                 $costUsd += (float) $response->cost;
+                $coreLogId = $response->logId;
                 $observer?->onTurn($turns, []);
                 $this->finishReasons->assertUsable($response->finishReason, $this->settings->maxTokens(), 'raise the limit of the generator or ask for a simpler component.');
 

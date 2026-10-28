@@ -26,7 +26,6 @@ use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationRequest;
 use TheliaCMS\Generation\GeneratorSettings;
-use TheliaCMS\Generation\Pricing;
 use TheliaCMS\Generation\WebPageRead;
 use TheliaCMS\Model\CmsPageGeneration;
 use TheliaCMS\Security\CmsResources;
@@ -55,7 +54,6 @@ final readonly class ContentScreen
         private GeneratorSettings $settings,
         private SectionFormBuilder $sectionForms,
         private ToolkitLink $toolkit,
-        private Pricing $pricing,
         private PreviewWidths $previewWidths,
         private SectionChoices $sectionChoices,
     ) {
@@ -219,7 +217,7 @@ final readonly class ContentScreen
     }
 
     /**
-     * @return array{id: int, date: \DateTimeInterface|null, kind: string, status: string, status_class: string, cost: string, duration: string, turns: int, error: string|null, pages: list<array{url: string, read: bool, error: string|null, tokens: int|null, cost: string|null}>, left_out: list<string>}
+     * @return array{id: int, date: \DateTimeInterface|null, kind: string, status: string, status_class: string, cost: string, duration: string, turns: int, error: string|null, pages: list<array{url: string, read: bool, error: string|null, tokens: int|null}>, left_out: list<string>}
      */
     private function row(CmsPageGeneration $row): array
     {
@@ -242,7 +240,6 @@ final readonly class ContentScreen
                 'read' => $page->wasRead(),
                 'error' => $page->errorCode,
                 'tokens' => $page->tokens,
-                'cost' => null === $page->tokens ? null : number_format($this->pricing->inputCost((string) $row->getModel(), $page->tokens), 3, '.', ''),
             ], GenerationLog::webPagesOf($row)),
             'left_out' => GenerationLog::leftOutOf($row),
         ];
