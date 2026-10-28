@@ -9,6 +9,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- **The `label` column of `cms_item_revision` reaches every site.** It was
+  shipped as the update to 2.3.1, a version the module already carried: a
+  site installed at 2.3.1 before that column existed never ran the update
+  and then queried a column it did not have. The update moves to 2.3.2 and
+  runs as a no-op where the column is already there.
 - **A publication no longer empties the shared cache of the whole site.**
   Every change to a page purged `cms` and `cms-menu`, which every page of the
   site carries, the shop included when the shared cache of Thelia is on. A
@@ -149,7 +154,7 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   screen lists them under *Previous drafts*, with the date and the number of
   sections; *Put it back* makes one the draft again and keeps the one it
   replaces in its place, so a restore is undone the same way. The update to
-  2.3.1 gives `cms_item_revision` the `label` column `cms_page_revision` had.
+  2.3.2 gives `cms_item_revision` the `label` column `cms_page_revision` had.
 
 - **Free text is edited where it stands.** A double click on a section of
   free text in the preview mounts the editor of the back office on it, in

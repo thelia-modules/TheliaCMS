@@ -1,4 +1,4 @@
--- 2.3.1: a revision of a catalogue item says what it is, as a revision of a
+-- 2.3.2: a revision of a catalogue item says what it is, as a revision of a
 -- page does: `cms_item_revision.label`, "draft" for the draft a generation
 -- replaced, empty for a publication.
 --
