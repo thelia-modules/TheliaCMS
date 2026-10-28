@@ -28,6 +28,8 @@ final readonly class ImportOptions
         public bool $replace = false,
         /** Whether the settings of the file are applied to this site. */
         public bool $withSettings = false,
+        /** Whether the markup of the file keeps its embeds, which the custom code right governs in the back office. */
+        public bool $allowCustomCode = false,
     ) {
     }
 }

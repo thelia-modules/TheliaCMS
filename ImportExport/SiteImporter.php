@@ -26,12 +26,20 @@ use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Catalogue\CatalogueItemKeys;
 use TheliaCMS\Catalogue\CatalogueItemType;
 use TheliaCMS\Catalogue\DealerStores;
+use TheliaCMS\Content\Document;
+use TheliaCMS\Content\DocumentValidator;
+use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
+use TheliaCMS\Content\Section;
+use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Form\FieldChoices;
+use TheliaCMS\Form\FormCode;
+use TheliaCMS\Form\Recipients;
+use TheliaCMS\Form\RetentionPolicy;
 use TheliaCMS\Generation\Brief;
 use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Model\CmsForm;
@@ -88,6 +96,8 @@ final readonly class SiteImporter
         private PageTypeWriter $pageTypeWriter,
         private PublishedContentSanitizer $sanitizer,
         private PageTagWriter $tagWriter,
+        private DocumentValidator $documentValidator,
+        private SectionCatalog $catalog,
         private ?SiteComponentRepository $components = null,
         private SiteComponentValidator $componentValidator = new SiteComponentValidator(),
         private CatalogueItemKeys $itemKeys = new CatalogueItemKeys(),
@@ -122,6 +132,9 @@ final readonly class SiteImporter
             $mediaMap = $this->mediaMap($document, $report);
             $this->importPageTypes($document, $report, $connection);
             $this->importComponents($document, $options, $report);
+            // The catalogue the documents are checked against is built once:
+            // it has to see the components just brought in.
+            $this->catalog->reset();
             $this->reportMissingComponents($document, $report);
             $pageIds = $this->importPages($document, $options, $report, $mediaMap, $connection);
             $this->importCatalogueContents($document, $options, $report, $mediaMap, $connection);
@@ -136,6 +149,7 @@ final readonly class SiteImporter
             $connection->commit();
         } catch (\Throwable $throwable) {
             $connection->rollBack();
+            $this->catalog->reset();
 
             throw $throwable;
         }
@@ -232,8 +246,8 @@ final readonly class SiteImporter
             foreach ($translations as $locale => $translation) {
                 $model->setLocale((string) $locale)
                     ->setTitle((string) ($translation['title'] ?? ''))
-                    ->setChapo($this->summaryHtml($translation['chapo'] ?? null))
-                    ->setDescription($this->summaryHtml($translation['description'] ?? null))
+                    ->setChapo($this->summaryHtml($translation['chapo'] ?? null, $options))
+                    ->setDescription($this->summaryHtml($translation['description'] ?? null, $options))
                     ->setFixedUrl(\is_string($translation['fixed_url'] ?? null) && '' !== trim($translation['fixed_url']) ? trim($translation['fixed_url']) : null)
                     ->setMetaTitle($translation['meta_title'] ?? null)
                     ->setMetaDescription($translation['meta_description'] ?? null)
@@ -250,7 +264,7 @@ final readonly class SiteImporter
             $model->save($connection);
             $pageIds[$uid] = (int) $model->getId();
 
-            $this->importPageContents($model, $document->carriesDocuments() ? $page['contents'] ?? [] : [], $mediaMap, $connection);
+            $this->importPageContents($model, $document->carriesDocuments() ? $page['contents'] ?? [] : [], $mediaMap, $options, $report, $connection);
 
             foreach ($translations as $locale => $translation) {
                 $this->refreshUrl($model, (string) $locale, $translation['slug'] ?? null, $report);
@@ -456,10 +470,11 @@ final readonly class SiteImporter
      * @param array<string, mixed> $contents
      * @param array<int, int>      $mediaMap
      */
-    private function importPageContents(CmsPage $page, array $contents, array $mediaMap, ConnectionInterface $connection): void
+    private function importPageContents(CmsPage $page, array $contents, array $mediaMap, ImportOptions $options, ImportReport $report, ConnectionInterface $connection): void
     {
         foreach ($contents as $locale => $content) {
             $locale = (string) $locale;
+            $where = \sprintf('page "%s" in %s', $page->setLocale($locale)->getTitle(), $locale);
 
             $model = CmsPageContentQuery::create()
                 ->filterByPageId($page->getId())
@@ -470,12 +485,12 @@ final readonly class SiteImporter
             // The model of a type is never published: a version the file
             // gives it, edited by hand or written elsewhere, is left out.
             $published = 1 === $page->getModel() ? [] : $content;
-            $publishedHtml = $this->media->remap($published['published_html'] ?? null, $mediaMap);
+            $publishedHtml = $this->importedHtml($published['published_html'] ?? null, $mediaMap, $options, $report, 'The published version of '.$where);
 
             $model
-                ->setDraftDocument($this->media->remap($content['draft_document'] ?? null, $mediaMap))
-                ->setDraftHtml($this->media->remap($content['draft_html'] ?? null, $mediaMap))
-                ->setPublishedDocument($this->media->remap($published['published_document'] ?? null, $mediaMap))
+                ->setDraftDocument($this->importedDocument($content['draft_document'] ?? null, $mediaMap, $report, 'The draft of '.$where))
+                ->setDraftHtml($this->importedHtml($content['draft_html'] ?? null, $mediaMap, $options, $report, 'The draft of '.$where))
+                ->setPublishedDocument($this->importedDocument($published['published_document'] ?? null, $mediaMap, $report, 'The published version of '.$where))
                 ->setPublishedHtml($publishedHtml)
                 ->setPublishedAt($this->date($published['published_at'] ?? null));
 
@@ -539,14 +554,15 @@ final readonly class SiteImporter
                 }
 
                 $locale = (string) $locale;
+                $where = \sprintf('the CMS content of the %s %s in %s', $type->value, self::describeKey($key), $locale);
                 $model = CmsItemContentQuery::create()->filterByItemType($type->value)->filterByItemId($id)->filterByLocale($locale)->findOne($connection)
                     ?? (new CmsItemContent())->setItemType($type->value)->setItemId($id)->setLocale($locale);
 
                 $model
-                    ->setDraftDocument($this->media->remap($content['draft_document'] ?? null, $mediaMap))
-                    ->setDraftHtml($this->media->remap($content['draft_html'] ?? null, $mediaMap))
-                    ->setPublishedDocument($this->media->remap($content['published_document'] ?? null, $mediaMap))
-                    ->setPublishedHtml($this->media->remap($content['published_html'] ?? null, $mediaMap))
+                    ->setDraftDocument($this->importedDocument($content['draft_document'] ?? null, $mediaMap, $report, 'The draft of '.$where))
+                    ->setDraftHtml($this->importedHtml($content['draft_html'] ?? null, $mediaMap, $options, $report, 'The draft of '.$where))
+                    ->setPublishedDocument($this->importedDocument($content['published_document'] ?? null, $mediaMap, $report, 'The published version of '.$where))
+                    ->setPublishedHtml($this->importedHtml($content['published_html'] ?? null, $mediaMap, $options, $report, 'The published version of '.$where))
                     ->setPublishedAt($this->date($content['published_at'] ?? null));
 
                 // As for a page: kept, or every imported document would read
@@ -734,6 +750,14 @@ final readonly class SiteImporter
                 continue;
             }
 
+            // A page prints the code in the script that reports a sent form.
+            if (!FormCode::isValid($code)) {
+                $report->warn(\sprintf('A form whose code "%s" is not lowercase letters, digits and dashes was left out.', mb_substr($code, 0, FormCode::MAX_LENGTH)));
+                $report->skipped('forms');
+
+                continue;
+            }
+
             $existing = CmsFormQuery::create()->findOneByCode($code);
 
             if (null !== $existing && !$options->replace) {
@@ -747,9 +771,9 @@ final readonly class SiteImporter
 
             $model
                 ->setActive(($form['active'] ?? true) ? 1 : 0)
-                ->setRecipients($form['recipients'] ?? null)
+                ->setRecipients(self::recipients($code, $form['recipients'] ?? null, $report))
                 ->setStoreSubmissions(($form['store_submissions'] ?? true) ? 1 : 0)
-                ->setRetentionDays((int) ($form['retention_days'] ?? 365))
+                ->setRetentionDays(self::retentionDays($code, $form['retention_days'] ?? null, $report))
                 ->setSendReceipt(($form['send_receipt'] ?? false) ? 1 : 0)
                 ->setLeadEvent(($form['lead_event'] ?? true) ? 1 : 0)
                 ->setPrivacyPolicyPageId(null !== $privacyUid ? ($pageIds[(string) $privacyUid] ?? null) : null)
@@ -795,6 +819,43 @@ final readonly class SiteImporter
 
             null !== $existing ? $report->replaced('forms') : $report->created('forms');
         }
+    }
+
+    /**
+     * The addresses of the file that are addresses: the back office refuses
+     * the others, and a form sending to them sends nowhere.
+     */
+    private static function recipients(string $code, mixed $stored, ImportReport $report): ?string
+    {
+        if (!\is_string($stored)) {
+            return null;
+        }
+
+        $rejected = Recipients::rejected($stored);
+
+        if ([] !== $rejected) {
+            $report->warn(\sprintf('Form "%s" was imported without the recipients that are not an email address: %s', $code, implode(', ', $rejected)));
+        }
+
+        $addresses = Recipients::parse($stored);
+
+        return [] === $addresses ? null : Recipients::toStorage($addresses);
+    }
+
+    /**
+     * Read as the form screen reads it: a negative duration, or one that is
+     * not a number at all, would keep the answers forever.
+     */
+    private static function retentionDays(string $code, mixed $stored, ImportReport $report): int
+    {
+        $days = \is_int($stored) || (\is_string($stored) && 1 === preg_match('/^-?\d+$/', $stored)) ? (int) $stored : null;
+        $kept = RetentionPolicy::normalize($days);
+
+        if (null !== $stored && $kept !== $days) {
+            $report->warn(\sprintf('The answers of form "%s" are kept %d days: the duration of the file is not one the form screen accepts.', $code, $kept));
+        }
+
+        return $kept;
     }
 
     /**
@@ -977,11 +1038,91 @@ final readonly class SiteImporter
     /**
      * The summary and the description of a page are printed by the theme as
      * they are. A file is not a trusted author either: nothing in it gets past
-     * the filter an editor without the custom code right is held to.
+     * the filter an editor without the custom code right is held to, unless
+     * the import is allowed custom code.
      */
-    private function summaryHtml(mixed $html): ?string
+    private function summaryHtml(mixed $html, ImportOptions $options): ?string
     {
-        return \is_string($html) ? $this->sanitizer->html($html) : null;
+        return \is_string($html) ? $this->sanitizer->html($html, $options->allowCustomCode) : null;
+    }
+
+    /**
+     * Markup of the file, filtered as a publication filters it: the draft is
+     * shown by the preview, the published version by the front, and both
+     * would otherwise carry whatever the file was edited to hold.
+     *
+     * @param array<int, int> $mediaMap
+     */
+    private function importedHtml(mixed $html, array $mediaMap, ImportOptions $options, ImportReport $report, string $where): ?string
+    {
+        if (!\is_string($html)) {
+            return null;
+        }
+
+        $remapped = (string) $this->media->remap($html, $mediaMap);
+        $filtered = $this->sanitizer->html($remapped, $options->allowCustomCode);
+
+        if ($filtered === $remapped) {
+            return $filtered;
+        }
+
+        $removedEmbeds = $this->sanitizer->customCodeCount($remapped) - $this->sanitizer->customCodeCount($filtered);
+
+        $report->warn(\sprintf(
+            '%s was filtered: it held markup a page may not publish%s.',
+            $where,
+            $removedEmbeds > 0 ? \sprintf(', among which %d element(s) of custom code, which an import keeps only when it is allowed custom code', $removedEmbeds) : '',
+        ));
+
+        return $filtered;
+    }
+
+    /**
+     * A document of the file, checked as the content screen checks the one it
+     * saves. The sections of a component of the site that neither the file
+     * nor this site has are kept as they are, and said so: the document is
+     * saved again once the component is made here. A document the screen
+     * would refuse otherwise is left out, and the content keeps only its
+     * filtered markup.
+     *
+     * @param array<int, int> $mediaMap
+     */
+    private function importedDocument(mixed $json, array $mediaMap, ImportReport $report, string $where): ?string
+    {
+        if (!\is_string($json)) {
+            return null;
+        }
+
+        $remapped = $this->media->remap($json, $mediaMap);
+
+        try {
+            $document = Document::fromJson($remapped);
+
+            if (null === $document) {
+                return null;
+            }
+
+            $known = array_values(array_filter($document->sections, $this->isKnownOrNotOfTheSite(...)));
+
+            if (\count($known) < \count($document->sections)) {
+                // The sections of the missing component have no schema to be
+                // read against here; every other one is checked all the same.
+                $this->documentValidator->validate(new Document($known));
+
+                return $remapped;
+            }
+
+            return $this->documentValidator->validate($document)->toJson();
+        } catch (InvalidDocumentException $exception) {
+            $report->warn(\sprintf('%s was imported without its document, which this site does not accept: %s', $where, implode(' ', $exception->problems)));
+
+            return null;
+        }
+    }
+
+    private function isKnownOrNotOfTheSite(Section $section): bool
+    {
+        return !str_starts_with($section->component, SiteComponent::PREFIX) || null !== $this->catalog->find($section->component);
     }
 
     private function date(mixed $value): ?\DateTimeImmutable
