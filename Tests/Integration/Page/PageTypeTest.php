@@ -14,8 +14,6 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Page;
 
-use Psr\Log\NullLogger;
-use TheliaCMS\Http\CachePurger;
 use TheliaCMS\Http\CachePurgerInterface;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\ImportExport\ImportOptions;
@@ -25,7 +23,6 @@ use TheliaCMS\ImportExport\SiteImporter;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\Map\CmsPageTableMap;
-use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Page\CmsPageRenderer;
 use TheliaCMS\Page\PageTemplateResolver;
@@ -206,7 +203,9 @@ final class PageTypeTest extends CmsIntegrationTestCase
         $page->setPageType('landing');
         $this->writerPurgingWith($purger)->saveDraft($page, $this->locale(), new PageDraft(title: 'Gratin de pâtes'));
 
-        self::assertSame(CacheTags::forPage((int) $page->getId()), $purger->purged);
+        // The page alone, and the lists of pages that may show its type: not
+        // the tags every page of the site is filed under.
+        self::assertSame([CacheTags::PAGE_LISTS, CacheTags::page((int) $page->getId())], $purger->purged);
     }
 
     public function testAFileWrittenBeforePageTypesKeepsTheLayoutOfItsPages(): void
@@ -319,25 +318,6 @@ final class PageTypeTest extends CmsIntegrationTestCase
         self::assertNotNull($reloaded);
 
         return $reloaded;
-    }
-
-    /**
-     * The writer of the container, but with a shared cache that remembers what
-     * it was told to drop.
-     */
-    private function writerPurgingWith(CachePurgerInterface $purger): CmsPageWriter
-    {
-        $arguments = [];
-
-        foreach ((new \ReflectionMethod(CmsPageWriter::class, '__construct'))->getParameters() as $parameter) {
-            /** @var class-string $type */
-            $type = (string) $parameter->getType();
-            $arguments[] = CachePurger::class === $type
-                ? new CachePurger([$purger], new NullLogger())
-                : $this->getService($type);
-        }
-
-        return new CmsPageWriter(...$arguments);
     }
 
     private function types(): PageTypeRepository
