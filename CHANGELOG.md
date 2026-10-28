@@ -7,8 +7,28 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Fixed
+
+- **A long page goes online whole.** The published content went through the
+  sanitizer of Symfony with its default limit of 20 000 bytes, and whatever
+  came after was dropped without a warning: terms of sale or a long FAQ went
+  online cut in the middle of a sentence. The limit is now 1 000 000 bytes
+  (`PublishedContentSanitizer::DEFAULT_MAX_LENGTH`), and a shop can pass its
+  own length to the service (`$maxLength`).
+
 ### Security
 
+- **An import filters what it writes like a publication does.** The draft
+  and the published markup and stylesheets of the pages and of the blocks
+  were stored as the file gave them: an export edited to hold a `<script>`,
+  run through `thelia_cms:import`, went online, past the custom code right.
+  The markup now goes through the sanitizer of a publication, iframes
+  included unless the new `--allow-custom-code` option is given, and the
+  stylesheets through the filter of a save. A form of the file is left out
+  when its code is not one the form screen accepts, loses the recipients that
+  are not email addresses, and gets a retention the screen accepts: a
+  negative one kept the answers forever. The report names each of them.
+  Tests import a hostile file and check what was stored.
 - **The guard of the back office reads the path the way the router does.**
   It compared the prefix `/admin/cms` with the path as the client wrote it,
   while the router decodes the path before it matches a route: with one

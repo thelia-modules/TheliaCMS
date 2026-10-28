@@ -57,6 +57,19 @@ final readonly class PublishedContentSanitizer
         'dir',
     ];
 
+    /**
+     * The longest markup read, in bytes. The sanitizer of Symfony stops at
+     * 20 000 by default and drops the rest without a word: a page of terms of
+     * sale went online cut in the middle of a sentence. A shop that publishes
+     * longer pages still passes its own length to the service.
+     */
+    public const int DEFAULT_MAX_LENGTH = 1_000_000;
+
+    public function __construct(
+        private int $maxLength = self::DEFAULT_MAX_LENGTH,
+    ) {
+    }
+
     public function html(?string $html, bool $allowCustomCode = false): ?string
     {
         if (null === $html || '' === trim($html)) {
@@ -98,6 +111,7 @@ final readonly class PublishedContentSanitizer
     private function sanitizerFor(bool $allowCustomCode): HtmlSanitizer
     {
         $config = (new HtmlSanitizerConfig())
+            ->withMaxInputLength($this->maxLength)
             ->allowSafeElements()
             ->allowAttribute('class', '*')
             ->allowAttribute('id', '*')

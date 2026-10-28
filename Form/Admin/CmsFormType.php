@@ -29,6 +29,7 @@ use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Range;
 use Symfony\Component\Validator\Constraints\Regex;
+use TheliaCMS\Form\FormCode;
 use TheliaCMS\Form\Recipients;
 use TheliaCMS\Form\RetentionPolicy;
 
@@ -51,8 +52,8 @@ final class CmsFormType extends AbstractType
                 'help' => 'How a page refers to this form, for example contact. Letters, digits, dashes.',
                 'constraints' => [
                     new NotBlank(),
-                    new Length(max: 50),
-                    new Regex(pattern: '/^[a-z0-9-]+$/', message: 'Use lowercase letters, digits and dashes only.'),
+                    new Length(max: FormCode::MAX_LENGTH),
+                    new Regex(pattern: FormCode::PATTERN, message: 'Use lowercase letters, digits and dashes only.'),
                 ],
             ])
             ->add('active', CheckboxType::class, [
