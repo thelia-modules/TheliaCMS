@@ -15,6 +15,10 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Generation\Component;
 
 use Psr\Log\NullLogger;
+use Thelia\Domain\Ai\AiFinishReason;
+use Thelia\Domain\Ai\AiMessageRole;
+use Thelia\Domain\Ai\AsAiUsage;
+use Thelia\Domain\Ai\Exception\AiBudgetExceededException;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentRepository;
@@ -24,17 +28,18 @@ use TheliaCMS\Front\BlockStyles;
 use TheliaCMS\Generation\Component\ComponentGenerator;
 use TheliaCMS\Generation\Component\ComponentPrompt;
 use TheliaCMS\Generation\Component\ComponentRequest;
+use TheliaCMS\Generation\GenerationException;
 use TheliaCMS\Generation\GenerationLog;
+use TheliaCMS\Generation\GenerationObserverInterface;
 use TheliaCMS\Generation\GenerationRefusedException;
 use TheliaCMS\Generation\GenerationTarget;
 use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\InvalidGenerationException;
-use TheliaCMS\Generation\Pricing;
 use TheliaCMS\Generation\ShopContext;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Skill\SkillRepository;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
-use TheliaCMS\Tests\Integration\Generation\FakeClaudeTransport;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 use TheliaCMS\Tests\Unit\Content\Site\PriceTable;
 
 /**
@@ -43,13 +48,13 @@ use TheliaCMS\Tests\Unit\Content\Site\PriceTable;
  */
 final class ComponentGeneratorTest extends CmsIntegrationTestCase
 {
-    private FakeClaudeTransport $api;
+    private FakeAiGateway $api;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->api = new FakeClaudeTransport();
+        $this->api = new FakeAiGateway();
     }
 
     public function testARequestBecomesAComponentTheSiteCanKeep(): void
@@ -63,12 +68,16 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
         self::assertSame(1, $result->turns);
 
         $request = $this->api->requests[0];
-        self::assertSame(ComponentPrompt::schema(), $request['output_config']['format']['schema'], 'The answer is constrained to a component.');
-        self::assertArrayNotHasKey('tools', $request, 'Making a component needs no tool of the site.');
-        self::assertSame(['type' => 'ephemeral'], end($request['system'])['cache_control'], 'The rules are cached.');
-        self::assertStringContainsString('var(--cms-color-accent)', json_encode($request['system'], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES), 'The tokens of the stylesheet are named.');
-        self::assertStringContainsString('`cms:richtext`', $request['messages'][0]['content'], 'The model is told what the site already has.');
-        self::assertStringContainsString('Un tableau de prix', $request['messages'][0]['content']);
+        self::assertSame('theliacms.component', $request->usageId, 'The call is the usage the module declares.');
+        self::assertSame(ComponentPrompt::schema(), $request->outputSchema?->schema, 'The answer is constrained to a component.');
+        self::assertSame([], $request->tools, 'Making a component needs no tool of the site.');
+        self::assertStringContainsString('var(--cms-color-accent)', (string) $request->system, 'The tokens of the stylesheet are named.');
+        self::assertStringContainsString('`cms:richtext`', $request->messages[0]->content, 'The model is told what the site already has.');
+        self::assertStringContainsString('Un tableau de prix', $request->messages[0]->content);
+        self::assertSame(AiMessageRole::User, $request->messages[0]->role);
+        self::assertSame('fake-model', $result->model);
+        self::assertSame(10, $result->usage->inputTokens);
+        self::assertSame(0.001, $result->costUsd, 'The cost is the one the gateway measured.');
 
         $row = CmsPageGenerationQuery::create()->findPk($result->logId);
         self::assertNotNull($row);
@@ -86,10 +95,10 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
         $result = $this->generator()->generate(new ComponentRequest('Un tableau de prix.', $this->locale()));
 
         self::assertSame(2, $result->turns);
-        $correction = $this->api->requests[1]['messages'][2]['content'];
+        $correction = $this->api->requests[1]->messages[2]->content;
         self::assertStringContainsString('cannot be kept', $correction);
         self::assertStringContainsString('"raw"', $correction);
-        self::assertSame('assistant', $this->api->requests[1]['messages'][1]['role'], 'The answer refused goes back with the problems.');
+        self::assertSame(AiMessageRole::Assistant, $this->api->requests[1]->messages[1]->role, 'The answer refused goes back with the problems.');
     }
 
     public function testANewComponentTakesAFreeCodeAndAChangeKeepsItsOwn(): void
@@ -105,15 +114,15 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
         $made = $this->generator()->generate(new ComponentRequest('Un tableau de prix.', $this->locale()));
 
         self::assertSame('PriceGrid', $made->component->code);
-        self::assertStringContainsString('"PriceTable" is already', $this->api->requests[1]['messages'][2]['content']);
+        self::assertStringContainsString('"PriceTable" is already', $this->api->requests[1]->messages[2]->content);
 
         $this->api->answer(self::answer($renamed))->answer(self::answer(PriceTable::component(css: '.plan--featured { border: 2px solid var(--cms-color-accent); }')));
         $id = (int) \TheliaCMS\Model\CmsComponentQuery::create()->findOneByCode('PriceTable')?->getId();
         $changed = $this->generator()->generate(new ComponentRequest('Mets la formule mise en avant en valeur.', $this->locale(), $current, $id));
 
         self::assertSame('PriceTable', $changed->component->code);
-        self::assertStringContainsString('stays "PriceTable"', $this->api->requests[3]['messages'][2]['content']);
-        self::assertStringContainsString('"code": "PriceTable"', $this->api->requests[2]['messages'][0]['content'], 'The component to change is sent with the request.');
+        self::assertStringContainsString('stays "PriceTable"', $this->api->requests[3]->messages[2]->content);
+        self::assertStringContainsString('"code": "PriceTable"', $this->api->requests[2]->messages[0]->content, 'The component to change is sent with the request.');
         self::assertSame([$id, ComponentRequest::KIND_CHANGE], [(int) CmsPageGenerationQuery::create()->findPk($changed->logId)?->getTargetId(), CmsPageGenerationQuery::create()->findPk($changed->logId)?->getKind()]);
     }
 
@@ -130,7 +139,7 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
         $result = $this->generator()->generate(new ComponentRequest('Renomme le nom des formules en titre.', $this->locale(), $current, (int) \TheliaCMS\Model\CmsComponentQuery::create()->findOneByCode('PriceTable')?->getId()));
 
         self::assertSame(2, $result->turns);
-        $correction = $this->api->requests[1]['messages'][2]['content'];
+        $correction = $this->api->requests[1]->messages[2]->content;
         self::assertStringContainsString('"Nos tarifs"', $correction, 'The page the version would break is named.');
         self::assertStringContainsString('"plans"', $correction);
         self::assertSame('.plan { padding: 1rem; }', $result->component->css);
@@ -152,22 +161,84 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
 
     public function testARefusalOfTheModelIsRecorded(): void
     {
-        $this->api->answer(FakeClaudeTransport::message([], 'refusal', [], ['type' => 'refusal', 'category' => 'general_harms', 'explanation' => 'Not this.']));
+        $this->api->answer(FakeAiGateway::response(finishReason: AiFinishReason::ContentFilter));
 
         try {
             $this->generator()->generate(new ComponentRequest('Something the model declines.', $this->locale()));
             self::fail('A refusal is no component.');
         } catch (GenerationRefusedException $exception) {
-            self::assertSame('refused', CmsPageGenerationQuery::create()->findPk($exception->logId)?->getStatus());
+            $row = CmsPageGenerationQuery::create()->findPk($exception->logId);
+            self::assertNotNull($row);
+            self::assertSame(['refused', 'content_filter'], [$row->getStatus(), $row->getStopReason()]);
         }
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private static function answer(SiteComponent $component): array
+    public function testAnAnswerCutByTheOutputLimitIsAnErrorInTheLedgerAndIsNotCorrected(): void
     {
-        return FakeClaudeTransport::message([FakeClaudeTransport::text(ComponentPrompt::json($component))]);
+        $this->api->answer(FakeAiGateway::response('{"code": "PriceTa', finishReason: AiFinishReason::MaxTokens));
+
+        try {
+            $this->generator()->generate(new ComponentRequest('Un tableau de prix.', $this->locale()));
+            self::fail('A cut answer is no component.');
+        } catch (GenerationException $exception) {
+            self::assertStringContainsString('was cut at', $exception->getMessage());
+            self::assertCount(1, $this->api->requests, 'A cut answer is not sent back for correction.');
+            self::assertSame('failed', CmsPageGenerationQuery::create()->findPk($exception->logId)?->getStatus());
+        }
+    }
+
+    public function testTheTextOfTheStreamIsToldToTheObserverAsItArrives(): void
+    {
+        $json = ComponentPrompt::json(PriceTable::component());
+        $this->api->streamed([substr($json, 0, 10), substr($json, 10)], FakeAiGateway::response($json));
+        $observer = new class implements GenerationObserverInterface {
+            /** @var list<int> */
+            public array $characters = [];
+
+            public function onTurn(int $turn, array $tools): void
+            {
+            }
+
+            public function onText(int $characters): void
+            {
+                $this->characters[] = $characters;
+            }
+
+            public function onCorrection(int $round, array $problems): void
+            {
+            }
+        };
+
+        $this->generator()->generate(new ComponentRequest('Un tableau de prix.', $this->locale()), $observer);
+
+        self::assertSame([10, mb_strlen($json)], $observer->characters);
+    }
+
+    public function testTheGatewayRefusingTheCallIsAnErrorInTheLedger(): void
+    {
+        $this->api->answer(new AiBudgetExceededException('theliacms.component'));
+
+        try {
+            $this->generator()->generate(new ComponentRequest('Un tableau de prix.', $this->locale()));
+            self::fail('A call the gateway refuses makes no component.');
+        } catch (GenerationException $exception) {
+            self::assertStringContainsString('budget', $exception->getMessage());
+            self::assertSame('failed', CmsPageGenerationQuery::create()->findPk($exception->logId)?->getStatus());
+        }
+    }
+
+    public function testTheUsageIsDeclaredOnTheGenerator(): void
+    {
+        $attributes = (new \ReflectionClass(ComponentGenerator::class))->getAttributes(AsAiUsage::class);
+
+        self::assertCount(1, $attributes);
+        $usage = $attributes[0]->newInstance();
+        self::assertSame(['theliacms.component', 'admin', 'advanced', 'generative'], [$usage->id, $usage->audience->value, $usage->tier->value, $usage->transparency->value]);
+    }
+
+    private static function answer(SiteComponent $component): \Thelia\Domain\Ai\AiResponse
+    {
+        return FakeAiGateway::response(ComponentPrompt::json($component));
     }
 
     private function generator(): ComponentGenerator
@@ -179,7 +250,6 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
             new SiteComponentValidator(),
             $this->getService(SiteComponentRepository::class),
             $this->getService(GenerationLog::class),
-            $this->getService(Pricing::class),
             new NullLogger(),
             new SiteComponentUsage(),
         );
