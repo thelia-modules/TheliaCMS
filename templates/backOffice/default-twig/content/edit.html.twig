@@ -117,12 +117,6 @@
 
         <div class="cms-content__stage">
             <aside class="cms-content__panel" aria-label="{{ 'Writing the content'|trans({}, 'theliacms') }}">
-                {% if generator_notice %}
-                    <div class="alert alert-warning small" role="status" data-testid="cms-content-notice">
-                        <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ generator_notice }}
-                    </div>
-                {% endif %}
-
                 {% if not may_generate %}
                     <div class="alert alert-secondary small" role="status" data-testid="cms-content-no-right">
                         {{ 'Your profile may read this screen and publish, not ask the generator to write.'|trans({}, 'theliacms') }}
@@ -165,7 +159,7 @@
                             <div class="col-6">{{ form_row(brief_form.tone) }}</div>
                             <div class="col-6">{{ form_row(brief_form.audience) }}</div>
                         </div>
-                        <button type="submit" class="btn btn-primary" data-testid="cms-content-generate"{% if not may_generate or generator_notice %} disabled{% endif %}>
+                        <button type="submit" class="btn btn-primary" data-testid="cms-content-generate"{% if not may_generate %} disabled{% endif %}>
                             <i class="bi bi-stars" aria-hidden="true"></i> {{ (replaces_draft ? 'Replace the draft' : 'Write the draft')|trans({}, 'theliacms') }}
                         </button>
                     {{ form_end(brief_form) }}
@@ -211,7 +205,7 @@
                             {{ form_start(change_form, { attr: { 'data-cms-generate': '', novalidate: 'novalidate' } }) }}
                                 <input type="hidden" name="_token" value="{{ assignToken() }}">
                                 {{ form_row(change_form.text, { label: false }) }}
-                                <button type="submit" class="btn btn-outline-primary" data-testid="cms-content-revise"{% if generator_notice %} disabled{% endif %}>
+                                <button type="submit" class="btn btn-outline-primary" data-testid="cms-content-revise">
                                     <i class="bi bi-arrow-repeat" aria-hidden="true"></i> {{ 'Apply the change'|trans({}, 'theliacms') }}
                                 </button>
                             {{ form_end(change_form) }}
@@ -310,7 +304,7 @@
                                                 <input type="hidden" name="_token" value="{{ assignToken() }}">
                                                 {{ form_widget(section.form.section) }}
                                                 {{ form_row(section.form.text, { label: false }) }}
-                                                <button type="submit" class="btn btn-sm btn-outline-primary"{% if generator_notice %} disabled{% endif %}>
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">
                                                     {{ 'Rewrite'|trans({}, 'theliacms') }}
                                                 </button>
                                             {{ form_end(section.form) }}
@@ -431,7 +425,7 @@
                                 {{ form_widget(translate_form.source, { attr: { hidden: 'hidden' } }) }}
                                 {% do translate_form.source.setRendered %}
                             {% endif %}
-                            <button type="submit" class="btn btn-primary" data-testid="cms-content-translate-btn"{% if not may_generate or generator_notice %} disabled{% endif %}>
+                            <button type="submit" class="btn btn-primary" data-testid="cms-content-translate-btn"{% if not may_generate %} disabled{% endif %}>
                                 <i class="bi bi-translate" aria-hidden="true"></i>
                                 {{ (subject.translationSources|length > 1 ? 'Write it in this language from that one' : 'Write it in this language from the %language% version')|trans({ '%language%': subject.translationSources[0].label }, 'theliacms') }}
                             </button>

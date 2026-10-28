@@ -14,9 +14,9 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Settings;
 
+use Thelia\Domain\Ai\AiGatewayInterface;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Generation\Brief;
-use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\Map\CmsPageTableMap;
@@ -24,7 +24,7 @@ use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Field\PageFields;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\PageTypeWriter;
-use TheliaCMS\Tests\Integration\Generation\FakeClaudeTransport;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
 
 /**
@@ -36,24 +36,14 @@ final class PageTemplateScreenTest extends AdminScreenTestCase
 {
     private const string TYPE = 'recipe-screen';
 
-    private FakeClaudeTransport $api;
+    private FakeAiGateway $api;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->api = new FakeClaudeTransport();
-        $provider = new class($this->api) implements ClaudeClientProviderInterface {
-            public function __construct(public ClaudeClientProviderInterface $delegate)
-            {
-            }
-
-            public function client(): \Anthropic\Client
-            {
-                return $this->delegate->client();
-            }
-        };
-        static::getContainer()->set(ClaudeClientProviderInterface::class, $provider);
+        $this->api = new FakeAiGateway();
+        static::getContainer()->set(AiGatewayInterface::class, $this->api);
 
         $this->typeWriter()->add(self::TYPE);
     }
@@ -201,11 +191,11 @@ final class PageTemplateScreenTest extends AdminScreenTestCase
         $page = $this->createPage('Tarte aux pommes', published: false);
         $page->setPageType(self::TYPE)->save();
 
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(json_encode([
+        $this->api->answer(FakeAiGateway::response(json_encode([
             'version' => 1,
             'sections' => [['id' => 'recipe', 'component' => 'cms:richtext', 'props' => json_encode(['html' => '<h1>Tarte aux pommes</h1><p>Six parts.</p>'], \JSON_THROW_ON_ERROR)]],
             'fields' => json_encode(['servings' => 6, 'cooking_time' => 45], \JSON_THROW_ON_ERROR),
-        ], \JSON_THROW_ON_ERROR))]));
+        ], \JSON_THROW_ON_ERROR)));
 
         $url = \sprintf('/admin/cms/pages/%d/content', $page->getId());
         $form = $this->screen($url)->filter('[data-testid="cms-content-brief"] form')->form();
@@ -214,10 +204,10 @@ final class PageTemplateScreenTest extends AdminScreenTestCase
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
 
         $request = $this->api->requests[0];
-        self::assertContains('fields', $request['output_config']['format']['schema']['required']);
-        self::assertStringContainsString('# The type of the page: Recette', $request['messages'][0]['content']);
-        self::assertStringContainsString('Une recette de saison, pas à pas.', $request['messages'][0]['content']);
-        self::assertStringContainsString('- `servings`: Personnes (a whole number, required)', $request['messages'][0]['content']);
+        self::assertContains('fields', $request->outputSchema?->schema['required']);
+        self::assertStringContainsString('# The type of the page: Recette', $request->messages[0]->content);
+        self::assertStringContainsString('Une recette de saison, pas à pas.', $request->messages[0]->content);
+        self::assertStringContainsString('- `servings`: Personnes (a whole number, required)', $request->messages[0]->content);
 
         CmsPageTableMap::clearInstancePool();
         self::assertSame(['servings' => 6, 'cooking_time' => 45], $this->fields()->valuesOf(CmsPageQuery::create()->findPk($page->getId()), $this->locale()));

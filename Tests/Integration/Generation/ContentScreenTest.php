@@ -16,20 +16,28 @@ namespace TheliaCMS\Tests\Integration\Generation;
 
 use Propel\Runtime\ActiveQuery\Criteria;
 use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Thelia\Core\Security\AccessManager;
+use Thelia\Domain\Ai\AiFinishReason;
+use Thelia\Domain\Ai\AiGatewayInterface;
+use Thelia\Domain\Ai\AiToolCall;
+use Thelia\Model\ModuleConfigQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionAppearance;
-use TheliaCMS\Generation\ClaudeClientProviderInterface;
+use TheliaCMS\Generation\GeneratorSettings;
+use TheliaCMS\Generation\Tool\ReadUrlTool;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Model\CmsPageRevisionQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 
 /**
  * The content screen of a page, against a recorded API: the brief becomes
@@ -38,30 +46,23 @@ use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
  */
 final class ContentScreenTest extends AdminScreenTestCase
 {
-    private FakeClaudeTransport $api;
-
-    /** @var ClaudeClientProviderInterface&object{delegate: ClaudeClientProviderInterface} */
-    private ClaudeClientProviderInterface $provider;
+    private FakeAiGateway $api;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->api = new FakeClaudeTransport();
+        $this->api = new FakeAiGateway();
+        static::getContainer()->set(AiGatewayInterface::class, $this->api);
+    }
 
-        // A service is replaced once per kernel: the provider the container
-        // gets delegates, so a test can still change what it answers.
-        $this->provider = new class($this->api) implements ClaudeClientProviderInterface {
-            public function __construct(public ClaudeClientProviderInterface $delegate)
-            {
-            }
+    protected function tearDown(): void
+    {
+        $settings = $this->getService(GeneratorSettings::class);
+        $settings->save($settings->model(), $settings->effort(), $settings->maxTokens(), webFetch: false);
+        ModuleConfigQuery::resetConfigCache();
 
-            public function client(): \Anthropic\Client
-            {
-                return $this->delegate->client();
-            }
-        };
-        static::getContainer()->set(ClaudeClientProviderInterface::class, $this->provider);
+        parent::tearDown();
     }
 
     public function testTheScreenOffersABriefToAPageWithoutContent(): void
@@ -77,7 +78,6 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(0, $screen->filter('[data-testid="cms-content-sections"]')->count());
         self::assertSame(1, $screen->filter('[data-testid="cms-content-brief"] form input[name="_token"]')->count(), 'The brief form carries the token.');
         self::assertSame(0, $screen->filter('[data-testid="cms-content-brief-dialog"]')->count(), 'Without a brief, the form is in the screen, the first thing to fill.');
-        self::assertSame(0, $screen->filter('[data-testid="cms-content-notice"]')->count(), 'With a client at hand, nothing warns about the key.');
         self::assertNotNull($screen->filter('[data-testid="cms-content-publish"] button')->attr('disabled'), 'Nothing to publish yet.');
     }
 
@@ -90,9 +90,9 @@ final class ContentScreenTest extends AdminScreenTestCase
 
         self::assertSame(0, $this->screen($url)->filter('[data-testid="cms-content-previous-drafts"]')->count(), 'Nothing replaced yet.');
 
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([
+        $this->api->answer(FakeAiGateway::response(self::document([
             ['id' => 'intro', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Après</h2><p>Écrit par le générateur.</p>']],
-        ]))], 'end_turn', ['input_tokens' => 100, 'output_tokens' => 50]));
+        ])));
         $form = $this->screen($url)->filter('[data-testid="cms-content-brief"] form')->form();
         $form['cms_brief[text]'] = 'Une page qui présente nos services.';
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
@@ -123,10 +123,10 @@ final class ContentScreenTest extends AdminScreenTestCase
         $page = $this->createPage('Nos services', published: false);
         $url = $this->url($page->getId());
 
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([
+        $this->api->answer(FakeAiGateway::response(self::document([
             ['id' => 'hero', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Nos services</h1><p>Ce que nous faisons.</p>']],
             ['id' => 'faq', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Questions</h2><p>Sur devis.</p>']],
-        ]))], 'end_turn', ['input_tokens' => 1200, 'output_tokens' => 400]));
+        ])));
 
         $form = $this->screen($url)->filter('[data-testid="cms-content-brief"] form')->form();
         $form['cms_brief[text]'] = 'Une page qui présente nos services de conseil.';
@@ -141,7 +141,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertStringContainsString('"html":"<h1>Nos services</h1>', (string) $content?->getDraftDocument(), 'The draft is the document the model wrote.');
         self::assertStringContainsString('Nos services', (string) $content?->getDraftHtml());
         self::assertNull($content?->getPublishedHtml(), 'Nothing went online.');
-        self::assertStringContainsString('Tone asked for: direct', $this->api->requests[0]['messages'][0]['content']);
+        self::assertStringContainsString('Tone asked for: direct', $this->api->requests[0]->messages[0]->content);
 
         $screen = $this->screen($location);
 
@@ -162,25 +162,27 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame('{"text":"Une page qui présente nos services de conseil.","tone":"direct","audience":null}', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getBrief());
     }
 
-    public function testTheHistoryListsTheWebPagesACallReadWithTheirTokens(): void
+    public function testTheHistoryListsTheWebPagesACallRead(): void
     {
         $page = $this->createPage('Notre histoire', published: false);
         $url = $this->url($page->getId());
+        $this->readingOn();
 
         $this->api
-            ->answer(FakeClaudeTransport::message([
-                FakeClaudeTransport::serverToolUse('srvtoolu_1', 'web_fetch', ['url' => 'https://example.com/a-propos']),
-                FakeClaudeTransport::webFetchResult('srvtoolu_1', 'https://example.com/a-propos', 'Fondée en 1987 à Lyon.'),
-                FakeClaudeTransport::serverToolUse('srvtoolu_2', 'web_fetch', ['url' => 'https://example.com/prive']),
-                FakeClaudeTransport::webFetchError('srvtoolu_2', 'url_not_accessible'),
-                FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<p>Lyon, 1987.</p>']]])),
+            ->answer(FakeAiGateway::response(toolCalls: [
+                new AiToolCall('call_1', 'read_url', ['url' => 'https://example.com/a-propos']),
+                new AiToolCall('call_2', 'read_url', ['url' => 'https://example.com/prive']),
             ]))
-            ->answer(FakeClaudeTransport::tokenCount(2500));
+            ->answer(FakeAiGateway::response(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<p>Lyon, 1987.</p>']]])));
+        static::getContainer()->set(ReadUrlTool::class, new ReadUrlTool(new MockHttpClient(static fn (string $method, string $address): MockResponse => str_ends_with($address, '/prive')
+            ? new MockResponse('', ['http_code' => 404])
+            : new MockResponse('Fondée en 1987 à Lyon.', ['response_headers' => ['Content-Type' => 'text/plain']]))));
 
         $form = $this->screen($url)->filter('[data-testid="cms-content-brief"] form')->form();
         $form['cms_brief[text]'] = 'Résume https://example.com/a-propos et https://example.com/prive.';
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+        self::assertStringContainsString('Fondée en 1987 à Lyon.', $this->api->requests[1]->untrustedContents[0]->content, 'The page read reaches the model as data.');
 
         $pages = $this->screen((string) $this->client->getResponse()->headers->get('Location'))->filter('[data-testid="cms-content-history-pages"]');
 
@@ -188,7 +190,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertStringContainsString('2 web page(s) read', $pages->filter('summary')->text());
         self::assertSame(2, $pages->filter('li')->count());
         self::assertStringContainsString('https://example.com/a-propos', $pages->filter('li')->eq(0)->text());
-        self::assertStringContainsString('2 500 tokens, about 0.010 USD a reading', $pages->filter('li')->eq(0)->text(), 'Counted, and priced as input of the model.');
+        self::assertStringContainsString('not counted', $pages->filter('li')->eq(0)->text(), 'The tokens of a page are in the log of the core, not counted here.');
         self::assertStringContainsString('not read (url_not_accessible)', $pages->filter('li')->eq(1)->text());
     }
 
@@ -199,7 +201,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         $target = LangQuery::create()->filterByActive(1)->filterById($source->getId(), Criteria::NOT_EQUAL)->orderById()->findOne();
         self::assertNotNull($target, 'The shop of the tests has a second active language.');
         $url = \sprintf('/admin/cms/pages/%d/content?edit_language_id=%d', $page->getId(), $target->getId());
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Translated</h1><p>Written for the test.</p>']]]))]));
+        $this->api->answer(FakeAiGateway::response(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Translated</h1><p>Written for the test.</p>']]])));
 
         $screen = $this->screen($url);
 
@@ -211,7 +213,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         $form = $screen->filter('[data-testid="cms-content-translate"] form')->form();
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
 
-        $prompt = $this->api->requests[0]['messages'][0]['content'];
+        $prompt = $this->api->requests[0]->messages[0]->content;
         self::assertStringContainsString(\sprintf('The document the page holds in %s (`%s`)', $source->getTitle(), $source->getLocale()), $prompt);
         self::assertStringContainsString('<h1>Nos services</h1><p>Written for the test.</p>', $prompt, 'The draft of the other language is what the model writes from.');
         self::assertStringContainsString(\sprintf('Write this document in %s (`%s`)', $target->getTitle(), $target->getLocale()), $prompt);
@@ -233,7 +235,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         $target = LangQuery::create()->filterByActive(1)->filterById($source->getId(), Criteria::NOT_EQUAL)->orderById()->findOne();
         self::assertNotNull($target);
         // The model drops the background and changes the room: the source wins.
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Our products</h2>'], 'appearance' => ['padding' => 'large']]]))]));
+        $this->api->answer(FakeAiGateway::response(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Our products</h2>'], 'appearance' => ['padding' => 'large']]])));
 
         $form = $this->screen(\sprintf('/admin/cms/pages/%d/content?edit_language_id=%d', $page->getId(), $target->getId()))->filter('[data-testid="cms-content-translate"] form')->form();
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
@@ -248,7 +250,7 @@ final class ContentScreenTest extends AdminScreenTestCase
     {
         $page = $this->createPage('Mine', published: false);
         $other = $this->createPage('Other', published: false);
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Other</h1>']]]))]));
+        $this->api->answer(FakeAiGateway::response(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Other</h1>']]])));
 
         $form = $this->screen($this->url($other->getId()))->filter('[data-testid="cms-content-brief"] form')->form();
         $form['cms_brief[text]'] = 'Something.';
@@ -264,8 +266,8 @@ final class ContentScreenTest extends AdminScreenTestCase
     {
         $page = $this->createPage('Streamed', published: false);
         $this->api
-            ->answer(FakeClaudeTransport::message([FakeClaudeTransport::toolUse('toolu_1', 'search_pages', ['query' => ''])], 'tool_use'))
-            ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Streamed</h1><p>Done.</p>']]]))]));
+            ->answer(FakeAiGateway::response(toolCalls: [new AiToolCall('toolu_1', 'search_pages', ['query' => ''])]))
+            ->answer(FakeAiGateway::response(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Streamed</h1><p>Done.</p>']]])));
 
         $form = $this->screen($this->url($page->getId()))->filter('[data-testid="cms-content-brief"] form')->form();
         $form['cms_brief[text]'] = 'A streamed page.';
@@ -290,7 +292,7 @@ final class ContentScreenTest extends AdminScreenTestCase
     public function testAFailureIsAnEventAndARowOfTheLedger(): void
     {
         $page = $this->createPage('Refused', published: false);
-        $this->api->answer(FakeClaudeTransport::message([], 'refusal', [], ['type' => 'refusal', 'category' => 'general_harms', 'explanation' => 'Not this.']));
+        $this->api->answer(FakeAiGateway::response(finishReason: AiFinishReason::ContentFilter));
 
         $form = $this->screen($this->url($page->getId()))->filter('[data-testid="cms-content-brief"] form')->form();
         $form['cms_brief[text]'] = 'Something the model declines.';
@@ -310,14 +312,14 @@ final class ContentScreenTest extends AdminScreenTestCase
     public function testAChangeKeepsTheSectionsItDoesNotConcern(): void
     {
         $page = $this->createPage('Revised', published: false);
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Revised</h1><p>After.</p>']]]))]));
+        $this->api->answer(FakeAiGateway::response(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Revised</h1><p>After.</p>']]])));
 
         $screen = $this->screen($this->url($page->getId()));
         $form = $screen->filter('[data-testid="cms-content-change"] form')->form();
         $form['cms_change[text]'] = 'Say After instead of Written for the test.';
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
-        self::assertStringContainsString('<h1>Revised</h1><p>Written for the test.</p>', $this->api->requests[0]['messages'][0]['content'], 'The document the page holds is sent with the change.');
+        self::assertStringContainsString('<h1>Revised</h1><p>Written for the test.</p>', $this->api->requests[0]->messages[0]->content, 'The document the page holds is sent with the change.');
         self::assertStringContainsString('<p>After.</p>', (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml());
         self::assertSame('revision', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getKind());
     }
@@ -326,17 +328,18 @@ final class ContentScreenTest extends AdminScreenTestCase
     {
         $page = $this->createPage('Partners', published: false);
         $logos = array_map(static fn (int $id): array => ['image' => \sprintf('https://img.logoipsum.com/%d.svg', $id), 'image_alt' => 'Logoipsum', 'text' => 'Lorem ipsum dolor sit amet.'], [243, 245, 247]);
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([
+        $this->readingOn();
+        $this->api->answer(FakeAiGateway::response(self::document([
             ['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Partners</h1><p>Written for the test.</p>']],
             ['id' => 'logos', 'component' => 'cms:columns', 'props' => json_encode(['title' => '', 'columns' => $logos], \JSON_THROW_ON_ERROR)],
-        ]))]));
+        ])));
 
         $form = $this->screen($this->url($page->getId()))->filter('[data-testid="cms-content-change"] form')->form();
         $form['cms_change[text]'] = 'Ajoute 3 colonnes avec dans chacune un logo venant de https://logoipsum.com/ et un texte court en lorem ipsum sous l’image';
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
-        self::assertStringContainsString('`cms:columns`', json_encode($this->api->requests[0]['system'] ?? [], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE), 'The model is offered the columns.');
-        self::assertSame('web_fetch', array_column($this->api->requests[0]['tools'] ?? [], 'name')[array_key_last(array_column($this->api->requests[0]['tools'] ?? [], 'name'))] ?? null, 'The site the change cites can be read for its logos.');
+        self::assertStringContainsString('`cms:columns`', (string) $this->api->requests[0]->system, 'The model is offered the columns.');
+        self::assertSame('read_url', array_column($this->api->requests[0]->tools, 'name')[array_key_last(array_column($this->api->requests[0]->tools, 'name'))], 'The site the change cites can be read for its logos.');
 
         $html = (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml();
         self::assertStringContainsString('<section data-cms-section="logos" class="cms-columns cms-columns--3">', $html);
@@ -347,11 +350,11 @@ final class ContentScreenTest extends AdminScreenTestCase
     {
         $page = $this->createPage('Tarte aux pommes', published: false);
         $missing = 'Aucune photo de tarte sortant du four : la médiathèque n’en a pas et le brief ne donne pas d’adresse.';
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(json_encode([
+        $this->api->answer(FakeAiGateway::response(json_encode([
             'version' => 1,
             'sections' => [['id' => 'recette', 'component' => 'cms:richtext', 'props' => json_encode(['html' => '<h2>La recette</h2><p>Written for the test.</p>'], \JSON_THROW_ON_ERROR)]],
             'left_out' => [$missing, ' ', '<b>Aucun moule</b> du catalogue.', 42],
-        ], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE))]));
+        ], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE)));
 
         $form = $this->screen($this->url($page->getId()))->filter('[data-testid="cms-content-brief"] form')->form();
         $form['cms_brief[text]'] = 'La recette de la tarte aux pommes avec une photo de la tarte sortant du four.';
@@ -368,22 +371,22 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame('true', $warning->attr('data-cms-toast-permanent-value'), 'A list of what is missing stays until it is closed.');
         self::assertSame(0, $screen->filter('[data-testid="cms-builder-flash-success"]')->count());
         self::assertStringContainsString('2 thing(s) of the brief left out', $screen->filter('[data-testid="cms-content-history-left-out"] summary')->text(), 'The history keeps it once the notice is gone.');
-        self::assertStringContainsString('"left_out":{"type":"array"', json_encode($this->api->requests[0]['output_config'] ?? [], \JSON_THROW_ON_ERROR), 'The model is given where to say it.');
+        self::assertStringContainsString('"left_out":{"type":"array"', json_encode($this->api->requests[0]->outputSchema?->schema, \JSON_THROW_ON_ERROR), 'The model is given where to say it.');
     }
 
     public function testAChangeAddsAPictureWithItsCaption(): void
     {
         $page = $this->createPage('Apple pie', published: false);
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([
+        $this->api->answer(FakeAiGateway::response(self::document([
             ['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Apple pie</h2><p>Written for the test.</p>']],
             ['id' => 'photo', 'component' => 'cms:image', 'props' => json_encode(['image' => 'https://example.com/tarte.jpg', 'alt' => 'Une tarte aux pommes dorée', 'caption' => 'Tout juste sortie du four', 'width' => 'narrow'], \JSON_THROW_ON_ERROR)],
-        ]))]));
+        ])));
 
         $form = $this->screen($this->url($page->getId()))->filter('[data-testid="cms-content-change"] form')->form();
         $form['cms_change[text]'] = 'Ajoute la photo https://example.com/tarte.jpg d’une tarte sortant du four';
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
-        self::assertStringContainsString('`cms:image`', json_encode($this->api->requests[0]['system'] ?? [], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE), 'The model is offered the image section.');
+        self::assertStringContainsString('`cms:image`', (string) $this->api->requests[0]->system, 'The model is offered the image section.');
 
         $html = (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml();
         self::assertStringContainsString('<figure data-cms-section="photo" class="cms-image cms-image--narrow">', $html);
@@ -394,14 +397,14 @@ final class ContentScreenTest extends AdminScreenTestCase
     public function testOneSectionIsWrittenAgainByItsOwnForm(): void
     {
         $page = $this->createPage('Sectioned', published: false);
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Sectioned</h1><p>Shorter.</p>']]]))]));
+        $this->api->answer(FakeAiGateway::response(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h1>Sectioned</h1><p>Shorter.</p>']]])));
 
         $screen = $this->screen($this->url($page->getId()));
         $form = $screen->filter('[data-testid="cms-content-sections"] li[data-section="content"] form[data-cms-generate]')->form();
         $form['cms_change_content[text]'] = 'Shorter.';
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
-        self::assertStringContainsString('Write the section `content` again', $this->api->requests[0]['messages'][0]['content']);
+        self::assertStringContainsString('Write the section `content` again', $this->api->requests[0]->messages[0]->content);
         self::assertSame('section', CmsPageGenerationQuery::create()->filterByTargetId($page->getId())->findOne()?->getKind());
     }
 
@@ -410,8 +413,8 @@ final class ContentScreenTest extends AdminScreenTestCase
         $page = $this->createPage('Styled', published: false);
         $this->api
             // A colour named in words is refused and sent back, then written as a value.
-            ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Cinq produits</h2>'], 'appearance' => ['background' => 'rouge pastel']]]))]))
-            ->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Cinq produits</h2>'], 'appearance' => ['background' => '#f8d7d7', 'padding' => 'medium']]]))]));
+            ->answer(FakeAiGateway::response(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Cinq produits</h2>'], 'appearance' => ['background' => 'rouge pastel']]])))
+            ->answer(FakeAiGateway::response(self::document([['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Cinq produits</h2>'], 'appearance' => ['background' => '#f8d7d7', 'padding' => 'medium']]])));
 
         $screen = $this->screen($this->url($page->getId()));
         $form = $screen->filter('[data-testid="cms-content-sections"] li[data-section="content"] form[data-cms-generate]')->form();
@@ -419,9 +422,9 @@ final class ContentScreenTest extends AdminScreenTestCase
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
 
-        $system = json_encode($this->api->requests[0]['system'] ?? [], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
+        $system = (string) $this->api->requests[0]->system;
         self::assertStringContainsString('The appearance of a section', $system, 'The model is told what it may set.');
-        self::assertStringContainsString('#rrggbb', json_encode($this->api->requests[1]['messages'] ?? [], \JSON_THROW_ON_ERROR), 'The colour written in words is sent back to be corrected.');
+        self::assertStringContainsString('#rrggbb', $this->api->requests[1]->messages[2]->content, 'The colour written in words is sent back to be corrected.');
 
         $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne();
         self::assertSame(['background' => '#f8d7d7', 'padding' => 'medium'], Document::fromJson($content?->getDraftDocument())?->section('content')?->appearance->toArray());
@@ -479,20 +482,11 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(404, $this->send('GET', $this->url(999999999)));
     }
 
-    public function testWithoutAKeyTheScreenSaysSoAndKeepsTheButtonOff(): void
+    private function readingOn(): void
     {
-        $page = $this->createPage('No key', published: false);
-        $this->provider->delegate = new class implements ClaudeClientProviderInterface {
-            public function client(): \Anthropic\Client
-            {
-                throw \TheliaCMS\Generation\GenerationUnavailableException::noKey();
-            }
-        };
-
-        $screen = $this->screen($this->url($page->getId()));
-
-        self::assertStringContainsString('ANTHROPIC_API_KEY', $screen->filter('[data-testid="cms-content-notice"]')->text());
-        self::assertNotNull($screen->filter('[data-testid="cms-content-generate"]')->attr('disabled'));
+        $settings = $this->getService(GeneratorSettings::class);
+        $settings->save($settings->model(), $settings->effort(), $settings->maxTokens(), webFetch: true);
+        ModuleConfigQuery::resetConfigCache();
     }
 
     private function url(int $pageId): string

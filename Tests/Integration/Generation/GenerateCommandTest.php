@@ -25,17 +25,19 @@ use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentSchema;
 use TheliaCMS\Content\DocumentValidator;
 use TheliaCMS\Generation\Admin\TranslationSources;
+use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
 use TheliaCMS\Generation\GenerateCommand;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationTargets;
 use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\PageGenerator;
-use TheliaCMS\Generation\Pricing;
 use TheliaCMS\Generation\PromptBuilder;
 use TheliaCMS\Generation\Tool\GeneratorTools;
+use TheliaCMS\Generation\Tool\ReadUrlTool;
 use TheliaCMS\Http\ConsoleRequest;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 
 /**
  * The command writes an item of the catalogue as well as a page, a language
@@ -44,13 +46,13 @@ use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
  */
 final class GenerateCommandTest extends CmsIntegrationTestCase
 {
-    private FakeClaudeTransport $api;
+    private FakeAiGateway $api;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->api = new FakeClaudeTransport();
+        $this->api = new FakeAiGateway();
     }
 
     public function testTheDocumentOfAnItemIsWrittenAtTheEffortAskedAndSavedOnlyWithoutDryRun(): void
@@ -67,14 +69,14 @@ final class GenerateCommandTest extends CmsIntegrationTestCase
         self::assertSame(Command::SUCCESS, $dryRun->getStatusCode(), $dryRun->getDisplay());
         self::assertStringContainsString('Mat, pour parquet.', $dryRun->getDisplay());
         self::assertMatchesRegularExpression('/^\/\/ .*\d+ turn\(s\).*USD, [\d.]+ s$/m', $dryRun->getDisplay(), 'The cost of the run stays on one line, where compare-runs reads it.');
-        self::assertSame('medium', $this->api->requests[0]['output_config']['effort'] ?? null);
-        self::assertStringContainsString('Vernis mat pour parquet', json_encode($this->api->requests[0]['messages'], \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR), 'The generator is told which item it writes for.');
+        self::assertSame('medium', $this->api->requests[0]->providerOptions['anthropic']['effort'] ?? null);
+        self::assertStringContainsString('Vernis mat pour parquet', $this->api->requests[0]->messages[0]->content, 'The generator is told which item it writes for.');
         self::assertNull($this->getService(ItemContentRepository::class)->draftDocument(CatalogueItemType::Product, $id, $this->locale()), 'A dry run saves nothing.');
 
         $saved = $this->generate(['--item' => 'product:'.$id, '--locale' => $this->locale(), '--brief' => 'Présente le vernis.']);
 
         self::assertSame(Command::SUCCESS, $saved->getStatusCode(), $saved->getDisplay());
-        self::assertSame('high', $this->api->requests[1]['output_config']['effort'] ?? null, 'Without --effort, the one of the settings.');
+        self::assertSame('high', $this->api->requests[1]->providerOptions['anthropic']['effort'] ?? null, 'Without --effort, the one of the settings.');
         self::assertInstanceOf(Document::class, $this->getService(ItemContentRepository::class)->draftDocument(CatalogueItemType::Product, $id, $this->locale()));
     }
 
@@ -87,7 +89,7 @@ final class GenerateCommandTest extends CmsIntegrationTestCase
         $tester = $this->generate(['--page' => (string) $page->getId(), '--locale' => $target, '--translate-from' => $this->locale(), '--dry-run' => true]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode(), $tester->getDisplay());
-        self::assertStringContainsString('Fondé en 1987 à Lyon.', json_encode($this->api->requests[0]['messages'], \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR), 'The generator reads the document to translate.');
+        self::assertStringContainsString('Fondé en 1987 à Lyon.', $this->api->requests[0]->messages[0]->content, 'The generator reads the document to translate.');
     }
 
     public function testATranslationFromALanguageHoldingNothingFails(): void
@@ -129,10 +131,10 @@ final class GenerateCommandTest extends CmsIntegrationTestCase
 
     private function answerWith(string $html): void
     {
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(json_encode(
+        $this->api->answer(FakeAiGateway::response(json_encode(
             ['version' => 1, 'sections' => [['id' => 'content', 'component' => 'cms:richtext', 'props' => ['html' => $html]]]],
             \JSON_THROW_ON_ERROR,
-        ))]));
+        )));
     }
 
     /**
@@ -146,10 +148,11 @@ final class GenerateCommandTest extends CmsIntegrationTestCase
                 $this->getService(GeneratorSettings::class),
                 $this->getService(PromptBuilder::class),
                 $this->getService(GeneratorTools::class),
+                $this->getService(GeneratorToolDefinitions::class),
+                new ReadUrlTool(),
                 $this->getService(DocumentSchema::class),
                 $this->getService(DocumentValidator::class),
                 $this->getService(GenerationLog::class),
-                $this->getService(Pricing::class),
                 new NullLogger(),
             ),
             $this->getService(CmsPageWriter::class),

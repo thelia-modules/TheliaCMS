@@ -23,10 +23,8 @@ use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionCatalog;
-use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationRequest;
-use TheliaCMS\Generation\GenerationUnavailableException;
 use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\Pricing;
 use TheliaCMS\Generation\WebPageRead;
@@ -55,7 +53,6 @@ final readonly class ContentScreen
         private SectionCatalog $catalog,
         private GenerationLog $log,
         private GeneratorSettings $settings,
-        private ClaudeClientProviderInterface $clients,
         private SectionFormBuilder $sectionForms,
         private ToolkitLink $toolkit,
         private Pricing $pricing,
@@ -82,7 +79,6 @@ final readonly class ContentScreen
             'outcome' => $this->outcome($request, $subject),
             'may_generate' => $mayGenerate,
             'may_publish' => $mayPublish,
-            'generator_notice' => $mayGenerate ? $this->notice() : null,
             'model' => $this->settings->model(),
             'toolkit_url' => $this->toolkit->url(),
             'preview_widths' => $this->previewWidths->widths(),
@@ -307,17 +303,6 @@ final readonly class ContentScreen
                 'details' => [(string) $row->getError()],
             ],
         };
-    }
-
-    private function notice(): ?string
-    {
-        try {
-            $this->clients->client();
-        } catch (GenerationUnavailableException $exception) {
-            return $exception->getMessage();
-        }
-
-        return null;
     }
 
     private function kindLabel(string $kind): string

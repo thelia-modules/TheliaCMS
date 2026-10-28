@@ -18,19 +18,21 @@ use Psr\Log\NullLogger;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentSchema;
 use TheliaCMS\Content\DocumentValidator;
+use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
 use TheliaCMS\Generation\Brief;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationRequest;
 use TheliaCMS\Generation\GenerationTargets;
 use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\PageGenerator;
-use TheliaCMS\Generation\Pricing;
 use TheliaCMS\Generation\PromptBuilder;
 use TheliaCMS\Generation\Tool\GeneratorTools;
+use TheliaCMS\Generation\Tool\ReadUrlTool;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Page\PageTypeWriter;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 
 /**
  * The generator for a page whose type is a template: it reads the brief of
@@ -39,13 +41,13 @@ use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
  */
 final class TypedPageGenerationTest extends CmsIntegrationTestCase
 {
-    private FakeClaudeTransport $api;
+    private FakeAiGateway $api;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->api = new FakeClaudeTransport();
+        $this->api = new FakeAiGateway();
 
         $writer = $this->getService(PageTypeWriter::class);
         $writer->add('recipe-generated');
@@ -66,7 +68,7 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
 
         self::assertSame(['servings' => 6, 'tip' => 'Servir tiède.'], $result->fields);
 
-        $message = $this->api->requests[0]['messages'][0]['content'];
+        $message = $this->api->requests[0]->messages[0]->content;
         self::assertStringContainsString('# The type of the page: Recette', $message);
         self::assertStringContainsString('Une recette de saison, pas à pas.', $message);
         self::assertStringContainsString('Audience: des cuisiniers pressés', $message, 'The audience of the type stands when the page names none.');
@@ -83,7 +85,7 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
 
         $this->generator()->generate(GenerationRequest::fromBrief($this->targets()->forPage($page, $this->locale()), $this->locale(), new Brief('La tarte de grand-mère.')));
 
-        $message = $this->api->requests[0]['messages'][0]['content'];
+        $message = $this->api->requests[0]->messages[0]->content;
         self::assertStringContainsString("Rules for every page of this type, read as a skill: follow them in everything you write for this page, and where a brief says otherwise, these rules win.\n\n- 300 mots au plus.\n- Mentionner les allergènes.", $message);
         self::assertGreaterThan(strpos($message, 'Une recette de saison, pas à pas.'), strpos($message, 'Rules for every page of this type'), 'The rules come after what the pages are about.');
     }
@@ -96,7 +98,7 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
 
         $this->generator()->generate(GenerationRequest::fromBrief($this->targets()->forPage($page, $this->locale()), $this->locale(), new Brief('La tarte de grand-mère.')));
 
-        self::assertStringNotContainsString('Rules for every page of this type', $this->api->requests[0]['messages'][0]['content']);
+        self::assertStringNotContainsString('Rules for every page of this type', $this->api->requests[0]->messages[0]->content);
     }
 
     public function testWrongFieldsGoBackToTheModelWithTheDocument(): void
@@ -111,7 +113,7 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
 
         self::assertSame(['servings' => 6], $result->fields);
         self::assertCount(2, $this->api->requests);
-        self::assertStringContainsString('Field Personnes: The value is not a whole number.', (string) json_encode($this->api->requests[1]['messages'][2]['content'], \JSON_UNESCAPED_UNICODE));
+        self::assertStringContainsString('Field Personnes: The value is not a whole number.', $this->api->requests[1]->messages[2]->content);
     }
 
     public function testARequiredFieldTheAnswerLeavesEmptyIsAskedAgain(): void
@@ -124,7 +126,7 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
 
         $this->generator()->generate(GenerationRequest::fromBrief($this->targets()->forPage($page, $this->locale()), $this->locale(), new Brief('La tarte de grand-mère.')));
 
-        self::assertStringContainsString('The field `servings` is required.', (string) json_encode($this->api->requests[1]['messages'][2]['content'], \JSON_UNESCAPED_UNICODE));
+        self::assertStringContainsString('The field `servings` is required.', $this->api->requests[1]->messages[2]->content);
     }
 
     public function testOneSectionWrittenAgainAsksForNoField(): void
@@ -132,12 +134,12 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
         $page = $this->givenARecipe('Tarte aux pommes');
         $current = Document::richText('<h1>Tarte</h1>');
 
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(json_encode(['version' => 1, 'sections' => [['id' => $current->sections[0]->id, 'component' => 'cms:richtext', 'props' => json_encode(['html' => '<h1>Tarte</h1><p>Encore.</p>'], \JSON_THROW_ON_ERROR)]]], \JSON_THROW_ON_ERROR))]));
+        $this->api->answer(FakeAiGateway::response(json_encode(['version' => 1, 'sections' => [['id' => $current->sections[0]->id, 'component' => 'cms:richtext', 'props' => json_encode(['html' => '<h1>Tarte</h1><p>Encore.</p>'], \JSON_THROW_ON_ERROR)]]], \JSON_THROW_ON_ERROR)));
 
         $result = $this->generator()->generate(GenerationRequest::section($this->targets()->forPage($page, $this->locale()), $this->locale(), $current, $current->sections[0]->id, new Brief('Plus long.')));
 
         self::assertNull($result->fields);
-        self::assertSame(['version', 'sections'], $this->api->requests[0]['output_config']['format']['schema']['required']);
+        self::assertSame(['version', 'sections'], $this->api->requests[0]->outputSchema?->schema['required']);
     }
 
     private function givenARecipe(string $title): CmsPage
@@ -154,13 +156,13 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
      *
      * @return array<string, mixed>
      */
-    private static function answer(array $fields): array
+    private static function answer(array $fields): \Thelia\Domain\Ai\AiResponse
     {
-        return FakeClaudeTransport::message([FakeClaudeTransport::text(json_encode([
+        return FakeAiGateway::response(json_encode([
             'version' => 1,
             'sections' => [['id' => 'recipe', 'component' => 'cms:richtext', 'props' => json_encode(['html' => '<h1>Tarte aux pommes</h1><p>Une tarte.</p>'], \JSON_THROW_ON_ERROR)]],
             'fields' => json_encode($fields, \JSON_THROW_ON_ERROR),
-        ], \JSON_THROW_ON_ERROR))]);
+        ], \JSON_THROW_ON_ERROR));
     }
 
     private function targets(): GenerationTargets
@@ -175,10 +177,11 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
             $this->getService(GeneratorSettings::class),
             $this->getService(PromptBuilder::class),
             $this->getService(GeneratorTools::class),
+            $this->getService(GeneratorToolDefinitions::class),
+            new ReadUrlTool(),
             $this->getService(DocumentSchema::class),
             $this->getService(DocumentValidator::class),
             $this->getService(GenerationLog::class),
-            $this->getService(Pricing::class),
             new NullLogger(),
         );
     }

@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Catalogue;
 
+use Thelia\Domain\Ai\AiGatewayInterface;
 use Thelia\Model\Content;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Catalogue\Admin\ItemContentTabHook;
@@ -22,13 +23,12 @@ use TheliaCMS\Catalogue\CatalogueItemType;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\ImageSection;
 use TheliaCMS\Content\Section;
-use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsItemContentQuery;
 use TheliaCMS\Model\CmsItemRevisionQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Preview\ItemPreviewLink;
-use TheliaCMS\Tests\Integration\Generation\FakeClaudeTransport;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
 use TheliaLibrary\Model\LibraryImage;
 
@@ -39,24 +39,14 @@ use TheliaLibrary\Model\LibraryImage;
  */
 final class ItemContentScreenTest extends AdminScreenTestCase
 {
-    private FakeClaudeTransport $api;
+    private FakeAiGateway $api;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->api = new FakeClaudeTransport();
-        $provider = new class($this->api) implements ClaudeClientProviderInterface {
-            public function __construct(public ClaudeClientProviderInterface $delegate)
-            {
-            }
-
-            public function client(): \Anthropic\Client
-            {
-                return $this->delegate->client();
-            }
-        };
-        static::getContainer()->set(ClaudeClientProviderInterface::class, $provider);
+        $this->api = new FakeAiGateway();
+        static::getContainer()->set(AiGatewayInterface::class, $this->api);
     }
 
     public function testTheEditScreenOfTheItemLeadsToItsContentScreen(): void
@@ -139,9 +129,9 @@ final class ItemContentScreenTest extends AdminScreenTestCase
     {
         $content = $this->content();
 
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(json_encode(['version' => 1, 'sections' => [
+        $this->api->answer(FakeAiGateway::response(json_encode(['version' => 1, 'sections' => [
             ['id' => 'faq', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Questions</h2><p>Sur devis.</p>']],
-        ]], \JSON_THROW_ON_ERROR))], 'end_turn', ['input_tokens' => 1200, 'output_tokens' => 400]));
+        ]], \JSON_THROW_ON_ERROR)));
 
         $form = $this->screen($this->url($content))->filter('[data-testid="cms-content-brief"] form')->form();
         $form['cms_brief[text]'] = 'Les questions fréquentes sur ce contenu.';
@@ -152,7 +142,7 @@ final class ItemContentScreenTest extends AdminScreenTestCase
         self::assertStringContainsString('Sur devis.', (string) $row?->getDraftHtml());
         self::assertSame(1, CmsPageGenerationQuery::create()->filterByTargetType('content')->filterByTargetId($content->getId())->count(), 'The call is in the ledger, under the item.');
 
-        $prompt = $this->api->requests[0]['messages'][0]['content'];
+        $prompt = $this->api->requests[0]->messages[0]->content;
         self::assertStringContainsString('# The content this document is shown on', $prompt, 'The model is told what the document is shown on.');
         self::assertStringContainsString('- Name: Notre méthode', $prompt);
         self::assertStringContainsString('repeat none of it', $prompt);
@@ -166,9 +156,9 @@ final class ItemContentScreenTest extends AdminScreenTestCase
         $writer = $this->getService(ItemContentWriter::class);
         $writer->saveContent(CatalogueItemType::Content, $id, $this->locale(), Document::richText('<h2>Avant</h2><p>Écrit à la main.</p>'));
 
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text(json_encode(['version' => 1, 'sections' => [
+        $this->api->answer(FakeAiGateway::response(json_encode(['version' => 1, 'sections' => [
             ['id' => 'intro', 'component' => 'cms:richtext', 'props' => ['html' => '<h2>Après</h2><p>Écrit par le générateur.</p>']],
-        ]], \JSON_THROW_ON_ERROR))], 'end_turn', ['input_tokens' => 100, 'output_tokens' => 50]));
+        ]], \JSON_THROW_ON_ERROR)));
         $form = $this->screen($this->url($content))->filter('[data-testid="cms-content-brief"] form')->form();
         $form['cms_brief[text]'] = 'Les questions fréquentes.';
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
