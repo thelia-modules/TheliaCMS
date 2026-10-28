@@ -48,4 +48,15 @@ final class ToolkitLinkTest extends TestCase
 
         self::assertNull((new ToolkitLink($urls, true))->url(), 'Another theme has no toolkit.');
     }
+
+    public function testLinksNowhereWhenTheThemeHasNoStories(): void
+    {
+        $urls = $this->createStub(UrlGeneratorInterface::class);
+        $urls->method('generate')->willReturn('/toolkit/cms-all-sections');
+
+        self::assertNull(
+            (new ToolkitLink($urls, true, storiesAvailable: false))->url(),
+            'A theme with a toolkit of its own but without the stories of Flexy lists no page of sections.',
+        );
+    }
 }

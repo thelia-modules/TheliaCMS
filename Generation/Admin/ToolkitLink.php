@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation\Admin;
 
+use FlexyBundle\Toolkit\StoryProviderInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -24,19 +25,29 @@ use TheliaCMS\Content\Section\SectionStories;
  * hangs in the toolkit of the Flexy theme. The toolkit answers only where
  * the kernel runs in debug, and only when the theme is there; elsewhere
  * there is nothing to link to.
+ *
+ * The page is a story of the toolkit (SectionStories), declared only when
+ * the theme brings the stories of Flexy. A theme with a toolkit of its own
+ * (a fork of Flexy from before them) answers the route but has no such page,
+ * and reading SectionStories there would load an interface that does not
+ * exist.
  */
 final readonly class ToolkitLink
 {
+    private bool $storiesAvailable;
+
     public function __construct(
         private UrlGeneratorInterface $urls,
         #[Autowire('%kernel.debug%')]
         private bool $debug,
+        ?bool $storiesAvailable = null,
     ) {
+        $this->storiesAvailable = $storiesAvailable ?? interface_exists(StoryProviderInterface::class);
     }
 
     public function url(): ?string
     {
-        if (!$this->debug) {
+        if (!$this->debug || !$this->storiesAvailable) {
             return null;
         }
 
