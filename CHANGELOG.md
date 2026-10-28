@@ -9,6 +9,17 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Security (2.3.1)
 
+- **An import filters what it writes like a publication does.** The draft
+  and the published markup of the pages and of the catalogue items were
+  stored as the file gave them: an export edited to hold a `<script>`, run
+  through `thelia_cms:import`, went online, past the custom code right. They
+  now go through the sanitizer of a publication, iframes included unless the
+  new `--allow-custom-code` option is given. Their documents are checked by
+  the validator of the content screen, and one it refuses is left out. A form
+  of the file is left out when its code is not one the form screen accepts,
+  loses the recipients that are not email addresses, and gets a retention the
+  screen accepts: a negative one kept the answers forever. The report names
+  each of them. Tests import a hostile file and check what was stored.
 - **The guard of the back office reads the path the way the router does.**
   It compared the prefix `/admin/cms` with the path as the client wrote it,
   while the router decodes the path before it matches a route: with one

@@ -1125,7 +1125,7 @@ Two commands write and read the content of a site as one JSON file:
 
 ```bash
 php Thelia thelia_cms:export site.json
-php Thelia thelia_cms:import site.json [--replace] [--with-settings]
+php Thelia thelia_cms:import site.json [--replace] [--with-settings] [--allow-custom-code]
 ```
 
 The file holds the page tree, the content of every language, the documents of
@@ -1151,7 +1151,19 @@ the site refuses is left out and named. The document of a catalogue item goes
 on the item of the importing site with the same reference (a product) or the
 same address; an item the site does not have is named and left out, never
 created. `--replace`
-overwrites them instead. Settings are only applied when asked for, so importing
+overwrites them instead.
+
+A file is not trusted any more than an editor is. The markup of the pages and
+of the catalogue items, drafts included, goes through the filter of a
+publication, and iframes are taken out unless the import is run with
+`--allow-custom-code`, the equivalent of the custom code right of the back
+office. Their documents are checked as the content screen checks the one it
+saves: one it would refuse is left out, and the content keeps only its
+filtered markup. A form keeps its code only when the form screen would accept
+it, its recipients that are email addresses, and a retention the screen
+accepts. Each of these is named in the report.
+
+Settings are only applied when asked for, so importing
 a starter kit never switches a running site into showcase mode by surprise. The
 whole thing runs in one transaction, so a file that turns out to be broken
 halfway through leaves the site as it was.
