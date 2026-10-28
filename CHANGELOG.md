@@ -7,8 +7,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-10-28
+
 ### Fixed
 
+- **The menus follow a content or a folder published on schedule.** The core
+  dispatches `CONTENT_UPDATE_PUBLICATION` and `FOLDER_UPDATE_PUBLICATION` when
+  a content or a folder is published, scheduled or taken offline, and the
+  menus did not listen to them: an entry pointing at such a content kept its
+  former state until the cache of the menus expired (one hour by default).
 - **A long page goes online whole.** The published content went through the
   sanitizer of Symfony with its default limit of 20 000 bytes, and whatever
   came after was dropped without a warning: terms of sale or a long FAQ went
