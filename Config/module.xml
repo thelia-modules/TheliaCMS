@@ -5,7 +5,7 @@
     <fullnamespace>TheliaCMS\TheliaCMS</fullnamespace>
     <descriptive locale="en_US">
         <title>Thelia CMS</title>
-        <description>Page tree, pages written from a brief by the Claude API, menus, forms and media for content-driven Thelia sites.</description>
+        <description>Page tree, pages written from a brief through the AI layer of Thelia, menus, forms and media for content-driven Thelia sites.</description>
     </descriptive>
     <descriptive locale="fr_FR">
         <title>Thelia CMS</title>

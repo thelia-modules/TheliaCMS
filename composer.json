@@ -2,15 +2,13 @@
     "name": "thelia/cms-module",
     "license": "LGPL-3.0-or-later",
     "type": "thelia-module",
-    "description": "All-in-one CMS for Thelia 3: page tree, pages written from a brief by the Claude API, menus, forms and media.",
+    "description": "All-in-one CMS for Thelia 3: page tree, pages written from a brief through the AI layer of Thelia, menus, forms and media.",
     "require": {
         "php": ">=8.3",
         "thelia/core": "^3.2",
         "thelia/installer": "~1.6",
         "symfony/html-sanitizer": "^7.4",
-        "thelia/thelia-library-module": "^2.0",
-        "anthropic-ai/sdk": "^0.59",
-        "nyholm/psr7": "^1.8"
+        "thelia/thelia-library-module": "^2.0"
     },
     "suggest": {
         "thelia/seone-module": "Publishes the SEO metadata, canonical and hreflang tags of CMS pages.",

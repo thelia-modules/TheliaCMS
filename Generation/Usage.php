@@ -39,14 +39,4 @@ final readonly class Usage
             $this->cacheWriteTokens + $tokens->cacheWriteTokens,
         );
     }
-
-    public function plus(\Anthropic\Messages\Usage $usage): self
-    {
-        return new self(
-            $this->inputTokens + $usage->inputTokens,
-            $this->outputTokens + $usage->outputTokens,
-            $this->cacheReadTokens + ($usage->cacheReadInputTokens ?? 0),
-            $this->cacheWriteTokens + ($usage->cacheCreationInputTokens ?? 0),
-        );
-    }
 }
