@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace TheliaCMS\Partial;
 
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
+use TheliaCMS\Http\CachePurger;
+use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Partial\Definition\BlockPartial;
 
 /**
@@ -29,6 +31,9 @@ final readonly class PartialCache
 {
     public function __construct(
         private TagAwareCacheInterface $cache,
+        // The pages that show the block are in a shared cache with the
+        // previous version of it, the fragment cache being only the first copy.
+        private CachePurger $httpCache,
     ) {
     }
 
@@ -38,6 +43,7 @@ final readonly class PartialCache
     public function invalidate(string $partialName): void
     {
         $this->cache->invalidateTags([PartialFragmentRenderer::tagFor($partialName)]);
+        $this->httpCache->purge([CacheTags::partial($partialName)]);
     }
 
     /**
@@ -51,6 +57,8 @@ final readonly class PartialCache
      */
     public function invalidateBlocks(): void
     {
-        $this->invalidate(BlockPartial::NAME);
+        // The fragments only: the writer of the blocks drops from a shared
+        // cache the pages that use the block that changed, and no others.
+        $this->cache->invalidateTags([PartialFragmentRenderer::tagFor(BlockPartial::NAME)]);
     }
 }

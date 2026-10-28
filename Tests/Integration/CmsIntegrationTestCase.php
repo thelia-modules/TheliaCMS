@@ -14,16 +14,21 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration;
 
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Thelia\Core\Template\TemplateDefinition;
 use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\ConfigQuery;
 use Thelia\Test\IntegrationTestCase;
+use TheliaCMS\Http\CachePurger;
+use TheliaCMS\Http\CachePurgerInterface;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\PageDraft;
+use TheliaCMS\Page\PageInvalidator;
+use TheliaCMS\Partial\PartialCache;
 
 /**
  * Shared ground for the integration tests of the module: a booted shop, a
@@ -149,6 +154,45 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
     protected function writer(): CmsPageWriter
     {
         return $this->getService(CmsPageWriter::class);
+    }
+
+    /**
+     * The writer of the container, but with a shared cache that remembers what
+     * it was told to drop.
+     */
+    protected function writerPurgingWith(CachePurgerInterface $purger): CmsPageWriter
+    {
+        return $this->purgingWith(CmsPageWriter::class, $purger);
+    }
+
+    /**
+     * A service built as the container builds it, down to the services that
+     * hand tags to a shared cache, which hand them to this purger instead.
+     *
+     * @template T of object
+     *
+     * @param class-string<T> $class
+     *
+     * @return T
+     */
+    protected function purgingWith(string $class, CachePurgerInterface $purger): object
+    {
+        $arguments = [];
+
+        foreach ((new \ReflectionMethod($class, '__construct'))->getParameters() as $parameter) {
+            /** @var class-string $type */
+            $type = ltrim((string) $parameter->getType(), '?');
+            $arguments[] = match (true) {
+                CachePurger::class === $type => new CachePurger([$purger], new NullLogger()),
+                \in_array($type, [PageInvalidator::class, PartialCache::class], true) => $this->purgingWith($type, $purger),
+                // What the container has no service for keeps the default the
+                // constructor gives it, as autowiring leaves it.
+                $parameter->isDefaultValueAvailable() && !static::getContainer()->has($type) => $parameter->getDefaultValue(),
+                default => $this->getService($type),
+            };
+        }
+
+        return new $class(...$arguments);
     }
 
     /**

@@ -602,9 +602,11 @@ final readonly class CmsPageAdminRepository
     }
 
     /**
+     * The pages under this one at any depth, binned ones included.
+     *
      * @return array<int, int>
      */
-    private function descendantIds(int $pageId): array
+    public function descendantIds(int $pageId): array
     {
         $ids = [];
         $frontier = [$pageId];

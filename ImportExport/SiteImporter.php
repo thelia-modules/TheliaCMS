@@ -18,13 +18,15 @@ use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Builder\PublishedContentSanitizer;
 use TheliaCMS\Form\FieldChoices;
 use TheliaCMS\Form\FormCode;
 use TheliaCMS\Form\Recipients;
 use TheliaCMS\Form\RetentionPolicy;
+use TheliaCMS\Http\CachePurger;
+use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Menu\MenuCache;
-use TheliaCMS\Block\Item\ItemBlockRepository;
 use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsBlockContent;
 use TheliaCMS\Model\CmsBlockContentQuery;
@@ -49,6 +51,8 @@ use TheliaCMS\Page\PageTagWriter;
 use TheliaCMS\Page\PageTypeCode;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\PageTypeWriter;
+use TheliaCMS\Partial\Definition\FormPartial;
+use TheliaCMS\Partial\PartialCache;
 use TheliaCMS\Search\SearchTextExtractor;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\DisabledBlocks;
@@ -81,6 +85,8 @@ final readonly class SiteImporter
         private PublishedContentSanitizer $sanitizer,
         private PageTagWriter $tagWriter,
         private ItemBlockRepository $itemBlocks,
+        private PartialCache $partials,
+        private CachePurger $httpCache,
     ) {
     }
 
@@ -114,7 +120,12 @@ final readonly class SiteImporter
             throw $throwable;
         }
 
+        // Pages, blocks, menus, forms, settings: an import may change any page
+        // of the site, the one case where the whole of it is dropped.
         $this->menuCache->invalidate();
+        $this->partials->invalidateBlocks();
+        $this->partials->invalidate(FormPartial::NAME);
+        $this->httpCache->purge([CacheTags::SITE]);
 
         return $report;
     }

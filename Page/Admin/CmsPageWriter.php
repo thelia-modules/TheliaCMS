@@ -26,9 +26,6 @@ use TheliaCMS\Builder\ImageRewriter;
 use TheliaCMS\Builder\PageContentNormalizer;
 use TheliaCMS\Builder\PlaceholderContentChecker;
 use TheliaCMS\Builder\PublishedContentSanitizer;
-use TheliaCMS\Http\CachePurger;
-use TheliaCMS\Http\CacheTags;
-use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -37,7 +34,10 @@ use TheliaCMS\Model\CmsPageRevision;
 use TheliaCMS\Model\CmsPageRevisionQuery;
 use TheliaCMS\Model\CmsPageSearch;
 use TheliaCMS\Model\CmsPageSearchQuery;
+use TheliaCMS\Model\Map\CmsPageI18nTableMap;
+use TheliaCMS\Model\Map\CmsPageTableMap;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\PageInvalidator;
 use TheliaCMS\Search\SearchTextExtractor;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -62,14 +62,9 @@ final readonly class CmsPageWriter
         private PlaceholderContentChecker $placeholders,
         private ImageRewriter $images,
         private SearchTextExtractor $searchText,
-        // Menus hold the address and the title of the pages they point at, and
-        // they are cached: a page that is renamed, published, unpublished or
-        // binned has to drop them, or the navigation of the site keeps pointing
-        // at what the page used to be.
-        private MenuCache $menuCache,
-        // A shared cache in front of the site holds pages this writer just
-        // changed, and it has no way of knowing on its own.
-        private CachePurger $httpCache,
+        // Menus, lists of pages and a shared cache in front of the site hold
+        // what this writer changes, and none of them can know on its own.
+        private PageInvalidator $invalidator,
     ) {
     }
 
@@ -98,6 +93,9 @@ final readonly class CmsPageWriter
                 ->setTitle($draft->title)
                 ->setChapo($this->sanitizer->html($page->getChapo(), $mayPublishCustomCode))
                 ->setDescription($this->sanitizer->html($page->getDescription(), $mayPublishCustomCode));
+            // Read before the save clears it: whether the menus and the
+            // breadcrumbs that name this page have to follow.
+            $presenceChanged = $this->presenceChanges($page);
             $page->save($connection);
 
             // The content itself belongs to the builder screen. The row is
@@ -122,13 +120,21 @@ final readonly class CmsPageWriter
 
             $connection->commit();
 
-            $this->menuCache->invalidate();
             // The settings of a page are live as soon as they are saved — its
             // type picks the template it is served with, its SEO fields are in
-            // its head — so the copy a shared cache holds is stale already.
-            if (!$wasNew) {
-                $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
+            // its head — so the copy a shared cache holds is stale already. A
+            // new page was served nowhere yet.
+            if ($wasNew) {
+                // Nothing to drop.
+            } elseif ($formerAddress !== $address) {
+                // The pages under it moved with it.
+                $this->invalidator->presenceChanged(...array_map(static fn (CmsPage $node): int => (int) $node->getId(), $this->branchOf($page)));
+            } elseif ($presenceChanged) {
+                $this->invalidator->presenceChanged((int) $page->getId());
+            } else {
+                $this->invalidator->contentChanged((int) $page->getId());
             }
+
             $this->activityLog->record($wasNew ? 'CREATE' : 'UPDATE', (int) $page->getId(), \sprintf('CMS page "%s" saved in %s', $draft->title, $locale));
         } catch (\Throwable $throwable) {
             $connection->rollBack();
@@ -178,6 +184,7 @@ final readonly class CmsPageWriter
             $content = $this->contentFor($page, $locale);
             $html = $this->publishableHtml($page, $locale, $content, $withCustomCode);
             $css = $this->sanitizer->css($this->normalizer->css($content->getDraftCss()));
+            $wasOnline = null !== $content->getPublishedAt();
 
             $content->setPublishedHtml($html)
                 ->setPublishedCss($css)
@@ -189,8 +196,14 @@ final readonly class CmsPageWriter
 
             $connection->commit();
 
-            $this->menuCache->invalidate();
-            $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
+            // Published again, the page only changes at its own address; for
+            // the first time in this language, it appears in its menus too.
+            if ($wasOnline) {
+                $this->invalidator->contentChanged((int) $page->getId());
+            } else {
+                $this->invalidator->presenceChanged((int) $page->getId());
+            }
+
             $this->activityLog->record('PUBLISH', (int) $page->getId(), \sprintf(
                 'CMS page #%d published in %s%s',
                 $page->getId(),
@@ -262,10 +275,14 @@ final readonly class CmsPageWriter
             ->filterByLocale($locale)
             ->findOne();
 
+        $wasOnline = null !== $content?->getPublishedAt();
+
         $content?->setPublishedAt(null)->save();
 
-        $this->menuCache->invalidate();
-        $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
+        if ($wasOnline) {
+            $this->invalidator->presenceChanged((int) $page->getId());
+        }
+
         $this->activityLog->record('UNPUBLISH', (int) $page->getId(), \sprintf('CMS page #%d unpublished in %s', $page->getId(), $locale));
     }
 
@@ -303,10 +320,8 @@ final readonly class CmsPageWriter
 
             $connection->commit();
 
-            $this->menuCache->invalidate();
-
             $ids = array_map(static fn (CmsPage $node): int => (int) $node->getId(), $branch);
-            $this->httpCache->purge(array_map(CacheTags::page(...), $ids));
+            $this->invalidator->presenceChanged(...$ids);
             $this->activityLog->record('DELETE', (int) $page->getId(), \sprintf('CMS pages moved to the bin: %s', implode(', ', $ids)));
 
             return $ids;
@@ -332,8 +347,11 @@ final readonly class CmsPageWriter
         $connection->beginTransaction();
 
         try {
+            $restored = [];
+
             foreach ($this->branchOf($page, includeDeleted: true) as $node) {
                 $node->setDeletedAt(null)->save($connection);
+                $restored[] = (int) $node->getId();
 
                 // Put back on the address it had, not on one derived from its
                 // title: a page comes out of the bin the way it went in, edited
@@ -347,8 +365,7 @@ final readonly class CmsPageWriter
 
             $connection->commit();
 
-            $this->menuCache->invalidate();
-            $this->httpCache->purge(CacheTags::forPage((int) $page->getId()));
+            $this->invalidator->presenceChanged(...$restored);
             $this->activityLog->record('RESTORE', (int) $page->getId(), \sprintf('CMS page #%d restored from the bin', $page->getId()));
         } catch (\Throwable $throwable) {
             $connection->rollBack();
@@ -432,14 +449,32 @@ final readonly class CmsPageWriter
     }
 
     /**
+     * Whether the title of the page, or what decides that it is online, is
+     * about to change: a link to it, in a menu or a breadcrumb, shows both.
+     */
+    private function presenceChanges(CmsPage $page): bool
+    {
+        return $page->isColumnModified(CmsPageTableMap::COL_VISIBLE)
+            || $page->isColumnModified(CmsPageTableMap::COL_PUBLISH_AT)
+            || $page->isColumnModified(CmsPageTableMap::COL_UNPUBLISH_AT)
+            || $page->getCurrentTranslation()->isColumnModified(CmsPageI18nTableMap::COL_TITLE);
+    }
+
+    /**
      * Makes this page the site home page.
      */
     public function setAsHome(CmsPage $page): void
     {
+        $formerHome = (int) TheliaCMS::getConfigValue('home_page_id', '0');
         TheliaCMS::setConfigValue('home_page_id', (string) $page->getId());
-        // Menus link the home page to the root of the site: the old home page
-        // would keep that link, the new one would keep its own address.
-        $this->menuCache->invalidate();
+
+        // The root of the site was filed under the former home page, and the
+        // address of the new one now redirects there. Menus link the home page
+        // to the root: the old home page would keep that link, the new one
+        // would keep its own address.
+        if ($formerHome !== (int) $page->getId()) {
+            $this->invalidator->presenceChanged(...array_filter([$formerHome, (int) $page->getId()]));
+        }
 
         $this->activityLog->record('UPDATE', (int) $page->getId(), \sprintf('CMS page #%d set as the home page', $page->getId()));
     }
@@ -522,6 +557,7 @@ final readonly class CmsPageWriter
     public function toggleVisibility(CmsPage $page): void
     {
         $page->setVisible(1 === $page->getVisible() ? 0 : 1)->save();
+        $this->invalidator->presenceChanged((int) $page->getId());
 
         $this->activityLog->record(
             'UPDATE',
@@ -562,6 +598,9 @@ final readonly class CmsPageWriter
         foreach ($ordered as $offset => $sibling) {
             $sibling->setPosition($offset + 1)->save();
         }
+
+        // A list of pages may run in the order of the tree.
+        $this->invalidator->listsChanged();
     }
 
     private function contentFor(CmsPage $page, string $locale): CmsPageContent

@@ -14,8 +14,6 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Page;
 
-use Psr\Log\NullLogger;
-use TheliaCMS\Http\CachePurger;
 use TheliaCMS\Http\CachePurgerInterface;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\ImportExport\ImportOptions;
@@ -187,12 +185,14 @@ final class PageTagTest extends CmsIntegrationTestCase
                 array_push($this->purged, ...$tags);
             }
         };
-        $writer = new PageTagWriter($this->tags(), $this->getService(\TheliaCMS\Page\Admin\CmsActivityLog::class), new CachePurger([$purger], new NullLogger()));
+        $writer = $this->purgingWith(PageTagWriter::class, $purger);
+        $dropped = [CacheTags::PAGE_LISTS, CacheTags::page((int) $page->getId())];
 
         $writer->rename($tag, 'Recettes');
         $writer->delete($tag);
 
-        self::assertSame([CacheTags::page((int) $page->getId()), CacheTags::page((int) $page->getId())], $purger->purged);
+        // The lists of pages show the tag of each page, and list the pages of a tag.
+        self::assertSame([...$dropped, ...$dropped], $purger->purged);
     }
 
     public function testTheTagTravelsWithTheExportAndIsCreatedByTheImport(): void
