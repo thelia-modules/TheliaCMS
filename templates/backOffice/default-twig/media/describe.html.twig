@@ -42,7 +42,7 @@
             </p>
             <p class="small">
                 {% if item.usageCount > 0 %}
-                    {{ 'Used in %count% page(s)'|trans({ '%count%': item.usageCount }, 'theliacms') }}
+                    {{ 'Used by %count% page(s) or item(s)'|trans({ '%count%': item.usageCount }, 'theliacms') }}
                 {% else %}
                     {{ 'Not used yet'|trans({}, 'theliacms') }}
                 {% endif %}

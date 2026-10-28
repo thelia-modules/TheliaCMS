@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Media\Admin;
 
 use Thelia\Model\Lang;
+use Thelia\Model\LangQuery;
 use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Media\MediaFilter;
 use TheliaLibrary\Model\LibraryImage;
@@ -95,6 +96,33 @@ final readonly class MediaCatalog
         $counts = $this->library->counts($locale, $search);
 
         return new MediaTally(total: $counts['total'], undescribed: $counts['undescribed']);
+    }
+
+    /**
+     * Where the image stands in each language of the shop: described, still
+     * to describe, or decorative, which holds for every language.
+     *
+     * @return list<array{languageId: int, locale: string, code: string, state: 'described'|'missing'|'decorative'}>
+     */
+    public function descriptionsOf(LibraryImage $image, string $editedLocale): array
+    {
+        $descriptions = [];
+
+        foreach (LangQuery::create()->filterByActive(1)->orderByPosition()->find() as $language) {
+            $locale = (string) $language->getLocale();
+            $alt = trim((string) $image->setLocale($locale)->getAlt());
+
+            $descriptions[] = [
+                'languageId' => (int) $language->getId(),
+                'locale' => $locale,
+                'code' => strtoupper((string) $language->getCode()),
+                'state' => 1 === $image->getDecorative() ? 'decorative' : ('' === $alt ? 'missing' : 'described'),
+            ];
+        }
+
+        $image->setLocale($editedLocale);
+
+        return $descriptions;
     }
 
     public function item(LibraryImage $image, string $locale, ?int $usageCount = null): ?MediaItem

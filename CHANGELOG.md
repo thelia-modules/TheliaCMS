@@ -22,6 +22,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.3.1)
 
+- **The sheet of an image says where its description stands in every
+  language**, each language a link to the sheet in it. Tags are chips
+  suggested from the tags of the library, written as the library has them; a
+  file chosen to replace the image is shown, with its size, before the sheet
+  is saved; deleting is asked in a dialog of the screen instead of the
+  browser's confirm(). The usage of an image says "pages or items": it
+  counts the catalogue items showing it too.
 - **Images are dropped on the media list and sent one by one.** The upload
   form of the list takes files dropped on it; with JavaScript each file is
   sent on its own, with its progress, then "added" or why it was refused

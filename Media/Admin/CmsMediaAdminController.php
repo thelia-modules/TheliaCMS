@@ -243,6 +243,9 @@ final readonly class CmsMediaAdminController
         return new Response($this->twig->render(self::EDIT_TEMPLATE, [
             // The list the image was opened from, to go back to it.
             'list_parameters' => MediaQuery::fromRequest($request)->addressParameters(),
+            'descriptions' => $this->catalog->descriptionsOf($image, $locale),
+            'known_tags' => array_keys($this->library->tagCounts()),
+            'assets_version' => substr(hash('xxh3', (string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/media-sheet.js')), 0, 12),
             'form' => $form->createView(),
             'item' => $this->catalog->item($image, $locale),
             'usages' => $this->usages->pagesUsing($id),
@@ -263,7 +266,7 @@ final readonly class CmsMediaAdminController
 
         if ($usageCount > 0) {
             return $this->backToList($request, $lang, $this->translator->trans(
-                'This image is still used by %count% page(s). Remove it from them first.',
+                'This image is still used by %count% page(s) or catalogue item(s). Remove it from them first.',
                 ['%count%' => $usageCount],
                 TheliaCMS::DOMAIN_NAME,
             ), 'warning');

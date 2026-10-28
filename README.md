@@ -464,8 +464,10 @@ mandatory in every language unless the image is marked decorative, which
 publishes it with an empty `alt`. An empty attribute on its own cannot say
 whether an image was described or simply forgotten, so the choice is recorded.
 
-Each image shows its dimensions, weight, format and the pages using it, in their
-content or as their image. One still in use cannot be deleted.
+Each image shows its dimensions, weight, format, the pages and catalogue items
+using it, and where its description stands in every language. One still in use
+cannot be deleted. Its tags are suggested from the ones the library already
+has, and a replacing file is shown before it is saved.
 
 The list shows 48 images a page. It narrows to the images still to describe
 in the language edited, the unused ones, the decorative ones or one tag, and

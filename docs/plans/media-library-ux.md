@@ -17,7 +17,12 @@ file, progress, refusals), `MediaUpload` and `MediaUploadRefusal`, the queue
 restricted to named images (`images=` in the address of the queue only: leaving it goes back to the whole list), tests in
 `Tests/Integration/Media/MediaUploadScreenTest.php`. Found on the way and
 fixed: the list stored GIF and BMP, and a file the library could not decode
-broke the whole sending. Lots 4 to 6 not started. The import of the catalogue
+broke the whole sending.
+
+Lot 4 done the same day: `MediaCatalog::descriptionsOf()`, `assets/media-sheet.js`
+(tag chips with suggestions, preview of a replacing file, delete dialog),
+tests in `Tests/Integration/Media/MediaSheetScreenTest.php`; the usage counts
+say "pages or items". Lots 5 and 6 not started. The import of the catalogue
 images it starts from is done: `thelia_cms:media:import-catalogue`
 (`Media/CatalogueImageImporter.php`), a copy, run again without duplicates.
 
