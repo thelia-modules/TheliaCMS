@@ -16,6 +16,7 @@ namespace TheliaCMS\Generation\Text;
 
 use Symfony\Component\HtmlSanitizer\HtmlSanitizer;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
+use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
 
 /**
  * Formatted text and nothing else: paragraphs, emphasis, lists, links,
@@ -34,6 +35,9 @@ final readonly class TextSanitizer
     public function text(string $html): string
     {
         $config = (new HtmlSanitizerConfig())
+            // The 20 000 bytes Symfony reads by default would cut a long text
+            // in the middle of a sentence, without a word.
+            ->withMaxInputLength(PublishedContentSanitizer::DEFAULT_MAX_LENGTH)
             ->allowElement('a', ['href', 'title'])
             ->allowLinkSchemes(['https', 'http', 'mailto', 'tel'])
             ->allowRelativeLinks();

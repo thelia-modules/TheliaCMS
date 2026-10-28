@@ -238,7 +238,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   recipe whose components are drawn with their classes went online cut in
   the middle of a sentence. The limit is now 1 000 000 bytes
   (`PublishedContentSanitizer::DEFAULT_MAX_LENGTH`), and a shop can pass its
-  own length to the service (`$maxLength`).
+  own length to the service (`$maxLength`). The text the generator writes for
+  a field had the same limit and reads the same length now.
 - **The media list refuses a file on its own, and only the formats it
   says.** A file the library could not decode stopped the whole sending with
   an error, after storing the files before it; and a GIF or a BMP was stored
