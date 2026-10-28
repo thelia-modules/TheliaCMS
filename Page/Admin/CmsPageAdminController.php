@@ -256,7 +256,11 @@ final readonly class CmsPageAdminController
     {
         $this->denyUnless(AccessManager::UPDATE);
 
-        $this->writer->toggleVisibility($this->livePageOrFail($id));
+        try {
+            $this->writer->toggleVisibility($this->livePageOrFail($id));
+        } catch (ModelPageSettingException) {
+            $this->flash($request, 'danger', $this->translate('This page is the model of its template: it is never online.'));
+        }
 
         return $this->backToList($request);
     }
@@ -301,7 +305,11 @@ final readonly class CmsPageAdminController
     {
         $this->denyUnless(AccessManager::DELETE);
 
-        $this->writer->moveToTrash($this->livePageOrFail($id));
+        try {
+            $this->writer->moveToTrash($this->livePageOrFail($id));
+        } catch (ModelPageSettingException) {
+            $this->flash($request, 'danger', $this->translate('This page is the model of its template: it is deleted with its template, under CMS > Page templates, never moved to the bin.'));
+        }
 
         return $this->backToList($request);
     }
@@ -424,7 +432,9 @@ final readonly class CmsPageAdminController
             'pageType' => $page->getPageType(),
             'tag' => $page->getTagId(),
             'image' => $page->getImageId(),
-            'visible' => $page->isNew() ? 1 : $page->getVisible(),
+            // A model is never online, whatever an older version of the module
+            // or an import left in the row.
+            'visible' => $page->isNew() ? 1 : (1 === $page->getModel() ? 0 : $page->getVisible()),
             'publishAt' => $page->getPublishAt(),
             'unpublishAt' => $page->getUnpublishAt(),
             'metaTitle' => $page->isNew() ? null : $page->getMetaTitle(),
@@ -461,7 +471,7 @@ final readonly class CmsPageAdminController
             ->setPageType($data['pageType'] ?? $page->getPageType())
             ->setTagId(null === $data['tag'] ? null : (int) $data['tag'])
             ->setImageId($this->chosenImage($data, $locale))
-            ->setVisible((int) $data['visible'])
+            ->setVisible(1 === $page->getModel() ? 0 : (int) $data['visible'])
             ->setPublishAt($data['publishAt'])
             ->setUnpublishAt($data['unpublishAt']);
 

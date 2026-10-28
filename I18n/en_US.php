@@ -1171,4 +1171,7 @@ return [
     'Give the page a title first.' => 'Give the page a title first.',
     'This address is free.' => 'This address is free.',
     'The address could not be checked.' => 'The address could not be checked.',
+    'This page is the model of its template: it is deleted with its template, under CMS > Page templates, never moved to the bin.' => 'This page is the model of its template: it is deleted with its template, under CMS > Page templates, never moved to the bin.',
+    'This page is the model of its template: it is never online.' => 'This page is the model of its template: it is never online.',
+    'The model of a template is never online.' => 'The model of a template is never online.',
 ];

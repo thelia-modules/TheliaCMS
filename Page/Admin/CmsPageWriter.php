@@ -523,9 +523,15 @@ final readonly class CmsPageWriter
      * that no longer resolves, which is a 500 and not a 404.
      *
      * @return list<int> the pages actually binned, deepest first
+     *
+     * @throws ModelPageSettingException when the page is the model of its type
      */
     public function moveToTrash(CmsPage $page): array
     {
+        if (1 === $page->getModel()) {
+            throw ModelPageSettingException::trash((int) $page->getId());
+        }
+
         $connection = Propel::getConnection('TheliaMain');
         $connection->beginTransaction();
 
@@ -836,8 +842,15 @@ final readonly class CmsPageWriter
         return array_values(array_unique(array_map(strval(...), $locales)));
     }
 
+    /**
+     * @throws ModelPageSettingException when the page is the model of its type
+     */
     public function toggleVisibility(CmsPage $page): void
     {
+        if (1 === $page->getModel()) {
+            throw ModelPageSettingException::visibility((int) $page->getId());
+        }
+
         $page->setVisible(1 === $page->getVisible() ? 0 : 1)->save();
         $this->partials->invalidate(PageListPartial::NAME);
 

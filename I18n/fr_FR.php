@@ -1171,4 +1171,7 @@ return [
     'Give the page a title first.' => 'Donnez d’abord un titre à la page.',
     'This address is free.' => 'Cette adresse est libre.',
     'The address could not be checked.' => 'L’adresse n’a pas pu être vérifiée.',
+    'This page is the model of its template: it is deleted with its template, under CMS > Page templates, never moved to the bin.' => 'Cette page est le modèle de son gabarit : elle est supprimée avec son gabarit, dans CMS > Gabarits, jamais mise à la corbeille.',
+    'This page is the model of its template: it is never online.' => 'Cette page est le modèle de son gabarit : elle n’est jamais en ligne.',
+    'The model of a template is never online.' => 'Le modèle d’un gabarit n’est jamais en ligne.',
 ];

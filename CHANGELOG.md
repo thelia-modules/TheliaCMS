@@ -134,7 +134,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   menus, the breadcrumb, the lists of a tag, the search, the TntSearch index
   and the sitemap now leave a model out on their own account, and an import
   keeps the draft of a model and drops the published version the file gives
-  it.
+  it. A model can no longer be set online nor moved to the bin: its edit
+  screen shows *Online* set to *No* and greyed out, saving it puts it offline,
+  an import brings it in offline, and posting to its bin or visibility action
+  is refused with a message. It still goes with its template when the
+  template is deleted.
 - **A reserved slug is refused on its field.** Saving a page with the slug
   `admin`, `api` or another reserved path answered an error 500; the form now
   shows why under the field.

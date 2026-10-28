@@ -351,6 +351,7 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
         $imported = $this->getService(PageTypeRepository::class)->modelOf('recipe-model-online');
 
         self::assertNotNull($imported, 'The model comes back as the model.');
+        self::assertSame(0, $imported->getVisible(), 'A model comes in offline, whatever the file says.');
         self::assertNull(
             $this->getService(PublishedPageRepository::class)->find((int) $imported->getId(), $this->locale()),
             'The model of a type is never served to a visitor.',

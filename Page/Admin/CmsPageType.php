@@ -112,6 +112,9 @@ final class CmsPageType extends AbstractType
                 'label' => 'Online',
                 'choices' => ['Yes' => 1, 'No' => 0],
                 'expanded' => true,
+                // A model is a reference for new pages, never a page of the site.
+                'disabled' => $options['is_model'],
+                'help' => $options['is_model'] ? 'The model of a template is never online.' : null,
             ])
             ->add('publishAt', DateTimeType::class, [
                 'label' => 'Publish on',
