@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace TheliaCMS\Catalogue;
 
 use Propel\Runtime\Connection\ConnectionInterface;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Model\ModuleQuery;
 
 /**
@@ -35,8 +37,27 @@ final class DealerStores
     /** The module dispatches the `.before` and `.after` events of a deletion, never `dealer.dealer.delete` itself. */
     public const string DELETED_EVENT = 'dealer.dealer.delete.after';
 
-    /** Route of the edit screen of a store, declared by the module. */
-    public const string EDIT_ROUTE = 'dealer.dealer_tab.view';
+    /**
+     * The route of the edit screen of a store changed name between versions
+     * of the module: `dealer_tab.view` in the attributes of 4.3,
+     * `dealer.dealer_tab.view` in the routing.xml of 4.0.
+     */
+    private const array EDIT_ROUTES = ['dealer_tab.view', 'dealer.dealer_tab.view'];
+
+    /**
+     * @param array<string, int|string> $parameters
+     */
+    public static function editUrl(UrlGeneratorInterface $urls, int $id, array $parameters = []): string
+    {
+        foreach (self::EDIT_ROUTES as $route) {
+            try {
+                return $urls->generate($route, ['dealer_id' => $id] + $parameters);
+            } catch (RouteNotFoundException) {
+            }
+        }
+
+        throw new RouteNotFoundException('The Dealer module declares no edit screen for a store.');
+    }
 
     public static function available(): bool
     {

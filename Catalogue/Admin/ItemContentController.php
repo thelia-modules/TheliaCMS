@@ -397,7 +397,7 @@ final readonly class ItemContentController
             CatalogueItemType::Category => $this->urls->generate('admin.categories.update', ['category_id' => $item->id] + $language),
             CatalogueItemType::Content => $this->urls->generate('admin.content.update', ['content_id' => $item->id] + $language),
             CatalogueItemType::Folder => $this->urls->generate('admin.folders.update', ['folder_id' => $item->id] + $language),
-            CatalogueItemType::Dealer => $this->urls->generate(DealerStores::EDIT_ROUTE, ['dealer_id' => $item->id] + $language),
+            CatalogueItemType::Dealer => DealerStores::editUrl($this->urls, $item->id, $language),
         };
     }
 
