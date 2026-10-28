@@ -29,6 +29,7 @@ use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Page\Field\PageFields;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\PageTypeWriter;
+use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaLibrary\Model\LibraryImage;
 
@@ -315,6 +316,47 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
         $imported = CmsPageQuery::create()->filterByPageType('recipe-round-trip')->filterByModel(0)->findOne();
         self::assertNotNull($imported);
         self::assertSame(['servings' => 6, 'tip' => 'Servir tiède.'], $this->getService(PageFields::class)->valuesOf($imported, $this->locale()));
+    }
+
+    /**
+     * The model of a type is never published, and the front shows nothing but
+     * published content: a file whose model carries a published version, edited
+     * by hand or written elsewhere, must not put the model online, even when
+     * the model is set visible.
+     */
+    public function testAModelImportedWithAPublishedVersionIsNotOnline(): void
+    {
+        $this->getService(PageTypeWriter::class)->add('recipe-model-online');
+        $model = $this->writer()->createModel('recipe-model-online', $this->locale(), 'Recette (modèle) en ligne');
+
+        $document = $this->getService(SiteExporter::class)->export();
+
+        foreach ($document['pages'] as $index => $page) {
+            if (true === $page['model'] && 'recipe-model-online' === $page['page_type']) {
+                // Online, as the model of this shop is: its visibility is a
+                // setting of the edit screen, and the file carries it.
+                $document['pages'][$index]['visible'] = true;
+                $document['pages'][$index]['contents'][$this->locale()]['published_html'] = '<div class="cms-page-content"><p>Modèle publié</p></div>';
+                $document['pages'][$index]['contents'][$this->locale()]['published_at'] = '2026-01-01T10:00:00+00:00';
+            }
+        }
+
+        $this->emptyTheSite();
+        $this->getPropelConnection()->exec("DELETE FROM cms_page_type WHERE code = 'recipe-model-online'");
+        CmsPageTypeDefinitionTableMap::clearInstancePool();
+
+        $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions());
+
+        CmsPageTableMap::clearInstancePool();
+        $imported = $this->getService(PageTypeRepository::class)->modelOf('recipe-model-online');
+
+        self::assertNotNull($imported, 'The model comes back as the model.');
+        self::assertNull(
+            $this->getService(PublishedPageRepository::class)->find((int) $imported->getId(), $this->locale()),
+            'The model of a type is never served to a visitor.',
+        );
+        self::assertSame([], $this->getService(PublishedPageRepository::class)->publishedLocales((int) $imported->getId()), 'The model is published in no language.');
+        unset($model);
     }
 
     /**

@@ -464,14 +464,17 @@ final readonly class SiteImporter
                 ->findOne()
                 ?? (new CmsPageContent())->setPageId($page->getId())->setLocale($locale);
 
-            $publishedHtml = $this->media->remap($content['published_html'] ?? null, $mediaMap);
+            // The model of a type is never published: a version the file
+            // gives it, edited by hand or written elsewhere, is left out.
+            $published = 1 === $page->getModel() ? [] : $content;
+            $publishedHtml = $this->media->remap($published['published_html'] ?? null, $mediaMap);
 
             $model
                 ->setDraftDocument($this->media->remap($content['draft_document'] ?? null, $mediaMap))
                 ->setDraftHtml($this->media->remap($content['draft_html'] ?? null, $mediaMap))
-                ->setPublishedDocument($this->media->remap($content['published_document'] ?? null, $mediaMap))
+                ->setPublishedDocument($this->media->remap($published['published_document'] ?? null, $mediaMap))
                 ->setPublishedHtml($publishedHtml)
-                ->setPublishedAt($this->date($content['published_at'] ?? null));
+                ->setPublishedAt($this->date($published['published_at'] ?? null));
 
             // The back office reads "edited since it went live" from this
             // column against the publication date. Saving without setting it

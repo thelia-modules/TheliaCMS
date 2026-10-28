@@ -127,6 +127,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   and stayed there once the parent was translated. Giving a page its first
   address in a language now puts the pages under it, the ones already written
   in that language, under that address. Their former address redirects.
+- **The model of a page type stays off the front.** The front left the model
+  out only because the back office never publishes it. Set visible from its
+  edit screen and imported with a published version, from a file edited by
+  hand or written elsewhere, it was served on its address. The pages, the
+  menus, the breadcrumb, the lists of a tag, the search, the TntSearch index
+  and the sitemap now leave a model out on their own account, and an import
+  keeps the draft of a model and drops the published version the file gives
+  it.
 - **A reserved slug is refused on its field.** Saving a page with the slug
   `admin`, `api` or another reserved path answered an error 500; the form now
   shows why under the field.

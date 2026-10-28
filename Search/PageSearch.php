@@ -59,6 +59,7 @@ final readonly class PageSearch
               AND MATCH (s.content) AGAINST (:terms IN BOOLEAN MODE)
               AND p.deleted_at IS NULL
               AND p.visible = 1
+              AND p.model = 0
               AND (p.publish_at IS NULL OR p.publish_at <= :now)
               AND (p.unpublish_at IS NULL OR p.unpublish_at > :now2)
               AND c.published_at IS NOT NULL

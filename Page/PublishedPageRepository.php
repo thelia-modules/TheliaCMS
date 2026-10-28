@@ -323,11 +323,14 @@ final readonly class PublishedPageRepository
     }
 
     /**
-     * Visible, not in the bin, and inside its publication window.
+     * Visible, not in the bin, inside its publication window, and not the
+     * model of a type: a model is a reference for new pages, never a page of
+     * the site, even set visible and holding a published version an import
+     * brought in.
      */
     private function isLive(CmsPage $page, \DateTimeInterface $now): bool
     {
-        if (null !== $page->getDeletedAt() || 1 !== $page->getVisible()) {
+        if (null !== $page->getDeletedAt() || 1 !== $page->getVisible() || 1 === $page->getModel()) {
             return false;
         }
 

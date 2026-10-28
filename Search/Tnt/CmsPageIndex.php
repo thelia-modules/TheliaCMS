@@ -52,6 +52,7 @@ class CmsPageIndex extends BaseIndex
             WHERE s.locale = '".addslashes((string) $locale)."'
               AND p.deleted_at IS NULL
               AND p.visible = 1
+              AND p.model = 0
               AND (p.publish_at IS NULL OR p.publish_at <= NOW())
               AND (p.unpublish_at IS NULL OR p.unpublish_at > NOW())
               AND c.published_at IS NOT NULL
