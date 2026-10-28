@@ -244,17 +244,26 @@
                 return;
             }
 
-            var button = element('button', 'btn btn-sm btn-outline-secondary ms-2', m.button);
+            var button = element('button', 'btn btn-sm btn-outline-secondary flex-shrink-0', m.button);
             button.type = 'button';
             button.setAttribute('data-cms-text-brief-open', field.kind);
 
+            // The label on the left, the button on the right, on one line: the
+            // row takes the margin the label had under it.
+            var row = element('div', 'd-flex align-items-center justify-content-between gap-2 mb-2');
+            row.setAttribute('data-cms-text-brief-row', '');
             var label = textarea.labels && textarea.labels[0];
 
             if (label) {
-                label.insertAdjacentElement('afterend', button);
+                label.insertAdjacentElement('beforebegin', row);
+                label.classList.add('mb-0');
+                row.appendChild(label);
             } else {
-                textarea.insertAdjacentElement('beforebegin', button);
+                row.classList.replace('justify-content-between', 'justify-content-end');
+                textarea.insertAdjacentElement('beforebegin', row);
             }
+
+            row.appendChild(button);
 
             button.addEventListener('click', function () {
                 if (!dialog) {
