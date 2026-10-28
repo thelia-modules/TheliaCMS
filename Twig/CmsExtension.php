@@ -29,6 +29,7 @@ use TheliaCMS\Page\PublishedPage;
 use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\SiteIcon;
+use TheliaCMS\TheliaCMS;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 
@@ -73,6 +74,7 @@ final class CmsExtension extends AbstractExtension
             new TwigFunction('cms_pages_of_type', $this->pagesOfType(...)),
             new TwigFunction('cms_page_type', $this->pageType(...)),
             new TwigFunction('cms_page_fields', $this->pageFields(...)),
+            new TwigFunction('cms_is_home', $this->isHome(...)),
         ];
     }
 
@@ -188,5 +190,10 @@ final class CmsExtension extends AbstractExtension
     public function siteIcon(): ?string
     {
         return $this->icon->exists() ? $this->urls->generate('cms.site_icon') : null;
+    }
+
+    public function isHome(string $id): ?bool
+    {
+        return (int) $id === (int) TheliaCMS::getConfigValue('home_page_id', 0);
     }
 }

@@ -1036,6 +1036,7 @@ to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
 | `cms_page_type(type, locale)` | the `code`, `title` and `description` of a type, for the heading of a list. |
 | `cms_page_fields(page)` | the fields of a page or a card holding a value, each with its `code`, `label`, raw `value` and `text` written for a visitor ("1 h 30 min"). |
 | `cms_item_content(type, id, locale)` | the published document of a product, a category, a content or a folder, as markup, or an empty string. The locale defaults to the one being served. |
+| `cms_is_home(id)` | whether the page of this id is the one the module shows as the home page (setting `home_page_id`). |
 
 Except for `cms_item_content()`, whose document is markup by nature, they
 return data rather than markup, because navigation markup belongs to the

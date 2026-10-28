@@ -583,6 +583,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,
   `ImageRewriter`, `PublishedContentSanitizer`, `PageContentNormalizer`.
 
+### Added (1.6.0)
+
+- Twig function `cms_is_home(id)`: tells whether a page is the one the module
+  shows as the home page.
+
 ### Added (1.5.0)
 
 - On a Thelia core that brings the shared cache of the public pages
