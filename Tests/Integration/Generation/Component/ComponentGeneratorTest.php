@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Generation\Component;
 
 use Psr\Log\NullLogger;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Domain\Ai\AiFinishReason;
 use Thelia\Domain\Ai\AiMessageRole;
 use Thelia\Domain\Ai\AsAiUsage;
@@ -25,6 +26,7 @@ use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentUsage;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Front\BlockStyles;
+use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Generation\Component\ComponentGenerator;
 use TheliaCMS\Generation\Component\ComponentPrompt;
 use TheliaCMS\Generation\Component\ComponentRequest;
@@ -222,7 +224,7 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
             $this->generator()->generate(new ComponentRequest('Un tableau de prix.', $this->locale()));
             self::fail('A call the gateway refuses makes no component.');
         } catch (GenerationException $exception) {
-            self::assertStringContainsString('budget', $exception->getMessage());
+            self::assertStringContainsString('The AI budget of the site is spent for now', $exception->getMessage());
             self::assertSame('failed', CmsPageGenerationQuery::create()->findPk($exception->logId)?->getStatus());
         }
     }
@@ -251,6 +253,7 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
             $this->getService(SiteComponentRepository::class),
             $this->getService(GenerationLog::class),
             new NullLogger(),
+            new GatewayFailures($this->getService(TranslatorInterface::class)),
             new SiteComponentUsage(),
         );
     }

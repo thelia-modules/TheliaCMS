@@ -17,9 +17,9 @@ namespace TheliaCMS\Tests\Integration\Generation;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Domain\Ai\AiFinishReason;
 use Thelia\Domain\Ai\AiMessageRole;
-use Thelia\Domain\Ai\AiResponse;
 use Thelia\Domain\Ai\AiToolCall;
 use Thelia\Domain\Ai\Exception\AiBudgetExceededException;
 use Thelia\Domain\Ai\UntrustedSource;
@@ -27,6 +27,7 @@ use Thelia\Model\ModuleConfigQuery;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentSchema;
 use TheliaCMS\Content\DocumentValidator;
+use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
 use TheliaCMS\Generation\Brief;
 use TheliaCMS\Generation\GenerationException;
@@ -224,7 +225,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
             $this->generator()->generate(GenerationRequest::fromBrief($this->target($page), $this->locale(), new Brief('Something')));
             self::fail('The generation should have failed.');
         } catch (GenerationException $exception) {
-            self::assertStringContainsString('The AI gateway refused the call', $exception->getMessage());
+            self::assertStringContainsString('The AI budget of the site is spent for now', $exception->getMessage());
             self::assertNotNull($exception->logId);
         }
 
@@ -470,6 +471,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
             $this->getService(DocumentValidator::class),
             $this->getService(GenerationLog::class),
             new NullLogger(),
+            new GatewayFailures($this->getService(TranslatorInterface::class)),
         );
     }
 

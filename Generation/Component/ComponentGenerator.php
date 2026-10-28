@@ -31,8 +31,9 @@ use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentUsage;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Content\Site\SitePropReader;
-use TheliaCMS\Generation\Ai\FinishReasonGuard;
+use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Generation\Ai\ObservedStream;
+use TheliaCMS\Generation\Ai\SentBackAnswer;
 use TheliaCMS\Generation\GenerationException;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationObserverInterface;
@@ -75,10 +76,10 @@ final readonly class ComponentGenerator
         private SiteComponentRepository $components,
         private GenerationLog $log,
         private LoggerInterface $logger,
+        private GatewayFailures $failures,
         private SiteComponentUsage $usage,
         private SitePropReader $props = new SitePropReader(),
         private ObservedStream $streams = new ObservedStream(),
-        private FinishReasonGuard $finishReasons = new FinishReasonGuard(),
     ) {
     }
 
@@ -131,7 +132,9 @@ final readonly class ComponentGenerator
                 try {
                     $response = $this->streams->read($this->gateway->stream($conversation), $observer);
                 } catch (AiExceptionInterface $exception) {
-                    throw GenerationException::because('The AI gateway refused the call: '.$exception->getMessage(), $exception);
+                    $coreLogId = $this->failures->logIdOf($exception) ?? $coreLogId;
+
+                    throw $this->failures->exceptionFor($exception);
                 }
 
                 $model = $response->model;
@@ -140,7 +143,7 @@ final readonly class ComponentGenerator
                 $costUsd += (float) $response->cost;
                 $coreLogId = $response->logId;
                 $observer?->onTurn($turns, []);
-                $this->finishReasons->assertUsable($response->finishReason, $this->settings->maxTokens(), 'raise the limit of the generator or ask for a simpler component.');
+                $this->failures->assertUsable($response, $this->settings->maxTokens(), 'raise the limit of the generator or ask for a simpler component.');
 
                 try {
                     $component = $this->validator->validate($this->componentFrom(trim($response->text), $request));
@@ -158,7 +161,7 @@ final readonly class ComponentGenerator
 
                     $this->logger->info('TheliaCMS: the generated component was refused and sent back: {problems}', ['problems' => implode(' ', $exception->problems)]);
                     $observer?->onCorrection($turns, $exception->problems);
-                    $conversation = $conversation->withMessages(AiMessage::fromResponse($response), AiMessage::user(ComponentPrompt::correction($exception->problems)));
+                    $conversation = $conversation->withMessages(SentBackAnswer::of($response), AiMessage::user(ComponentPrompt::correction($exception->problems)));
 
                     continue;
                 }
@@ -180,6 +183,13 @@ final readonly class ComponentGenerator
             $exception->logId = $record(GenerationLog::STATUS_FAILED, $exception->getMessage());
 
             throw $exception;
+        } catch (AiExceptionInterface $exception) {
+            // What the core refuses outside the call itself, a message it
+            // cannot take among them: the same ledger row, the same words.
+            $failure = $this->failures->exceptionFor($exception);
+            $failure->logId = $record(GenerationLog::STATUS_FAILED, $failure->getMessage());
+
+            throw $failure;
         }
     }
 

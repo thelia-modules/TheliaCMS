@@ -15,9 +15,11 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Generation;
 
 use Psr\Log\NullLogger;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentSchema;
 use TheliaCMS\Content\DocumentValidator;
+use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
 use TheliaCMS\Generation\Brief;
 use TheliaCMS\Generation\GenerationLog;
@@ -183,6 +185,7 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
             $this->getService(DocumentValidator::class),
             $this->getService(GenerationLog::class),
             new NullLogger(),
+            new GatewayFailures($this->getService(TranslatorInterface::class)),
         );
     }
 }

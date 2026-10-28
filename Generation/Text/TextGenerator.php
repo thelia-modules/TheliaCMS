@@ -21,14 +21,14 @@ use Thelia\Domain\Ai\AiGatewayInterface;
 use Thelia\Domain\Ai\AiMessage;
 use Thelia\Domain\Ai\AiOutputSchema;
 use Thelia\Domain\Ai\AiRequest;
-use Thelia\Domain\Ai\AiResponse;
 use Thelia\Domain\Ai\AiTier;
 use Thelia\Domain\Ai\AiToolCall;
 use Thelia\Domain\Ai\AiTransparency;
 use Thelia\Domain\Ai\AsAiUsage;
 use Thelia\Domain\Ai\Exception\AiExceptionInterface;
-use TheliaCMS\Generation\Ai\FinishReasonGuard;
+use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
+use TheliaCMS\Generation\Ai\SentBackAnswer;
 use TheliaCMS\Generation\GenerationException;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationRefusedException;
@@ -77,7 +77,7 @@ final readonly class TextGenerator
         private TextSanitizer $sanitizer,
         private GenerationLog $log,
         private LoggerInterface $logger,
-        private FinishReasonGuard $finishReasons = new FinishReasonGuard(),
+        private GatewayFailures $failures,
     ) {
     }
 
@@ -134,7 +134,9 @@ final readonly class TextGenerator
                 try {
                     $response = $this->gateway->complete($conversation);
                 } catch (AiExceptionInterface $exception) {
-                    throw GenerationException::because('The AI gateway refused the call: '.$exception->getMessage(), $exception);
+                    $coreLogId = $this->failures->logIdOf($exception) ?? $coreLogId;
+
+                    throw $this->failures->exceptionFor($exception);
                 }
 
                 $model = $response->model;
@@ -142,7 +144,7 @@ final readonly class TextGenerator
                 $usage = $usage->plusTokens($response->tokenUsage);
                 $costUsd += (float) $response->cost;
                 $coreLogId = $response->logId;
-                $this->finishReasons->assertUsable($response->finishReason, $this->settings->textMaxTokens(), 'raise the limit of the texts in the settings or ask for a shorter text.');
+                $this->failures->assertUsable($response, $this->settings->textMaxTokens(), 'raise the limit of the texts in the settings or ask for a shorter text.');
 
                 if ($response->hasToolCalls()) {
                     $conversation = $conversation->withMessages(AiMessage::fromResponse($response), ...$this->toolResults($response->toolCalls, $text));
@@ -159,7 +161,7 @@ final readonly class TextGenerator
                     }
 
                     $this->logger->info('TheliaCMS: the generated text was refused and sent back: {problems}', ['problems' => implode(' ', $problems)]);
-                    $conversation = $conversation->withMessages(self::answerOf($response), AiMessage::user(TextPrompt::correction($problems)));
+                    $conversation = $conversation->withMessages(SentBackAnswer::of($response), AiMessage::user(TextPrompt::correction($problems)));
 
                     continue;
                 }
@@ -181,6 +183,13 @@ final readonly class TextGenerator
             $exception->logId = $record(GenerationLog::STATUS_FAILED, $exception->getMessage());
 
             throw $exception;
+        } catch (AiExceptionInterface $exception) {
+            // What the core refuses outside the call itself, a message it
+            // cannot take among them: the same ledger row, the same words.
+            $failure = $this->failures->exceptionFor($exception);
+            $failure->logId = $record(GenerationLog::STATUS_FAILED, $failure->getMessage());
+
+            throw $failure;
         }
     }
 
@@ -229,14 +238,5 @@ final readonly class TextGenerator
             ),
             $calls,
         );
-    }
-
-    /**
-     * The answer sent back with its problems. An empty one is one of them, and
-     * the gateway takes no assistant message without text nor tool call.
-     */
-    private static function answerOf(AiResponse $response): AiMessage
-    {
-        return '' === trim($response->text) ? AiMessage::assistant('(no text)') : AiMessage::fromResponse($response);
     }
 }

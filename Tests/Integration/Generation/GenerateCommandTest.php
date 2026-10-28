@@ -17,6 +17,7 @@ namespace TheliaCMS\Tests\Integration\Generation;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use TheliaCMS\Catalogue\Admin\ItemContentWriter;
 use TheliaCMS\Catalogue\CatalogueItems;
 use TheliaCMS\Catalogue\CatalogueItemType;
@@ -25,6 +26,7 @@ use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentSchema;
 use TheliaCMS\Content\DocumentValidator;
 use TheliaCMS\Generation\Admin\TranslationSources;
+use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
 use TheliaCMS\Generation\GenerateCommand;
 use TheliaCMS\Generation\GenerationLog;
@@ -154,6 +156,7 @@ final class GenerateCommandTest extends CmsIntegrationTestCase
                 $this->getService(DocumentValidator::class),
                 $this->getService(GenerationLog::class),
                 new NullLogger(),
+                new GatewayFailures($this->getService(TranslatorInterface::class)),
             ),
             $this->getService(CmsPageWriter::class),
             $this->getService(ConsoleRequest::class),

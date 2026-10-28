@@ -21,7 +21,6 @@ use Thelia\Domain\Ai\AiGatewayInterface;
 use Thelia\Domain\Ai\AiMessage;
 use Thelia\Domain\Ai\AiOutputSchema;
 use Thelia\Domain\Ai\AiRequest;
-use Thelia\Domain\Ai\AiResponse;
 use Thelia\Domain\Ai\AiTier;
 use Thelia\Domain\Ai\AiToolCall;
 use Thelia\Domain\Ai\AiTransparency;
@@ -33,9 +32,10 @@ use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentSchema;
 use TheliaCMS\Content\DocumentValidator;
 use TheliaCMS\Content\InvalidDocumentException;
-use TheliaCMS\Generation\Ai\FinishReasonGuard;
+use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
 use TheliaCMS\Generation\Ai\ObservedStream;
+use TheliaCMS\Generation\Ai\SentBackAnswer;
 use TheliaCMS\Generation\Tool\GeneratorTools;
 use TheliaCMS\Generation\Tool\ReadUrlTool;
 use TheliaCMS\Page\Field\FieldDefinitions;
@@ -92,8 +92,8 @@ final readonly class PageGenerator
         private DocumentValidator $validator,
         private GenerationLog $log,
         private LoggerInterface $logger,
+        private GatewayFailures $failures,
         private ObservedStream $streams = new ObservedStream(),
-        private FinishReasonGuard $finishReasons = new FinishReasonGuard(),
     ) {
     }
 
@@ -174,7 +174,9 @@ final readonly class PageGenerator
                     // written, and a long answer no longer looks like a hang.
                     $response = $this->streams->read($this->gateway->stream($conversation), $observer);
                 } catch (AiExceptionInterface $exception) {
-                    throw GenerationException::because('The AI gateway refused the call: '.$exception->getMessage(), $exception);
+                    $coreLogId = $this->failures->logIdOf($exception) ?? $coreLogId;
+
+                    throw $this->failures->exceptionFor($exception);
                 }
 
                 $model = $response->model;
@@ -182,7 +184,7 @@ final readonly class PageGenerator
                 $usage = $usage->plusTokens($response->tokenUsage);
                 $costUsd += (float) $response->cost;
                 $coreLogId = $response->logId;
-                $this->finishReasons->assertUsable($response->finishReason, $this->settings->maxTokens(), 'raise the limit of the generator or ask for a shorter page.');
+                $this->failures->assertUsable($response, $this->settings->maxTokens(), 'raise the limit of the generator or ask for a shorter page.');
 
                 if ($response->hasToolCalls()) {
                     $observer?->onTurn($turns, array_map(static fn (AiToolCall $call): string => $call->name, $response->toolCalls));
@@ -205,7 +207,7 @@ final readonly class PageGenerator
 
                     $this->logger->info('TheliaCMS: the generated document was refused once and sent back: {problems}', ['problems' => implode(' ', $exception->problems)]);
                     $observer?->onCorrection($corrections, $exception->problems);
-                    $conversation = $conversation->withMessages(self::answerOf($response), AiMessage::user(PromptBuilder::correction($exception->problems)));
+                    $conversation = $conversation->withMessages(SentBackAnswer::of($response), AiMessage::user(PromptBuilder::correction($exception->problems)));
 
                     continue;
                 }
@@ -234,6 +236,13 @@ final readonly class PageGenerator
             $exception->logId = $record(GenerationLog::STATUS_FAILED, $exception->getMessage());
 
             throw $exception;
+        } catch (AiExceptionInterface $exception) {
+            // What the core refuses outside the call itself, a message it
+            // cannot take among them: the same ledger row, the same words.
+            $failure = $this->failures->exceptionFor($exception);
+            $failure->logId = $record(GenerationLog::STATUS_FAILED, $failure->getMessage());
+
+            throw $failure;
         }
     }
 
@@ -319,15 +328,6 @@ final readonly class PageGenerator
             $conversation->correlationId,
             $conversation->actor,
         );
-    }
-
-    /**
-     * The answer sent back with its problems. An empty one is one of them, and
-     * the gateway takes no assistant message without text nor tool call.
-     */
-    private static function answerOf(AiResponse $response): AiMessage
-    {
-        return '' === trim($response->text) ? AiMessage::assistant('(no text)') : AiMessage::fromResponse($response);
     }
 
     /**
