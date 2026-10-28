@@ -27,7 +27,9 @@ say "pages or items". Lot 5 started the same day on the sections: `admin.cms.med
 (`SectionFormBuilder::imageFrom()`), tests in
 `Tests/Integration/Generation/SectionImagePickerTest.php`; choices with
 pictograms (`Prop::$icons`, `_section_form.html.twig`). The image of a page
-still has its radio grid. Same day: an image of the library is drawn with
+uses the same picker since (`CmsPageType` image an id, `media/_picker.html.twig`
+shared, `Tests/Integration/Page/PageImagePickerTest.php`): lot 5 done, the
+content of a catalogue item using the section forms. Same day: an image of the library is drawn with
 its text in the library (`ImageSource::alt()`, Image and Columns sections,
 `Tests/Integration/Content/ImageAltTest.php`), the field of the section
 showing only for a picture kept elsewhere; the picker needs the right to

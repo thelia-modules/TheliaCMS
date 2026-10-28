@@ -12,8 +12,9 @@
  * fields they are, folded under the image: what they hold is drawn in the
  * same place.
  *
- * content-editor.js calls `CmsMediaPicker.bind(root)` on every form it
- * enhances, a section added since the page loaded included.
+ * The script binds the fields of the screen once loaded, and content-editor.js
+ * calls `CmsMediaPicker.bind(root)` on every form it enhances, a section added
+ * since the page loaded included.
  */
 (function () {
     'use strict';
@@ -318,7 +319,7 @@
         var thumbnail = element('img');
         thumbnail.alt = '';
         thumbnail.style.objectFit = 'scale-down';
-        var empty = element('div', 'd-flex align-items-center justify-content-center text-body-secondary');
+        var empty = element('div', 'align-items-center justify-content-center text-body-secondary');
         empty.appendChild(element('i', 'bi bi-image fs-2'));
         frame.append(thumbnail, empty);
         var info = element('div', 'flex-grow-1 small');
@@ -370,7 +371,9 @@
 
         function show(url, title, label) {
             thumbnail.hidden = !url;
-            empty.hidden = !!url;
+            // Shown as a flex box only when there is no picture: `hidden`
+            // loses to a display class, a style does not.
+            empty.style.display = url ? 'none' : 'flex';
 
             if (url) {
                 thumbnail.src = url;
@@ -477,4 +480,12 @@
     }
 
     window.CmsMediaPicker = { bind: bind };
+
+    // A screen without the content editor, the settings of a page: bound
+    // once loaded. A field already bound is left alone.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { bind(document); });
+    } else {
+        bind(document);
+    }
 })();

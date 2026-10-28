@@ -28,8 +28,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   the section: a grid of thumbnails, searched, filtered by what is still to
   describe or by a tag, by pages, and an image can be sent from it. It
   replaces a list of every title, which could not be read past a few dozen
-  and lost an image older than the 200 newest. An id sent for an image of a
-  section is kept only when the CMS owns that image.
+  and lost an image older than the 200 newest. The image of a page, on its
+  settings, is picked the same way instead of a grid of radio cards. An id
+  sent for an image of a section or of a page is kept only when the CMS owns
+  that image.
 - **A choice with pictograms is chosen on buttons.** A choice prop may give a
   pictogram per value (`Prop::choice(..., icons: [...])`): the width of the
   Image section shows its three widths as shapes, and the room above and
