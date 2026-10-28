@@ -7,6 +7,26 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Fixed
+
+- **A publication no longer empties the shared cache of the whole site.**
+  Every change to a page purged `cms` and `cms-menu`, which every page of the
+  site carries, the shop included when the shared cache of Thelia is on. A
+  change now drops the page, the lists of pages, the pages under it when its
+  title, its address or whether it is online changed, and the menus only when
+  one of them links to it.
+- **Hiding, binning or restoring a page, or changing the home page, reaches
+  the caches.** Hiding a page left it in the menus for up to an hour and in a
+  shared cache until its lifetime ran out; binning a page left the other pages
+  linking to it; restoring a branch dropped its first page only; a new home
+  page left the root of the site on the former one. Moving a page among its
+  siblings now drops the lists of pages that follow the order of the tree.
+- **A page showing a list of pages or a form is dropped when they change.**
+  The page is filed under a `cms-partial-<name>` tag for each dynamic block it
+  shows, read from its content or from its template, and the block purges it.
+- **No more `Vary: Accept-Language`.** The language of a page comes from its
+  address, never from that header: it only multiplied the copies of a page.
+
 ### Security (2.3.1)
 
 - **An import filters what it writes like a publication does.** The draft

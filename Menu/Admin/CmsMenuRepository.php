@@ -159,6 +159,25 @@ final readonly class CmsMenuRepository
     }
 
     /**
+     * Whether an entry of any menu points at one of these pages, usable or
+     * not: an entry hidden because its page is offline shows again once the
+     * page is back.
+     *
+     * @param list<int> $pageIds
+     */
+    public function linksToAnyPage(array $pageIds): bool
+    {
+        if ([] === $pageIds) {
+            return false;
+        }
+
+        return CmsMenuItemQuery::create()
+            ->filterByTargetType(MenuTargetType::Page->value)
+            ->filterByTargetId($pageIds, Criteria::IN)
+            ->exists();
+    }
+
+    /**
      * @return array<int, CmsMenuItem>
      */
     private function items(int $menuId): array

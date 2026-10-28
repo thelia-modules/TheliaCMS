@@ -19,6 +19,8 @@ use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\Lang;
 use TheliaCMS\Content\Partial\PartialSection;
 use TheliaCMS\Content\SectionCatalog;
+use TheliaCMS\Http\CacheTags;
+use TheliaCMS\Http\ShownTags;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
 use TheliaCMS\Page\Field\FieldFormatter;
@@ -27,6 +29,7 @@ use TheliaCMS\Page\PageListQuery;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\PublishedPage;
 use TheliaCMS\Page\PublishedPageRepository;
+use TheliaCMS\Partial\Definition\PageListPartial;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\SiteIcon;
 use TheliaCMS\TheliaCMS;
@@ -52,6 +55,7 @@ final class CmsExtension extends AbstractExtension
         private readonly SectionCatalog $sections,
         private readonly PageTypeRepository $pageTypes,
         private readonly FieldFormatter $fieldFormatter,
+        private readonly ShownTags $shownTags,
     ) {
     }
 
@@ -131,6 +135,8 @@ final class CmsExtension extends AbstractExtension
      */
     public function pagesTagged(string $tag, ?string $locale = null): array
     {
+        $this->showsPageList();
+
         return $this->pages->withTag($tag, $locale ?? $this->currentLocale());
     }
 
@@ -145,6 +151,8 @@ final class CmsExtension extends AbstractExtension
      */
     public function pagesOfType(string $pageType, array $options = [], ?string $locale = null): array
     {
+        $this->showsPageList();
+
         return $this->pages->ofType($pageType, $locale ?? $this->currentLocale(), PageListQuery::fromArray($options));
     }
 
@@ -181,6 +189,15 @@ final class CmsExtension extends AbstractExtension
     private function currentLocale(): string
     {
         return $this->langService->getLang()?->getLocale() ?? Lang::getDefaultLanguage()->getLocale();
+    }
+
+    /**
+     * A list read from a template changes with the same pages as the block a
+     * page holds, and is dropped with it.
+     */
+    private function showsPageList(): void
+    {
+        $this->shownTags->add(CacheTags::partial(PageListPartial::NAME));
     }
 
     /**

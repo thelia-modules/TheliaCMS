@@ -16,7 +16,11 @@ namespace TheliaCMS\Tests\Unit\Partial;
 
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Translation\IdentityTranslator;
+use TheliaCMS\Http\PageCacheListener;
+use TheliaCMS\Http\ShownTags;
 use TheliaCMS\Partial\PartialDefinitionInterface;
 use TheliaCMS\Partial\PartialFragmentRendererInterface;
 use TheliaCMS\Partial\PartialProp;
@@ -35,6 +39,14 @@ use TheliaCMS\Partial\UnknownPartialException;
  */
 final class PartialRendererTest extends TestCase
 {
+    private RequestStack $requests;
+
+    protected function setUp(): void
+    {
+        $this->requests = new RequestStack();
+        $this->requests->push(Request::create('/a-page'));
+    }
+
     public function testReturnsThePageUntouchedWhenItHoldsNoBlock(): void
     {
         $html = '<div class="cms-page-content"><h1>Hello</h1></div>';
@@ -123,11 +135,28 @@ final class PartialRendererTest extends TestCase
                 }
             },
             new NullLogger(),
+            new ShownTags($this->requests),
         );
 
         $html = $renderer->substitute('<p>Kept</p><div data-cms-partial="broken"></div>', 'fr_FR');
 
         self::assertSame('<p>Kept</p>', (string) $html);
+        self::assertSame([], $this->shownTags(), 'A block left out of the page does not tie the page to it.');
+    }
+
+    /**
+     * A shared cache keeps the page with the block as it was rendered: the
+     * page is filed under the block, so a change to what the block shows
+     * drops it.
+     */
+    public function testAPageIsFiledUnderTheBlocksItShows(): void
+    {
+        $this->renderer([new FakePartial('cms-menu'), new FakePartial('news')])->substitute(
+            '<div data-cms-partial="cms-menu"></div><div data-cms-partial="news"></div><div data-cms-partial="news"></div>',
+            'fr_FR',
+        );
+
+        self::assertSame(['cms-partial-cms-menu', 'cms-partial-news'], $this->shownTags());
     }
 
     /**
@@ -191,6 +220,17 @@ final class PartialRendererTest extends TestCase
                 }
             },
             new NullLogger(),
+            new ShownTags($this->requests),
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function shownTags(): array
+    {
+        $tags = $this->requests->getMainRequest()?->attributes->get(PageCacheListener::SHOWN_TAGS_ATTRIBUTE, []);
+
+        return \is_array($tags) ? $tags : [];
     }
 }
