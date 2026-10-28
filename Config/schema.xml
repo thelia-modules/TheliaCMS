@@ -164,6 +164,8 @@
         <column name="published_html" type="CLOB"/>
         <column name="published_at" type="TIMESTAMP"/>
         <column name="draft_updated_by" type="INTEGER"/>
+        <column name="draft_provenance" type="CLOB"/>
+        <column name="published_provenance" type="CLOB"/>
 
         <foreign-key foreignTable="cms_page" name="fk_cms_page_content_page" onDelete="CASCADE" onUpdate="RESTRICT">
             <reference foreign="id" local="page_id"/>
@@ -183,6 +185,7 @@
         <column name="locale" required="true" size="5" type="VARCHAR"/>
         <column name="document" type="CLOB"/>
         <column name="html" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
         <column name="label" size="60" type="VARCHAR"/>
         <column name="created_by" type="INTEGER"/>
 
@@ -237,6 +240,8 @@
         <column name="published_html" type="CLOB"/>
         <column name="published_at" type="TIMESTAMP"/>
         <column name="draft_updated_by" type="INTEGER"/>
+        <column name="draft_provenance" type="CLOB"/>
+        <column name="published_provenance" type="CLOB"/>
 
         <unique name="unq_cms_item_content_item_locale">
             <unique-column name="item_type"/>
@@ -254,6 +259,7 @@
         <column name="locale" required="true" size="5" type="VARCHAR"/>
         <column name="document" type="CLOB"/>
         <column name="html" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
         <column name="label" size="60" type="VARCHAR"/>
         <column name="created_by" type="INTEGER"/>
 
@@ -571,6 +577,7 @@
         <column name="sample" type="CLOB"/>
         <column name="template" type="CLOB"/>
         <column name="css" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
         <column defaultValue="draft" name="status" required="true" size="20" type="VARCHAR"/>
         <column name="created_by" type="INTEGER"/>
         <column name="updated_by" type="INTEGER"/>
@@ -640,6 +647,7 @@
         <column defaultValue="0" name="duration_ms" required="true" type="INTEGER"/>
         <column name="error" type="LONGVARCHAR"/>
         <column name="document" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
         <column name="web_pages" type="CLOB"/>
         <column name="left_out" type="CLOB"/>
         <column name="created_by" type="INTEGER"/>
