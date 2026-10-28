@@ -8,8 +8,10 @@ defect tests of `Tests/Integration/Page/PageAddressTest.php` were red before
 the fix. Steps 5 to 7 done the same day: route `admin.cms.pages.address_proposal`
 (`Tests/Integration/Page/AddressProposalScreenTest.php`), `Page/Admin/PageAddressType.php`
 and `assets/page-address.js`; a reserved slug saved from the form is now an
-error on the field instead of a 500. To do: step 8, the editor documentation and
-the CHANGELOG of step 9, step 10 in a real browser. The design questions are
+error on the field instead of a 500. Steps 8 and 9 done too: route
+`admin.cms.pages.fixed_address_check` (`CmsUrlService::checkFixedAddress()`),
+the editor documentation and the CHANGELOG. To do: step 10 in a real browser,
+then the core screens. The design questions are
 settled (see "Decisions taken").
 
 ## What is asked
@@ -94,7 +96,8 @@ Measured on the test database with a throwaway integration test, 2026-10-28.
 ## Core screens (second delivery, thelia/thelia)
 
 - Field `url` of `core/lib/Thelia/Form/SeoFieldsTrait.php:35`, on the screens
-  of contents, folders, categories, products, brands and videos
+  of contents, folders, categories, products and brands (the `url` of a
+  video is the address of the video itself, not a rewritten URL)
   (`templates/backOffice/default-twig/*/edit.html.twig`, `seo_form.url`).
 - The form of a core address is `title.html`, accents kept
   (`UrlRewritingTrait::generateRewrittenUrl()`), and that method saves: it

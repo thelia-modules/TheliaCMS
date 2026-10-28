@@ -38,6 +38,19 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   text back. Without the Tiptap module the text is edited as it is, with no
   toolbar. The other components keep their form.
 
+- **The edit screen of a page proposes its address.** Under the *URL slug*
+  field, the whole address the page would answer on, under its parent pages
+  and in the language being edited, follows what is typed in the title, the
+  slug and the parent. *Regenerate from the title* fills the slug from the
+  title. The screen says when the slug no longer follows the title, after a
+  rename, and when a number was added because another page or another
+  language already answers on the address. Nothing is written until the form
+  is saved: a published address moves only on purpose. The *Fixed address*
+  field says, as it is typed, whether the address is free. Both are answered
+  by `POST /admin/cms/pages/address-proposal` and
+  `POST /admin/cms/pages/fixed-address-check`, which write nothing and take the
+  token of the back office like any write of the module.
+
 ### Changed (2.3.1)
 
 - **The props of the components of the theme read in the language of the
@@ -100,6 +113,23 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - **A section is deleted from the preview.** Hovering a section shows
   *Delete* next to *Edit*; it asks for the same confirmation as the bin of
   the list.
+
+### Fixed (2.3.1)
+
+- **The number that keeps an address unique stays out of the slug.** A page
+  titled alike in two languages answers on `cookies` in one and `cookies-2` in
+  the other, and the `-2` was stored as the slug of the second: shown in the
+  field, and brought back by every rebuild of the addresses. The slug keeps the
+  segment asked for. A slug stored that way before keeps it: the edit screen
+  points it out, and *Regenerate from the title* then a save clear it.
+- **A page translated before its parent moves under it.** A child written in a
+  language its parent did not have yet answered at the root of that language,
+  and stayed there once the parent was translated. Giving a page its first
+  address in a language now puts the pages under it, the ones already written
+  in that language, under that address. Their former address redirects.
+- **A reserved slug is refused on its field.** Saving a page with the slug
+  `admin`, `api` or another reserved path answered an error 500; the form now
+  shows why under the field.
 
 ### Added (2.3.0)
 

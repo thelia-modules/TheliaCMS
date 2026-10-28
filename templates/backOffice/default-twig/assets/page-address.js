@@ -157,8 +157,74 @@
         }
     }
 
+    /*
+     * The fixed address is kept as typed: it is checked while it is typed,
+     * as the save would check it, and never regenerated.
+     */
+    function bindFixed(input) {
+        var messages = JSON.parse(input.getAttribute('data-messages') || '{}');
+        var pending = null;
+        var sent = 0;
+
+        var notice = document.createElement('div');
+        notice.className = 'form-text';
+        notice.setAttribute('role', 'status');
+        notice.setAttribute('aria-live', 'polite');
+        notice.setAttribute('data-cms-fixed-address-status', '');
+        input.insertAdjacentElement('afterend', notice);
+
+        function show(text, failed) {
+            notice.textContent = text;
+            notice.classList.toggle('text-danger', failed);
+            notice.classList.toggle('text-success', !failed && text !== '');
+        }
+
+        function check() {
+            if (input.value.trim() === '') {
+                show('', false);
+
+                return;
+            }
+
+            var body = new FormData();
+            body.append('page', input.getAttribute('data-page-id') || '0');
+            body.append('address', input.value);
+            body.append('_token', backOfficeToken());
+
+            var ticket = ++sent;
+
+            fetch(input.getAttribute('data-check-url'), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+                body: body,
+            })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (payload) {
+                    if (ticket === sent) {
+                        show(payload.error || messages.free, Boolean(payload.error));
+                    }
+                })
+                .catch(function () {
+                    if (ticket === sent) {
+                        show(messages.failed, true);
+                    }
+                });
+        }
+
+        input.addEventListener('input', function () {
+            window.clearTimeout(pending);
+            pending = window.setTimeout(check, 300);
+        });
+
+        check();
+    }
+
     function start() {
         document.querySelectorAll('input[data-cms-page-address]').forEach(bind);
+        document.querySelectorAll('input[data-cms-fixed-address]').forEach(bindFixed);
     }
 
     if (document.readyState === 'loading') {

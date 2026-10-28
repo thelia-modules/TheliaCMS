@@ -67,6 +67,16 @@ final class CmsPageType extends AbstractType
                 'required' => false,
                 'constraints' => [new Length(max: 255)],
                 'help' => 'The whole address, kept as typed whatever the parent page: the address a site taken over had, such as about-us.html. Leave empty for the address built from the parent pages and the slug.',
+                // Checked by `assets/page-address.js` while it is typed.
+                'attr' => null === $options['fixed_address_check_url'] ? [] : [
+                    'data-cms-fixed-address' => '',
+                    'data-check-url' => $options['fixed_address_check_url'],
+                    'data-page-id' => (string) $options['page_id'],
+                    'data-messages' => json_encode([
+                        'free' => $this->translate('This address is free.'),
+                        'failed' => $this->translate('The address could not be checked.'),
+                    ], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE),
+                ],
             ])
             // `wysiwyg` is the opt-in class of the back-office rich text
             // editor: the same editor as the summary and description of a
@@ -251,9 +261,11 @@ final class CmsPageType extends AbstractType
                 // Where the slug field asks for the address it proposes; none,
                 // and the field is a plain input.
                 'address_proposal_url' => null,
+                'fixed_address_check_url' => null,
                 'page_id' => 0,
             ])
             ->setAllowedTypes('address_proposal_url', ['null', 'string'])
+            ->setAllowedTypes('fixed_address_check_url', ['null', 'string'])
             ->setAllowedTypes('page_id', 'int')
             ->setAllowedTypes('page_type_labels', 'array')
             ->setAllowedTypes('is_model', 'bool')

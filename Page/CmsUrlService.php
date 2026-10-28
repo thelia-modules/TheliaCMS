@@ -359,6 +359,24 @@ final class CmsUrlService
     }
 
     /**
+     * A fixed address as the edit screen checks it before the form is saved:
+     * normalized as on save, and refused when another object answers on it.
+     * Nothing is written.
+     *
+     * @throws FixedAddressException when the address cannot be the page's
+     */
+    public function checkFixedAddress(?string $raw, int $pageId, string $locale): ?string
+    {
+        $address = $this->normalizeFixedAddress($raw);
+
+        if (null !== $address) {
+            $this->assertFree($address, $pageId, $locale);
+        }
+
+        return $address;
+    }
+
+    /**
      * An address another object answers on is refused; a redirection or the
      * obsolete address of a deleted item is not an owner, and goes to the page.
      *

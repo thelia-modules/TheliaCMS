@@ -183,6 +183,30 @@ final readonly class CmsPageAdminController
         ]);
     }
 
+    /**
+     * Whether a fixed address typed on the edit screen can be the page's, as
+     * the save would decide it, without saving: a fixed address is kept as
+     * typed, so it is checked, never regenerated.
+     */
+    #[Route('/fixed-address-check', name: 'fixed_address_check', methods: ['POST'], priority: 1)]
+    public function fixedAddressCheck(Request $request): JsonResponse
+    {
+        $pageId = $request->request->getInt('page');
+        $this->denyUnless(0 === $pageId ? AccessManager::CREATE : AccessManager::UPDATE);
+
+        if (0 !== $pageId) {
+            $this->livePageOrFail($pageId);
+        }
+
+        try {
+            $address = $this->addresses->checkFixedAddress((string) $request->request->get('address', ''), $pageId, $this->editLang($request)->getLocale());
+        } catch (FixedAddressException $exception) {
+            return new JsonResponse(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return new JsonResponse(['address' => $address]);
+    }
+
     #[Route('/{id}', name: 'edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function edit(Request $request, int $id): Response
     {
@@ -423,6 +447,7 @@ final readonly class CmsPageAdminController
             'tag_choices' => $this->tags->namesById(),
             'allow_image_upload' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::CREATE]),
             'address_proposal_url' => $this->urls->generate('admin.cms.pages.address_proposal', [self::EDIT_LANGUAGE_PARAMETER => $lang->getId()]),
+            'fixed_address_check_url' => $this->urls->generate('admin.cms.pages.fixed_address_check', [self::EDIT_LANGUAGE_PARAMETER => $lang->getId()]),
             'page_id' => $page->isNew() ? 0 : (int) $page->getId(),
         ]);
     }

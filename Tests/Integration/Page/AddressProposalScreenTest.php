@@ -28,6 +28,8 @@ final class AddressProposalScreenTest extends AdminScreenTestCase
 {
     private const string ROUTE = '/admin/cms/pages/address-proposal';
 
+    private const string FIXED_ROUTE = '/admin/cms/pages/fixed-address-check';
+
     public function testTheEditScreenTellsTheSlugFieldWhereToAsk(): void
     {
         $page = $this->createPage('Atelier de reliure');
@@ -101,15 +103,52 @@ final class AddressProposalScreenTest extends AdminScreenTestCase
         self::assertSame('atelier-de-gravure', $page->getRewrittenUrl($this->locale()));
     }
 
+    public function testTheFixedAddressFieldIsToldWhereToCheck(): void
+    {
+        $page = $this->createPage('Atelier de vitrail');
+
+        $field = $this->screen(\sprintf('/admin/cms/pages/%d', $page->getId()))->filter('input[name="cms_page[fixedUrl]"]');
+
+        self::assertSame(self::FIXED_ROUTE, parse_url((string) $field->attr('data-check-url'), \PHP_URL_PATH));
+        self::assertSame((string) $page->getId(), $field->attr('data-page-id'));
+    }
+
+    /**
+     * A fixed address is kept as typed: it is checked as the save checks it,
+     * free, its own, or held by another page, and nothing is written.
+     */
+    public function testAFixedAddressIsCheckedWithoutBeingWritten(): void
+    {
+        $page = $this->createPage('Atelier de tapisserie');
+        $other = $this->createPage('Atelier de broderie');
+
+        $free = $this->propose(['page' => (string) $page->getId(), 'address' => '/ancien-site/tapisserie.html'], self::FIXED_ROUTE);
+
+        self::assertSame(200, $free['status']);
+        self::assertSame('ancien-site/tapisserie.html', $free['body']['address'], 'The address is normalized as on save.');
+        self::assertNull(RewritingUrlQuery::create()->findOneByUrl('ancien-site/tapisserie.html'), 'Nothing is written.');
+
+        $own = $this->propose(['page' => (string) $page->getId(), 'address' => 'atelier-de-tapisserie'], self::FIXED_ROUTE);
+
+        self::assertSame(200, $own['status'], 'The address the page already answers on is its own.');
+
+        $taken = $this->propose(['page' => (string) $page->getId(), 'address' => (string) $other->getRewrittenUrl($this->locale())], self::FIXED_ROUTE);
+
+        self::assertSame(422, $taken['status']);
+        self::assertStringContainsString('already the address', (string) $taken['body']['error']);
+
+        self::assertSame(422, $this->propose(['page' => '0', 'address' => 'admin/tapisserie'], self::FIXED_ROUTE)['status'], 'A reserved path is refused.');
+    }
+
     /**
      * @param array<string, string> $parameters
      *
      * @return array{status: int, body: array<string, mixed>}
      */
-    private function propose(array $parameters): array
+    private function propose(array $parameters, string $route = self::ROUTE): array
     {
         $token = $this->tokenOfTheScripts($this->screen('/admin/cms/pages'));
-        $status = $this->send('POST', self::ROUTE, $parameters, [...self::XHR, 'HTTP_X_CSRF_TOKEN' => $token]);
+        $status = $this->send('POST', $route, $parameters, [...self::XHR, 'HTTP_X_CSRF_TOKEN' => $token]);
         $body = json_decode((string) $this->client->getResponse()->getContent(), true);
 
         return ['status' => $status, 'body' => \is_array($body) ? $body : []];

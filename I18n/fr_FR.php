@@ -1169,4 +1169,6 @@ return [
     'The address no longer follows the title.' => 'L’adresse ne suit plus le titre.',
     'The address could not be computed.' => 'L’adresse n’a pas pu être calculée.',
     'Give the page a title first.' => 'Donnez d’abord un titre à la page.',
+    'This address is free.' => 'Cette adresse est libre.',
+    'The address could not be checked.' => 'L’adresse n’a pas pu être vérifiée.',
 ];

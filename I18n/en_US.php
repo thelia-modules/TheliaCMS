@@ -1169,4 +1169,6 @@ return [
     'The address no longer follows the title.' => 'The address no longer follows the title.',
     'The address could not be computed.' => 'The address could not be computed.',
     'Give the page a title first.' => 'Give the page a title first.',
+    'This address is free.' => 'This address is free.',
+    'The address could not be checked.' => 'The address could not be checked.',
 ];
