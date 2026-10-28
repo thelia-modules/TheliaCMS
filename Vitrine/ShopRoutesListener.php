@@ -18,6 +18,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Thelia\Core\HttpFoundation\RequestPath;
 use TheliaCMS\Settings\CmsSettings;
 
 /**
@@ -49,7 +50,8 @@ final readonly class ShopRoutesListener
             return;
         }
 
-        $path = rtrim($event->getRequest()->getPathInfo(), '/');
+        // Decoded, as the router reads it: `/c%61rt` is the cart too.
+        $path = rtrim(RequestPath::decoded($event->getRequest()), '/');
 
         foreach (self::CLOSED_PREFIXES as $prefix) {
             if ($path === $prefix || str_starts_with($path, $prefix.'/')) {

@@ -76,6 +76,11 @@ abstract class AdminScreenTestCase extends WebIntegrationTestCase
         $this->session->logIn($admin);
     }
 
+    protected function logOut(): void
+    {
+        $this->session->logOut();
+    }
+
     protected function screen(string $url): Crawler
     {
         $crawler = $this->client->request('GET', $url);
