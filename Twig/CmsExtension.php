@@ -192,8 +192,14 @@ final class CmsExtension extends AbstractExtension
         return $this->icon->exists() ? $this->urls->generate('cms.site_icon') : null;
     }
 
-    public function isHome(string $id): ?bool
+    /**
+     * A theme passes the id of a page as it holds it, or nothing on a screen
+     * that is not a page: a site with no home page set has none, whatever id.
+     */
+    public function isHome(int|string|null $id): bool
     {
-        return (int) $id === (int) TheliaCMS::getConfigValue('home_page_id', 0);
+        $home = (int) TheliaCMS::getConfigValue('home_page_id', 0);
+
+        return $home > 0 && (int) $id === $home;
     }
 }

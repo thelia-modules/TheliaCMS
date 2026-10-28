@@ -162,6 +162,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   an import brings it in offline, and posting to its bin or visibility action
   is refused with a message. It still goes with its template when the
   template is deleted.
+- **`cms_is_home()` answers false on a site with no home page.** Without a
+  home page set, it took the page of id 0, and an id the theme did not have
+  (a product page passes none), for the home page; it also refused a null id.
+  It takes a number, a string or null, and answers a boolean.
 - **A reserved slug is refused on its field.** Saving a page with the slug
   `admin`, `api` or another reserved path answered an error 500; the form now
   shows why under the field.
