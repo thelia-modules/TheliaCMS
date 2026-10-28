@@ -853,7 +853,7 @@ Two commands write and read the content of a site as one JSON file:
 
 ```bash
 php Thelia thelia_cms:export site.json
-php Thelia thelia_cms:import site.json [--replace] [--with-settings]
+php Thelia thelia_cms:import site.json [--replace] [--with-settings] [--allow-custom-code]
 ```
 
 The file holds the page tree, the content of every language, the menus, the
@@ -873,7 +873,17 @@ is missing is named in the report rather than left as a silent hole.
 
 An import leaves alone whatever is already there: a page at the same address, a
 menu or a form carrying the same code. It counts them and says so. `--replace`
-overwrites them instead. Settings are only applied when asked for, so importing
+overwrites them instead.
+
+A file is not trusted any more than an editor is. The markup of the pages and
+of the blocks, drafts included, goes through the filter of a publication, and
+iframes are taken out unless the import is run with `--allow-custom-code`, the
+equivalent of the custom code right of the back office. Their stylesheets lose
+what a save takes out of them. A form keeps its code only when the form screen
+would accept it, its recipients that are email addresses, and a retention the
+screen accepts. Each of these is named in the report.
+
+Settings are only applied when asked for, so importing
 a starter kit never switches a running site into showcase mode by surprise. The
 whole thing runs in one transaction, so a file that turns out to be broken
 halfway through leaves the site as it was.
