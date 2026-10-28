@@ -18,10 +18,11 @@ namespace TheliaCMS\Security;
  * ACL resources owned by the module.
  *
  * They are both declared to the container (so `is_granted` knows them) and
- * seeded into `resource`/`profile_resource` on activation: without the rows,
- * `SecurityContext::isUserGranted()` finds the resource missing from the
- * profile permissions and denies everyone but the super administrator — the
- * "Editor" profile could never be given access.
+ * seeded into `resource`/`profile_resource` on activation and on every update
+ * of the module (a site active before a right existed only gets the update):
+ * without the rows, `SecurityContext::isUserGranted()` finds the resource
+ * missing from the profile permissions and denies everyone but the super
+ * administrator — the "Editor" profile could never be given access.
  */
 final class CmsResources
 {
