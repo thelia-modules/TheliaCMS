@@ -17,6 +17,7 @@ namespace TheliaCMS\Media\Admin;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -83,44 +84,89 @@ final readonly class CmsMediaAdminController
             'tags' => $this->library->tagCounts(),
             'has_library' => $tally->total > 0,
             'accepted_mime_types' => implode(',', CmsMediaType::ACCEPTED_MIME_TYPES),
+            'max_upload_size' => (int) UploadedFile::getMaxFilesize(),
+            'assets_version' => substr(hash('xxh3', (string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/media-upload.js')), 0, 12),
             'edit_locale' => $lang->getLocale(),
             'edit_language_id' => $lang->getId(),
         ]));
     }
 
+    /**
+     * Files sent from the list, all at once without JavaScript, one by one
+     * from its script, which asks for JSON to show each file as it lands.
+     */
     #[Route('', name: 'add', methods: ['POST'])]
-    public function add(Request $request): RedirectResponse
+    public function add(Request $request): Response
     {
         $this->denyUnless(AccessManager::CREATE);
         $lang = $this->editLang($request);
 
         /** @var list<UploadedFile> $files */
-        $files = array_filter(
+        $files = array_values(array_filter(
             $request->files->all()['files'] ?? [],
             static fn (mixed $file): bool => $file instanceof UploadedFile,
-        );
+        ));
+
+        $upload = $this->writer->add($files, $lang->getLocale());
+
+        if (\in_array('application/json', $request->getAcceptableContentTypes(), true)) {
+            return new JsonResponse([
+                'stored' => array_map(static fn (LibraryImage $image): array => [
+                    'id' => (int) $image->getId(),
+                    'title' => (string) $image->setLocale($lang->getLocale())->getTitle(),
+                ], $upload->stored),
+                'refused' => $this->refusals($upload),
+            ], [] === $files ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK);
+        }
 
         if ([] === $files) {
             return $this->backToList($request, $lang, $this->translator->trans('Choose at least one image to add.', [], TheliaCMS::DOMAIN_NAME), 'warning');
         }
 
-        $stored = $this->writer->add(array_values($files), $lang->getLocale());
+        if ([] !== $upload->refused) {
+            $this->flash($request, 'warning', $this->translator->trans(
+                'Not added: %files%.',
+                ['%files%' => implode(', ', array_map(static fn (array $refusal): string => $refusal['name'].' ('.$refusal['reason'].')', $this->refusals($upload)))],
+                TheliaCMS::DOMAIN_NAME,
+            ));
+        }
+
+        if ([] === $upload->stored) {
+            return $this->backToList($request, $lang);
+        }
 
         // Straight to the description screen for a single upload: an image with
         // no alternative text is not publishable, and the moment it lands is
         // the moment the editor knows what it shows.
-        if (1 === \count($stored)) {
+        if (1 === \count($upload->stored)) {
             return new RedirectResponse($this->urls->generate('admin.cms.media.edit', [
-                'id' => $stored[0]->getId(),
+                'id' => $upload->stored[0]->getId(),
                 self::EDIT_LANGUAGE_PARAMETER => $lang->getId(),
             ]));
         }
 
-        return $this->backToList($request, $lang, $this->translator->trans(
+        // Several: the describe queue of these images, one after the other.
+        $this->flash($request, 'success', $this->translator->trans(
             '%count% images added. Describe each of them before using it in a page.',
-            ['%count%' => \count($stored)],
+            ['%count%' => \count($upload->stored)],
             TheliaCMS::DOMAIN_NAME,
         ));
+
+        return new RedirectResponse($this->urls->generate('admin.cms.media.describe', [
+            self::EDIT_LANGUAGE_PARAMETER => $lang->getId(),
+            'images' => implode(',', $upload->storedIds()),
+        ]));
+    }
+
+    /**
+     * @return list<array{name: string, reason: string}>
+     */
+    private function refusals(MediaUpload $upload): array
+    {
+        return array_map(fn (array $refusal): array => [
+            'name' => $refusal['name'],
+            'reason' => $this->translator->trans($refusal['refusal']->message(), [], TheliaCMS::DOMAIN_NAME),
+        ], $upload->refused);
     }
 
     /**
@@ -159,7 +205,7 @@ final readonly class CmsMediaAdminController
             return new RedirectResponse($this->urls->generate('admin.cms.media.describe', [
                 self::EDIT_LANGUAGE_PARAMETER => $lang->getId(),
                 'at' => $position,
-            ] + $query->parameters()));
+            ] + $query->queueParameters()));
         }
 
         return new Response($this->twig->render(self::DESCRIBE_TEMPLATE, [
@@ -168,6 +214,7 @@ final readonly class CmsMediaAdminController
             'position' => $position,
             'total' => $queue->total,
             'list_parameters' => $query->parameters(),
+            'queue_parameters' => $query->queueParameters(),
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
         ]));
@@ -288,14 +335,21 @@ final readonly class CmsMediaAdminController
 
     private function backToList(Request $request, Lang $lang, ?string $message = null, string $level = 'success'): RedirectResponse
     {
-        $session = $request->hasSession() ? $request->getSession() : null;
-
-        if (null !== $message && $session instanceof FlashBagAwareSessionInterface) {
-            $session->getFlashBag()->add($level, $message);
+        if (null !== $message) {
+            $this->flash($request, $level, $message);
         }
 
         return new RedirectResponse($this->urls->generate('admin.cms.media.list', [
             self::EDIT_LANGUAGE_PARAMETER => $lang->getId(),
         ] + MediaQuery::fromRequest($request)->addressParameters()));
+    }
+
+    private function flash(Request $request, string $level, string $message): void
+    {
+        $session = $request->hasSession() ? $request->getSession() : null;
+
+        if ($session instanceof FlashBagAwareSessionInterface) {
+            $session->getFlashBag()->add($level, $message);
+        }
     }
 }

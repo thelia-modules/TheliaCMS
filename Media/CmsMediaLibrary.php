@@ -221,11 +221,17 @@ final readonly class CmsMediaLibrary implements MediaResolver
      * "Unused" is let through: what uses an image is read from the content of
      * the pages, which the media screens do, not the library.
      *
+     * @param list<int> $only named images, the others left out
+     *
      * @return list<int>
      */
-    public function selection(string $locale, ?string $search = null, ?MediaFilter $filter = null, ?string $tag = null): array
+    public function selection(string $locale, ?string $search = null, ?MediaFilter $filter = null, ?string $tag = null, array $only = []): array
     {
         $imageIds = $this->taggedImageIds($this->tagId());
+
+        if ([] !== $only) {
+            $imageIds = array_values(array_intersect($imageIds, $only));
+        }
 
         if ([] !== $imageIds && null !== $search && '' !== $search) {
             $imageIds = $this->matching($imageIds, $search);

@@ -22,6 +22,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.3.1)
 
+- **Images are dropped on the media list and sent one by one.** The upload
+  form of the list takes files dropped on it; with JavaScript each file is
+  sent on its own, with its progress, then "added" or why it was refused
+  (format and size checked before sending, then by the server). Once every
+  file is answered, the describe queue opens on the images just added; when
+  one was refused, the screen stays and offers the queue. Without
+  JavaScript, several files sent at once lead to the same queue.
 - **The images still to describe can be described one by one.** "Describe
   them one by one", above the media list, shows the first image of the list
   that says nothing in the language edited, large, with its usage and one
@@ -165,6 +172,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed (2.3.1)
 
+- **The media list refuses a file on its own, and only the formats it
+  says.** A file the library could not decode stopped the whole sending with
+  an error, after storing the files before it; and a GIF or a BMP was stored
+  although the screen accepts JPEG, PNG and WebP only. Each refused file is
+  now named with why, and the others are stored.
 - **An image with no row in the language edited is counted as still to
   describe.** It showed the "no alternative text" badge and was left out of
   the count above the list: an image uploaded in one language was never

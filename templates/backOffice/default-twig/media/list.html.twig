@@ -6,24 +6,42 @@
 {% block content %}
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Media'|trans({}, 'theliacms') } %}{% endembed %}
 
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-        {# The form posts on its own so it keeps working without JavaScript;
-           choosing files just submits it sooner. #}
-        <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-start"
-              action="{{ path('admin.cms.media.add', { edit_language_id: edit_language_id }) }}"
-              data-testid="cms-media-upload-form">
-            <input type="hidden" name="_token" value="{{ assignToken() }}">
-            <div>
-                <label class="visually-hidden" for="cms-media-files">{{ 'Add images'|trans({}, 'theliacms') }}</label>
+    {# The form posts on its own so it keeps working without JavaScript:
+       files chosen are sent at once. The script of the screen makes it a
+       place to drop files on, sends them one by one and shows each land. #}
+    <form method="post" enctype="multipart/form-data"
+          class="border border-2 rounded p-3 mb-3" style="border-style: dashed !important"
+          action="{{ path('admin.cms.media.add', { edit_language_id: edit_language_id }) }}"
+          data-testid="cms-media-upload-form"
+          data-cms-media-upload
+          data-accepted="{{ accepted_mime_types }}"
+          data-max-size="{{ max_upload_size }}"
+          data-describe-url="{{ path('admin.cms.media.describe', { edit_language_id: edit_language_id }) }}"
+          data-messages="{{ {
+              sending: 'Sending…'|trans({}, 'theliacms'),
+              added: 'Added'|trans({}, 'theliacms'),
+              format: 'Only JPEG, PNG and WebP images can be uploaded.'|trans({}, 'theliacms'),
+              tooLarge: 'The file is larger than the server accepts.'|trans({}, 'theliacms'),
+              failed: 'The file did not arrive whole. Send it again.'|trans({}, 'theliacms'),
+              describe: 'Describe the %count% image(s) added'|trans({}, 'theliacms'),
+              stay: 'Stay on the list'|trans({}, 'theliacms'),
+          }|json_encode }}">
+        <input type="hidden" name="_token" value="{{ assignToken() }}">
+        <div class="d-flex flex-wrap gap-3 align-items-center">
+            <i class="bi bi-cloud-arrow-up fs-3 text-body-secondary" aria-hidden="true"></i>
+            <div class="flex-grow-1">
+                <label class="form-label mb-1 fw-medium" for="cms-media-files">{{ 'Drop images here, or choose them'|trans({}, 'theliacms') }}</label>
                 <input class="form-control" type="file" id="cms-media-files" name="files[]" multiple
                        accept="{{ accepted_mime_types }}" onchange="this.form.requestSubmit()">
                 <div class="form-text">{{ 'JPEG, PNG or WebP. Several at once.'|trans({}, 'theliacms') }}</div>
             </div>
-            <button type="submit" class="btn btn-primary text-nowrap">
+            <button type="submit" class="btn btn-primary text-nowrap" data-cms-media-upload-submit>
                 <i class="bi bi-upload me-1" aria-hidden="true"></i>{{ 'Add images'|trans({}, 'theliacms') }}
             </button>
-        </form>
-    </div>
+        </div>
+        <ul class="list-unstyled small mt-3 mb-0 d-none" data-cms-media-upload-files aria-live="polite"></ul>
+        <div class="d-flex gap-2 mt-2 d-none" data-cms-media-upload-done></div>
+    </form>
 
     {% if has_library %}
         {% set filter_labels = {
@@ -198,4 +216,5 @@
             </nav>
         {% endif %}
     {% endif %}
+    <script src="{{ module_asset('TheliaCMS', 'assets/media-upload.js') }}?v={{ assets_version }}" defer></script>
 {% endblock %}

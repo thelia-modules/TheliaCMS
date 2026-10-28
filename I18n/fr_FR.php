@@ -1222,4 +1222,13 @@ return [
     'Every image of this list is described.' => 'Toutes les images de cette liste sont décrites.',
     'Describe them one by one' => 'Les décrire une à une',
     'Decorative images are published with an empty alternative text so screen readers skip them.' => 'Une image décorative est publiée avec un texte alternatif vide : les lecteurs d’écran la passent.',
+    'Sending…' => 'Envoi…',
+    'Added' => 'Ajoutée',
+    'The file is larger than the server accepts.' => 'Le fichier dépasse la taille que le serveur accepte.',
+    'The file did not arrive whole. Send it again.' => 'Le fichier n’est pas arrivé en entier. Envoyez-le à nouveau.',
+    'The file is not a readable image.' => 'Le fichier n’est pas une image lisible.',
+    'Describe the %count% image(s) added' => 'Décrire les %count% image(s) ajoutée(s)',
+    'Stay on the list' => 'Rester sur la liste',
+    'Drop images here, or choose them' => 'Déposez des images ici, ou choisissez-les',
+    'Not added: %files%.' => 'Non ajoutées : %files%.',
 ];

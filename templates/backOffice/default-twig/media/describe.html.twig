@@ -6,6 +6,7 @@
 {% block content %}
     {% form_theme form with bo_form_themes only %}
     {% set here = list_parameters|merge({ edit_language_id: edit_language_id }) %}
+    {% set queue = queue_parameters|merge({ edit_language_id: edit_language_id }) %}
 
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: block('title') } %}
         {% block actions %}
@@ -49,7 +50,7 @@
             </p>
 
             {{ form_start(form, {
-                action: path('admin.cms.media.describe', here|merge({ at: position, image: item.id })),
+                action: path('admin.cms.media.describe', queue|merge({ at: position, image: item.id })),
                 attr: { novalidate: 'novalidate', 'data-testid': 'cms-media-describe-form' },
             }) }}
                 <input type="hidden" name="_token" value="{{ assignToken() }}">
@@ -70,7 +71,7 @@
                     </button>
                     {% if position + 1 < total %}
                         <a class="btn btn-link" data-testid="cms-media-describe-skip"
-                           href="{{ path('admin.cms.media.describe', here|merge({ at: position + 1 })) }}">{{ 'Skip'|trans({}, 'theliacms') }}</a>
+                           href="{{ path('admin.cms.media.describe', queue|merge({ at: position + 1 })) }}">{{ 'Skip'|trans({}, 'theliacms') }}</a>
                     {% endif %}
                 </div>
             {# The flag is sent by its button, not drawn as a box. #}

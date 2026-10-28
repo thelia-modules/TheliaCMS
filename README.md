@@ -477,7 +477,9 @@ say nothing in the language edited: one image, one field, Enter saves and
 shows the next one. An image can be answered as decorative or skipped.
 
 Uploads accept JPEG, PNG and WebP. SVG is refused: it is a document that can
-carry script.
+carry script. Files are dropped on the list or chosen, sent one by one, and a
+refused file is named with why without costing the others. The describe queue
+then opens on the images just added.
 
 The images of the catalogue (products, categories, brands, folders, contents)
 are not in the library: the core keeps them in its own tables. To use them in

@@ -210,7 +210,7 @@ final readonly class SectionFormBuilder
         $file = $data[$prop->name.self::FILE_SUFFIX] ?? null;
 
         if ($file instanceof UploadedFile && $this->mayUpload()) {
-            $stored = $this->media->add([$file], $this->library->locale());
+            $stored = $this->media->add([$file], $this->library->locale())->stored;
 
             if (isset($stored[0]) && $stored[0] instanceof LibraryImage) {
                 return (int) $stored[0]->getId();

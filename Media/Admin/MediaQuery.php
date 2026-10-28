@@ -26,12 +26,19 @@ final readonly class MediaQuery
 {
     public const int PER_PAGE = 48;
 
+    /** A list of named images is the images of one sending, not a selection. */
+    private const int MAX_IMAGES = 200;
+
+    /**
+     * @param list<int> $images only these images, as a sending of files names them: read by the describe queue, not by the list
+     */
     public function __construct(
         public ?string $search = null,
         public ?MediaFilter $filter = null,
         public ?string $tag = null,
         public MediaOrder $order = MediaOrder::Newest,
         public int $page = 1,
+        public array $images = [],
     ) {
     }
 
@@ -50,7 +57,18 @@ final readonly class MediaQuery
             tag: '' !== $tag ? $tag : null,
             order: MediaOrder::tryFrom($request->query->getString('order')) ?? MediaOrder::Newest,
             page: max(1, $request->query->getInt('page', 1)),
+            images: self::imageIds($request->query->getString('images')),
         );
+    }
+
+    /**
+     * @return list<int>
+     */
+    private static function imageIds(string $list): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', explode(',', $list)), static fn (int $id): bool => $id > 0)));
+
+        return \array_slice($ids, 0, self::MAX_IMAGES);
     }
 
     public function isNarrowed(): bool
@@ -72,6 +90,18 @@ final readonly class MediaQuery
             'tag' => $this->tag,
             'order' => MediaOrder::Newest === $this->order ? null : $this->order->value,
         ], static fn (?string $value): bool => null !== $value);
+    }
+
+    /**
+     * The parameters of a describe queue: those of its list, and the images
+     * of a sending when it holds them only. The list itself is never
+     * narrowed to them: leaving the queue goes back to the whole list.
+     *
+     * @return array<string, string>
+     */
+    public function queueParameters(): array
+    {
+        return $this->parameters() + ([] === $this->images ? [] : ['images' => implode(',', $this->images)]);
     }
 
     /**

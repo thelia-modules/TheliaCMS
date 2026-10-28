@@ -10,8 +10,14 @@ queue (`admin.cms.media.describe`, `MediaCatalog::toDescribe()`,
 `MediaDescriptionType`, `CmsMediaWriter::describe()`), tests in
 `Tests/Integration/Media/MediaDescribeScreenTest.php`; an image opened from a
 filtered list leads back to it. The decorative answer is a button with the
-access key `d` (the browser's modifier), not a bare key. Lots 3 to 6 not
-started. The import of the catalogue
+access key `d` (the browser's modifier), not a bare key.
+
+Lot 3 done the same day: `assets/media-upload.js` (drop, one request per
+file, progress, refusals), `MediaUpload` and `MediaUploadRefusal`, the queue
+restricted to named images (`images=` in the address of the queue only: leaving it goes back to the whole list), tests in
+`Tests/Integration/Media/MediaUploadScreenTest.php`. Found on the way and
+fixed: the list stored GIF and BMP, and a file the library could not decode
+broke the whole sending. Lots 4 to 6 not started. The import of the catalogue
 images it starts from is done: `thelia_cms:media:import-catalogue`
 (`Media/CatalogueImageImporter.php`), a copy, run again without duplicates.
 

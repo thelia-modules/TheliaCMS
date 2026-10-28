@@ -503,7 +503,11 @@ final readonly class CmsPageAdminController
     private function chosenImage(array $data, string $locale): ?int
     {
         if (($data['imageUpload'] ?? null) instanceof UploadedFile) {
-            return (int) $this->media->add([$data['imageUpload']], $locale)[0]->getId();
+            $stored = $this->media->add([$data['imageUpload']], $locale)->stored;
+
+            if (isset($stored[0])) {
+                return (int) $stored[0]->getId();
+            }
         }
 
         return null === $data['image'] ? null : (int) $data['image'];
