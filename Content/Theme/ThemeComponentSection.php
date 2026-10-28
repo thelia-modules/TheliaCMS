@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Content\Theme;
 
+use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\UX\TwigComponent\ComponentRendererInterface;
 use TheliaCMS\Content\ImageSource;
 use TheliaCMS\Content\PropSchema;
@@ -26,7 +27,9 @@ use TheliaCMS\Content\SectionDefinitionInterface;
  * Named as the theme names it (`Molecules:Reinsurance:Base`), described by
  * what its template documents, rendered by the component renderer of Symfony
  * UX: the markup is the theme's own, so the stylesheet the theme built already
- * knows every class in it.
+ * knows every class in it. It is drawn in the language of the page: a page is
+ * rendered when it is saved, by whoever saves it, an editor working in another
+ * language or a command run without any.
  */
 final readonly class ThemeComponentSection implements SectionDefinitionInterface
 {
@@ -43,6 +46,7 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
         private ComponentRendererInterface $renderer,
         private array $idLists = [],
         private array $example = [],
+        private ?LocaleSwitcher $localeSwitcher = null,
     ) {
     }
 
@@ -131,6 +135,8 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
             $forComponent[$this->twigNames[$name] ?? $name] = $value;
         }
 
-        return $this->renderer->createAndRender($this->component, $forComponent);
+        $draw = fn (): string => $this->renderer->createAndRender($this->component, $forComponent);
+
+        return null === $this->localeSwitcher ? $draw() : $this->localeSwitcher->runWithLocale($locale, $draw);
     }
 }
