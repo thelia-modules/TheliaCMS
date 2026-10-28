@@ -5,20 +5,20 @@ For the people who run the shop and write its pages. The technical side is in
 
 ## What the AI does here
 
-- **Writes a page from a brief.** You say what the page is for, in your own
+- Writes a page from a brief. You say what the page is for, in your own
   words; the AI proposes the whole page as a draft. You read it, change what you
   want, and publish it yourself. Nothing goes online without you.
-- **Changes a page, or one section.** Ask for a shorter introduction or a
+- Changes a page, or one section. Ask for a shorter introduction or a
   friendlier tone; the rest of the page stays as it is.
-- **Translates a page** into another language of the shop from the one that
+- Translates a page into another language of the shop from the one that
   already exists.
-- **Writes the text of a field.** Beside a rich-text field (a product
+- Writes the text of a field. Beside a rich-text field (a product
   description, for example) a button writes a text from a short brief. The text
   is shown first: you choose to replace the field, insert it at the cursor or
   cancel. Nothing is saved before you save the form.
-- **Makes a component** (a price table, a timeline) from a request, which you
+- Makes a component (a price table, a timeline) from a request, which you
   check before the site keeps it.
-- **Reads a web page you cite**, if you allowed it (see below).
+- Reads a web page you cite, if you allowed it (see below).
 
 Each use is recorded in the history of the page, with its date, its outcome and
 its cost.
