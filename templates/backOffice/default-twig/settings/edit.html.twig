@@ -128,6 +128,16 @@
                             </div>
                         </div>
 
+                        <div class="border-top pt-3 mb-3" data-testid="cms-settings-generator-text">
+                            <h3 class="h6">{{ 'Texts written from a brief'|trans({}, 'theliacms') }}</h3>
+                            <p class="text-muted small">{{ 'The summary, description and conclusion of a page or of an item of the catalogue, written from a brief beside the field.'|trans({}, 'theliacms') }}</p>
+                            <div class="row g-3">
+                                <div class="col-lg-4">{{ form_row(form.textModel) }}</div>
+                                <div class="col-lg-4">{{ form_row(form.textEffort) }}</div>
+                                <div class="col-lg-4">{{ form_row(form.textMaxTokens) }}</div>
+                            </div>
+                        </div>
+
                         <p class="text-muted small mb-0">
                             {{ 'The API key is never set here: it is read from the environment of the server, in the ANTHROPIC_API_KEY variable, where a secret belongs and where an export of the site does not carry it.'|trans({}, 'theliacms') }}
                         </p>

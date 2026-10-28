@@ -1174,4 +1174,11 @@ return [
     'This page is the model of its template: it is deleted with its template, under CMS > Page templates, never moved to the bin.' => 'This page is the model of its template: it is deleted with its template, under CMS > Page templates, never moved to the bin.',
     'This page is the model of its template: it is never online.' => 'This page is the model of its template: it is never online.',
     'The model of a template is never online.' => 'The model of a template is never online.',
+    'Left empty, the model of the pages.' => 'Left empty, the model of the pages.',
+    'Low: the default' => 'Low: the default',
+    'High' => 'High',
+    'A description of a few paragraphs fits in 2,000.' => 'A description of a few paragraphs fits in 2,000.',
+    'Texts written from a brief' => 'Texts written from a brief',
+    'The summary, description and conclusion of a page or of an item of the catalogue, written from a brief beside the field.' => 'The summary, description and conclusion of a page or of an item of the catalogue, written from a brief beside the field.',
+    'Text of a field' => 'Text of a field',
 ];

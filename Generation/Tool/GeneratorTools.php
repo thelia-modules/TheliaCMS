@@ -63,6 +63,22 @@ final class GeneratorTools
     }
 
     /**
+     * Some of the tools only, as definitions() gives them: a short text needs
+     * the catalogue and the pages, not the pictures nor the sections.
+     *
+     * @param list<string> $names
+     *
+     * @return list<array{name: string, description: string, inputSchema: array<string, mixed>}>
+     */
+    public function definitionsOf(array $names): array
+    {
+        return array_values(array_filter(
+            $this->definitions(),
+            static fn (array $definition): bool => \in_array($definition['name'], $names, true),
+        ));
+    }
+
+    /**
      * @param array<string, mixed> $input
      */
     public function run(string $name, array $input, GenerationRequest $request): string

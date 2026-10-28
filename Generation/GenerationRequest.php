@@ -30,6 +30,8 @@ final readonly class GenerationRequest
     public const string KIND_REVISION = 'revision';
     public const string KIND_SECTION = 'section';
     public const string KIND_TRANSLATION = 'translation';
+    /** The text of one rich-text field, written from a brief beside it. */
+    public const string KIND_TEXT = 'text';
 
     private function __construct(
         public GenerationTarget $target,
@@ -53,6 +55,11 @@ final readonly class GenerationRequest
     public static function fromBrief(GenerationTarget $target, string $locale, Brief $brief): self
     {
         return new self($target, $locale, self::KIND_BRIEF, $brief);
+    }
+
+    public static function text(GenerationTarget $target, string $locale, Brief $brief): self
+    {
+        return new self($target, $locale, self::KIND_TEXT, $brief);
     }
 
     /**

@@ -1174,4 +1174,11 @@ return [
     'This page is the model of its template: it is deleted with its template, under CMS > Page templates, never moved to the bin.' => 'Cette page est le modèle de son gabarit : elle est supprimée avec son gabarit, dans CMS > Gabarits, jamais mise à la corbeille.',
     'This page is the model of its template: it is never online.' => 'Cette page est le modèle de son gabarit : elle n’est jamais en ligne.',
     'The model of a template is never online.' => 'Le modèle d’un gabarit n’est jamais en ligne.',
+    'Left empty, the model of the pages.' => 'Laissé vide, le modèle des pages.',
+    'Low: the default' => 'Faible : par défaut',
+    'High' => 'Élevé',
+    'A description of a few paragraphs fits in 2,000.' => 'Une description de quelques paragraphes tient en 2 000.',
+    'Texts written from a brief' => 'Textes rédigés depuis un brief',
+    'The summary, description and conclusion of a page or of an item of the catalogue, written from a brief beside the field.' => 'Le résumé, la description et la conclusion d’une page ou d’un élément du catalogue, rédigés depuis un brief à côté du champ.',
+    'Text of a field' => 'Texte d’un champ',
 ];
