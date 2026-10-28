@@ -33,6 +33,12 @@ final readonly class PageCacheListener
     /** Set by whatever rendered a page, and read here. */
     public const string TAGS_ATTRIBUTE = '_cms_cache_tags';
 
+    /**
+     * Written by ShownTags: what the page shows of others. Added to the tags
+     * of any page, but never what makes a page cacheable on its own.
+     */
+    public const string SHOWN_TAGS_ATTRIBUTE = '_cms_cache_shown_tags';
+
     public function __construct(
         private PageCachePolicy $policy,
         private ?CoreSharedCache $sharedCache = null,
@@ -52,21 +58,26 @@ final readonly class PageCacheListener
 
         $request = $event->getRequest();
         $tags = $request->attributes->get(self::TAGS_ATTRIBUTE);
+        $tags = \is_array($tags) ? array_values($tags) : [];
+        $shown = $request->attributes->get(self::SHOWN_TAGS_ATTRIBUTE);
+        $shown = \is_array($shown) ? array_values($shown) : [];
 
         // The shared cache of the core has the last word once the shop turns it on.
         // Every page may show the menus and the site settings of the module (a theme
         // hook, a footer menu), so every page is filed under them, and a page of the
         // module under its own tags as well.
         if (null !== $this->sharedCache && $this->sharedCache->isActive()) {
-            $this->sharedCache->tag([CacheTags::SITE, CacheTags::MENUS, ...(\is_array($tags) ? array_values($tags) : [])]);
+            $this->sharedCache->tag(array_values(array_unique([CacheTags::SITE, CacheTags::MENUS, ...$tags, ...$shown])));
 
             return;
         }
 
-        if (!\is_array($tags) || [] === $tags) {
+        // Only a page of the module is given headers of its own: a page of the
+        // shop that shows a list of pages stays what the shop made it.
+        if ([] === $tags) {
             return;
         }
 
-        $this->policy->apply($event->getResponse(), $request, array_values($tags));
+        $this->policy->apply($event->getResponse(), $request, array_values(array_unique([...$tags, ...$shown])));
     }
 }

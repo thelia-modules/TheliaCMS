@@ -21,6 +21,10 @@ namespace TheliaCMS\Http;
  * Without tags the only way to publish a correction is to empty the whole cache
  * and let the site rebuild itself under traffic. With them, publishing a page
  * drops that page, and saving a menu drops every page (they all render it).
+ *
+ * What a change drops is decided by `PageInvalidator`, never by purging the
+ * tags a page is filed under: `cms` and `cms-menu` are on every page of the
+ * site, so purging them for one page empties the whole cache.
  */
 final readonly class CacheTags
 {
@@ -30,6 +34,15 @@ final readonly class CacheTags
     public static function page(int $pageId): string
     {
         return 'cms-page-'.$pageId;
+    }
+
+    /**
+     * A dynamic block of a page (a list of pages, a form), read when the page
+     * is served: the pages that show it change with what it renders.
+     */
+    public static function partial(string $partialName): string
+    {
+        return 'cms-partial-'.$partialName;
     }
 
     /**

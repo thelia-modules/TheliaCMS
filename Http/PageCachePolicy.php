@@ -108,9 +108,10 @@ final readonly class PageCachePolicy
         $response->setMaxAge(0);
         $response->setSharedMaxAge($ttl);
 
-        // The same address answers in the language the visitor asked for, so a
-        // shared cache has to key on it.
-        $response->setVary(['Accept-Language'], false);
+        // No `Vary: Accept-Language`: the language of a page comes from its
+        // address, its domain or a `lang` parameter, all part of what a cache
+        // keys on, never from that header. Varying on it would only keep one
+        // copy per browser language of the same page.
 
         // Symfony rewrites Cache-Control to `private` whenever the session was
         // touched, which on Thelia is always. This header is its documented way

@@ -41,6 +41,8 @@ use TheliaCMS\Form\FormCode;
 use TheliaCMS\Form\Recipients;
 use TheliaCMS\Form\RetentionPolicy;
 use TheliaCMS\Generation\Brief;
+use TheliaCMS\Http\CachePurger;
+use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormField;
@@ -66,6 +68,9 @@ use TheliaCMS\Page\PageTagWriter;
 use TheliaCMS\Page\PageTypeCode;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\PageTypeWriter;
+use TheliaCMS\Partial\Definition\FormPartial;
+use TheliaCMS\Partial\Definition\PageListPartial;
+use TheliaCMS\Partial\PartialCache;
 use TheliaCMS\Search\SearchTextExtractor;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\SiteMode;
@@ -98,6 +103,8 @@ final readonly class SiteImporter
         private PageTagWriter $tagWriter,
         private DocumentValidator $documentValidator,
         private SectionCatalog $catalog,
+        private PartialCache $partials,
+        private CachePurger $httpCache,
         private ?SiteComponentRepository $components = null,
         private SiteComponentValidator $componentValidator = new SiteComponentValidator(),
         private CatalogueItemKeys $itemKeys = new CatalogueItemKeys(),
@@ -154,7 +161,12 @@ final readonly class SiteImporter
             throw $throwable;
         }
 
+        // Pages, menus, forms, settings: an import may change any page of the
+        // site, the one case where the whole of it is dropped.
         $this->menuCache->invalidate();
+        $this->partials->invalidate(PageListPartial::NAME);
+        $this->partials->invalidate(FormPartial::NAME);
+        $this->httpCache->purge([CacheTags::SITE]);
 
         return $report;
     }
