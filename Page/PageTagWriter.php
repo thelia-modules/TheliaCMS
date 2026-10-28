@@ -15,8 +15,6 @@ declare(strict_types=1);
 namespace TheliaCMS\Page;
 
 use Propel\Runtime\Connection\ConnectionInterface;
-use TheliaCMS\Http\CachePurger;
-use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsTag;
 use TheliaCMS\Page\Admin\CmsActivityLog;
@@ -24,16 +22,16 @@ use TheliaCMS\Page\Admin\CmsActivityLog;
 /**
  * Every change to the tags goes through here.
  *
- * A tag shows on the pages that carry it, so renaming or deleting one drops
- * those pages from the shared cache: the page itself did not change, the cache
- * has no other way to know.
+ * A tag shows on the pages that carry it and on the lists of pages, so
+ * renaming or deleting one drops them from the caches: the page itself did not
+ * change, the caches have no other way to know.
  */
 final readonly class PageTagWriter
 {
     public function __construct(
         private PageTagRepository $tags,
         private CmsActivityLog $activityLog,
-        private CachePurger $httpCache,
+        private PageInvalidator $invalidator,
     ) {
     }
 
@@ -128,6 +126,6 @@ final readonly class PageTagWriter
             return;
         }
 
-        $this->httpCache->purge(array_map(static fn (CmsPage $page): string => CacheTags::page((int) $page->getId()), $pages));
+        $this->invalidator->contentChanged(...array_map(static fn (CmsPage $page): int => (int) $page->getId(), $pages));
     }
 }

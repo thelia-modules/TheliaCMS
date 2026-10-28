@@ -19,12 +19,20 @@ the addresses it is allowed to cache. That configuration is below.
 Two headers are written in every case, cached or not:
 
 ```
-Cache-Tag: cms-page-12, cms-menu, cms-settings
-Surrogate-Key: cms-page-12 cms-menu cms-settings
+Cache-Tag: cms,cms-menu,cms-page-12,cms-page-list,cms-partial-cms-form
+Surrogate-Key: cms cms-menu cms-page-12 cms-page-list cms-partial-cms-form
 ```
 
 The two say the same thing under the two names proxies read: commas for
 Cloudflare and Akamai, spaces for Fastly and for the Varnish `xkey` module.
+`cms` and `cms-menu` are on every page, `cms-page-12` names the page, a
+`cms-partial-<name>` tag is added for each dynamic block the page shows (a
+form, a reusable block), and `cms-page-list` when its template reads a list of
+pages (`cms_pages_tagged`).
+
+No `Vary` header is written: the language of a page comes from its address, its
+domain or its `lang` parameter, which a cache keys on already, never from
+`Accept-Language`.
 
 ## With the shared cache of Thelia
 
@@ -34,7 +42,9 @@ shop setting `shared_cache_mode` takes over. While it is `announce` or
 the cookies and writes `Cache-Control` and its own tag header (`xkey` or
 `Surrogate-Key`, depending on `SHARED_CACHE_PURGER`), and the module only adds
 its tags to that header: `cms` and `cms-menu` on every page, `cms-page-12` on
-the page it renders. It writes neither `Cache-Tag` nor its own `Cache-Control`
+the page it renders, `cms-partial-<name>` and `cms-page-list` on a page that
+shows a dynamic block or a list of pages.
+It writes neither `Cache-Tag` nor its own `Cache-Control`
 then, and `http_cache_ttl` is not read: the lifetime is `shared_cache_ttl`.
 
 Every purge of the module goes to the proxy the core is configured for, so no
@@ -136,9 +146,26 @@ addresses, which Fastly does in `vcl_recv` exactly as above.
 
 ## Telling the proxy what to drop
 
-The module works out which tags are stale: the page just published, the page
-whose settings were just saved (its type, its SEO fields), the pages drawing a
-menu that changed, the pages using a reusable block that was edited.
+The module works out which tags are stale, and drops no more than what changed:
+
+- a page published again, or whose settings were saved: `cms-page-N`, and
+  `cms-page-list`, the pages that show a list of pages;
+- a page that goes online or offline (published for the first time in a
+  language, unpublished, hidden, shown, binned, restored), renamed, or given a
+  new address: the page and the pages under it, whose breadcrumb names it,
+  `cms-page-list`, and `cms-menu` only when a menu links to one of them;
+- a new home page: the former one, whose tag the root of the site was filed
+  under, and the new one;
+- a page moved among its siblings: `cms-page-list`;
+- a reusable block: the pages that use it;
+- a tag renamed or deleted: the pages that carry it, and `cms-page-list`;
+- a content or a folder written by the shop: `cms-menu`, only when a menu
+  links to it;
+- an import: `cms`, so every page;
+- a menu: `cms-menu`, so every page; the site settings: `cms`, so every page.
+
+`cms` and `cms-menu` are never purged for a single page: every page of the site
+carries them, and purging them would empty the whole cache, the shop included.
 It hands them to every service tagged `thelia_cms.cache_purger`, and ships none
 of its own. What a purge means depends on the proxy, on its address, on its
 authentication and on whether it invalidates by key or by ban, and a wrong guess

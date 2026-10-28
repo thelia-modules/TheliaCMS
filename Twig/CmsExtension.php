@@ -20,6 +20,8 @@ use Thelia\Model\Lang;
 use TheliaCMS\Block\Item\ItemType;
 use TheliaCMS\Block\Item\PublishedItemBlock;
 use TheliaCMS\Block\Item\PublishedItemBlockRepository;
+use TheliaCMS\Http\CacheTags;
+use TheliaCMS\Http\ShownTags;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
 use TheliaCMS\Page\PageCard;
@@ -47,6 +49,7 @@ final class CmsExtension extends AbstractExtension
         private readonly PublishedPageRepository $pages,
         private readonly LangService $langService,
         private readonly PublishedItemBlockRepository $itemBlocks,
+        private readonly ShownTags $shownTags,
     ) {
     }
 
@@ -92,12 +95,23 @@ final class CmsExtension extends AbstractExtension
      */
     public function pagesTagged(string $tag, ?string $locale = null): array
     {
+        $this->showsPageList();
+
         return $this->pages->withTag($tag, $locale ?? $this->currentLocale());
     }
 
     private function currentLocale(): string
     {
         return $this->langService->getLang()?->getLocale() ?? Lang::getDefaultLanguage()->getLocale();
+    }
+
+    /**
+     * A list read from a template changes with pages the page that shows it
+     * never names, and is dropped with them.
+     */
+    private function showsPageList(): void
+    {
+        $this->shownTags->add(CacheTags::PAGE_LISTS);
     }
 
     /**

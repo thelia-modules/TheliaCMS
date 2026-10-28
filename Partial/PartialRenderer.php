@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace TheliaCMS\Partial;
 
 use Psr\Log\LoggerInterface;
+use TheliaCMS\Http\CacheTags;
+use TheliaCMS\Http\ShownTags;
 
 /**
  * Replaces the placeholders a page stores with what the server renders for them.
@@ -36,6 +38,7 @@ final readonly class PartialRenderer
         private PartialProps $props,
         private PartialFragmentRendererInterface $fragments,
         private LoggerInterface $logger,
+        private ShownTags $shownTags,
     ) {
     }
 
@@ -111,6 +114,8 @@ final readonly class PartialRenderer
             return;
         }
 
+        // Served from the fragment cache or not, the page now shows the block.
+        $this->shownTags->add(CacheTags::partial($name));
         $this->replaceWithMarkup($document, $placeholder, $rendered);
     }
 
