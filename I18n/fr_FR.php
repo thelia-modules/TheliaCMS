@@ -1163,4 +1163,10 @@ return [
     'The previous draft is back. The one it replaces is kept in its place.' => 'Le brouillon précédent est rétabli. Celui qu’il remplace est gardé à sa place.',
     'This draft is no longer available.' => 'Ce brouillon n’est plus disponible.',
     'Double-click to edit this text where it stands' => 'Double-cliquez pour modifier ce texte sur place',
+    'Regenerate from the title' => 'Régénérer depuis le titre',
+    'Address: %address%' => 'Adresse : %address%',
+    'Another page or language already answers on this address: a number was added to it.' => 'Une autre page ou une autre langue répond déjà à cette adresse : un numéro y a été ajouté.',
+    'The address no longer follows the title.' => 'L’adresse ne suit plus le titre.',
+    'The address could not be computed.' => 'L’adresse n’a pas pu être calculée.',
+    'Give the page a title first.' => 'Donnez d’abord un titre à la page.',
 ];

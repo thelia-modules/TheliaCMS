@@ -5,8 +5,12 @@ Status: steps 1 to 4 done (2026-10-28): `CmsUrlService::propose()` returns an
 uniqueness suffix, `CmsPageWriter::saveDraft()` calls
 `CmsUrlService::rebuildDescendants()` on a first address in a locale. The two
 defect tests of `Tests/Integration/Page/PageAddressTest.php` were red before
-the fix. Steps 5 and on to do. The design questions are settled (see
-"Decisions taken").
+the fix. Steps 5 to 7 done the same day: route `admin.cms.pages.address_proposal`
+(`Tests/Integration/Page/AddressProposalScreenTest.php`), `Page/Admin/PageAddressType.php`
+and `assets/page-address.js`; a reserved slug saved from the form is now an
+error on the field instead of a 500. To do: step 8, the editor documentation and
+the CHANGELOG of step 9, step 10 in a real browser. The design questions are
+settled (see "Decisions taken").
 
 ## What is asked
 

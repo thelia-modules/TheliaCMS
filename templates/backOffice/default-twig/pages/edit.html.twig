@@ -227,4 +227,5 @@
 {% block scripts_extra %}
     {{ parent() }}
     {{ safe_hook('wysiwyg.js', { location: 'cms-page-edit-js' }) }}
+    <script src="{{ module_asset('TheliaCMS', 'assets/page-address.js') }}?v={{ assets_version }}" defer></script>
 {% endblock %}

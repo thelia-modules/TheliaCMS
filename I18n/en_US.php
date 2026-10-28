@@ -1163,4 +1163,10 @@ return [
     'The previous draft is back. The one it replaces is kept in its place.' => 'The previous draft is back. The one it replaces is kept in its place.',
     'This draft is no longer available.' => 'This draft is no longer available.',
     'Double-click to edit this text where it stands' => 'Double-click to edit this text where it stands',
+    'Regenerate from the title' => 'Regenerate from the title',
+    'Address: %address%' => 'Address: %address%',
+    'Another page or language already answers on this address: a number was added to it.' => 'Another page or language already answers on this address: a number was added to it.',
+    'The address no longer follows the title.' => 'The address no longer follows the title.',
+    'The address could not be computed.' => 'The address could not be computed.',
+    'Give the page a title first.' => 'Give the page a title first.',
 ];

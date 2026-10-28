@@ -18,6 +18,7 @@ use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -138,6 +139,48 @@ final readonly class CmsPageAdminController
         }
 
         return $this->backToEdit((int) $page->getId(), $lang);
+    }
+
+    /**
+     * The address the edit screen offers for a title, a slug and a parent not
+     * saved yet, in the language being edited: from the slug when one is typed,
+     * from the title otherwise, and the segment the title alone would give, so
+     * the screen can say when the address no longer follows the title. Nothing
+     * is written: the address changes when the form is saved.
+     */
+    #[Route('/address-proposal', name: 'address_proposal', methods: ['POST'], priority: 1)]
+    public function addressProposal(Request $request): JsonResponse
+    {
+        $pageId = $request->request->getInt('page');
+        $this->denyUnless(0 === $pageId ? AccessManager::CREATE : AccessManager::UPDATE);
+
+        if (0 !== $pageId) {
+            $this->livePageOrFail($pageId);
+        }
+
+        $title = trim((string) $request->request->get('title', ''));
+        $slug = trim((string) $request->request->get('slug', ''));
+
+        if ('' === $title && '' === $slug) {
+            return new JsonResponse(['error' => $this->translate('Give the page a title first.')], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $locale = $this->editLang($request)->getLocale();
+        $parent = $request->request->getInt('parent');
+
+        try {
+            $proposal = $this->addresses->propose($pageId, $parent, $locale, $title, '' === $slug ? null : $slug);
+            $fromTitle = '' === $title ? null : $this->addresses->propose($pageId, $parent, $locale, $title);
+        } catch (\InvalidArgumentException $exception) {
+            return new JsonResponse(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return new JsonResponse([
+            'segment' => $proposal->segment,
+            'address' => $proposal->address,
+            'suffixed' => $proposal->suffixed,
+            'title_segment' => $fromTitle?->segment,
+        ]);
     }
 
     #[Route('/{id}', name: 'edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
@@ -283,7 +326,7 @@ final readonly class CmsPageAdminController
         $lang = $this->editLang($request);
         $locale = $lang->getLocale();
         $images = $this->imageChoices->for($page, $locale);
-        $form = $this->buildForm($page, $locale, array_keys($images));
+        $form = $this->buildForm($page, $lang, array_keys($images));
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -299,6 +342,9 @@ final readonly class CmsPageAdminController
                 }
             } catch (FixedAddressException $exception) {
                 $form->get('fixedUrl')->addError(new FormError($exception->getMessage()));
+            } catch (\InvalidArgumentException $exception) {
+                // A slug that would shadow a reserved path (`admin`, `api`...).
+                $form->get('slug')->addError(new FormError($exception->getMessage()));
             }
         }
 
@@ -316,14 +362,18 @@ final readonly class CmsPageAdminController
             'edit_language_id' => $lang->getId(),
             'is_home' => !$page->isNew() && (int) $page->getId() === (int) TheliaCMS::getConfigValue('home_page_id', 0),
             'preview_url' => $page->isNew() ? null : $page->getUrl($locale),
+            // The browser keeps the script until its version changes.
+            'assets_version' => substr(hash('xxh3', (string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/page-address.js')), 0, 12),
         ]));
     }
 
     /**
      * @param list<int> $imageChoices
      */
-    private function buildForm(CmsPage $page, string $locale, array $imageChoices): FormInterface
+    private function buildForm(CmsPage $page, Lang $lang, array $imageChoices): FormInterface
     {
+        $locale = $lang->getLocale();
+
         if (!$page->isNew()) {
             $page->setLocale($locale);
         }
@@ -372,6 +422,8 @@ final readonly class CmsPageAdminController
             'field_locale' => $locale,
             'tag_choices' => $this->tags->namesById(),
             'allow_image_upload' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::CREATE]),
+            'address_proposal_url' => $this->urls->generate('admin.cms.pages.address_proposal', [self::EDIT_LANGUAGE_PARAMETER => $lang->getId()]),
+            'page_id' => $page->isNew() ? 0 : (int) $page->getId(),
         ]);
     }
 

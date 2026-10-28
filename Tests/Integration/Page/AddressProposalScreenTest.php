@@ -1,0 +1,117 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Tests\Integration\Page;
+
+use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+
+/**
+ * The address the edit screen proposes for a page, before the form is saved.
+ *
+ * The slug field asks the server, which computes the address the page would get
+ * and writes nothing: a published address moves when the editor saves, never
+ * while they type.
+ */
+final class AddressProposalScreenTest extends AdminScreenTestCase
+{
+    private const string ROUTE = '/admin/cms/pages/address-proposal';
+
+    public function testTheEditScreenTellsTheSlugFieldWhereToAsk(): void
+    {
+        $page = $this->createPage('Atelier de reliure');
+
+        $field = $this->screen(\sprintf('/admin/cms/pages/%d', $page->getId()))->filter('input[name="cms_page[slug]"]');
+
+        self::assertSame(1, $field->count());
+        self::assertSame(self::ROUTE, parse_url((string) $field->attr('data-proposal-url'), \PHP_URL_PATH));
+        self::assertSame((string) $page->getId(), $field->attr('data-page-id'));
+        self::assertSame('cms_page_title', $field->attr('data-title-field'), 'The script finds the title field by the id Symfony gives it.');
+        self::assertSame('cms_page_parent', $field->attr('data-parent-field'));
+    }
+
+    public function testAProposalFollowsTheNewTitleAndWritesNothing(): void
+    {
+        $page = $this->createPage('Atelier de dorure');
+
+        $answer = $this->propose(['page' => (string) $page->getId(), 'title' => 'Atelier de dorure à la feuille', 'slug' => 'atelier-de-dorure']);
+
+        self::assertSame(200, $answer['status']);
+        self::assertSame('atelier-de-dorure', $answer['body']['segment'], 'The slug typed wins over the title.');
+        self::assertSame('atelier-de-dorure', $answer['body']['address']);
+        self::assertFalse($answer['body']['suffixed']);
+        self::assertSame('atelier-de-dorure-a-la-feuille', $answer['body']['title_segment'], 'The screen can tell the slug no longer follows the title.');
+        self::assertNull(RewritingUrlQuery::create()->findOneByUrl('atelier-de-dorure-a-la-feuille'), 'Nothing is written.');
+    }
+
+    public function testAProposalSaysWhenTheAddressIsTaken(): void
+    {
+        $this->createPage('Atelier de marqueterie');
+
+        $answer = $this->propose(['page' => '0', 'title' => 'Atelier de marqueterie']);
+
+        self::assertSame('atelier-de-marqueterie-2', $answer['body']['address']);
+        self::assertSame('atelier-de-marqueterie', $answer['body']['segment']);
+        self::assertTrue($answer['body']['suffixed']);
+    }
+
+    public function testAReservedSlugIsRefusedWithAMessage(): void
+    {
+        $answer = $this->propose(['page' => '0', 'title' => 'Administration', 'slug' => 'admin']);
+
+        self::assertSame(422, $answer['status']);
+        self::assertStringContainsString('reserved', (string) $answer['body']['error']);
+    }
+
+    public function testNothingIsProposedWithoutATitleOrASlug(): void
+    {
+        self::assertSame(422, $this->propose(['page' => '0', 'title' => ' '])['status']);
+    }
+
+    public function testAProposalForAPageThatDoesNotExistIsNotFound(): void
+    {
+        self::assertSame(404, $this->propose(['page' => '999999999', 'title' => 'Fantôme'])['status']);
+    }
+
+    /**
+     * A reserved slug saved from the form is shown on the field, as a fixed
+     * address another page holds is: the editor fixes it there.
+     */
+    public function testSavingAReservedSlugIsRefusedOnTheField(): void
+    {
+        $page = $this->createPage('Atelier de gravure');
+        $url = \sprintf('/admin/cms/pages/%d', $page->getId());
+
+        $form = $this->screen($url)->filter('form[name="cms_page"]')->form();
+        $form['cms_page[slug]'] = 'admin';
+
+        self::assertSame(200, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+        self::assertStringContainsString('reserved', $this->client->getCrawler()->filter('.invalid-feedback, .form-error-message')->text(''));
+        self::assertSame('atelier-de-gravure', $page->getRewrittenUrl($this->locale()));
+    }
+
+    /**
+     * @param array<string, string> $parameters
+     *
+     * @return array{status: int, body: array<string, mixed>}
+     */
+    private function propose(array $parameters): array
+    {
+        $token = $this->tokenOfTheScripts($this->screen('/admin/cms/pages'));
+        $status = $this->send('POST', self::ROUTE, $parameters, [...self::XHR, 'HTTP_X_CSRF_TOKEN' => $token]);
+        $body = json_decode((string) $this->client->getResponse()->getContent(), true);
+
+        return ['status' => $status, 'body' => \is_array($body) ? $body : []];
+    }
+}

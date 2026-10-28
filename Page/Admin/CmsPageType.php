@@ -56,10 +56,11 @@ final class CmsPageType extends AbstractType
                 'label' => 'Title',
                 'constraints' => [new NotBlank(), new Length(max: 255)],
             ])
-            ->add('slug', TextType::class, [
+            ->add('slug', PageAddressType::class, [
                 'label' => 'URL slug',
-                'required' => false,
                 'help' => 'Leave empty to derive it from the title. Parent pages prefix it automatically.',
+                'proposal_url' => $options['address_proposal_url'],
+                'page_id' => $options['page_id'],
             ])
             ->add('fixedUrl', TextType::class, [
                 'label' => 'Fixed address',
@@ -247,7 +248,13 @@ final class CmsPageType extends AbstractType
                 'is_model' => false,
                 'field_definitions' => FieldDefinitions::none(),
                 'field_locale' => 'en_US',
+                // Where the slug field asks for the address it proposes; none,
+                // and the field is a plain input.
+                'address_proposal_url' => null,
+                'page_id' => 0,
             ])
+            ->setAllowedTypes('address_proposal_url', ['null', 'string'])
+            ->setAllowedTypes('page_id', 'int')
             ->setAllowedTypes('page_type_labels', 'array')
             ->setAllowedTypes('is_model', 'bool')
             ->setAllowedTypes('field_definitions', FieldDefinitions::class)
