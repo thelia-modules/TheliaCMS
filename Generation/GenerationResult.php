@@ -25,7 +25,7 @@ use TheliaCMS\Content\Document;
 final readonly class GenerationResult
 {
     /**
-     * @param array<string, int|float|string|bool|null>|null $fields  by field code, null when no field was asked for
+     * @param array<string, int|float|string|bool|null>|null $fields     by field code, null when no field was asked for
      * @param list<string>                                   $leftOut    what the brief asked and the page does not hold, one sentence each
      * @param AiProvenance|null                              $provenance the mark of the core on the last answer; null when the shop turned the mark off for the usage
      */

@@ -24,8 +24,8 @@ use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Field\PageFields;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\PageTypeWriter;
-use TheliaCMS\Tests\Support\FakeAiGateway;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 
 /**
  * A page type as a template, through the screens: describing it, adding its

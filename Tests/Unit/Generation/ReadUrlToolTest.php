@@ -100,7 +100,7 @@ final class ReadUrlToolTest extends TestCase
 
     public function testAPageIsReducedToItsText(): void
     {
-        $html = "<html><head><title>T</title><style>p{}</style><script>alert(1)</script></head><body><h1>Titre</h1><!-- hidden --><p>Un  paragraphe &amp; un autre.</p><ul><li>Un</li><li>Deux</li></ul></body></html>";
+        $html = '<html><head><title>T</title><style>p{}</style><script>alert(1)</script></head><body><h1>Titre</h1><!-- hidden --><p>Un  paragraphe &amp; un autre.</p><ul><li>Un</li><li>Deux</li></ul></body></html>';
         $tool = new ReadUrlTool(new MockHttpClient(new MockResponse($html, ['response_headers' => ['Content-Type' => 'text/html']])));
 
         $page = $tool->read('https://example.com/');

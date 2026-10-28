@@ -257,10 +257,10 @@ final readonly class PageGenerator
      * the brief, at most READ_URL_USES times, and its text goes to the model
      * in $pages, not in the result.
      *
-     * @param list<AiToolCall>        $calls
-     * @param list<string>            $addresses what the brief cites, empty when no page may be read
-     * @param list<WebPageRead>       $reads
-     * @param list<UntrustedContent>  $pages
+     * @param list<AiToolCall>       $calls
+     * @param list<string>           $addresses what the brief cites, empty when no page may be read
+     * @param list<WebPageRead>      $reads
+     * @param list<UntrustedContent> $pages
      *
      * @return list<AiMessage>
      */

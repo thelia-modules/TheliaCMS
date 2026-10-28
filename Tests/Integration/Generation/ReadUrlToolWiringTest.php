@@ -12,7 +12,6 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-
 namespace TheliaCMS\Tests\Integration\Generation;
 
 use TheliaCMS\Generation\Tool\ReadUrlTool;

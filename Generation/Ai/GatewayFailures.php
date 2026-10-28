@@ -98,9 +98,7 @@ final readonly class GatewayFailures
             case AiFinishReason::ContentFilter:
                 throw GenerationRefusedException::because($this->say('The model declined to write this. Reword the brief.'));
             case AiFinishReason::MaxTokens:
-                throw GenerationException::because(null === $outputLimit
-                    ? $this->say('The answer was cut at the output limit: %advice%', ['%advice%' => $this->say($advice)])
-                    : $this->say('The answer was cut at %limit% tokens: %advice%', ['%limit%' => $outputLimit, '%advice%' => $this->say($advice)]));
+                throw GenerationException::because(null === $outputLimit ? $this->say('The answer was cut at the output limit: %advice%', ['%advice%' => $this->say($advice)]) : $this->say('The answer was cut at %limit% tokens: %advice%', ['%limit%' => $outputLimit, '%advice%' => $this->say($advice)]));
             case AiFinishReason::Other:
                 // A reason the layer does not know is no failure by itself:
                 // an answer that holds something goes on to be checked. One

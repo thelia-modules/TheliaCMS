@@ -28,8 +28,8 @@ use TheliaCMS\Model\CmsItemContentQuery;
 use TheliaCMS\Model\CmsItemRevisionQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Preview\ItemPreviewLink;
-use TheliaCMS\Tests\Support\FakeAiGateway;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 use TheliaLibrary\Model\LibraryImage;
 
 /**

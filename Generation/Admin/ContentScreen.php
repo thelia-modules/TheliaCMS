@@ -232,7 +232,7 @@ final readonly class ContentScreen
             'duration' => number_format(((int) $row->getDurationMs()) / 1000, 1, '.', ''),
             'turns' => (int) $row->getTurns(),
             'error' => $row->getError(),
-            'pages' => array_map(fn (WebPageRead $page): array => [
+            'pages' => array_map(static fn (WebPageRead $page): array => [
                 'url' => $page->url,
                 'read' => $page->wasRead(),
                 'error' => $page->errorCode,

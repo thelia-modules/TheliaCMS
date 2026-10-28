@@ -27,6 +27,7 @@ use TheliaCMS\Content\Site\SiteComponentUsage;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Front\BlockStyles;
 use TheliaCMS\Generation\Ai\GatewayFailures;
+use TheliaCMS\Generation\Component\ComponentCandidates;
 use TheliaCMS\Generation\Component\ComponentGenerator;
 use TheliaCMS\Generation\Component\ComponentPrompt;
 use TheliaCMS\Generation\Component\ComponentRequest;
@@ -38,7 +39,6 @@ use TheliaCMS\Generation\GenerationTarget;
 use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\InvalidGenerationException;
 use TheliaCMS\Generation\ShopContext;
-use TheliaCMS\Generation\Component\ComponentCandidates;
 use TheliaCMS\Model\CmsComponentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Skill\SkillRepository;
@@ -144,7 +144,7 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
         self::assertStringContainsString('"PriceTable" is already', $this->api->requests[1]->messages[2]->content);
 
         $this->api->answer(self::answer($renamed))->answer(self::answer(PriceTable::component(css: '.plan--featured { border: 2px solid var(--cms-color-accent); }')));
-        $id = (int) \TheliaCMS\Model\CmsComponentQuery::create()->findOneByCode('PriceTable')?->getId();
+        $id = (int) CmsComponentQuery::create()->findOneByCode('PriceTable')?->getId();
         $changed = $this->generator()->generate(new ComponentRequest('Mets la formule mise en avant en valeur.', $this->locale(), $current, $id));
 
         self::assertSame('PriceTable', $changed->component->code);
@@ -163,7 +163,7 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
         $this->writer()->saveContent($page, $this->locale(), new \TheliaCMS\Content\Document([new \TheliaCMS\Content\Section('plans', 'Site:PriceTable', ['plans' => [['name' => 'Studio', 'price' => '40 €']]])]));
 
         $this->api->answer(self::answer(PriceTable::renamingThePlanName()))->answer(self::answer(PriceTable::component(css: '.plan { padding: 1rem; }')));
-        $result = $this->generator()->generate(new ComponentRequest('Renomme le nom des formules en titre.', $this->locale(), $current, (int) \TheliaCMS\Model\CmsComponentQuery::create()->findOneByCode('PriceTable')?->getId()));
+        $result = $this->generator()->generate(new ComponentRequest('Renomme le nom des formules en titre.', $this->locale(), $current, (int) CmsComponentQuery::create()->findOneByCode('PriceTable')?->getId()));
 
         self::assertSame(2, $result->turns);
         $correction = $this->api->requests[1]->messages[2]->content;

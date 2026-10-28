@@ -28,7 +28,7 @@ final readonly class SiteComponent
     public const string PREFIX = 'Site:';
 
     /**
-     * @param list<array<string, mixed>> $props  the JSON form of the props (SitePropReader)
+     * @param list<array<string, mixed>> $props      the JSON form of the props (SitePropReader)
      * @param array<string, mixed>       $sample
      * @param string|null                $provenance the JSON of the mark of the core (AI Act, article 50(2)), null for a component written by hand
      */
