@@ -5,8 +5,15 @@ Status: steps 1 to 4 done (2026-10-28): the settings of the texts
 settings screen), `Generation/Text/` (`TextGenerator`, `TextPrompt`,
 `TextRequest`, `TextField`, `TextSanitizer`, `TextResult`), the kind
 `GenerationRequest::KIND_TEXT` and the target `GenerationTarget::field()` in the
-ledger. Tested with the fake transport only, never against the API. Steps 5 and
-on to do. The design questions are settled (see "Decisions taken").
+ledger. Steps 5 to 7 done the same day: route `admin.cms.text.generate`
+(`Generation/Text/Admin/TextBriefController.php`), hook
+`Generation/Text/Admin/TextBriefHook.php` on `wysiwyg.js`, script
+`assets/rich-text-brief.js` (button by the label of the field, dialog, preview,
+replace or insert). Tried against the API on a CMS page and on a product:
+about 5 to 8 seconds and 0.01 $ a call. Two calls in eight failed in the
+browser with `TypeError: Failed to fetch` while the server answered 200 and
+logged the call: not reproduced since, cause unknown (open point). To do:
+step 9 (editor documentation, CHANGELOG). The design questions are settled (see "Decisions taken").
 
 Change from step 2 as planned: only the `copywriting` skill is inlined; the
 others, written for pages made of sections, are listed for `read_skill`.
