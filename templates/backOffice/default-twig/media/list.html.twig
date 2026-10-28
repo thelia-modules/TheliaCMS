@@ -86,7 +86,8 @@
         {# Counts come from the library, not from the rows loaded: the grid is
            paged, so counting it announces the size of a page as the size of
            the library. #}
-        <p class="text-body-secondary small" data-testid="cms-media-count">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <p class="text-body-secondary small mb-0" data-testid="cms-media-count">
             {{ '%count% image(s)'|trans({ '%count%': tally.total }, 'theliacms') }}
             {%- if tally.undescribed > 0 %}
                 · <a class="link-warning" href="{{ path('admin.cms.media.list', { edit_language_id: edit_language_id, filter: 'to-describe' }) }}">{{ '%count% still to describe'|trans({ '%count%': tally.undescribed }, 'theliacms') }}</a>
@@ -97,7 +98,14 @@
             {%- if grid.pageCount > 1 %}
                 · {{ 'page %page% of %pages%'|trans({ '%page%': grid.page, '%pages%': grid.pageCount }, 'theliacms') }}
             {%- endif -%}
-        </p>
+            </p>
+            {% if tally.undescribed > 0 %}
+                <a class="btn btn-sm btn-warning" data-testid="cms-media-describe-start"
+                   href="{{ path('admin.cms.media.describe', query.parameters|merge({ edit_language_id: edit_language_id })) }}">
+                    <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>{{ 'Describe them one by one'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
+        </div>
     {% endif %}
 
     {% if grid.items is empty %}
@@ -112,28 +120,26 @@
             </div>
         </div>
     {% else %}
-        <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3">
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-6 g-3">
             {% for item in grid.items %}
                 <div class="col">
                     <div class="card h-100" data-testid="cms-media-card-{{ item.id }}">
                         {# `scale-down`, not `cover`: a media library has to show
                            the real shape of a file, and never blow a small image
                            up to fill the card. #}
-                        <a href="{{ path('admin.cms.media.edit', { id: item.id, edit_language_id: edit_language_id }) }}"
-                           class="ratio ratio-4x3 bg-body-secondary rounded-top overflow-hidden">
+                        <a href="{{ path('admin.cms.media.edit', query.addressParameters|merge({ id: item.id, edit_language_id: edit_language_id })) }}"
+                           class="ratio ratio-4x3 bg-body-secondary rounded-top overflow-hidden"
+                           {# Size and weight on hover and on the sheet: on a card of a
+                              library of hundreds, the name and the state come first. #}
+                           title="{{ [item.dimensions, item.weight, item.format ? item.format|upper : null]|filter(v => v)|join(' · ') }}">
                             <img src="{{ item.thumbnailUrl }}" alt="" loading="lazy" decoding="async"
                                  style="object-fit: scale-down">
                         </a>
-                        <div class="card-body py-2">
+                        <div class="card-body p-2 small">
                             <a class="d-block text-truncate fw-medium text-decoration-none"
-                               href="{{ path('admin.cms.media.edit', { id: item.id, edit_language_id: edit_language_id }) }}"
+                               href="{{ path('admin.cms.media.edit', query.addressParameters|merge({ id: item.id, edit_language_id: edit_language_id })) }}"
                                title="{{ item.title }}">{{ item.title }}</a>
 
-                            <p class="text-muted small mb-2">
-                                {%- if item.dimensions %}{{ item.dimensions }}{% endif -%}
-                                {%- if item.weight %} · {{ item.weight }}{% endif -%}
-                                {%- if item.format %} · {{ item.format|upper }}{% endif -%}
-                            </p>
 
                             {% if not item.isDescribed %}
                                 <span class="badge text-bg-warning">
@@ -144,9 +150,12 @@
                                 <span class="badge text-bg-light">{{ 'Decorative'|trans({}, 'theliacms') }}</span>
                             {% endif %}
 
-                            {% for tag in item.tags %}
+                            {% for tag in item.tags|slice(0, 2) %}
                                 <span class="badge text-bg-light">{{ tag }}</span>
                             {% endfor %}
+                            {% if item.tags|length > 2 %}
+                                <span class="badge text-bg-light" title="{{ item.tags|slice(2)|join(', ') }}">+{{ item.tags|length - 2 }}</span>
+                            {% endif %}
                         </div>
                         <div class="card-footer bg-transparent py-2 text-muted small">
                             {% if item.usageCount > 0 %}

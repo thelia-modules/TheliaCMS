@@ -105,6 +105,32 @@ final class MediaListScreenTest extends AdminScreenTestCase
     }
 
     /**
+     * Opened from a filtered list, an image leads back to that list: from its
+     * sheet, and once deleted.
+     */
+    public function testAnImageOpenedFromAFilteredListLeadsBackToIt(): void
+    {
+        $image = $this->image('Fauteuil à reprendre');
+        $this->getService(CmsMediaLibrary::class)->retag($image, ['Fauteuils']);
+
+        $sheet = $this->cards($this->screen(self::LIST.'?tag=Fauteuils&order=title'))->filter('a')->first()->attr('href');
+        self::assertIsString($sheet);
+        self::assertStringContainsString('tag=Fauteuils', $sheet);
+        self::assertStringContainsString('order=title', $sheet);
+
+        $screen = $this->screen($sheet);
+        $back = $screen->filter('[data-testid="cms-media-back"]')->attr('href');
+        self::assertStringContainsString('tag=Fauteuils', (string) $back);
+        self::assertStringContainsString('order=title', (string) $back);
+
+        $action = (string) $screen->filter('form[action*="/delete"]')->attr('action');
+        self::assertSame(302, $this->send('POST', $action, ['_token' => $this->tokenOfTheForm($screen, (string) parse_url($action, \PHP_URL_PATH))]));
+        $location = (string) $this->client->getResponse()->headers->get('Location');
+        self::assertStringContainsString('tag=Fauteuils', $location, 'Deleted, the image leads back to the list it came from.');
+        self::assertStringContainsString('order=title', $location);
+    }
+
+    /**
      * @return list<int>
      */
     private function idsOf(Crawler $screen): array

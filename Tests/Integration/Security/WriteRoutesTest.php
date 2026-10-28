@@ -58,6 +58,7 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.forms.list',
         'admin.cms.forms.submissions',
         'admin.cms.forms.submissions_export',
+        'admin.cms.media.describe',
         'admin.cms.media.edit',
         'admin.cms.media.list',
         'admin.cms.menus.create',

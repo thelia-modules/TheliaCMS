@@ -73,4 +73,15 @@ final readonly class MediaQuery
             'order' => MediaOrder::Newest === $this->order ? null : $this->order->value,
         ], static fn (?string $value): bool => null !== $value);
     }
+
+    /**
+     * The parameters of this very list, the page included: an image opened
+     * from it carries them, so going back lands where the editor was.
+     *
+     * @return array<string, string|int>
+     */
+    public function addressParameters(): array
+    {
+        return $this->parameters() + (1 < $this->page ? ['page' => $this->page] : []);
+    }
 }

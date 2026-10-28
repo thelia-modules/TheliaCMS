@@ -71,6 +71,23 @@ final readonly class MediaCatalog
     }
 
     /**
+     * The image of the describe queue at a position: the images of the list
+     * the queue was opened from that say nothing in the language, in its
+     * order. A described image leaves the queue, so the next one takes its
+     * position; past the end, the last one.
+     */
+    public function toDescribe(MediaQuery $query, string $locale, int $position): MediaGrid
+    {
+        $imageIds = $this->library->selection($locale, $query->search, MediaFilter::ToDescribe, $query->tag);
+        $total = \count($imageIds);
+        $position = max(0, min($position, $total - 1));
+        $images = $this->library->sorted($imageIds, $query->order, $locale, $position, 1);
+        $item = [] === $images ? null : $this->item($images[0], $locale);
+
+        return new MediaGrid(null === $item ? [] : [$item], $total, $position + 1, 1);
+    }
+
+    /**
      * The size of the library, and how much of it is still to describe.
      */
     public function tally(string $locale, ?string $search = null): MediaTally

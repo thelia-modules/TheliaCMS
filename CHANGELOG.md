@@ -22,6 +22,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.3.1)
 
+- **The images still to describe can be described one by one.** "Describe
+  them one by one", above the media list, shows the first image of the list
+  that says nothing in the language edited, large, with its usage and one
+  field: Enter saves its alternative text and shows the next one, "It is
+  decorative" is an answer of its own, "Skip" leaves it for later. The queue
+  follows the search, the tag and the order of the list it was opened from,
+  and goes back to it once everything is described. The cards of the list are
+  denser (six a row on a wide screen), with the size and weight on hover, and
+  an image opened from a filtered list leads back to that list, from its
+  sheet and once deleted.
 - **The media list is paged, filtered and ordered.** 48 images a page, the
   last page when the address asks for one past it. It shows what is still to
   describe in the language edited, what no page and no item uses, the

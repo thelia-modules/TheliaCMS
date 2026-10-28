@@ -472,6 +472,10 @@ in the language edited, the unused ones, the decorative ones or one tag, and
 orders them newest, oldest, by title or heaviest first. The search reads the
 title, the alternative text, the caption and the tags.
 
+"Describe them one by one" walks through the images of the list that still
+say nothing in the language edited: one image, one field, Enter saves and
+shows the next one. An image can be answered as decorative or skipped.
+
 Uploads accept JPEG, PNG and WebP. SVG is refused: it is a document that can
 carry script.
 

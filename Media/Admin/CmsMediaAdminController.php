@@ -48,6 +48,7 @@ final readonly class CmsMediaAdminController
 {
     private const string LIST_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/media/list.html.twig';
     private const string EDIT_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/media/edit.html.twig';
+    private const string DESCRIBE_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/media/describe.html.twig';
 
     private const string EDIT_LANGUAGE_PARAMETER = EditLanguage::PARAMETER;
 
@@ -122,6 +123,56 @@ final readonly class CmsMediaAdminController
         ));
     }
 
+    /**
+     * The images of a list that say nothing in the language, one at a time:
+     * what each shows, or that it is decorative, then the next one. Saving
+     * the description of 34 images is 34 answers, not 34 sheets opened.
+     */
+    #[Route('/describe', name: 'describe', methods: ['GET', 'POST'])]
+    public function describe(Request $request): Response
+    {
+        $lang = $this->editLang($request);
+        $locale = $lang->getLocale();
+        $query = MediaQuery::fromRequest($request);
+        $queue = $this->catalog->toDescribe($query, $locale, $request->query->getInt('at'));
+        $position = $queue->page - 1;
+
+        // The image answered is the one the screen showed, named in the
+        // address: the queue may have moved since.
+        $image = $request->isMethod('POST')
+            ? $this->ownedImageOrFail($request->query->getInt('image'))
+            : $this->library->ownedImage($queue->items[0]->id ?? 0);
+
+        if (!$image instanceof LibraryImage) {
+            return $this->backToList($request, $lang, $this->translator->trans('Every image of this list is described.', [], TheliaCMS::DOMAIN_NAME));
+        }
+
+        $form = $this->forms->create(MediaDescriptionType::class, ['alt' => null, 'decorative' => false]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->denyUnless(AccessManager::UPDATE);
+            $data = $form->getData();
+            $this->writer->describe($image, $locale, $data['alt'], true === $data['decorative']);
+
+            // Described, it left the queue: the next one is at its position.
+            return new RedirectResponse($this->urls->generate('admin.cms.media.describe', [
+                self::EDIT_LANGUAGE_PARAMETER => $lang->getId(),
+                'at' => $position,
+            ] + $query->parameters()));
+        }
+
+        return new Response($this->twig->render(self::DESCRIBE_TEMPLATE, [
+            'form' => $form->createView(),
+            'item' => $this->catalog->item($image, $locale),
+            'position' => $position,
+            'total' => $queue->total,
+            'list_parameters' => $query->parameters(),
+            'edit_locale' => $locale,
+            'edit_language_id' => $lang->getId(),
+        ]));
+    }
+
     #[Route('/{id}', name: 'edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function edit(Request $request, int $id): Response
     {
@@ -139,10 +190,12 @@ final readonly class CmsMediaAdminController
             return new RedirectResponse($this->urls->generate('admin.cms.media.edit', [
                 'id' => $id,
                 self::EDIT_LANGUAGE_PARAMETER => $lang->getId(),
-            ]));
+            ] + MediaQuery::fromRequest($request)->addressParameters()));
         }
 
         return new Response($this->twig->render(self::EDIT_TEMPLATE, [
+            // The list the image was opened from, to go back to it.
+            'list_parameters' => MediaQuery::fromRequest($request)->addressParameters(),
             'form' => $form->createView(),
             'item' => $this->catalog->item($image, $locale),
             'usages' => $this->usages->pagesUsing($id),
@@ -243,6 +296,6 @@ final readonly class CmsMediaAdminController
 
         return new RedirectResponse($this->urls->generate('admin.cms.media.list', [
             self::EDIT_LANGUAGE_PARAMETER => $lang->getId(),
-        ]));
+        ] + MediaQuery::fromRequest($request)->addressParameters()));
     }
 }

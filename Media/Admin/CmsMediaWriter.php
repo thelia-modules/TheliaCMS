@@ -81,6 +81,17 @@ final readonly class CmsMediaWriter
         $this->library->retag($image, $this->splitTags($data['tags']));
     }
 
+    /**
+     * What the image shows in a language, or that it is decorative: the two
+     * answers of the describe queue.
+     */
+    public function describe(LibraryImage $image, string $locale, ?string $alt, bool $decorative): void
+    {
+        $image->setDecorative($decorative ? 1 : 0);
+        $image->setLocale($locale)->setAlt($decorative ? null : $alt);
+        $image->save();
+    }
+
     public function delete(LibraryImage $image): void
     {
         $this->images->deleteImage($image->getId());

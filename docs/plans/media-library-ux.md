@@ -5,7 +5,13 @@ Status: lot 1 done (2026-10-28): `MediaQuery`, `MediaGrid`,
 `tagCounts()`, `MediaCatalog::browse()`; tests in
 `Tests/Integration/Media/MediaListScreenTest.php`. Found on the way and
 fixed: an image with no row in the language edited was left out of the
-count to describe. Lots 2 to 6 not started. The import of the catalogue
+count to describe. Lot 2 done the same day: cards six a row at 1440 px and wider, the describe
+queue (`admin.cms.media.describe`, `MediaCatalog::toDescribe()`,
+`MediaDescriptionType`, `CmsMediaWriter::describe()`), tests in
+`Tests/Integration/Media/MediaDescribeScreenTest.php`; an image opened from a
+filtered list leads back to it. The decorative answer is a button with the
+access key `d` (the browser's modifier), not a bare key. Lots 3 to 6 not
+started. The import of the catalogue
 images it starts from is done: `thelia_cms:media:import-catalogue`
 (`Media/CatalogueImageImporter.php`), a copy, run again without duplicates.
 
