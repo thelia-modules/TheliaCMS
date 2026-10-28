@@ -25,6 +25,7 @@ use Thelia\Model\ProductQuery;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Catalogue\CatalogueItemKeys;
 use TheliaCMS\Catalogue\CatalogueItemType;
+use TheliaCMS\Catalogue\DealerStores;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
@@ -710,6 +711,7 @@ final readonly class SiteImporter
             CatalogueItemType::Category => null !== CategoryQuery::create()->findPk($id, $connection),
             CatalogueItemType::Content => null !== ContentQuery::create()->findPk($id, $connection),
             CatalogueItemType::Folder => null !== FolderQuery::create()->findPk($id, $connection),
+            CatalogueItemType::Dealer => null !== DealerStores::find($id, null, $connection),
         };
     }
 

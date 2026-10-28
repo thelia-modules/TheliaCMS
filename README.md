@@ -370,9 +370,10 @@ made only of emoji, since the search index holds the written-out form.
 
 ## The content of a catalogue item
 
-A product, a category, a content and a folder carry a document of sections in
-each language, written on the content screen of a page: from a brief, by
-asking, or by hand, then published (docs/adr/0011). The edit screen of the item
+A product, a category, a content, a folder and, while the Dealer module is
+active, a store carry a document of sections in each language, written on the
+content screen of a page: from a brief, by asking, or by hand, then published
+(docs/adr/0011). The edit screen of the item
 in the back office has a **CMS content** tab, which says where the document
 stands in each language and leads to its screen
 (`/admin/cms/catalogue/{type}/{id}/content`). The rights are those of the pages.
@@ -380,6 +381,11 @@ stands in each language and leads to its screen
 The generator is told which item the document is shown on, and what the theme
 already shows of it, so the document adds to the page of the item rather than
 repeating its name, its price or its description.
+
+A store has no address the core builds, so its content screen offers the
+preview of the document alone, not of its whole page. Its document follows it
+from one site to another by the slug of its SEO record. The theme prints it on
+the page of the store with `{{ cms_item_content('dealer', dealer.id) }}`.
 
 The theme prints the published document where it wants it:
 
@@ -1068,7 +1074,7 @@ to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
 | `cms_pages_of_type(type, options, locale)` | the pages online of a type, the model left out, ordered, filtered and cut by `options` (`sort`, `direction`, `filter`, `limit`, `offset`): see [Templates of pages](#templates-of-pages). |
 | `cms_page_type(type, locale)` | the `code`, `title` and `description` of a type, for the heading of a list. |
 | `cms_page_fields(page)` | the fields of a page or a card holding a value, each with its `code`, `label`, raw `value` and `text` written for a visitor ("1 h 30 min"). |
-| `cms_item_content(type, id, locale)` | the published document of a product, a category, a content or a folder, as markup, or an empty string. The locale defaults to the one being served. |
+| `cms_item_content(type, id, locale)` | the published document of a product, a category, a content, a folder or a store (`dealer`), as markup, or an empty string. The locale defaults to the one being served. |
 | `cms_is_home(id)` | whether the page of this id is the one the module shows as the home page (setting `home_page_id`). |
 
 Except for `cms_item_content()`, whose document is markup by nature, they

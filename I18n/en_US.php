@@ -1069,6 +1069,7 @@ return [
     'Back to the category' => 'Back to the category',
     'Back to the content' => 'Back to the content',
     'Back to the folder' => 'Back to the folder',
+    'Back to the store' => 'Back to the store',
     'content' => 'content',
     'folder' => 'folder',
     'Text and media' => 'Text and media',

@@ -50,7 +50,7 @@ final readonly class ItemPreviewController
     #[Route(
         '/cms-preview/item/{type}/{id}/{locale}/{expires}/{signature}',
         name: 'cms.item.preview',
-        requirements: ['type' => 'product|category|content|folder', 'id' => '\d+', 'locale' => '[a-z]{2}_[A-Z]{2}', 'expires' => '\d+', 'signature' => '[a-f0-9]{64}'],
+        requirements: ['type' => CatalogueItemType::ROUTE_REQUIREMENT, 'id' => '\d+', 'locale' => '[a-z]{2}_[A-Z]{2}', 'expires' => '\d+', 'signature' => '[a-f0-9]{64}'],
         methods: ['GET'],
     )]
     public function __invoke(string $type, int $id, string $locale, int $expires, string $signature): Response

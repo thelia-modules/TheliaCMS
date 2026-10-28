@@ -22,16 +22,27 @@ use Thelia\Model\RewritingUrlQuery;
  * How an export names a catalogue item so that another site finds it: the
  * ids of two shops have nothing in common, their references and addresses
  * do. A product is found by its reference first; any item by the address it
- * answers at, in any language.
+ * answers at, in any language; a store, which has no rewritten address, by
+ * the slug of its SEO record.
  */
 final readonly class CatalogueItemKeys
 {
     /**
-     * @return array{reference?: string, urls: array<string, string>}
+     * @return array{reference?: string, slug?: string, urls: array<string, string>}
      */
     public function keyOf(CatalogueItemType $type, int $id): array
     {
         $key = ['urls' => []];
+
+        if (CatalogueItemType::Dealer === $type) {
+            $slug = DealerStores::slugOf($id);
+
+            if (null !== $slug) {
+                $key['slug'] = $slug;
+            }
+
+            return $key;
+        }
 
         if (CatalogueItemType::Product === $type) {
             $reference = trim((string) ProductQuery::create()->findPk($id)?->getRef());
@@ -63,6 +74,12 @@ final readonly class CatalogueItemKeys
      */
     public function find(CatalogueItemType $type, array $key): ?int
     {
+        if (CatalogueItemType::Dealer === $type) {
+            $slug = $key['slug'] ?? null;
+
+            return \is_string($slug) && '' !== $slug ? DealerStores::idOfSlug($slug) : null;
+        }
+
         $reference = $key['reference'] ?? null;
 
         if (CatalogueItemType::Product === $type && \is_string($reference) && '' !== $reference) {

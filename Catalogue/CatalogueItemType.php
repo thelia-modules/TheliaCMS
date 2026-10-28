@@ -18,6 +18,8 @@ namespace TheliaCMS\Catalogue;
  * The items of the shop that carry a document of their own (docs/adr/0011).
  * The value is what `cms_item_content.item_type` stores, what the routes of
  * the back office take and what a theme passes to cms_item_content().
+ * A store comes from the Dealer module and exists only while it is active
+ * (DealerStores).
  */
 enum CatalogueItemType: string
 {
@@ -25,6 +27,10 @@ enum CatalogueItemType: string
     case Category = 'category';
     case Content = 'content';
     case Folder = 'folder';
+    case Dealer = 'dealer';
+
+    /** The `{type}` requirement of the routes that take an item. */
+    public const string ROUTE_REQUIREMENT = 'product|category|content|folder|dealer';
 
     /**
      * The key the shared cache of the core files the pages showing this item
@@ -47,6 +53,7 @@ enum CatalogueItemType: string
             self::Category => 'Back to the category',
             self::Content => 'Back to the content',
             self::Folder => 'Back to the folder',
+            self::Dealer => 'Back to the store',
         };
     }
 }
