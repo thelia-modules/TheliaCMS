@@ -51,6 +51,11 @@ final readonly class NativeContentMenuCacheListener
     #[AsEventListener(event: TheliaEvents::FOLDER_TOGGLE_VISIBILITY, priority: self::AFTER_THE_CORE)]
     #[AsEventListener(event: TheliaEvents::FOLDER_UPDATE_POSITION, priority: self::AFTER_THE_CORE)]
     #[AsEventListener(event: TheliaEvents::FOLDER_UPDATE_SEO, priority: self::AFTER_THE_CORE)]
+    // The scheduled publication of a content or a folder. Named by their value,
+    // not by TheliaEvents::CONTENT_UPDATE_PUBLICATION and FOLDER_UPDATE_PUBLICATION:
+    // no released core of the 3.2 branch, which this module accepts, declares them.
+    #[AsEventListener(event: 'action.updateContentPublication', priority: self::AFTER_THE_CORE)]
+    #[AsEventListener(event: 'action.updateFolderPublication', priority: self::AFTER_THE_CORE)]
     public function onContentOrFolderChange(): void
     {
         $this->cache->invalidate();
