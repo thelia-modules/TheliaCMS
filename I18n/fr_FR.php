@@ -766,7 +766,6 @@ return [
     'Failed' => 'Échec',
     'History' => 'Historique',
     'Make the opening shorter, add a question about delivery, swap the figures for…' => 'Raccourcir l’introduction, ajouter une question sur la livraison, remplacer les chiffres par…',
-    'Model: %model%' => 'Modèle : %model%',
     'Nothing was asked of the generator for this language yet.' => 'Rien n’a encore été demandé au générateur dans cette langue.',
     'Nothing was sent.' => 'Rien n’a été envoyé.',
     'On the whole draft: the sections the change does not concern are kept as they are.' => 'Sur tout le brouillon : les sections que la modification ne concerne pas sont gardées telles quelles.',

@@ -122,13 +122,11 @@ final readonly class CmsSettingsController
         );
 
         $this->generator->save(
-            model: $this->generator->model(),
             effort: (string) $data['generatorEffort'],
             maxTokens: (int) $data['generatorMaxTokens'],
             webFetch: (bool) $data['generatorWebFetch'],
         );
         $this->generator->saveText(
-            model: $this->generator->textModelAsSet(),
             effort: (string) $data['textEffort'],
             maxTokens: (int) $data['textMaxTokens'],
         );

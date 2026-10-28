@@ -766,7 +766,6 @@ return [
     'Failed' => 'Failed',
     'History' => 'History',
     'Make the opening shorter, add a question about delivery, swap the figures for…' => 'Make the opening shorter, add a question about delivery, swap the figures for…',
-    'Model: %model%' => 'Model: %model%',
     'Nothing was asked of the generator for this language yet.' => 'Nothing was asked of the generator for this language yet.',
     'Nothing was sent.' => 'Nothing was sent.',
     'On the whole draft: the sections the change does not concern are kept as they are.' => 'On the whole draft: the sections the change does not concern are kept as they are.',

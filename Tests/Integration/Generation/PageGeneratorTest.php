@@ -66,7 +66,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
     protected function tearDown(): void
     {
         $settings = $this->getService(GeneratorSettings::class);
-        $settings->save($settings->model(), $settings->effort(), $settings->maxTokens(), webFetch: false);
+        $settings->save($settings->effort(), $settings->maxTokens(), webFetch: false);
         ModuleConfigQuery::resetConfigCache();
 
         parent::tearDown();
@@ -443,7 +443,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
     private function readingOn(): void
     {
         $settings = $this->getService(GeneratorSettings::class);
-        $settings->save($settings->model(), $settings->effort(), $settings->maxTokens(), webFetch: true);
+        $settings->save($settings->effort(), $settings->maxTokens(), webFetch: true);
         ModuleConfigQuery::resetConfigCache();
     }
 

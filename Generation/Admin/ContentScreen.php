@@ -25,7 +25,6 @@ use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationRequest;
-use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\WebPageRead;
 use TheliaCMS\Model\CmsPageGeneration;
 use TheliaCMS\Security\CmsResources;
@@ -51,7 +50,6 @@ final readonly class ContentScreen
         private SecurityContext $securityContext,
         private SectionCatalog $catalog,
         private GenerationLog $log,
-        private GeneratorSettings $settings,
         private SectionFormBuilder $sectionForms,
         private ToolkitLink $toolkit,
         private PreviewWidths $previewWidths,
@@ -77,7 +75,6 @@ final readonly class ContentScreen
             'outcome' => $this->outcome($request, $subject),
             'may_generate' => $mayGenerate,
             'may_publish' => $mayPublish,
-            'model' => $this->settings->model(),
             'toolkit_url' => $this->toolkit->url(),
             'preview_widths' => $this->previewWidths->widths(),
             'addable' => $mayPublish ? $this->sectionChoices->groups() : [],

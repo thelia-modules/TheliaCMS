@@ -15,8 +15,10 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\ImportExport;
 
 use Propel\Runtime\Propel;
+use Thelia\Model\ModuleConfigQuery;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Generation\Brief;
+use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\ImportExport\ExportFormat;
 use TheliaCMS\ImportExport\ImportOptions;
 use TheliaCMS\ImportExport\SiteDocument;
@@ -34,6 +36,7 @@ use TheliaCMS\Page\PageTypeWriter;
 use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\Tests\Support\FakeAiGateway;
+use TheliaCMS\TheliaCMS;
 use TheliaLibrary\Model\LibraryImage;
 
 /**
@@ -114,6 +117,22 @@ final class SiteRoundTripTest extends CmsIntegrationTestCase
         $content = CmsPageContentQuery::create()->findOneByLocale($locale);
         self::assertNull($content?->getDraftProvenance(), 'A mark missing a field of the core is not one.');
         self::assertNull($content?->getPublishedProvenance());
+    }
+
+    public function testTheModelKeysOfAnEarlierFileAreIgnoredAndNothingFailsOnThem(): void
+    {
+        $file = $this->getService(SiteExporter::class)->export();
+        $file['settings']['generator_model'] = 'claude-opus-5-5';
+        $file['settings']['generator_text_model'] = 'claude-haiku-5';
+        $file['settings']['generator_effort'] = 'max';
+
+        $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($file), new ImportOptions(withSettings: true));
+
+        ModuleConfigQuery::resetConfigCache();
+        self::assertSame([], $report->warnings(), 'The keys of a setting that no longer exists are no reason to warn.');
+        self::assertNull(TheliaCMS::getConfigValue('generator_model', null), 'The model is chosen in the AI settings of the core, never read from a file.');
+        self::assertNull(TheliaCMS::getConfigValue('generator_text_model', null));
+        self::assertSame('high', $this->getService(GeneratorSettings::class)->effort(), 'The generator settings were never part of an export.');
     }
 
     public function testASecondImportChangesNothing(): void
