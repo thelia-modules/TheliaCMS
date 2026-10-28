@@ -107,6 +107,24 @@ final class ComponentPropsReaderTest extends TestCase
         self::assertSame(0, $props['product_ids']->minItems, 'A list of records may stay empty.');
     }
 
+    public function testAPropDocumentedAsHtmlIsMarkupWithoutALengthLimit(): void
+    {
+        $read = $this->reader()->readSource(<<<'TWIG'
+            {# @prop title string The heading #}
+            {# @prop html html|null The text, as HTML #}
+            {# @prop body html The text the class takes #}
+            {% props title = '', html = null %}
+            TWIG);
+        $props = $this->byName($read);
+
+        self::assertSame(PropType::Text, $props['title']->type);
+        self::assertSame(PropType::Html, $props['html']->type);
+        self::assertFalse($props['html']->required, 'Documented as nullable.');
+        self::assertSame(PropType::Html, $props['body']->type);
+        self::assertNull($props['html']->max, 'A text of several paragraphs is not cut at 500 characters.');
+        self::assertSame(str_repeat('<p>Un paragraphe.</p>', 50), $read['schema']->normalize(['html' => str_repeat('<p>Un paragraphe.</p>', 50)])['html']);
+    }
+
     /**
      * @return array<string, Prop>
      */

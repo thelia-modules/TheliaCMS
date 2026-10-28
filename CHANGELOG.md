@@ -169,6 +169,19 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - **A reserved slug is refused on its field.** Saving a page with the slug
   `admin`, `api` or another reserved path answered an error 500; the form now
   shows why under the field.
+- **A picture reaches a component of the theme as its address.** A prop
+  documented `image` was handed to the component as stored, the id of the
+  media library, which the component printed in a `src`: the picture did not
+  show. The section turns it into the address of the picture, as the
+  components made in the back office already did; an `https://` address is
+  kept, and an image gone from the library leaves the prop to the default of
+  the component.
+- **A prop of a component of the theme may be `html`.** Any type the reader
+  did not know read as a line of text of 500 characters at most, so a
+  component documenting a prop as `html` refused a text of a few paragraphs
+  and had it written as plain text. It is now markup, without a length
+  limit, filtered by the writer on the rendered page like the text of
+  `cms:richtext`.
 
 ### Added (2.3.0)
 

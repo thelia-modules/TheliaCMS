@@ -71,11 +71,14 @@ from two places:
 - one `{# @prop name type description #}` comment per prop gives the type and
   the meaning. `bool` or `boolean` is a boolean, `int` or `integer` an integer,
   `array`, `list`, `iterable`, `object` or `array<…>` a JSON prop, a list of
-  quoted alternatives (`'primary'|'secondary'`) a choice, and anything else a
-  line of text, 500 characters at most. A type naming `null` makes the prop
-  optional.
+  quoted alternatives (`'primary'|'secondary'`) a choice, `html` markup
+  (handed to the component as it is, to print with `|raw`, and filtered by
+  the writer on the rendered page), and anything else a line of
+  text, 500 characters at most. A type naming `null` makes the prop optional.
 - a prop may name what the site holds: `image` is a picture of the media
-  library (its id, or the `https://` address of a picture kept elsewhere);
+  library (its id, or the `https://` address of a picture kept elsewhere),
+  handed to the component as the address of the picture, to print in a
+  `src`;
   `product`, `category`, `folder`, `form` or `menu` is one record,
   picked by its id with the same pickers the partials use (the generator
   finds the id with its search tools); `product[]`, `category[]`, or

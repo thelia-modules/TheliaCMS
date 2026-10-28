@@ -172,7 +172,9 @@ description #}` comments at the top give the type and the meaning, the
 `{% props name = default, … %}` tag the defaults. A prop declared without a
 default and not documented as nullable is required, and so is a record or a
 picture the class of the component takes (documented, not declared) unless
-its type says `|null`. `camelCase` in the
+its type says `|null`. A picture is stored as the id of the media library
+and reaches the component as its address; a prop documented `html` is
+markup, filtered by the writer on the rendered page. `camelCase` in the
 template is `snake_case` in a document, and goes back to the component under
 its own name. A `{# @description … #}` comment, when the template has one, is
 what a generator reads about the component. Slots (`{% block %}`) are not

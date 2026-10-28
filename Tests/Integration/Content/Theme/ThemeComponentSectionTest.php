@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Content\Theme;
 
 use Symfony\UX\TwigComponent\ComponentRendererInterface;
+use TheliaCMS\Content\Prop;
+use TheliaCMS\Content\PropSchema;
 use TheliaCMS\Content\PropType;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\Theme\ComponentPropsReader;
@@ -22,6 +24,7 @@ use TheliaCMS\Content\Theme\ThemeComponentSection;
 use TheliaCMS\Content\Theme\ThemeComponentSections;
 use TheliaCMS\Content\Theme\ThemeSections;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaLibrary\Model\LibraryImage;
 
 /**
  * A component of the Flexy theme, read off its template and rendered as a
@@ -86,6 +89,32 @@ final class ThemeComponentSectionTest extends CmsIntegrationTestCase
         self::assertStringContainsString('class="Reinsurance', $html);
         self::assertStringContainsString('<strong>Free delivery</strong>', $html);
         self::assertSame('Reinsurance Base', $section->label());
+    }
+
+    public function testAnImageOfTheLibraryReachesTheComponentAsItsAddress(): void
+    {
+        $image = new LibraryImage();
+        $image->setLocale($this->locale())->setFileName('portrait.webp')->setTitle('portrait');
+        $image->save();
+        $imageId = (int) $image->getId();
+
+        $received = [];
+        $renderer = $this->createStub(ComponentRendererInterface::class);
+        $renderer->method('createAndRender')->willReturnCallback(static function (string $component, array $props) use (&$received): string {
+            $received[] = $props;
+
+            return '';
+        });
+        $schema = new PropSchema([Prop::image('image', 'image'), Prop::text('image_alt', 'image_alt')]);
+        $section = new ThemeComponentSection('Layouts:Banner:Base', '', $schema, ['image' => 'image', 'image_alt' => 'imageAlt'], $renderer);
+
+        $section->render($section->normalizeProps(['image' => $imageId, 'image_alt' => 'A portrait']), $this->locale());
+        $section->render($section->normalizeProps(['image' => 'https://images.example.com/a.jpg']), $this->locale());
+        $section->render($section->normalizeProps(['image' => $imageId + 1000]), $this->locale());
+
+        self::assertSame(['image' => '/image-library/'.$imageId.'/full/max/0/default.webp', 'imageAlt' => 'A portrait'], $received[0], 'The component prints the address in a src, as the theme passes it.');
+        self::assertSame(['image' => 'https://images.example.com/a.jpg'], $received[1], 'An address of elsewhere is kept.');
+        self::assertSame([], $received[2], 'An image gone from the library is left to the default of the component.');
     }
 
     public function testNothingIsOpenedUntilTheThemeDeclaresIt(): void
