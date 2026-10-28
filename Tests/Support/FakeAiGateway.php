@@ -16,6 +16,7 @@ namespace TheliaCMS\Tests\Support;
 
 use Thelia\Domain\Ai\AiFinishReason;
 use Thelia\Domain\Ai\AiGatewayInterface;
+use Thelia\Domain\Ai\AiProvenance;
 use Thelia\Domain\Ai\AiRequest;
 use Thelia\Domain\Ai\AiResponse;
 use Thelia\Domain\Ai\AiTokenUsage;
@@ -51,6 +52,7 @@ final class FakeAiGateway implements AiGatewayInterface
         array $toolCalls = [],
         ?AiFinishReason $finishReason = null,
         int $logId = 1,
+        ?AiProvenance $provenance = null,
     ): AiResponse {
         return new AiResponse(
             $text,
@@ -63,7 +65,17 @@ final class FakeAiGateway implements AiGatewayInterface
             $finishReason ?? ([] === $toolCalls ? AiFinishReason::Completed : AiFinishReason::ToolCalls),
             [],
             $logId,
+            $provenance,
         );
+    }
+
+    /**
+     * The mark the core puts on the answer of a generative usage, which the
+     * real gateway builds and this one is told to.
+     */
+    public static function provenance(string $usageId = 'theliacms.page_generation', int $logId = 1): AiProvenance
+    {
+        return new AiProvenance($usageId, 'fake-model', new \DateTimeImmutable('2026-10-28T10:00:00+00:00'), $logId);
     }
 
     public function answer(AiResponse|\Throwable $answer): self

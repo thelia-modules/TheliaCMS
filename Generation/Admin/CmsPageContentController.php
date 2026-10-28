@@ -26,6 +26,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Domain\Ai\AiProvenance;
 use Thelia\Model\Lang;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\InvalidDocumentException;
@@ -421,10 +422,10 @@ final readonly class CmsPageContentController
         return $this->runner->respond(
             $request,
             $generation,
-            function (Document $document, ?array $fields = null) use ($page, $locale): void {
+            function (Document $document, ?array $fields = null, ?AiProvenance $provenance = null) use ($page, $locale): void {
                 // The draft the answer replaces is kept first: it can be put back.
                 $this->writer->keepDraft($page, $locale);
-                $this->writer->saveContent($page, $locale, $document);
+                $this->writer->saveContent($page, $locale, $document, $provenance);
 
                 if (null !== $fields && [] !== $fields) {
                     $this->writer->saveFields($page, $locale, $fields);

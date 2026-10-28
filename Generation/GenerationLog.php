@@ -16,6 +16,8 @@ namespace TheliaCMS\Generation;
 
 use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Domain\Ai\AiProvenance;
+use TheliaCMS\Content\ProvenanceMark;
 use TheliaCMS\Model\CmsPageGeneration;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 
@@ -65,6 +67,7 @@ final readonly class GenerationLog
         ?string $document = null,
         array $webPages = [],
         array $leftOut = [],
+        ?AiProvenance $provenance = null,
     ): int {
         $row = (new CmsPageGeneration())
             ->setTargetType($request->target->type)
@@ -88,6 +91,7 @@ final readonly class GenerationLog
             ->setDurationMs($durationMs)
             ->setError(null !== $error ? mb_substr($error, 0, 60000) : null)
             ->setDocument($document)
+            ->setProvenance(ProvenanceMark::encode($provenance))
             ->setWebPages([] === $webPages ? null : json_encode(array_map(static fn (WebPageRead $page): array => $page->toArray(), $webPages), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE))
             ->setLeftOut([] === $leftOut ? null : json_encode($leftOut, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE))
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
@@ -119,6 +123,7 @@ final readonly class GenerationLog
         ?string $stopCategory = null,
         ?string $error = null,
         ?string $component = null,
+        ?AiProvenance $provenance = null,
     ): int {
         $row = (new CmsPageGeneration())
             ->setTargetType(GenerationTarget::TYPE_COMPONENT)
@@ -142,6 +147,7 @@ final readonly class GenerationLog
             ->setDurationMs($durationMs)
             ->setError(null !== $error ? mb_substr($error, 0, 60000) : null)
             ->setDocument($component)
+            ->setProvenance(ProvenanceMark::encode($provenance))
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
         $row->save();
 

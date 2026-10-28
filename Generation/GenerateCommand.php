@@ -171,7 +171,7 @@ final class GenerateCommand extends Command
 
         if (null !== $item) {
             $this->request->around(function () use ($item, $result): void {
-                $this->itemWriter->saveContent($item->type, $item->id, $item->locale, $result->document);
+                $this->itemWriter->saveContent($item->type, $item->id, $item->locale, $result->document, $result->provenance);
             }, $url);
             $io->success(\sprintf('Draft of %s #%d saved in %s.', $item->type->value, $item->id, $locale));
 
@@ -180,7 +180,7 @@ final class GenerateCommand extends Command
 
         \assert($page instanceof CmsPage);
         $this->request->around(function () use ($page, $locale, $result): void {
-            $this->writer->saveContent($page, $locale, $result->document);
+            $this->writer->saveContent($page, $locale, $result->document, $result->provenance);
 
             if (null !== $result->fields && [] !== $result->fields) {
                 $this->writer->saveFields($page, $locale, $result->fields);

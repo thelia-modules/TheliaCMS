@@ -17,6 +17,7 @@ namespace TheliaCMS\Catalogue\Admin;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
+use Thelia\Domain\Ai\AiProvenance;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Catalogue\CatalogueItemType;
@@ -25,6 +26,7 @@ use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentRenderer;
 use TheliaCMS\Content\DocumentValidator;
 use TheliaCMS\Content\InvalidDocumentException;
+use TheliaCMS\Content\ProvenanceMark;
 use TheliaCMS\Content\Pipeline\EmptyContentChecker;
 use TheliaCMS\Content\Pipeline\HeadingChecker;
 use TheliaCMS\Content\Pipeline\ImageRewriter;
@@ -76,9 +78,12 @@ final readonly class ItemContentWriter
      * Stores the document and its rendering, without touching the published
      * snapshot: saving never changes what visitors see.
      *
+     * A generation hands in its provenance, which replaces the mark of the
+     * draft; a person editing the draft hands in none and the mark stays.
+     *
      * @throws InvalidDocumentException when the document cannot be stored
      */
-    public function saveContent(CatalogueItemType $type, int $id, string $locale, Document $document): void
+    public function saveContent(CatalogueItemType $type, int $id, string $locale, Document $document, ?AiProvenance $provenance = null): void
     {
         $document = $this->validator->validate($document);
 
@@ -86,11 +91,16 @@ final readonly class ItemContentWriter
         // back office loads it back.
         $html = $this->sanitizer->html($this->normalizer->html($this->renderer->render($document, $locale)), $this->mayPublishCustomCode());
 
-        $this->contentFor($type, $id, $locale)
+        $content = $this->contentFor($type, $id, $locale)
             ->setDraftDocument($document->toJson())
             ->setDraftHtml($html)
-            ->setDraftUpdatedBy($this->securityContext->getAdminUser()?->getId())
-            ->save();
+            ->setDraftUpdatedBy($this->securityContext->getAdminUser()?->getId());
+
+        if (null !== $provenance) {
+            $content->setDraftProvenance(ProvenanceMark::encode($provenance));
+        }
+
+        $content->save();
 
         $this->activityLog->record('UPDATE', $id, \sprintf('CMS content of the %s #%d edited in %s', $type->value, $id, $locale));
     }
@@ -115,6 +125,7 @@ final readonly class ItemContentWriter
             ->setLocale($locale)
             ->setDocument($content->getDraftDocument())
             ->setHtml($content->getDraftHtml())
+            ->setProvenance($content->getDraftProvenance())
             ->setLabel(self::DRAFT_LABEL)
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
             ->save();
@@ -157,6 +168,8 @@ final readonly class ItemContentWriter
 
         $this->keepDraft($type, $id, $locale);
         $this->saveContent($type, $id, $locale, $document);
+        // The draft put back brings its own mark, or none.
+        $this->contentFor($type, $id, $locale)->setDraftProvenance($revision->getProvenance())->save();
     }
 
     private function draftRevisions(CatalogueItemType $type, int $id, string $locale): CmsItemRevisionQuery
@@ -219,6 +232,7 @@ final readonly class ItemContentWriter
 
             $content->setPublishedDocument($content->getDraftDocument())
                 ->setPublishedHtml($html)
+                ->setPublishedProvenance($content->getDraftProvenance())
                 ->setPublishedAt(new \DateTimeImmutable())
                 ->save($connection);
 
@@ -250,6 +264,7 @@ final readonly class ItemContentWriter
         $this->contents->find($type, $id, $locale)?->setPublishedAt(null)
             ->setPublishedDocument(null)
             ->setPublishedHtml(null)
+            ->setPublishedProvenance(null)
             ->save();
 
         $this->httpCache->purge([$type->cacheKey($id)]);
@@ -321,6 +336,7 @@ final readonly class ItemContentWriter
             ->setLocale($content->getLocale())
             ->setDocument($content->getPublishedDocument())
             ->setHtml($content->getPublishedHtml())
+            ->setProvenance($content->getPublishedProvenance())
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
             ->save($connection);
 

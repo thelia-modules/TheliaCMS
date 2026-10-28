@@ -38,6 +38,8 @@ use TheliaCMS\Generation\GenerationTarget;
 use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\InvalidGenerationException;
 use TheliaCMS\Generation\ShopContext;
+use TheliaCMS\Generation\Component\ComponentCandidates;
+use TheliaCMS\Model\CmsComponentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Skill\SkillRepository;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
@@ -86,6 +88,29 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
         self::assertSame([GenerationTarget::TYPE_COMPONENT, 0, ComponentRequest::KIND_NEW, 'done'], [$row->getTargetType(), (int) $row->getTargetId(), $row->getKind(), $row->getStatus()]);
         self::assertStringContainsString('"code": "PriceTable"', (string) $row->getDocument());
         self::assertNull($this->getService(SiteComponentRepository::class)->find('PriceTable'), 'Nothing is kept before the editor says so.');
+    }
+
+    public function testTheMarkOfTheCoreFollowsTheComponentFromTheCallToTheComponentKept(): void
+    {
+        $this->api->answer(FakeAiGateway::response(ComponentPrompt::json(PriceTable::component()), provenance: FakeAiGateway::provenance('theliacms.component')));
+
+        $result = $this->generator()->generate(new ComponentRequest('Un tableau de prix.', $this->locale()));
+
+        self::assertSame('theliacms.component', $result->provenance?->usageId);
+        self::assertStringContainsString('"usage":"theliacms.component"', (string) CmsPageGenerationQuery::create()->findPk($result->logId)?->getProvenance(), 'The row of the ledger keeps the mark of its call.');
+
+        $candidate = (new ComponentCandidates())->find($result->logId);
+        self::assertNotNull($candidate?->component?->provenance, 'The candidate read back from the ledger still carries it.');
+
+        $repository = $this->getService(SiteComponentRepository::class);
+        $repository->save((new SiteComponentValidator())->validate($candidate->component), SiteComponentRepository::STATUS_READY);
+
+        self::assertSame($candidate->component->provenance, $repository->find('PriceTable')?->provenance, 'Kept, the component is marked as a generated one.');
+        self::assertStringContainsString('"model":"fake-model"', (string) CmsComponentQuery::create()->findOneByCode('PriceTable')?->getProvenance());
+
+        $byHand = new SiteComponent('PriceTable', 'Prix', 'Un tableau de prix.', $candidate->component->props, $candidate->component->sample, $candidate->component->template);
+        $repository->save($byHand, SiteComponentRepository::STATUS_READY, 'PriceTable');
+        self::assertSame($candidate->component->provenance, $repository->find('PriceTable')?->provenance, 'A save without a mark leaves the mark the component has.');
     }
 
     public function testAComponentTheSiteRefusesGoesBackWithEveryProblemAndTheCorrectionIsKept(): void

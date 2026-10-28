@@ -30,6 +30,7 @@ final readonly class SiteComponent
     /**
      * @param list<array<string, mixed>> $props  the JSON form of the props (SitePropReader)
      * @param array<string, mixed>       $sample
+     * @param string|null                $provenance the JSON of the mark of the core (AI Act, article 50(2)), null for a component written by hand
      */
     public function __construct(
         public string $code,
@@ -39,7 +40,17 @@ final readonly class SiteComponent
         public array $sample,
         public string $template,
         public string $css = '',
+        public ?string $provenance = null,
     ) {
+    }
+
+    /**
+     * The same component with the mark of provenance of the call that wrote
+     * it (ProvenanceMark), or none.
+     */
+    public function withProvenance(?string $provenance): self
+    {
+        return new self($this->code, $this->label, $this->description, $this->props, $this->sample, $this->template, $this->css, $provenance);
     }
 
     public function name(): string

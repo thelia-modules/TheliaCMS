@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation\Component;
 
+use Thelia\Domain\Ai\AiProvenance;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Generation\Usage;
 
@@ -32,6 +33,7 @@ final readonly class ComponentResult
         public int $durationMs,
         public int $turns,
         public int $logId,
+        public ?AiProvenance $provenance = null,
     ) {
     }
 }

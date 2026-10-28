@@ -103,10 +103,11 @@ final readonly class ComponentGenerator
         $usage = new Usage();
         $costUsd = 0.0;
         $coreLogId = null;
+        $provenance = null;
         $turns = 0;
         $finishReason = null;
 
-        $record = function (string $status, ?string $error = null, ?string $component = null) use ($request, &$model, $started, &$usage, &$costUsd, &$coreLogId, &$turns, &$finishReason): int {
+        $record = function (string $status, ?string $error = null, ?string $component = null) use ($request, &$model, $started, &$usage, &$costUsd, &$coreLogId, &$provenance, &$turns, &$finishReason): int {
             return $this->log->recordComponent(
                 $request->componentId ?? 0,
                 $request->locale,
@@ -124,6 +125,7 @@ final readonly class ComponentGenerator
                 null,
                 $error,
                 $component,
+                GenerationLog::STATUS_DONE === $status ? $provenance : null,
             );
         };
 
@@ -144,6 +146,7 @@ final readonly class ComponentGenerator
                 $usage = $usage->plusTokens($response->tokenUsage);
                 $costUsd += (float) $response->cost;
                 $coreLogId = $response->logId;
+                $provenance = $response->provenance;
                 $observer?->onTurn($turns, []);
                 $this->failures->assertUsable($response, $this->settings->maxTokens(), 'raise the limit of the generator or ask for a simpler component.');
 
@@ -171,7 +174,7 @@ final readonly class ComponentGenerator
                 $durationMs = (int) ((hrtime(true) - $started) / 1_000_000);
                 $logId = $record(GenerationLog::STATUS_DONE, null, ComponentPrompt::json($component));
 
-                return new ComponentResult($component, $model, null, $usage, round($costUsd, 6), $durationMs, $turns, $logId);
+                return new ComponentResult($component, $model, null, $usage, round($costUsd, 6), $durationMs, $turns, $logId, $provenance);
             }
         } catch (GenerationRefusedException $exception) {
             $exception->logId = $record(GenerationLog::STATUS_REFUSED, $exception->getMessage());

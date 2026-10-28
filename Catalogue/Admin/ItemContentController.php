@@ -26,6 +26,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Domain\Ai\AiProvenance;
 use Thelia\Model\Lang;
 use TheliaCMS\Catalogue\CatalogueItem;
 use TheliaCMS\Catalogue\CatalogueItems;
@@ -354,9 +355,9 @@ final readonly class ItemContentController
             // An item has no fields of a page type: whatever the answer
             // writes besides the document is left out. The draft the answer
             // replaces is kept first: it can be put back.
-            function (Document $document) use ($item): void {
+            function (Document $document, ?array $fields = null, ?AiProvenance $provenance = null) use ($item): void {
                 $this->writer->keepDraft($item->type, $item->id, $item->locale);
-                $this->writer->saveContent($item->type, $item->id, $item->locale, $document);
+                $this->writer->saveContent($item->type, $item->id, $item->locale, $document, $provenance);
             },
             $this->screenUrl($item, $lang),
         );

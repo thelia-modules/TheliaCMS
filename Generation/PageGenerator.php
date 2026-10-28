@@ -133,6 +133,7 @@ final readonly class PageGenerator
         $usage = new Usage();
         $costUsd = 0.0;
         $coreLogId = null;
+        $provenance = null;
         $turns = 0;
         $corrections = 0;
         $finishReason = null;
@@ -144,7 +145,7 @@ final readonly class PageGenerator
         // A closure over references: the tokens, the turns and the pages read
         // are what they are when the outcome is written, not when the call
         // started.
-        $record = function (string $status, ?string $error = null, ?string $document = null, array $leftOut = []) use ($request, $prompt, &$model, $started, &$usage, &$costUsd, &$coreLogId, &$turns, &$finishReason, &$reads): int {
+        $record = function (string $status, ?string $error = null, ?string $document = null, array $leftOut = []) use ($request, $prompt, &$model, $started, &$usage, &$costUsd, &$coreLogId, &$provenance, &$turns, &$finishReason, &$reads): int {
             return $this->log->record(
                 $request,
                 $status,
@@ -162,6 +163,7 @@ final readonly class PageGenerator
                 $document,
                 $reads,
                 $leftOut,
+                GenerationLog::STATUS_DONE === $status ? $provenance : null,
             );
         };
 
@@ -186,6 +188,7 @@ final readonly class PageGenerator
                 $usage = $usage->plusTokens($response->tokenUsage);
                 $costUsd += (float) $response->cost;
                 $coreLogId = $response->logId;
+                $provenance = $response->provenance;
                 $this->failures->assertUsable($response, $this->settings->maxTokens(), 'raise the limit of the generator or ask for a shorter page.');
 
                 if ($response->hasToolCalls()) {
@@ -224,7 +227,7 @@ final readonly class PageGenerator
                 $durationMs = (int) ((hrtime(true) - $started) / 1_000_000);
                 $logId = $record(GenerationLog::STATUS_DONE, null, $document->toJson(), $leftOut);
 
-                return new GenerationResult($document, $model, null, $usage, round($costUsd, 6), $durationMs, $turns, $logId, $fields, $leftOut);
+                return new GenerationResult($document, $model, null, $usage, round($costUsd, 6), $durationMs, $turns, $logId, $fields, $leftOut, $provenance);
             }
         } catch (GenerationRefusedException $exception) {
             $exception->logId = $record(GenerationLog::STATUS_REFUSED, $exception->getMessage());
