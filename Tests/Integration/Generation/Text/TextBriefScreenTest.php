@@ -32,6 +32,8 @@ final class TextBriefScreenTest extends AdminScreenTestCase
 {
     private const string ROUTE = '/admin/cms/text/generate';
 
+    private const string OUTCOME = '/admin/cms/text/outcome';
+
     private FakeClaudeTransport $api;
 
     protected function setUp(): void
@@ -113,6 +115,47 @@ final class TextBriefScreenTest extends AdminScreenTestCase
 
         $page->setLocale($this->locale());
         self::assertSame('', (string) $page->getChapo(), 'Nothing is saved: the field takes the text when the form is saved.');
+    }
+
+    /**
+     * The server writes the text to the end even when the browser stopped
+     * waiting: the answer is read back by the id of the call, by the
+     * administrator who asked only, instead of being written and billed again.
+     */
+    public function testAnAnswerIsReadBackByTheIdOfTheCall(): void
+    {
+        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text('{"html":"<p>Un atelier ouvert le dimanche.</p>"}')]));
+        $screen = $this->screen('/admin/cms/pages');
+        $server = $this->withToken($screen);
+        $id = 'b1a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+
+        self::assertSame(404, $this->send('POST', self::OUTCOME, ['request' => $id], $server), 'Nothing is kept before the call.');
+
+        $this->send('POST', self::ROUTE, $this->parameters(['request' => $id]), $server);
+
+        self::assertSame(200, $this->send('POST', self::OUTCOME, ['request' => $id], $server));
+        self::assertSame('<p>Un atelier ouvert le dimanche.</p>', json_decode((string) $this->client->getResponse()->getContent(), true)['html']);
+        self::assertCount(1, $this->api->requests, 'Reading the answer back calls the generator no second time.');
+
+        self::assertSame(404, $this->send('POST', self::OUTCOME, ['request' => 'f0e1d2c3-b4a5-4968-8776-655443322110'], $server), 'Another id has nothing.');
+
+        $this->logInAs((new FixtureFactory($this->getPropelConnection()))->restrictedAdmin([
+            CmsResources::PAGE => [AccessManager::VIEW],
+            CmsResources::GENERATE => [AccessManager::VIEW, AccessManager::UPDATE],
+        ]));
+        $other = $this->withToken($this->screen('/admin/cms/pages'));
+
+        self::assertSame(404, $this->send('POST', self::OUTCOME, ['request' => $id], $other), 'Another administrator cannot read it.');
+    }
+
+    public function testAnErrorIsReadBackAsItWasAnswered(): void
+    {
+        $server = $this->withToken($this->screen('/admin/cms/pages'));
+        $id = 'c1a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+
+        $this->send('POST', self::ROUTE, $this->parameters(['brief' => ' ', 'request' => $id]), $server);
+
+        self::assertSame(422, $this->send('POST', self::OUTCOME, ['request' => $id], $server), 'The screen stops looking: the call is over.');
     }
 
     public function testWhatTheButtonCannotServeIsRefusedBeforeTheGenerator(): void

@@ -105,6 +105,7 @@ class TextBriefHook extends BaseHook
         $form = $screen['form'];
         $config = [
             'url' => $this->urls->generate('admin.cms.text.generate'),
+            'outcomeUrl' => $this->urls->generate('admin.cms.text.outcome'),
             'type' => $screen['type'],
             'title' => $form.'[title]',
             'idField' => $form.'[id]',
@@ -149,6 +150,8 @@ class TextBriefHook extends BaseHook
             'preview' => 'The text written, not saved yet',
             'cost' => 'Cost: %cost% $',
             'failed' => 'The text could not be written.',
+            'cut' => 'The connection was cut before the answer: the text may have been written all the same. Looking for it…',
+            'lost' => 'No text came back for this brief. Write it again if you still need it.',
             'noEditor' => 'The editor of this field cannot be reached: the text cannot be put in it.',
         ];
 

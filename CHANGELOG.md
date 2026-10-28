@@ -68,6 +68,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   Tiptap module through the element it draws: an update of that module that
   stops leaving its instance there leaves the field without the text, and
   says so.
+  A text is written to the end even when the connection is cut before the
+  answer arrives: the server keeps it ten minutes under an id the screen
+  gave the call, and the screen asks for it again by that id
+  (`POST /admin/cms/text/outcome`, for the administrator who asked only)
+  rather than having it written and billed a second time.
 
 ### Changed (2.3.1)
 

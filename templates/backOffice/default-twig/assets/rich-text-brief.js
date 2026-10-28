@@ -61,6 +61,17 @@
         return node;
     }
 
+    // A text takes seconds; a call that reads web pages, up to a minute or two.
+    var LOOK_FOR_MS = 180000;
+
+    function newRequestId() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
+        }
+
+        return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    }
+
     function bind(config) {
         var m = config.messages || {};
         var dialog = null;
@@ -127,6 +138,8 @@
             document.body.appendChild(dialog);
 
             var written = '';
+            // The call whose answer the dialog waits for; a reset forgets it.
+            var current = null;
 
             function show(node, visible) {
                 node.classList.toggle('d-none', !visible);
@@ -138,6 +151,7 @@
             }
 
             dialog.reset = function () {
+                current = null;
                 written = '';
                 preview.innerHTML = '';
                 [preview, previewLabel, cost, replace, insert].forEach(function (node) { show(node, false); });
@@ -169,44 +183,104 @@
                 // A write route of the module: the token of the back office,
                 // in the body, never in the address.
                 body.append('_token', backOfficeToken());
+                // The id under which the server keeps its answer, for the
+                // case where the connection is cut before it arrives.
+                var requestId = newRequestId();
+                current = requestId;
+                body.append('request', requestId);
 
                 write.disabled = true;
                 write.textContent = m.writing;
                 say('');
 
-                fetch(config.url, {
+                post(config.url, body)
+                    .then(function (answer) { showAnswer(requestId, answer); })
+                    .catch(function (error) {
+                        if (requestId !== current) {
+                            return;
+                        }
+
+                        // The server writes the text to the end whatever the
+                        // browser does: it is asked for again by its id rather
+                        // than written, and billed, a second time.
+                        console.error('TheliaCMS: the answer to the brief did not arrive', error);
+                        say(m.cut, 'warning');
+                        lookFor(requestId, Date.now());
+                    });
+            });
+
+            function post(url, body) {
+                return fetch(url, {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { Accept: 'application/json' },
                     body: body,
-                })
-                    .then(function (response) {
-                        return response.json().catch(function () { return { error: m.failed }; });
-                    })
-                    .then(function (payload) {
-                        write.disabled = false;
-                        write.textContent = m.again;
+                }).then(function (response) {
+                    return response.json()
+                        .catch(function () { return { error: m.failed }; })
+                        .then(function (payload) { return { status: response.status, payload: payload }; });
+                });
+            }
 
-                        if (!payload || payload.error || typeof payload.html !== 'string') {
-                            say((payload && payload.error) || m.failed, 'danger');
+            function showAnswer(requestId, answer) {
+                // An answer to a dialog since closed or asked again is dropped.
+                if (requestId !== current) {
+                    return;
+                }
+
+                var payload = answer.payload;
+                write.disabled = false;
+                write.textContent = m.again;
+
+                if (!payload || payload.error || typeof payload.html !== 'string') {
+                    say((payload && payload.error) || m.failed, 'danger');
+
+                    return;
+                }
+
+                // Formatted text the server filtered: paragraphs, emphasis,
+                // lists, links, subheadings, quotes.
+                say('');
+                written = payload.html;
+                preview.innerHTML = written;
+                cost.textContent = (m.cost || '').replace('%cost%', payload.cost);
+                [preview, previewLabel, cost, replace, insert].forEach(function (node) { show(node, true); });
+            }
+
+            // Asks every two seconds, for as long as a text takes at most.
+            function lookFor(requestId, since) {
+                if (requestId !== current) {
+                    return;
+                }
+
+                var body = new FormData();
+                body.append('request', requestId);
+                body.append('_token', backOfficeToken());
+
+                post(config.outcomeUrl, body)
+                    .then(function (answer) {
+                        if (answer.status !== 404) {
+                            showAnswer(requestId, answer);
 
                             return;
                         }
 
-                        // Formatted text the server filtered: paragraphs,
-                        // emphasis, lists, links, subheadings, quotes.
-                        written = payload.html;
-                        preview.innerHTML = written;
-                        cost.textContent = (m.cost || '').replace('%cost%', payload.cost);
-                        [preview, previewLabel, cost, replace, insert].forEach(function (node) { show(node, true); });
+                        retry();
                     })
-                    .catch(function (error) {
-                        console.error('TheliaCMS: the text written from the brief could not be shown', error);
+                    .catch(retry);
+
+                function retry() {
+                    if (Date.now() - since > LOOK_FOR_MS) {
                         write.disabled = false;
                         write.textContent = m.again;
-                        say(m.failed, 'danger');
-                    });
-            });
+                        say(m.lost, 'danger');
+
+                        return;
+                    }
+
+                    window.setTimeout(function () { lookFor(requestId, since); }, 2000);
+                }
+            }
 
             function put(mode) {
                 var textarea = active.textarea;

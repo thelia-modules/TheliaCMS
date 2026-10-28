@@ -32,6 +32,7 @@ use TheliaCMS\Generation\GenerationUnavailableException;
 use TheliaCMS\Generation\InvalidGenerationException;
 use TheliaCMS\Generation\Text\TextField;
 use TheliaCMS\Generation\Text\TextGenerator;
+use TheliaCMS\Generation\Text\TextOutcomes;
 use TheliaCMS\Generation\Text\TextRequest;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -41,6 +42,10 @@ use TheliaCMS\TheliaCMS;
  * the field: the text comes back as JSON and nothing is saved but the row of
  * the ledger. The field holds it once the editor chose to put it there, and
  * the form saves it as if they had typed it.
+ *
+ * A call carries an id the screen made: what it answered is kept under it a
+ * few minutes, and `outcome` gives it back when the connection was cut before
+ * the answer arrived, rather than having the text written and billed twice.
  */
 #[Route('/admin/cms/text', name: 'admin.cms.text.')]
 final readonly class TextBriefController
@@ -56,16 +61,49 @@ final readonly class TextBriefController
         private TextGenerator $generator,
         private SecurityContext $securityContext,
         private TranslatorInterface $translator,
+        private TextOutcomes $outcomes,
     ) {
     }
 
     #[Route('/generate', name: 'generate', methods: ['POST'])]
     public function generate(Request $request): JsonResponse
     {
-        if (!$this->securityContext->isGranted(['ADMIN'], [CmsResources::GENERATE], [], [AccessManager::UPDATE])) {
-            throw new AccessDeniedHttpException($this->translate('You are not allowed to use the generator.'));
+        $this->denyUnlessMayGenerate();
+
+        // The text is written to the end and kept even when the browser stops
+        // waiting: it was asked for, and it is billed.
+        ignore_user_abort(true);
+        set_time_limit(0);
+
+        [$status, $answer] = $this->answer($request);
+        $this->outcomes->keep($this->adminId(), (string) $request->request->get('request', ''), $status, $answer);
+
+        return new JsonResponse($answer, $status);
+    }
+
+    /**
+     * What a call answered, read back by the id the screen gave it: 404 while
+     * the text is still being written, or when nothing is kept under that id.
+     */
+    #[Route('/outcome', name: 'outcome', methods: ['POST'])]
+    public function outcome(Request $request): JsonResponse
+    {
+        $this->denyUnlessMayGenerate();
+
+        $outcome = $this->outcomes->find($this->adminId(), (string) $request->request->get('request', ''));
+
+        if (null === $outcome) {
+            return new JsonResponse(['pending' => true], Response::HTTP_NOT_FOUND);
         }
 
+        return new JsonResponse($outcome['answer'], $outcome['status']);
+    }
+
+    /**
+     * @return array{0: int, 1: array<string, string>}
+     */
+    private function answer(Request $request): array
+    {
         $type = (string) $request->request->get('type', '');
         $field = TextField::tryFrom((string) $request->request->get('field', ''));
         $locale = (string) $request->request->get('locale', '');
@@ -73,15 +111,15 @@ final readonly class TextBriefController
         $current = (string) $request->request->get('current', '');
 
         if (!\in_array($type, self::TYPES, true) || !$field instanceof TextField || !LangQuery::create()->filterByActive(1)->filterByLocale($locale)->exists()) {
-            return $this->error($this->translate('This field cannot be written from a brief.'), Response::HTTP_BAD_REQUEST);
+            return [Response::HTTP_BAD_REQUEST, ['error' => $this->translate('This field cannot be written from a brief.')]];
         }
 
         if ('' === $brief) {
-            return $this->error($this->translate('Say in the brief what the text should say.'), Response::HTTP_UNPROCESSABLE_ENTITY);
+            return [Response::HTTP_UNPROCESSABLE_ENTITY, ['error' => $this->translate('Say in the brief what the text should say.')]];
         }
 
         if (mb_strlen($brief) > self::BRIEF_LENGTH || \strlen($current) > self::CURRENT_LENGTH) {
-            return $this->error($this->translate('The brief or the text of the field is too long.'), Response::HTTP_UNPROCESSABLE_ENTITY);
+            return [Response::HTTP_UNPROCESSABLE_ENTITY, ['error' => $this->translate('The brief or the text of the field is too long.')]];
         }
 
         $target = GenerationTarget::field($type, max(0, $request->request->getInt('id')), (string) $request->request->get('title', ''), $locale);
@@ -94,22 +132,29 @@ final readonly class TextBriefController
         try {
             $result = $this->generator->generate(new TextRequest($generation, $field, $current));
         } catch (GenerationUnavailableException $exception) {
-            return $this->error($exception->getMessage(), Response::HTTP_SERVICE_UNAVAILABLE);
+            return [Response::HTTP_SERVICE_UNAVAILABLE, ['error' => $exception->getMessage()]];
         } catch (GenerationRefusedException|InvalidGenerationException $exception) {
-            return $this->error($exception->getMessage(), Response::HTTP_UNPROCESSABLE_ENTITY);
+            return [Response::HTTP_UNPROCESSABLE_ENTITY, ['error' => $exception->getMessage()]];
         } catch (GenerationException $exception) {
-            return $this->error($exception->getMessage(), Response::HTTP_BAD_GATEWAY);
+            return [Response::HTTP_BAD_GATEWAY, ['error' => $exception->getMessage()]];
         }
 
-        return new JsonResponse([
+        return [Response::HTTP_OK, [
             'html' => $result->html,
             'cost' => number_format($result->costUsd, 3, '.', ''),
-        ]);
+        ]];
     }
 
-    private function error(string $message, int $status): JsonResponse
+    private function denyUnlessMayGenerate(): void
     {
-        return new JsonResponse(['error' => $message], $status);
+        if (!$this->securityContext->isGranted(['ADMIN'], [CmsResources::GENERATE], [], [AccessManager::UPDATE])) {
+            throw new AccessDeniedHttpException($this->translate('You are not allowed to use the generator.'));
+        }
+    }
+
+    private function adminId(): int
+    {
+        return (int) $this->securityContext->getAdminUser()?->getId();
     }
 
     private static function optional(mixed $value): ?string

@@ -12,7 +12,11 @@ ledger. Steps 5 to 7 done the same day: route `admin.cms.text.generate`
 replace or insert). Tried against the API on a CMS page and on a product:
 about 5 to 8 seconds and 0.01 $ a call. Two calls in eight failed in the
 browser with `TypeError: Failed to fetch` while the server answered 200 and
-logged the call: not reproduced since, cause unknown (open point). Step 9 done:
+logged the call: nginx and the router logged 499, the browser closed the
+connection; what closed it was not found. Since then the server writes the text
+to the end (`ignore_user_abort`), keeps the answer ten minutes under an id the
+screen gives the call (`Generation/Text/TextOutcomes.php`), and the screen reads
+it back by that id (`admin.cms.text.outcome`) after a cut. Step 9 done:
 the editor documentation (both languages) and the CHANGELOG. The design questions are settled (see "Decisions taken").
 
 Change from step 2 as planned: only the `copywriting` skill is inlined; the

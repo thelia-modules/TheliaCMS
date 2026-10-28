@@ -1196,4 +1196,6 @@ return [
     'This field cannot be written from a brief.' => 'This field cannot be written from a brief.',
     'Say in the brief what the text should say.' => 'Say in the brief what the text should say.',
     'The brief or the text of the field is too long.' => 'The brief or the text of the field is too long.',
+    'The connection was cut before the answer: the text may have been written all the same. Looking for it…' => 'The connection was cut before the answer: the text may have been written all the same. Looking for it…',
+    'No text came back for this brief. Write it again if you still need it.' => 'No text came back for this brief. Write it again if you still need it.',
 ];

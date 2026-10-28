@@ -1196,4 +1196,6 @@ return [
     'This field cannot be written from a brief.' => 'Ce champ ne peut pas être rédigé depuis un brief.',
     'Say in the brief what the text should say.' => 'Dites dans le brief ce que le texte doit dire.',
     'The brief or the text of the field is too long.' => 'Le brief ou le texte du champ est trop long.',
+    'The connection was cut before the answer: the text may have been written all the same. Looking for it…' => 'La connexion a été coupée avant la réponse : le texte a peut-être été rédigé quand même. Recherche en cours…',
+    'No text came back for this brief. Write it again if you still need it.' => 'Aucun texte n’est revenu pour ce brief. Rédigez-le à nouveau si vous en avez encore besoin.',
 ];
