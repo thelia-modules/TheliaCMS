@@ -9,6 +9,18 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Security (2.3.1)
 
+- **The guard of the back office reads the path the way the router does.**
+  It compared the prefix `/admin/cms` with the path as the client wrote it,
+  while the router decodes the path before it matches a route: with one
+  letter percent-encoded (`/admin/c%6Ds/forms`), a request reached the screens
+  of the module without logging in, including the export of the submissions
+  of a form, skipped the token checked on a write, and was granted the right
+  of the pages whatever its section. A proxy that normalises the path in front
+  of the site hid it; one that passes the path as it came did not. The guard now
+  compares the decoded path (`RequestPath::decoded()` of the core), and so
+  does the showcase mode for the paths it closes (`/cart`, `/order`, `/checkout`). Tests send encoded
+  addresses anonymously, with a profile limited to the pages, and to a hidden
+  screen.
 - **A `style` attribute is filtered like a stylesheet.** The published
   content and every drawing of a component made for the site kept `style`
   attributes as they were: a component whose template prints a text prop in

@@ -19,6 +19,7 @@ use Symfony\Component\HttpKernel\Event\ControllerEvent;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Thelia\Core\HttpFoundation\RequestPath;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Tools\TokenProvider;
@@ -96,7 +97,10 @@ final readonly class CmsAdminGuard
             return;
         }
 
-        $path = $event->getRequest()->getPathInfo();
+        // Decoded, as the router reads it: compared as the client wrote it,
+        // `/admin/c%6Ds/forms` would reach the forms without starting with the
+        // prefix.
+        $path = RequestPath::decoded($event->getRequest());
 
         if (self::PREFIX !== $path && !str_starts_with($path, self::PREFIX.'/')) {
             return;
