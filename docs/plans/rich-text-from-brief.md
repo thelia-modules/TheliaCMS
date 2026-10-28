@@ -12,8 +12,8 @@ ledger. Steps 5 to 7 done the same day: route `admin.cms.text.generate`
 replace or insert). Tried against the API on a CMS page and on a product:
 about 5 to 8 seconds and 0.01 $ a call. Two calls in eight failed in the
 browser with `TypeError: Failed to fetch` while the server answered 200 and
-logged the call: not reproduced since, cause unknown (open point). To do:
-step 9 (editor documentation, CHANGELOG). The design questions are settled (see "Decisions taken").
+logged the call: not reproduced since, cause unknown (open point). Step 9 done:
+the editor documentation (both languages) and the CHANGELOG. The design questions are settled (see "Decisions taken").
 
 Change from step 2 as planned: only the `copywriting` skill is inlined; the
 others, written for pages made of sections, are listed for `read_skill`.

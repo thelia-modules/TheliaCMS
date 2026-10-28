@@ -51,6 +51,24 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   `POST /admin/cms/pages/fixed-address-check`, which write nothing and take the
   token of the back office like any write of the module.
 
+- **A rich-text field is written from a brief.** Beside the summary and the
+  detailed description of a page, and beside the summary, the description
+  and the conclusion of a product, a category, a brand, a folder and a
+  content, *Write from a brief* asks the generator for the text of that field.
+  It reads the brief, the title, what the field holds, and may search the
+  products, categories and pages of the site. The text comes back as
+  formatted text only (paragraphs, emphasis, lists, links, subheadings,
+  quotes), is shown with its cost, then replaces the text of the field or is
+  inserted at the cursor. Nothing is saved before the form is. The button
+  takes the right to use the generator; each call is in the ledger of the
+  generations, kind `text`, and in the history of the content screen of a
+  page. CMS > Settings gives these texts a model, an effort and a length of
+  their own (by default the model of the pages, effort `low`, 2,000 tokens).
+  The button is drawn by a hook on `wysiwyg.js` and reaches the editor of the
+  Tiptap module through the element it draws: an update of that module that
+  stops leaving its instance there leaves the field without the text, and
+  says so.
+
 ### Changed (2.3.1)
 
 - **The props of the components of the theme read in the language of the
