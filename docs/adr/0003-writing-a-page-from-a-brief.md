@@ -1,6 +1,8 @@
 # 3. Written from a brief, changed by asking, corrected by hand
 
-Date: 2026-10-20. Status: accepted.
+Date: 2026-10-20. Status: superseded in 2.4.0 (the call to the Claude API and the cost ledger).
+
+Superseded in 2.4.0: the generator no longer calls the Claude API itself. It goes through the AI gateway of Thelia (`Generation/PageGenerator.php` takes an `AiGatewayInterface`), and the cost of a call comes from the usage log of the core. The text below is the decision as it was taken.
 
 ## Context
 
