@@ -14,20 +14,26 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation\Text;
 
-use Anthropic\Core\Exceptions\APIConnectionException;
-use Anthropic\Core\Exceptions\APIStatusException;
-use Anthropic\Messages\Message;
-use Anthropic\Messages\TextBlock;
-use Anthropic\Messages\ToolUseBlock;
 use Psr\Log\LoggerInterface;
-use TheliaCMS\Generation\ClaudeClientProviderInterface;
+use Thelia\Domain\Ai\AiAudience;
+use Thelia\Domain\Ai\AiCapability;
+use Thelia\Domain\Ai\AiGatewayInterface;
+use Thelia\Domain\Ai\AiMessage;
+use Thelia\Domain\Ai\AiOutputSchema;
+use Thelia\Domain\Ai\AiRequest;
+use Thelia\Domain\Ai\AiResponse;
+use Thelia\Domain\Ai\AiTier;
+use Thelia\Domain\Ai\AiToolCall;
+use Thelia\Domain\Ai\AiTransparency;
+use Thelia\Domain\Ai\AsAiUsage;
+use Thelia\Domain\Ai\Exception\AiExceptionInterface;
+use TheliaCMS\Generation\Ai\FinishReasonGuard;
+use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
 use TheliaCMS\Generation\GenerationException;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationRefusedException;
 use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\InvalidGenerationException;
-use TheliaCMS\Generation\Pricing;
-use TheliaCMS\Generation\StreamedMessage;
 use TheliaCMS\Generation\Tool\GeneratorTools;
 use TheliaCMS\Generation\Usage;
 
@@ -37,13 +43,23 @@ use TheliaCMS\Generation\Usage;
  * in the field, or not, and the form is saved as if they had typed it.
  *
  * The model may search the products, categories and pages of the site and
- * read a skill, and read the pages the brief cites, as for a page. An answer
- * that is not the envelope asked for, or holds no text once filtered, goes
- * back once. Every outcome is written to the ledger, with the kind `text`,
+ * read a skill. It reads no page of the web: the tools offered are the ones of
+ * TOOLS and nothing the provider runs. An answer that is not the envelope
+ * asked for, or holds no text once filtered, goes back once. Every outcome is written to the ledger, with the kind `text`,
  * before it is returned or thrown.
  */
+#[AsAiUsage(
+    id: 'theliacms.text',
+    purpose: 'Write the text of one rich-text field of the back office (summary, description, conclusion) from a brief typed by the editor.',
+    audience: AiAudience::Admin,
+    tier: AiTier::Standard,
+    capabilities: [AiCapability::StructuredOutput, AiCapability::Tools],
+    transparency: AiTransparency::Generative,
+)]
 final readonly class TextGenerator
 {
+    public const string USAGE = 'theliacms.text';
+
     /** The tools a text needs: what the site sells and what it publishes. */
     public const array TOOLS = ['read_skill', 'search_categories', 'search_pages', 'search_products'];
 
@@ -52,19 +68,16 @@ final readonly class TextGenerator
     /** How many times an answer that cannot be used is sent back. */
     private const int CORRECTIONS = 1;
 
-    private const int WEB_FETCH_USES = 3;
-
-    private const int WEB_FETCH_CONTENT_TOKENS = 20000;
-
     public function __construct(
-        private ClaudeClientProviderInterface $clients,
+        private AiGatewayInterface $gateway,
         private GeneratorSettings $settings,
         private TextPrompt $prompts,
         private GeneratorTools $tools,
+        private GeneratorToolDefinitions $definitions,
         private TextSanitizer $sanitizer,
         private GenerationLog $log,
-        private Pricing $pricing,
         private LoggerInterface $logger,
+        private FinishReasonGuard $finishReasons = new FinishReasonGuard(),
     ) {
     }
 
@@ -75,26 +88,24 @@ final readonly class TextGenerator
     {
         $request = $text->request;
         $started = hrtime(true);
-        $client = $this->clients->client();
-        $model = $this->settings->textModel();
+        $model = '';
         $prompt = $this->prompts->userMessage($text);
-        $messages = [['role' => 'user', 'content' => $prompt]];
-        $tools = $this->tools->definitionsOf(self::TOOLS);
-
-        // As for a page: offered only when the brief cites a page to read.
-        if ($this->settings->webFetch() && [] !== $request->brief->addresses()) {
-            $tools[] = ['type' => 'web_fetch_20260209', 'name' => 'web_fetch', 'maxUses' => self::WEB_FETCH_USES, 'maxContentTokens' => self::WEB_FETCH_CONTENT_TOKENS];
-        }
-
-        $format = ['type' => 'json_schema', 'schema' => TextPrompt::schema()];
+        $conversation = new AiRequest(
+            self::USAGE,
+            [AiMessage::user($prompt)],
+            implode("\n\n", array_column($this->prompts->system(), 'text')),
+            outputSchema: new AiOutputSchema('text', TextPrompt::schema()),
+            tools: $this->definitions->of(self::TOOLS),
+            maxOutputTokens: $this->settings->textMaxTokens(),
+            providerOptions: ['anthropic' => ['effort' => $this->settings->textEffort()]],
+        );
         $usage = new Usage();
+        $costUsd = 0.0;
         $turns = 0;
         $corrections = 0;
-        $requestId = null;
-        $container = null;
-        $message = null;
+        $finishReason = null;
 
-        $record = function (string $status, ?string $error = null, ?string $html = null) use ($request, $prompt, $model, $started, &$usage, &$turns, &$requestId, &$message): int {
+        $record = function (string $status, ?string $error = null, ?string $html = null) use ($request, $prompt, &$model, $started, &$usage, &$turns, &$finishReason): int {
             return $this->log->record(
                 $request,
                 $status,
@@ -103,9 +114,9 @@ final readonly class TextGenerator
                 $usage,
                 $turns,
                 (int) ((hrtime(true) - $started) / 1_000_000),
-                $requestId,
-                $message?->stopReason,
-                $message?->stopDetails?->category,
+                null,
+                $finishReason,
+                null,
                 $error,
                 $html,
             );
@@ -117,59 +128,26 @@ final readonly class TextGenerator
                     throw GenerationException::because(\sprintf('The model made more than %d turns without answering with a text.', self::MAX_TURNS));
                 }
 
-                $streamed = new StreamedMessage();
-
                 try {
-                    $stream = $client->messages->createStream(
-                        maxTokens: $this->settings->textMaxTokens(),
-                        messages: $messages,
-                        container: $container,
-                        model: $model,
-                        outputConfig: ['effort' => $this->settings->textEffort(), 'format' => $format],
-                        system: $this->prompts->system(),
-                        toolChoice: ['type' => 'auto'],
-                        tools: $tools,
-                    );
-
-                    foreach ($stream as $event) {
-                        $streamed->absorb($event);
-                    }
-
-                    $message = $streamed->message();
-                } catch (APIStatusException $exception) {
-                    throw GenerationException::because(\sprintf('The Claude API answered %s: %s', $exception->type?->value ?? 'an error', $exception->getMessage()), $exception);
-                } catch (APIConnectionException $exception) {
-                    throw GenerationException::because('The Claude API could not be reached: '.$exception->getMessage(), $exception);
+                    $response = $this->gateway->complete($conversation);
+                } catch (AiExceptionInterface $exception) {
+                    throw GenerationException::because('The AI gateway refused the call: '.$exception->getMessage(), $exception);
                 }
 
-                $usage = $usage->plus($message->usage);
-                $container = $message->container?->id ?? $container;
-                $requestId = $message->id;
+                $model = $response->model;
+                $finishReason = $response->finishReason->value;
+                $usage = $usage->plusTokens($response->tokenUsage);
+                $costUsd += (float) $response->cost;
+                $this->finishReasons->assertUsable($response->finishReason, $this->settings->textMaxTokens(), 'raise the limit of the texts in the settings or ask for a shorter text.');
 
-                if ('refusal' === $message->stopReason) {
-                    throw GenerationRefusedException::withCategory($message->stopDetails?->category, $message->stopDetails?->explanation);
-                }
-
-                if ('max_tokens' === $message->stopReason) {
-                    throw GenerationException::because(\sprintf('The answer was cut at %d tokens: raise the limit of the texts in the settings or ask for a shorter text.', $this->settings->textMaxTokens()));
-                }
-
-                // A page being read by the API: the turn goes back as it is.
-                if ('pause_turn' === $message->stopReason) {
-                    $messages[] = ['role' => 'assistant', 'content' => $message->content];
-
-                    continue;
-                }
-
-                if ('tool_use' === $message->stopReason) {
-                    $messages[] = ['role' => 'assistant', 'content' => $message->content];
-                    $messages[] = ['role' => 'user', 'content' => $this->toolResults($message, $text)];
+                if ($response->hasToolCalls()) {
+                    $conversation = $conversation->withMessages(AiMessage::fromResponse($response), ...$this->toolResults($response->toolCalls, $text));
 
                     continue;
                 }
 
                 $problems = [];
-                $html = $this->htmlFrom(self::textOf($message), $problems);
+                $html = $this->htmlFrom(trim($response->text), $problems);
 
                 if ([] !== $problems) {
                     if (++$corrections > self::CORRECTIONS) {
@@ -177,8 +155,7 @@ final readonly class TextGenerator
                     }
 
                     $this->logger->info('TheliaCMS: the generated text was refused and sent back: {problems}', ['problems' => implode(' ', $problems)]);
-                    $messages[] = ['role' => 'assistant', 'content' => $message->content];
-                    $messages[] = ['role' => 'user', 'content' => TextPrompt::correction($problems)];
+                    $conversation = $conversation->withMessages(self::answerOf($response), AiMessage::user(TextPrompt::correction($problems)));
 
                     continue;
                 }
@@ -186,7 +163,7 @@ final readonly class TextGenerator
                 $durationMs = (int) ((hrtime(true) - $started) / 1_000_000);
                 $logId = $record(GenerationLog::STATUS_DONE, null, $html);
 
-                return new TextResult($html, $model, $requestId, $usage, $this->pricing->cost($model, $usage), $durationMs, $turns, $logId);
+                return new TextResult($html, $model, null, $usage, round($costUsd, 6), $durationMs, $turns, $logId);
             }
         } catch (GenerationRefusedException $exception) {
             $exception->logId = $record(GenerationLog::STATUS_REFUSED, $exception->getMessage());
@@ -232,39 +209,30 @@ final readonly class TextGenerator
     }
 
     /**
-     * @return list<array{type: 'tool_result', toolUseID: string, content: string}>
+     * @param list<AiToolCall> $calls
+     *
+     * @return list<AiMessage>
      */
-    private function toolResults(Message $message, TextRequest $text): array
+    private function toolResults(array $calls, TextRequest $text): array
     {
-        $results = [];
-
-        foreach ($message->content as $block) {
-            if ($block instanceof ToolUseBlock) {
-                // Only the tools offered run, whatever name the call gives.
-                $results[] = [
-                    'type' => 'tool_result',
-                    'toolUseID' => $block->id,
-                    'content' => \in_array($block->name, self::TOOLS, true)
-                        ? $this->tools->run($block->name, $block->input, $text->request)
-                        : \sprintf('There is no tool called "%s".', $block->name),
-                ];
-            }
-        }
-
-        return $results;
+        return array_map(
+            // Only the tools offered run, whatever name the call gives.
+            fn (AiToolCall $call): AiMessage => AiMessage::toolResult(
+                $call->id,
+                \in_array($call->name, self::TOOLS, true)
+                    ? $this->tools->run($call->name, $call->arguments, $text->request)
+                    : \sprintf('There is no tool called "%s".', $call->name),
+            ),
+            $calls,
+        );
     }
 
     /**
-     * The text written after the last call of a tool.
+     * The answer sent back with its problems. An empty one is one of them, and
+     * the gateway takes no assistant message without text nor tool call.
      */
-    private static function textOf(Message $message): string
+    private static function answerOf(AiResponse $response): AiMessage
     {
-        $text = '';
-
-        foreach ($message->content as $block) {
-            $text = $block instanceof TextBlock ? $text.$block->text : '';
-        }
-
-        return trim($text);
+        return '' === trim($response->text) ? AiMessage::assistant('(no text)') : AiMessage::fromResponse($response);
     }
 }

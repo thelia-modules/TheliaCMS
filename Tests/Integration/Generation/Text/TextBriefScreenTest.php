@@ -16,13 +16,14 @@ namespace TheliaCMS\Tests\Integration\Generation\Text;
 
 use Symfony\Component\DomCrawler\Crawler;
 use Thelia\Core\Security\AccessManager;
+use Thelia\Domain\Ai\AiFinishReason;
+use Thelia\Domain\Ai\AiGatewayInterface;
 use Thelia\Test\FixtureFactory;
-use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Generation\GenerationRequest;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Security\CmsResources;
-use TheliaCMS\Tests\Integration\Generation\FakeClaudeTransport;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 
 /**
  * "Write from a brief" beside the rich-text fields: the screens that offer it,
@@ -34,27 +35,14 @@ final class TextBriefScreenTest extends AdminScreenTestCase
 
     private const string OUTCOME = '/admin/cms/text/outcome';
 
-    private FakeClaudeTransport $api;
+    private FakeAiGateway $api;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->api = new FakeClaudeTransport();
-
-        // A service is replaced once per kernel: the provider the container
-        // gets delegates, so a test can still change what it answers.
-        $provider = new class($this->api) implements ClaudeClientProviderInterface {
-            public function __construct(public ClaudeClientProviderInterface $delegate)
-            {
-            }
-
-            public function client(): \Anthropic\Client
-            {
-                return $this->delegate->client();
-            }
-        };
-        static::getContainer()->set(ClaudeClientProviderInterface::class, $provider);
+        $this->api = new FakeAiGateway();
+        static::getContainer()->set(AiGatewayInterface::class, $this->api);
     }
 
     public function testTheSettingsOfACmsPageOfferTheButtonForItsSummaryAndDescription(): void
@@ -100,7 +88,7 @@ final class TextBriefScreenTest extends AdminScreenTestCase
     public function testTheRouteAnswersTheTextAndLogsTheCallWithoutSavingAnything(): void
     {
         $page = $this->createPage('Atelier de tournage');
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text('{"html":"<p>Un atelier <strong>ouvert</strong> le samedi.</p>"}')]));
+        $this->api->answer(FakeAiGateway::response('{"html":"<p>Un atelier <strong>ouvert</strong> le samedi.</p>"}'));
 
         $screen = $this->screen(\sprintf('/admin/cms/pages/%d', $page->getId()));
         $status = $this->send('POST', self::ROUTE, $this->parameters(['id' => (string) $page->getId()]), $this->withToken($screen));
@@ -117,6 +105,18 @@ final class TextBriefScreenTest extends AdminScreenTestCase
         self::assertSame('', (string) $page->getChapo(), 'Nothing is saved: the field takes the text when the form is saved.');
     }
 
+    public function testARefusalOfTheModelAndACutAnswerAreAnsweredWithTheirStatus(): void
+    {
+        $server = $this->withToken($this->screen('/admin/cms/pages'));
+
+        $this->api->answer(FakeAiGateway::response(finishReason: AiFinishReason::ContentFilter));
+        self::assertSame(422, $this->send('POST', self::ROUTE, $this->parameters(), $server), 'The model declined: the editor is told, nothing is retried.');
+
+        $this->api->answer(FakeAiGateway::response('{"html":"<p>Un atel', finishReason: AiFinishReason::MaxTokens));
+        self::assertSame(502, $this->send('POST', self::ROUTE, $this->parameters(), $server), 'The answer was cut by the limit.');
+        self::assertStringContainsString('cut at', (string) json_decode((string) $this->client->getResponse()->getContent(), true)['error']);
+    }
+
     /**
      * The server writes the text to the end even when the browser stopped
      * waiting: the answer is read back by the id of the call, by the
@@ -124,7 +124,7 @@ final class TextBriefScreenTest extends AdminScreenTestCase
      */
     public function testAnAnswerIsReadBackByTheIdOfTheCall(): void
     {
-        $this->api->answer(FakeClaudeTransport::message([FakeClaudeTransport::text('{"html":"<p>Un atelier ouvert le dimanche.</p>"}')]));
+        $this->api->answer(FakeAiGateway::response('{"html":"<p>Un atelier ouvert le dimanche.</p>"}'));
         $screen = $this->screen('/admin/cms/pages');
         $server = $this->withToken($screen);
         $id = 'b1a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
