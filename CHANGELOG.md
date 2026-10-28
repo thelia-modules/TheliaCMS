@@ -24,6 +24,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - **A page showing a list of pages or a form is dropped when they change.**
   The page is filed under a `cms-partial-<name>` tag for each dynamic block it
   shows, read from its content or from its template, and the block purges it.
+- **A content, a folder, a category or a product a menu links to reaches the
+  shared cache.** Their events dropped the menus kept by the module, not the
+  pages a shared cache kept with the menu in them. They now drop `cms-menu`
+  when a menu links to the row they wrote, and only then: a catalogue import
+  writes thousands of products no menu names.
+- **An import drops the whole site from the caches.** It changed pages,
+  menus, forms and settings, and dropped only the menus kept by the module.
+- **Renaming or deleting a tag drops the lists of pages**, which show the tag
+  of each page and list the pages of a tag.
 - **No more `Vary: Accept-Language`.** The language of a page comes from its
   address, never from that header: it only multiplied the copies of a page.
 

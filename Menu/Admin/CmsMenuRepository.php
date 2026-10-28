@@ -159,22 +159,25 @@ final readonly class CmsMenuRepository
     }
 
     /**
-     * Whether an entry of any menu points at one of these pages, usable or
-     * not: an entry hidden because its page is offline shows again once the
-     * page is back.
+     * Whether an entry of any menu points at one of these rows, usable or
+     * not: an entry hidden because its target is offline shows again once the
+     * target is back. Null asks about any row of that kind.
      *
-     * @param list<int> $pageIds
+     * @param list<int>|null $ids
      */
-    public function linksToAnyPage(array $pageIds): bool
+    public function linksTo(MenuTargetType $type, ?array $ids = null): bool
     {
-        if ([] === $pageIds) {
+        if ([] === $ids) {
             return false;
         }
 
-        return CmsMenuItemQuery::create()
-            ->filterByTargetType(MenuTargetType::Page->value)
-            ->filterByTargetId($pageIds, Criteria::IN)
-            ->exists();
+        $query = CmsMenuItemQuery::create()->filterByTargetType($type->value);
+
+        if (null !== $ids) {
+            $query->filterByTargetId($ids, Criteria::IN);
+        }
+
+        return $query->exists();
     }
 
     /**

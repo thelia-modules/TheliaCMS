@@ -155,6 +155,10 @@ The module works out which tags are stale, and drops no more than what changed:
 - a new home page: the former one, whose tag the root of the site was filed
   under, and the new one;
 - a page moved among its siblings: the lists of pages;
+- a tag renamed or deleted: the pages that carry it, and the lists of pages;
+- a content, a folder, a category or a product written by the shop:
+  `cms-menu`, only when a menu links to it;
+- an import: `cms`, so every page;
 - a menu: `cms-menu`, so every page; the site settings: `cms`, so every page.
 
 `cms` and `cms-menu` are never purged for a single page: every page of the site

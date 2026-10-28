@@ -212,10 +212,13 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
 
         foreach ((new \ReflectionMethod($class, '__construct'))->getParameters() as $parameter) {
             /** @var class-string $type */
-            $type = (string) $parameter->getType();
-            $arguments[] = match ($type) {
-                CachePurger::class => new CachePurger([$purger], new NullLogger()),
-                PageInvalidator::class, PartialCache::class => $this->purgingWith($type, $purger),
+            $type = ltrim((string) $parameter->getType(), '?');
+            $arguments[] = match (true) {
+                CachePurger::class === $type => new CachePurger([$purger], new NullLogger()),
+                \in_array($type, [PageInvalidator::class, PartialCache::class], true) => $this->purgingWith($type, $purger),
+                // What the container has no service for keeps the default the
+                // constructor gives it, as autowiring leaves it.
+                $parameter->isDefaultValueAvailable() && !static::getContainer()->has($type) => $parameter->getDefaultValue(),
                 default => $this->getService($type),
             };
         }

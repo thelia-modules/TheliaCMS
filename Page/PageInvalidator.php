@@ -18,6 +18,7 @@ use TheliaCMS\Http\CachePurger;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Menu\Admin\CmsMenuRepository;
 use TheliaCMS\Menu\MenuCache;
+use TheliaCMS\Menu\MenuTargetType;
 use TheliaCMS\Page\Admin\CmsPageAdminRepository;
 use TheliaCMS\Partial\Definition\PageListPartial;
 use TheliaCMS\Partial\PartialCache;
@@ -68,7 +69,7 @@ final readonly class PageInvalidator
 
         $tags = array_map(CacheTags::page(...), array_values(array_unique($shown)));
 
-        if ($this->menus->linksToAnyPage($pageIds)) {
+        if ($this->menus->linksTo(MenuTargetType::Page, $pageIds)) {
             $this->menuCache->invalidate();
             $tags[] = CacheTags::MENUS;
         }

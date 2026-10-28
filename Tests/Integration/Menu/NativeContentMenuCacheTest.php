@@ -16,7 +16,10 @@ namespace TheliaCMS\Tests\Integration\Menu;
 
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Event\Content\ContentToggleVisibilityEvent;
+use Thelia\Core\Event\Product\ProductUpdateEvent;
 use Thelia\Core\Event\TheliaEvents;
+use TheliaCMS\Http\CachePurgerInterface;
+use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Menu\CmsMenuProvider;
 use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Menu\NativeContentMenuCacheListener;
@@ -47,17 +50,7 @@ final class NativeContentMenuCacheTest extends CmsIntegrationTestCase
         $factory = $this->createFixtureFactory();
         $content = $factory->content($factory->folder(), ['locale' => $this->locale(), 'title' => 'Notre histoire']);
 
-        $menu = CmsMenuQuery::create()->findOneByCode('main');
-        self::assertInstanceOf(CmsMenu::class, $menu);
-        CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->find()->delete();
-        (new CmsMenuItem())
-            ->setMenuId($menu->getId())
-            ->setParent(0)
-            ->setPosition(1)
-            ->setTargetType('content')
-            ->setTargetId((int) $content->getId())
-            ->save();
-        $this->getService(MenuCache::class)->invalidate();
+        $this->linkFromTheMainMenu('content', (int) $content->getId());
 
         $menus = $this->getService(CmsMenuProvider::class);
         self::assertSame(['Notre histoire'], array_column($menus->menu('main', $this->locale()), 'label'), 'The content is online: it is in the menu.');
@@ -68,6 +61,34 @@ final class NativeContentMenuCacheTest extends CmsIntegrationTestCase
         );
 
         self::assertSame([], $menus->menu('main', $this->locale()), 'A content taken offline from its own screen is still offered by the menu.');
+    }
+
+    public function testHidingAContentAMenuLinksToDropsTheMenusFromTheSharedCache(): void
+    {
+        $factory = $this->createFixtureFactory();
+        $content = $factory->content($factory->folder(), ['locale' => $this->locale(), 'title' => 'Notre histoire']);
+        $this->linkFromTheMainMenu('content', (int) $content->getId());
+
+        $this->listenerPurgingWith($purger = $this->recordingPurger())->onContentChange(new ContentToggleVisibilityEvent($content));
+
+        self::assertSame([CacheTags::MENUS], $purger->purged, 'The pages of the site still link to a hidden content.');
+    }
+
+    /**
+     * A catalogue import writes thousands of products: dropping the menus,
+     * and with them every page of the site, for each of them empties the
+     * shared cache for nothing.
+     */
+    public function testAProductNoMenuLinksToLeavesTheSharedCache(): void
+    {
+        $factory = $this->createFixtureFactory();
+        $content = $factory->content($factory->folder(), ['locale' => $this->locale(), 'title' => 'Notre histoire']);
+        $this->linkFromTheMainMenu('content', (int) $content->getId());
+        $event = new ProductUpdateEvent(999999);
+
+        $this->listenerPurgingWith($purger = $this->recordingPurger())->onProductChange($event);
+
+        self::assertSame([], $purger->purged);
     }
 
     /**
@@ -94,5 +115,41 @@ final class NativeContentMenuCacheTest extends CmsIntegrationTestCase
 
             self::assertNotEmpty($listening, \sprintf('TheliaEvents::%s leaves the menus cached.', $name));
         }
+    }
+
+    private function linkFromTheMainMenu(string $targetType, int $targetId): void
+    {
+        $menu = CmsMenuQuery::create()->findOneByCode('main');
+        self::assertInstanceOf(CmsMenu::class, $menu);
+        CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->find()->delete();
+        (new CmsMenuItem())
+            ->setMenuId($menu->getId())
+            ->setParent(0)
+            ->setPosition(1)
+            ->setTargetType($targetType)
+            ->setTargetId($targetId)
+            ->save();
+        $this->getService(MenuCache::class)->invalidate();
+    }
+
+    /**
+     * @return CachePurgerInterface&object{purged: list<string>}
+     */
+    private function recordingPurger(): CachePurgerInterface
+    {
+        return new class implements CachePurgerInterface {
+            /** @var list<string> */
+            public array $purged = [];
+
+            public function purge(array $tags): void
+            {
+                array_push($this->purged, ...$tags);
+            }
+        };
+    }
+
+    private function listenerPurgingWith(CachePurgerInterface $purger): NativeContentMenuCacheListener
+    {
+        return $this->purgingWith(NativeContentMenuCacheListener::class, $purger);
     }
 }
