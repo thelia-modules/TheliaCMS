@@ -7,6 +7,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-10-28
+
 ### Fixed
 
 - **A publication no longer empties the shared cache of the whole site.**
