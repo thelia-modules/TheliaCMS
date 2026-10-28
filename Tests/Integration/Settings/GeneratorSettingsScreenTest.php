@@ -79,6 +79,49 @@ final class GeneratorSettingsScreenTest extends AdminScreenTestCase
         self::assertTrue($this->settings()->webFetch());
     }
 
+    /**
+     * A short text written from a brief has settings of its own: a paragraph
+     * does not need the effort, nor the length, of a whole page. Left empty,
+     * the model is the one of the pages.
+     */
+    public function testTheTextsWrittenFromABriefHaveTheirOwnSettings(): void
+    {
+        $card = $this->screen(self::SCREEN)->filter('[data-testid="cms-settings-generator-text"]');
+
+        self::assertSame(1, $card->filter('input[name="cms_settings[textModel]"]')->count());
+        self::assertSame(1, $card->filter('select[name="cms_settings[textEffort]"]')->count());
+        self::assertSame(1, $card->filter('input[name="cms_settings[textMaxTokens]"]')->count());
+
+        $settings = $this->settings();
+        self::assertSame($settings->model(), $settings->textModel(), 'By default, the model of the pages.');
+        self::assertSame('low', $settings->textEffort());
+        self::assertSame(GeneratorSettings::DEFAULT_TEXT_MAX_TOKENS, $settings->textMaxTokens());
+
+        $form = $this->settingsForm();
+        $form['cms_settings[textModel]'] = 'claude-haiku-5-5';
+        $form['cms_settings[textEffort]'] = 'medium';
+        $form['cms_settings[textMaxTokens]'] = '3000';
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        ModuleConfigQuery::resetConfigCache();
+        $settings = $this->settings();
+        self::assertSame('claude-haiku-5-5', $settings->textModel());
+        self::assertSame('medium', $settings->textEffort());
+        self::assertSame(3000, $settings->textMaxTokens());
+        self::assertNotSame('claude-haiku-5-5', $settings->model(), 'The pages keep their own model.');
+
+        $form = $this->settingsForm();
+        $form['cms_settings[textModel]'] = '';
+        $form['cms_settings[textMaxTokens]'] = '10';
+        $this->send('POST', $form->getUri(), $form->getPhpValues());
+
+        ModuleConfigQuery::resetConfigCache();
+        $settings = $this->settings();
+        self::assertSame($settings->model(), $settings->textModel(), 'Emptied, the model follows the pages again.');
+        self::assertSame(GeneratorSettings::DEFAULT_TEXT_MAX_TOKENS, $settings->textMaxTokens(), 'A length too short for a paragraph comes back to the default.');
+    }
+
     public function testAnEffortTheApiDoesNotKnowIsRefused(): void
     {
         $before = $this->settings()->effort();

@@ -242,7 +242,9 @@ is cheap to change back.
 
 Each section is also **edited by hand**, on the same screen, in a form read
 from the schema of its component: a field per prop, rows added and removed for
-a list, a picker on the media library for an image. A `html` prop is edited in
+a list, a picker on the media library for an image (thumbnails, search,
+filters, sending), buttons for a choice that gives a pictogram per value
+(`Prop::choice(..., icons: [...])`). A `html` prop is edited in
 the editor of the Tiptap module when it is installed (`thelia/tiptap-module`,
 suggested, not required) and in a plain textarea otherwise. What comes back
 goes through the same validator as a generated document and is stored the same
@@ -470,11 +472,42 @@ mandatory in every language unless the image is marked decorative, which
 publishes it with an empty `alt`. An empty attribute on its own cannot say
 whether an image was described or simply forgotten, so the choice is recorded.
 
-Each image shows its dimensions, weight, format and the pages using it, in their
-content or as their image. One still in use cannot be deleted.
+Each image shows its dimensions, weight, format, the pages and catalogue items
+using it, and where its description stands in every language. One still in use
+cannot be deleted. Its tags are suggested from the ones the library already
+has, and a replacing file is shown before it is saved.
+
+The list shows 48 images a page. It narrows to the images still to describe
+in the language edited, the unused ones, the decorative ones or one tag, and
+orders them newest, oldest, by title or heaviest first. The search reads the
+title, the alternative text, the caption and the tags.
+
+"Describe them one by one" walks through the images of the list that still
+say nothing in the language edited: one image, one field, Enter saves and
+shows the next one. An image can be answered as decorative or skipped.
+
+Images selected on the list take or lose a tag, are marked decorative or not,
+or are deleted when nothing uses them; the ones still used are kept and named.
 
 Uploads accept JPEG, PNG and WebP. SVG is refused: it is a document that can
-carry script.
+carry script. Files are dropped on the list or chosen, sent one by one, and a
+refused file is named with why without costing the others. The describe queue
+then opens on the images just added.
+
+The images of the catalogue (products, categories, brands, folders, contents)
+are not in the library: the core keeps them in its own tables. To use them in
+pages, copy them in:
+
+```bash
+php Thelia thelia_cms:media:import-catalogue [--type product --type brand] [--dry-run]
+```
+
+Each copy takes the title, the alternative text and the decorative flag of the
+catalogue image in every language, the title of its item when it has none, and
+a tag for its kind of item (and, for a product, its default category). Run it
+again after adding images to the catalogue: a file the library already holds,
+by its content, is not copied twice. A copy does not follow the catalogue: an
+image replaced there is copied again as a new one.
 
 At publication every image becomes a `<picture>` with a WebP alternative, a
 `srcset` bounded by the file's real width and ending on the original, explicit
@@ -1042,6 +1075,7 @@ to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
 | `cms_page_type(type, locale)` | the `code`, `title` and `description` of a type, for the heading of a list. |
 | `cms_page_fields(page)` | the fields of a page or a card holding a value, each with its `code`, `label`, raw `value` and `text` written for a visitor ("1 h 30 min"). |
 | `cms_item_content(type, id, locale)` | the published document of a product, a category, a content, a folder or a store (`dealer`), as markup, or an empty string. The locale defaults to the one being served. |
+| `cms_is_home(id)` | whether the page of this id is the one the module shows as the home page (setting `home_page_id`). |
 
 Except for `cms_item_content()`, whose document is markup by nature, they
 return data rather than markup, because navigation markup belongs to the

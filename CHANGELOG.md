@@ -7,17 +7,6 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
-### Added
-
-- **A store of the Dealer module carries a document.** Up to 1.6.0 a store
-  could carry a content block, which the update to 2.0.0 drops with the item
-  blocks. While Dealer is active, its store screen gets the *CMS content* tab
-  of the other catalogue items, the generator writes for the page of a store,
-  a deleted store takes its documents with it, and an export names a store by
-  the slug of its SEO record. The theme prints the document with
-  `cms_item_content('dealer', id)`. Dealer stays optional: its classes are
-  reached by name.
-
 ### Security (2.3.1)
 
 - **A `style` attribute is filtered like a stylesheet.** The published
@@ -33,6 +22,74 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.3.1)
 
+- **A store of the Dealer module carries a document.** Up to 1.6.0 a store
+  could carry a content block, which the update to 2.0.0 drops with the item
+  blocks. While Dealer is active, its store screen gets the *CMS content* tab
+  of the other catalogue items, the generator writes for the page of a store,
+  a deleted store takes its documents with it, and an export names a store by
+  the slug of its SEO record. The theme prints the document with
+  `cms_item_content('dealer', id)`. Dealer stays optional: its classes are
+  reached by name.
+
+- **Several images of the media list are answered at once.** A box on each
+  card and one for the page select images; a tag is given or taken off,
+  they are marked decorative or not, or the unused ones are deleted, asked
+  in a dialog first: an image a page or an item still shows is kept and
+  named.
+- **The image of a section is chosen in a picker of the media library.**
+  The section shows the image it holds (thumbnail, name, whether it is
+  described) with "Choose in the library" and "Remove"; the picker opens over
+  the section: a grid of thumbnails, searched, filtered by what is still to
+  describe or by a tag, by pages, and an image can be sent from it. It
+  replaces a list of every title, which could not be read past a few dozen
+  and lost an image older than the 200 newest. The image of a page, on its
+  settings, is picked the same way instead of a grid of radio cards. An id
+  sent for an image of a section or of a page is kept only when the CMS owns
+  that image.
+- **A choice with pictograms is chosen on buttons.** A choice prop may give a
+  pictogram per value (`Prop::choice(..., icons: [...])`): the width of the
+  Image section shows its three widths as shapes, and the room above and
+  below and the alignment of a section are buttons too.
+- **The sheet of an image says where its description stands in every
+  language**, each language a link to the sheet in it. Tags are chips
+  suggested from the tags of the library, written as the library has them; a
+  file chosen to replace the image is shown, with its size, before the sheet
+  is saved; deleting is asked in a dialog of the screen instead of the
+  browser's confirm(). The usage of an image says "pages or items": it
+  counts the catalogue items showing it too.
+- **Images are dropped on the media list and sent one by one.** The upload
+  form of the list takes files dropped on it; with JavaScript each file is
+  sent on its own, with its progress, then "added" or why it was refused
+  (format and size checked before sending, then by the server). Once every
+  file is answered, the describe queue opens on the images just added; when
+  one was refused, the screen stays and offers the queue. Without
+  JavaScript, several files sent at once lead to the same queue.
+- **The images still to describe can be described one by one.** "Describe
+  them one by one", above the media list, shows the first image of the list
+  that says nothing in the language edited, large, with its usage and one
+  field: Enter saves its alternative text and shows the next one, "It is
+  decorative" is an answer of its own, "Skip" leaves it for later. The queue
+  follows the search, the tag and the order of the list it was opened from,
+  and goes back to it once everything is described. The cards of the list are
+  denser (six a row on a wide screen), with the size and weight on hover, and
+  an image opened from a filtered list leads back to that list, from its
+  sheet and once deleted.
+- **The media list is paged, filtered and ordered.** 48 images a page, the
+  last page when the address asks for one past it. It shows what is still to
+  describe in the language edited, what no page and no item uses, the
+  decorative images, or one tag (offered with its count); newest, oldest, by
+  title or heaviest first. The list is an address: a filtered list can be
+  bookmarked and shared. The search reads the alternative text and the
+  caption as well as the title and the tags, and so does `search_media` for
+  the generator. It replaces the list of the 200 newest images, past which an
+  image could only be found by searching.
+- **The images of the catalogue can be copied into the media library.**
+  `thelia_cms:media:import-catalogue` copies the images of products,
+  categories, brands, folders and contents with their titles, alternative
+  texts and decorative flag in every language, tagged with their kind of item
+  and, for a product, its default category. Run again, it copies only the
+  files the library does not hold yet; `--type` narrows it, `--dry-run`
+  counts.
 - **The draft a generation replaces can be put back.** Before a brief, a
   change, a section rewrite or a translation writes the draft of a page or of
   a catalogue item, the draft as it was is kept as a revision labelled
@@ -62,8 +119,44 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   `POST /admin/cms/pages/fixed-address-check`, which write nothing and take the
   token of the back office like any write of the module.
 
+- **A rich-text field is written from a brief.** Beside the summary and the
+  detailed description of a page, and beside the summary, the description
+  and the conclusion of a product, a category, a brand, a folder and a
+  content, *Write from a brief* asks the generator for the text of that field.
+  It reads the brief, the title, what the field holds, and may search the
+  products, categories and pages of the site. The text comes back as
+  formatted text only (paragraphs, emphasis, lists, links, subheadings,
+  quotes), is shown with its cost, then replaces the text of the field or is
+  inserted at the cursor. Nothing is saved before the form is. The button
+  takes the right to use the generator; each call is in the ledger of the
+  generations, kind `text`, and in the history of the content screen of a
+  page. CMS > Settings gives these texts a model, an effort and a length of
+  their own (by default the model of the pages, effort `low`, 2,000 tokens).
+  The button is drawn by a hook on `wysiwyg.js` and reaches the editor of the
+  Tiptap module through the element it draws: an update of that module that
+  stops leaving its instance there leaves the field without the text, and
+  says so.
+  A text is written to the end even when the connection is cut before the
+  answer arrives: the server keeps it ten minutes under an id the screen
+  gave the call, and the screen asks for it again by that id
+  (`POST /admin/cms/text/outcome`, for the administrator who asked only)
+  rather than having it written and billed a second time.
+
 ### Changed (2.3.1)
 
+- **An image of the media library is drawn with the text it has in the
+  library.** The Image and Columns sections published the text they held
+  for the image, whatever the library said: an image described once in the
+  library was published without it, or with another text. An image of the
+  library is now drawn with its text in the language of the page, empty when
+  it is decorative; the text of the section answers for a picture kept
+  elsewhere, and for an image not described yet. In the form, the field of
+  the text shows only for a picture kept elsewhere; for an image of the
+  library, its text in the library is shown, or a link to describe it.
+- **The appearance of a section is laid out as one.** The two colours stand
+  side by side with their help under their field, a colour not set shows a
+  crossed swatch instead of black, and the room and the alignment are each a
+  row of buttons of one width.
 - **The props of the components of the theme read in the language of the
   back office.** Their labels and help come from the comments of the theme,
   in English and sometimes in the words of a developer. The form of a section
@@ -127,6 +220,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed (2.3.1)
 
+- **The media list refuses a file on its own, and only the formats it
+  says.** A file the library could not decode stopped the whole sending with
+  an error, after storing the files before it; and a GIF or a BMP was stored
+  although the screen accepts JPEG, PNG and WebP only. Each refused file is
+  now named with why, and the others are stored.
+- **An image with no row in the language edited is counted as still to
+  describe.** It showed the "no alternative text" badge and was left out of
+  the count above the list: an image uploaded in one language was never
+  counted in the others.
 - **The number that keeps an address unique stays out of the slug.** A page
   titled alike in two languages answers on `cookies` in one and `cookies-2` in
   the other, and the `-2` was stored as the slug of the second: shown in the
@@ -145,7 +247,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   menus, the breadcrumb, the lists of a tag, the search, the TntSearch index
   and the sitemap now leave a model out on their own account, and an import
   keeps the draft of a model and drops the published version the file gives
-  it.
+  it. A model can no longer be set online nor moved to the bin: its edit
+  screen shows *Online* set to *No* and greyed out, saving it puts it offline,
+  an import brings it in offline, and posting to its bin or visibility action
+  is refused with a message. It still goes with its template when the
+  template is deleted.
+- **`cms_is_home()` answers false on a site with no home page.** Without a
+  home page set, it took the page of id 0, and an id the theme did not have
+  (a product page passes none), for the home page; it also refused a null id.
+  It takes a number, a string or null, and answers a boolean.
 - **A reserved slug is refused on its field.** Saving a page with the slug
   `admin`, `api` or another reserved path answered an error 500; the form now
   shows why under the field.
@@ -593,6 +703,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   from `TheliaCMS\Builder` to `TheliaCMS\Content\Pipeline`:
   `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,
   `ImageRewriter`, `PublishedContentSanitizer`, `PageContentNormalizer`.
+
+### Added (1.6.0)
+
+- Twig function `cms_is_home(id)`: tells whether a page is the one the module
+  shows as the home page.
 
 ### Added (1.5.0)
 

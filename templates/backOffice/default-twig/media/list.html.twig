@@ -6,58 +6,131 @@
 {% block content %}
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Media'|trans({}, 'theliacms') } %}{% endembed %}
 
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-        {# The form posts on its own so it keeps working without JavaScript;
-           choosing files just submits it sooner. #}
-        <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-start"
-              action="{{ path('admin.cms.media.add', { edit_language_id: edit_language_id }) }}"
-              data-testid="cms-media-upload-form">
-            <input type="hidden" name="_token" value="{{ assignToken() }}">
-            <div>
-                <label class="visually-hidden" for="cms-media-files">{{ 'Add images'|trans({}, 'theliacms') }}</label>
+    {# The form posts on its own so it keeps working without JavaScript:
+       files chosen are sent at once. The script of the screen makes it a
+       place to drop files on, sends them one by one and shows each land. #}
+    <form method="post" enctype="multipart/form-data"
+          class="border border-2 rounded p-3 mb-3" style="border-style: dashed !important"
+          action="{{ path('admin.cms.media.add', { edit_language_id: edit_language_id }) }}"
+          data-testid="cms-media-upload-form"
+          data-cms-media-upload
+          data-accepted="{{ accepted_mime_types }}"
+          data-max-size="{{ max_upload_size }}"
+          data-describe-url="{{ path('admin.cms.media.describe', { edit_language_id: edit_language_id }) }}"
+          data-messages="{{ {
+              sending: 'Sending…'|trans({}, 'theliacms'),
+              added: 'Added'|trans({}, 'theliacms'),
+              format: 'Only JPEG, PNG and WebP images can be uploaded.'|trans({}, 'theliacms'),
+              tooLarge: 'The file is larger than the server accepts.'|trans({}, 'theliacms'),
+              failed: 'The file did not arrive whole. Send it again.'|trans({}, 'theliacms'),
+              describe: 'Describe the %count% image(s) added'|trans({}, 'theliacms'),
+              stay: 'Stay on the list'|trans({}, 'theliacms'),
+          }|json_encode }}">
+        <input type="hidden" name="_token" value="{{ assignToken() }}">
+        <div class="d-flex flex-wrap gap-3 align-items-center">
+            <i class="bi bi-cloud-arrow-up fs-3 text-body-secondary" aria-hidden="true"></i>
+            <div class="flex-grow-1">
+                <label class="form-label mb-1 fw-medium" for="cms-media-files">{{ 'Drop images here, or choose them'|trans({}, 'theliacms') }}</label>
                 <input class="form-control" type="file" id="cms-media-files" name="files[]" multiple
                        accept="{{ accepted_mime_types }}" onchange="this.form.requestSubmit()">
                 <div class="form-text">{{ 'JPEG, PNG or WebP. Several at once.'|trans({}, 'theliacms') }}</div>
             </div>
-            <button type="submit" class="btn btn-primary text-nowrap">
+            <button type="submit" class="btn btn-primary text-nowrap" data-cms-media-upload-submit>
                 <i class="bi bi-upload me-1" aria-hidden="true"></i>{{ 'Add images'|trans({}, 'theliacms') }}
             </button>
-        </form>
+        </div>
+        <ul class="list-unstyled small mt-3 mb-0 d-none" data-cms-media-upload-files aria-live="polite"></ul>
+        <div class="d-flex gap-2 mt-2 d-none" data-cms-media-upload-done></div>
+    </form>
 
-        {% if has_library %}
-            <form method="get" class="d-flex gap-2 align-items-start" action="{{ path('admin.cms.media.list') }}">
-                <input type="hidden" name="edit_language_id" value="{{ edit_language_id }}">
-                <label class="visually-hidden" for="cms-media-search">{{ 'Search'|trans({}, 'theliacms') }}</label>
-                <input class="form-control" type="search" id="cms-media-search" name="search" value="{{ search }}"
-                       placeholder="{{ 'Name or tag'|trans({}, 'theliacms') }}">
-                <button class="btn btn-outline-secondary text-nowrap" type="submit">{{ 'Search'|trans({}, 'theliacms') }}</button>
-                {% if search %}
+    {% if has_library %}
+        {% set filter_labels = {
+            'to-describe': 'To describe'|trans({}, 'theliacms'),
+            'unused': 'Unused images'|trans({}, 'theliacms'),
+            'decorative': 'Decorative images'|trans({}, 'theliacms'),
+        } %}
+        {% set order_labels = {
+            'newest': 'Newest first'|trans({}, 'theliacms'),
+            'oldest': 'Oldest first'|trans({}, 'theliacms'),
+            'title': 'By title'|trans({}, 'theliacms'),
+            'weight': 'Heaviest first'|trans({}, 'theliacms'),
+        } %}
+        {# A GET form: a filtered list is an address, bookmarked, shared or
+           reloaded as it is. #}
+        <form method="get" class="row g-2 align-items-end mb-3" action="{{ path('admin.cms.media.list') }}"
+              data-testid="cms-media-filters">
+            <input type="hidden" name="edit_language_id" value="{{ edit_language_id }}">
+            <div class="col-12 col-md">
+                <label class="form-label small mb-1" for="cms-media-search">{{ 'Search'|trans({}, 'theliacms') }}</label>
+                <input class="form-control" type="search" id="cms-media-search" name="search" value="{{ query.search }}"
+                       placeholder="{{ 'Name, description, caption or tag'|trans({}, 'theliacms') }}">
+            </div>
+            <div class="col-6 col-md-auto">
+                <label class="form-label small mb-1" for="cms-media-filter">{{ 'Show'|trans({}, 'theliacms') }}</label>
+                <select class="form-select" id="cms-media-filter" name="filter">
+                    <option value="">{{ 'Every image'|trans({}, 'theliacms') }}</option>
+                    {% for filter in filters %}
+                        <option value="{{ filter.value }}" {{ query.filter == filter ? 'selected' }}>{{ filter_labels[filter.value] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if tags is not empty %}
+                <div class="col-6 col-md-auto">
+                    <label class="form-label small mb-1" for="cms-media-tag">{{ 'Tag'|trans({}, 'theliacms') }}</label>
+                    <select class="form-select" id="cms-media-tag" name="tag">
+                        <option value="">{{ 'Every tag'|trans({}, 'theliacms') }}</option>
+                        {% for title, count in tags %}
+                            <option value="{{ title }}" {{ query.tag == title ? 'selected' }}>{{ title }} ({{ count }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+            <div class="col-6 col-md-auto">
+                <label class="form-label small mb-1" for="cms-media-order">{{ 'Order'|trans({}, 'theliacms') }}</label>
+                <select class="form-select" id="cms-media-order" name="order">
+                    {% for order in orders %}
+                        <option value="{{ order.value }}" {{ query.order == order ? 'selected' }}>{{ order_labels[order.value] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-auto d-flex gap-2">
+                <button class="btn btn-outline-secondary text-nowrap" type="submit">{{ 'Apply'|trans({}, 'theliacms') }}</button>
+                {% if query.isNarrowed %}
                     <a class="btn btn-link text-nowrap" href="{{ path('admin.cms.media.list', { edit_language_id: edit_language_id }) }}">{{ 'Clear'|trans({}, 'theliacms') }}</a>
                 {% endif %}
-            </form>
-        {% endif %}
-    </div>
+            </div>
+        </form>
 
-    {# Counts come from the library, not from the rows loaded: the grid is
-       capped, so counting it announces the size of a page as the size of the
-       library. #}
-    {% if items is not empty %}
-        <p class="text-body-secondary small">
+        {# Counts come from the library, not from the rows loaded: the grid is
+           paged, so counting it announces the size of a page as the size of
+           the library. #}
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <p class="text-body-secondary small mb-0" data-testid="cms-media-count">
             {{ '%count% image(s)'|trans({ '%count%': tally.total }, 'theliacms') }}
             {%- if tally.undescribed > 0 %}
-                · <span class="text-warning-emphasis">{{ '%count% still to describe'|trans({ '%count%': tally.undescribed }, 'theliacms') }}</span>
+                · <a class="link-warning" href="{{ path('admin.cms.media.list', { edit_language_id: edit_language_id, filter: 'to-describe' }) }}">{{ '%count% still to describe'|trans({ '%count%': tally.undescribed }, 'theliacms') }}</a>
             {%- endif -%}
-            {%- if not tally.isComplete(items|length) %}
-                · {{ 'showing the %count% most recent'|trans({ '%count%': items|length }, 'theliacms') }}
+            {%- if query.isNarrowed %}
+                · {{ '%count% matching'|trans({ '%count%': grid.total }, 'theliacms') }}
             {%- endif -%}
-        </p>
+            {%- if grid.pageCount > 1 %}
+                · {{ 'page %page% of %pages%'|trans({ '%page%': grid.page, '%pages%': grid.pageCount }, 'theliacms') }}
+            {%- endif -%}
+            </p>
+            {% if tally.undescribed > 0 %}
+                <a class="btn btn-sm btn-warning" data-testid="cms-media-describe-start"
+                   href="{{ path('admin.cms.media.describe', query.parameters|merge({ edit_language_id: edit_language_id })) }}">
+                    <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>{{ 'Describe them one by one'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
+        </div>
     {% endif %}
 
-    {% if items is empty %}
+    {% if grid.items is empty %}
         <div class="card">
             <div class="card-body text-center py-5">
-                {% if search %}
-                    <p class="text-muted mb-3">{{ 'No image matches “%search%”.'|trans({ '%search%': search }, 'theliacms') }}</p>
+                {% if query.isNarrowed %}
+                    <p class="text-muted mb-3">{{ 'No image matches.'|trans({}, 'theliacms') }}</p>
                     <a class="btn btn-outline-secondary" href="{{ path('admin.cms.media.list', { edit_language_id: edit_language_id }) }}">{{ 'Show every image'|trans({}, 'theliacms') }}</a>
                 {% else %}
                     <p class="text-muted mb-0">{{ 'No image yet. Images added here can be placed in any page, and are described once for every page that uses them.'|trans({}, 'theliacms') }}</p>
@@ -65,28 +138,70 @@
             </div>
         </div>
     {% else %}
-        <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3">
-            {% for item in items %}
+        {# Several images answered at once. The boxes of the cards belong to
+           this form by their `form` attribute; without the script, it works
+           as it is, the script counts and asks before deleting. #}
+        <form method="post" id="cms-media-bulk" data-cms-media-bulk data-testid="cms-media-bulk"
+              class="d-flex flex-wrap align-items-center gap-2 mb-3 p-2 border rounded bg-body-tertiary sticky-top"
+              action="{{ path('admin.cms.media.bulk', query.addressParameters|merge({ edit_language_id: edit_language_id })) }}">
+            <input type="hidden" name="_token" value="{{ assignToken() }}">
+            <div class="form-check mb-0 me-2">
+                <input class="form-check-input" type="checkbox" id="cms-media-select-all" data-cms-media-select-all hidden>
+                <label class="form-check-label small" for="cms-media-select-all" data-cms-media-selected hidden>{{ 'Select the page'|trans({}, 'theliacms') }}</label>
+            </div>
+            <label class="visually-hidden" for="cms-media-bulk-action">{{ 'With the selected images'|trans({}, 'theliacms') }}</label>
+            <select class="form-select form-select-sm w-auto" id="cms-media-bulk-action" name="action">
+                <option value="">{{ 'With the selected images…'|trans({}, 'theliacms') }}</option>
+                <option value="tag-add">{{ 'Add a tag'|trans({}, 'theliacms') }}</option>
+                <option value="tag-remove">{{ 'Remove a tag'|trans({}, 'theliacms') }}</option>
+                <option value="decorative">{{ 'Mark decorative'|trans({}, 'theliacms') }}</option>
+                <option value="not-decorative">{{ 'Mark not decorative'|trans({}, 'theliacms') }}</option>
+                <option value="delete">{{ 'Delete the unused ones'|trans({}, 'theliacms') }}</option>
+            </select>
+            <label class="visually-hidden" for="cms-media-bulk-tag">{{ 'Tag'|trans({}, 'theliacms') }}</label>
+            <input class="form-control form-control-sm w-auto" id="cms-media-bulk-tag" name="tag" list="cms-media-bulk-tags"
+                   placeholder="{{ 'Tag'|trans({}, 'theliacms') }}" data-cms-media-bulk-tag>
+            <datalist id="cms-media-bulk-tags">
+                {% for title in tags|keys %}<option value="{{ title }}"></option>{% endfor %}
+            </datalist>
+            <button type="submit" class="btn btn-sm btn-primary" data-cms-media-bulk-apply>{{ 'Apply'|trans({}, 'theliacms') }}</button>
+        </form>
+
+        <dialog class="border-0 rounded shadow p-0" data-cms-media-bulk-dialog aria-labelledby="cms-media-bulk-title"
+                style="width: min(480px, calc(100vw - 32px))">
+            <div class="p-4">
+                <h2 class="h5" id="cms-media-bulk-title">{{ 'Delete the selected images for good?'|trans({}, 'theliacms') }}</h2>
+                <p class="text-body-secondary">{{ 'Their files are removed. An image a page or an item still shows is kept.'|trans({}, 'theliacms') }}</p>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary" data-cms-media-bulk-cancel>{{ 'Cancel'|trans({}, 'theliacms') }}</button>
+                    <button type="button" class="btn btn-danger" data-cms-media-bulk-confirm>{{ 'Delete the unused ones'|trans({}, 'theliacms') }}</button>
+                </div>
+            </div>
+        </dialog>
+
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-6 g-3">
+            {% for item in grid.items %}
                 <div class="col">
-                    <div class="card h-100" data-testid="cms-media-card-{{ item.id }}">
+                    <div class="card h-100 position-relative" data-testid="cms-media-card-{{ item.id }}">
+                        <input class="form-check-input position-absolute top-0 start-0 m-2 shadow-sm" style="z-index: 2"
+                               type="checkbox" form="cms-media-bulk" name="images[]" value="{{ item.id }}"
+                               data-cms-media-select aria-label="{{ 'Select %title%'|trans({ '%title%': item.title }, 'theliacms') }}">
                         {# `scale-down`, not `cover`: a media library has to show
                            the real shape of a file, and never blow a small image
                            up to fill the card. #}
-                        <a href="{{ path('admin.cms.media.edit', { id: item.id, edit_language_id: edit_language_id }) }}"
-                           class="ratio ratio-4x3 bg-body-secondary rounded-top overflow-hidden">
+                        <a href="{{ path('admin.cms.media.edit', query.addressParameters|merge({ id: item.id, edit_language_id: edit_language_id })) }}"
+                           class="ratio ratio-4x3 bg-body-secondary rounded-top overflow-hidden"
+                           {# Size and weight on hover and on the sheet: on a card of a
+                              library of hundreds, the name and the state come first. #}
+                           title="{{ [item.dimensions, item.weight, item.format ? item.format|upper : null]|filter(v => v)|join(' · ') }}">
                             <img src="{{ item.thumbnailUrl }}" alt="" loading="lazy" decoding="async"
                                  style="object-fit: scale-down">
                         </a>
-                        <div class="card-body py-2">
+                        <div class="card-body p-2 small">
                             <a class="d-block text-truncate fw-medium text-decoration-none"
-                               href="{{ path('admin.cms.media.edit', { id: item.id, edit_language_id: edit_language_id }) }}"
+                               href="{{ path('admin.cms.media.edit', query.addressParameters|merge({ id: item.id, edit_language_id: edit_language_id })) }}"
                                title="{{ item.title }}">{{ item.title }}</a>
 
-                            <p class="text-muted small mb-2">
-                                {%- if item.dimensions %}{{ item.dimensions }}{% endif -%}
-                                {%- if item.weight %} · {{ item.weight }}{% endif -%}
-                                {%- if item.format %} · {{ item.format|upper }}{% endif -%}
-                            </p>
 
                             {% if not item.isDescribed %}
                                 <span class="badge text-bg-warning">
@@ -97,13 +212,16 @@
                                 <span class="badge text-bg-light">{{ 'Decorative'|trans({}, 'theliacms') }}</span>
                             {% endif %}
 
-                            {% for tag in item.tags %}
+                            {% for tag in item.tags|slice(0, 2) %}
                                 <span class="badge text-bg-light">{{ tag }}</span>
                             {% endfor %}
+                            {% if item.tags|length > 2 %}
+                                <span class="badge text-bg-light" title="{{ item.tags|slice(2)|join(', ') }}">+{{ item.tags|length - 2 }}</span>
+                            {% endif %}
                         </div>
                         <div class="card-footer bg-transparent py-2 text-muted small">
                             {% if item.usageCount > 0 %}
-                                {{ 'Used in %count% page(s)'|trans({ '%count%': item.usageCount }, 'theliacms') }}
+                                {{ 'Used by %count% page(s) or item(s)'|trans({ '%count%': item.usageCount }, 'theliacms') }}
                             {% else %}
                                 {{ 'Not used yet'|trans({}, 'theliacms') }}
                             {% endif %}
@@ -112,5 +230,36 @@
                 </div>
             {% endfor %}
         </div>
+
+        {% if grid.pageCount > 1 %}
+            {% set from = max(1, grid.page - 2) %}
+            {% set to = min(grid.pageCount, grid.page + 2) %}
+            {% set link = query.parameters|merge({ edit_language_id: edit_language_id }) %}
+            <nav class="mt-4" aria-label="{{ 'Pages of the media'|trans({}, 'theliacms') }}" data-testid="cms-media-pages">
+                <ul class="pagination justify-content-center flex-wrap">
+                    <li class="page-item {{ grid.page == 1 ? 'disabled' }}">
+                        <a class="page-link" href="{{ path('admin.cms.media.list', link|merge({ page: grid.page - 1 })) }}">{{ 'Previous'|trans({}, 'theliacms') }}</a>
+                    </li>
+                    {% if from > 1 %}
+                        <li class="page-item"><a class="page-link" href="{{ path('admin.cms.media.list', link|merge({ page: 1 })) }}">1</a></li>
+                        {% if from > 2 %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+                    {% endif %}
+                    {% for number in from..to %}
+                        <li class="page-item {{ number == grid.page ? 'active' }}" {{ number == grid.page ? 'aria-current="page"' }}>
+                            <a class="page-link" href="{{ path('admin.cms.media.list', link|merge({ page: number })) }}">{{ number }}</a>
+                        </li>
+                    {% endfor %}
+                    {% if to < grid.pageCount %}
+                        {% if to < grid.pageCount - 1 %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+                        <li class="page-item"><a class="page-link" href="{{ path('admin.cms.media.list', link|merge({ page: grid.pageCount })) }}">{{ grid.pageCount }}</a></li>
+                    {% endif %}
+                    <li class="page-item {{ grid.page == grid.pageCount ? 'disabled' }}">
+                        <a class="page-link" href="{{ path('admin.cms.media.list', link|merge({ page: grid.page + 1 })) }}">{{ 'Next'|trans({}, 'theliacms') }}</a>
+                    </li>
+                </ul>
+            </nav>
+        {% endif %}
     {% endif %}
+    <script src="{{ module_asset('TheliaCMS', 'assets/media-upload.js') }}?v={{ assets_version }}" defer></script>
+    <script src="{{ module_asset('TheliaCMS', 'assets/media-list.js') }}?v={{ assets_version }}" defer></script>
 {% endblock %}

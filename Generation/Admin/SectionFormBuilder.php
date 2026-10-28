@@ -28,6 +28,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Validator\Constraints\Image;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
@@ -83,6 +84,7 @@ final readonly class SectionFormBuilder
         private CmsMediaLibrary $library,
         private CmsMediaWriter $media,
         private SecurityContext $securityContext,
+        private UrlGeneratorInterface $urls,
     ) {
     }
 
@@ -156,13 +158,13 @@ final readonly class SectionFormBuilder
             'required' => false,
             'placeholder' => "The component's",
             'choices' => $paddings,
-        ]);
+        ] + self::asButtons(['small' => 'space-small', 'medium' => 'space-medium', 'large' => 'space-large']));
         $group->add('align', ChoiceType::class, [
             'label' => 'Alignment of the text',
             'required' => false,
             'placeholder' => "The component's",
             'choices' => ['Left' => 'left', 'Center' => 'center', 'Right' => 'right'],
-        ]);
+        ] + self::asButtons(['left' => 'bi-text-left', 'center' => 'bi-text-center', 'right' => 'bi-text-right']));
 
         $builder->add($group);
     }
@@ -210,7 +212,7 @@ final readonly class SectionFormBuilder
         $file = $data[$prop->name.self::FILE_SUFFIX] ?? null;
 
         if ($file instanceof UploadedFile && $this->mayUpload()) {
-            $stored = $this->media->add([$file], $this->library->locale());
+            $stored = $this->media->add([$file], $this->library->locale())->stored;
 
             if (isset($stored[0]) && $stored[0] instanceof LibraryImage) {
                 return (int) $stored[0]->getId();
@@ -225,7 +227,10 @@ final readonly class SectionFormBuilder
             return $address;
         }
 
-        return (int) ($data[$prop->name] ?? 0);
+        // An id the screen sent is an image of the library of the CMS, or none.
+        $id = (int) ($data[$prop->name] ?? 0);
+
+        return $id > 0 && null !== $this->library->ownedImage($id) ? $id : 0;
     }
 
     private function mayUpload(): bool
@@ -278,7 +283,7 @@ final readonly class SectionFormBuilder
             PropType::Choice => $builder->add($prop->name, ChoiceType::class, $common + [
                 'choices' => array_flip(array_map(strval(...), $prop->choices)),
                 'choice_translation_domain' => false,
-            ]),
+            ] + ([] === $prop->icons ? [] : ['placeholder' => false]) + self::asButtons($prop->icons)),
             PropType::Image => $this->addImage($builder, $prop, $common),
             PropType::Reference => $builder->add($prop->name, IntegerType::class, $common + [
                 'attr' => array_filter([
@@ -303,6 +308,29 @@ final readonly class SectionFormBuilder
                     )),
             ),
         };
+    }
+
+    /**
+     * A choice with a pictogram per value is drawn as a row of buttons, the
+     * pictogram above the words: a width or an alignment is seen before it
+     * is read. Without pictograms, a list. The "none" of an optional choice
+     * has no value, and the screen draws it with a pictogram of its own.
+     *
+     * @param array<string, string> $icons
+     *
+     * @return array<string, mixed>
+     */
+    private static function asButtons(array $icons): array
+    {
+        if ([] === $icons) {
+            return [];
+        }
+
+        return [
+            'expanded' => true,
+            'choice_attr' => static fn (mixed $choice, mixed $key, mixed $value): array => ['data-cms-icon' => $icons[(string) $value] ?? ''],
+            'attr' => ['data-cms-choice-buttons' => ''],
+        ];
     }
 
     /**
@@ -339,15 +367,15 @@ final readonly class SectionFormBuilder
      */
     private function addImage(FormBuilderInterface $builder, Prop $prop, array $common): void
     {
-        $choices = $this->imageChoices();
-        $urls = $choices['urls'];
-
-        $builder->add($prop->name, ChoiceType::class, $common + [
-            'choices' => $choices['choices'],
-            'placeholder' => $prop->required ? false : '—',
-            'choice_translation_domain' => false,
-            'choice_attr' => static fn (int $id): array => isset($urls[$id]) ? ['data-url' => $urls[$id]] : [],
-            'attr' => ['data-cms-image' => ''],
+        // The id of the image: the screen draws the image and opens the
+        // picker of the media library on it. A list of every image cannot be
+        // read past a few dozen, and lost the current one past the 200
+        // newest.
+        $builder->add($prop->name, IntegerType::class, $common + [
+            'attr' => [
+                'min' => 0,
+                'data-cms-image-picker' => $this->urls->generate('admin.cms.media.picker'),
+            ] + ($this->mayUpload() ? ['data-cms-image-upload' => $this->urls->generate('admin.cms.media.add')] : []),
         ]);
 
         if ($this->mayUpload()) {
@@ -405,31 +433,5 @@ final readonly class SectionFormBuilder
         }
 
         return $data;
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    /**
-     * @return array{choices: array<string, int>, urls: array<int, string>}
-     */
-    private function imageChoices(): array
-    {
-        $locale = $this->library->locale();
-        $choices = [];
-        $urls = [];
-
-        foreach ($this->library->images() as $image) {
-            $title = trim((string) $image->setLocale($locale)->getTitle());
-            $label = '' === $title ? (string) $image->getFileName() : $title;
-            $choices[isset($choices[$label]) ? \sprintf('%s (#%d)', $label, $image->getId()) : $label] = (int) $image->getId();
-            $url = $this->library->publicUrl($image);
-
-            if (null !== $url) {
-                $urls[(int) $image->getId()] = $url;
-            }
-        }
-
-        return ['choices' => $choices, 'urls' => $urls];
     }
 }

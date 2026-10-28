@@ -29,6 +29,7 @@ use TheliaCMS\Page\PublishedPage;
 use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\SiteIcon;
+use TheliaCMS\TheliaCMS;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 
@@ -73,6 +74,7 @@ final class CmsExtension extends AbstractExtension
             new TwigFunction('cms_pages_of_type', $this->pagesOfType(...)),
             new TwigFunction('cms_page_type', $this->pageType(...)),
             new TwigFunction('cms_page_fields', $this->pageFields(...)),
+            new TwigFunction('cms_is_home', $this->isHome(...)),
         ];
     }
 
@@ -188,5 +190,16 @@ final class CmsExtension extends AbstractExtension
     public function siteIcon(): ?string
     {
         return $this->icon->exists() ? $this->urls->generate('cms.site_icon') : null;
+    }
+
+    /**
+     * A theme passes the id of a page as it holds it, or nothing on a screen
+     * that is not a page: a site with no home page set has none, whatever id.
+     */
+    public function isHome(int|string|null $id): bool
+    {
+        $home = (int) TheliaCMS::getConfigValue('home_page_id', 0);
+
+        return $home > 0 && (int) $id === $home;
     }
 }

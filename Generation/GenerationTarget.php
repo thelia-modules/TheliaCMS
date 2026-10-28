@@ -91,6 +91,16 @@ final readonly class GenerationTarget
     }
 
     /**
+     * The object a rich-text field belongs to: a page or an item of the shop
+     * (`product`, `category`, `brand`, `folder`, `content`), named as its form
+     * holds it, saved or not.
+     */
+    public static function field(string $type, int $id, string $title, string $locale): self
+    {
+        return new self($type, $id, trim($title), null, null, locale: $locale);
+    }
+
+    /**
      * The brief every page of the type is written from, before its own.
      */
     public function typeBrief(): ?Brief

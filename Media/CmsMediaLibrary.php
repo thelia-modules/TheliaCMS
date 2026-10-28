@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Media;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use Propel\Runtime\Propel;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Model\Lang;
 use TheliaCMS\Page\Admin\EditLanguage;
@@ -159,7 +160,8 @@ final readonly class CmsMediaLibrary implements MediaResolver
      * Images of the library the CMS owns, most recent first.
      *
      * TheliaLibrary ships no listing service, so the query lives here. A search
-     * term matches a title or one of the image tags.
+     * term matches a title, an alternative text, a caption or one of the image
+     * tags.
      *
      * @return list<LibraryImage>
      */
@@ -210,19 +212,158 @@ final readonly class CmsMediaLibrary implements MediaResolver
             return ['total' => 0, 'undescribed' => 0];
         }
 
-        $described = LibraryImageQuery::create()
-            ->filterById($imageIds, Criteria::IN)
-            ->filterByDecorative(0)
-            ->useLibraryImageI18nQuery(joinType: Criteria::LEFT_JOIN)
-                ->filterByLocale($locale)
-            ->endUse()
-            // A description is a non-empty alternative text. NULL and the empty
-            // string mean the same thing here, and only one of the two is what
-            // a fresh row holds.
-            ->where('library_image_i18n.alt IS NULL OR library_image_i18n.alt = ?', '')
-            ->count();
+        return ['total' => \count($imageIds), 'undescribed' => \count($this->undescribed($imageIds, $locale))];
+    }
 
-        return ['total' => \count($imageIds), 'undescribed' => $described];
+    /**
+     * The images of the CMS a search, a tag and a filter leave, in no order.
+     *
+     * "Unused" is let through: what uses an image is read from the content of
+     * the pages, which the media screens do, not the library.
+     *
+     * @param list<int> $only named images, the others left out
+     *
+     * @return list<int>
+     */
+    public function selection(string $locale, ?string $search = null, ?MediaFilter $filter = null, ?string $tag = null, array $only = []): array
+    {
+        $imageIds = $this->taggedImageIds($this->tagId());
+
+        if ([] !== $only) {
+            $imageIds = array_values(array_intersect($imageIds, $only));
+        }
+
+        if ([] !== $imageIds && null !== $search && '' !== $search) {
+            $imageIds = $this->matching($imageIds, $search);
+        }
+
+        if ([] !== $imageIds && null !== $tag && '' !== $tag) {
+            $tagId = $this->existingTagId($tag);
+            $imageIds = null === $tagId ? [] : array_values(array_intersect($imageIds, $this->taggedImageIds($tagId)));
+        }
+
+        if ([] === $imageIds) {
+            return [];
+        }
+
+        return match ($filter) {
+            MediaFilter::ToDescribe => $this->undescribed($imageIds, $locale),
+            MediaFilter::Decorative => array_map('intval', LibraryImageQuery::create()->filterById($imageIds, Criteria::IN)->filterByDecorative(1)->select(['Id'])->find()->toArray()),
+            MediaFilter::Unused, null => $imageIds,
+        };
+    }
+
+    /**
+     * One page of these images in the order asked. A title is read in the
+     * language edited, then in the default one, then the file name stands
+     * for it, as the screens show it.
+     *
+     * @param list<int> $imageIds
+     *
+     * @return list<LibraryImage>
+     */
+    public function sorted(array $imageIds, MediaOrder $order, string $locale, int $offset, int $limit): array
+    {
+        if ([] === $imageIds || $limit <= 0) {
+            return [];
+        }
+
+        $orderBy = match ($order) {
+            MediaOrder::Newest => 'li.id DESC',
+            MediaOrder::Oldest => 'li.id ASC',
+            MediaOrder::Weight => 'li.file_size DESC, li.id DESC',
+            MediaOrder::Title => "COALESCE(NULLIF(TRIM(edited.title), ''), NULLIF(TRIM(fallback.title), ''), li.file_name) ASC, li.id ASC",
+        };
+
+        $statement = Propel::getConnection('TheliaMain')->prepare(\sprintf(
+            'SELECT li.id FROM library_image li
+             LEFT JOIN library_image_i18n edited ON edited.id = li.id AND edited.locale = :locale
+             LEFT JOIN library_image_i18n fallback ON fallback.id = li.id AND fallback.locale = :fallback
+             WHERE li.id IN (%s) ORDER BY %s LIMIT %d OFFSET %d',
+            implode(',', array_map('intval', $imageIds)),
+            $orderBy,
+            $limit,
+            max(0, $offset),
+        ));
+        $statement->execute(['locale' => $locale, 'fallback' => Lang::getDefaultLanguage()->getLocale()]);
+        $pageIds = array_map('intval', $statement->fetchAll(\PDO::FETCH_COLUMN));
+
+        $images = [];
+
+        foreach (LibraryImageQuery::create()->filterById($pageIds, Criteria::IN)->find() as $image) {
+            $images[(int) $image->getId()] = $image;
+        }
+
+        return array_values(array_filter(array_map(static fn (int $id): ?LibraryImage => $images[$id] ?? null, $pageIds)));
+    }
+
+    /**
+     * The tags the images of the CMS carry, the CMS one aside, by title, with
+     * how many images carry each.
+     *
+     * @return array<string, int>
+     */
+    public function tagCounts(): array
+    {
+        $imageIds = $this->taggedImageIds($this->tagId());
+
+        if ([] === $imageIds) {
+            return [];
+        }
+
+        $perTag = [];
+
+        foreach (LibraryImageTagQuery::create()->filterByImageId($imageIds, Criteria::IN)->filterByTagId($this->tagId(), Criteria::NOT_EQUAL)->select(['TagId'])->find()->toArray() as $tagId) {
+            $perTag[(int) $tagId] = ($perTag[(int) $tagId] ?? 0) + 1;
+        }
+
+        $counts = [];
+        $locale = $this->locale();
+
+        foreach (LibraryTagQuery::create()->filterById(array_keys($perTag), Criteria::IN)->find() as $tag) {
+            $title = $tag->setLocale($locale)->getTitle() ?? $tag->setLocale(Lang::getDefaultLanguage()->getLocale())->getTitle();
+
+            if (null !== $title && '' !== $title) {
+                $counts[$title] = ($counts[$title] ?? 0) + $perTag[(int) $tag->getId()];
+            }
+        }
+
+        ksort($counts, \SORT_NATURAL | \SORT_FLAG_CASE);
+
+        return $counts;
+    }
+
+    /**
+     * The images among these that say nothing in the language: neither a
+     * non-blank alternative text there nor decorative. An image with no row
+     * at all in the language says nothing in it either.
+     *
+     * @param list<int> $imageIds
+     *
+     * @return list<int>
+     */
+    private function undescribed(array $imageIds, string $locale): array
+    {
+        if ([] === $imageIds) {
+            return [];
+        }
+
+        $statement = Propel::getConnection('TheliaMain')->prepare(\sprintf(
+            "SELECT li.id FROM library_image li
+             WHERE li.id IN (%s) AND li.decorative = 0
+             AND NOT EXISTS (SELECT 1 FROM library_image_i18n i WHERE i.id = li.id AND i.locale = :locale AND TRIM(COALESCE(i.alt, '')) <> '')",
+            implode(',', array_map('intval', $imageIds)),
+        ));
+        $statement->execute(['locale' => $locale]);
+
+        return array_map('intval', $statement->fetchAll(\PDO::FETCH_COLUMN));
+    }
+
+    private function existingTagId(string $title): ?int
+    {
+        $tag = LibraryTagQuery::create()->useLibraryTagI18nQuery()->filterByTitle($title)->endUse()->findOne();
+
+        return $tag instanceof LibraryTag ? (int) $tag->getId() : null;
     }
 
     /**
@@ -274,6 +415,39 @@ final readonly class CmsMediaLibrary implements MediaResolver
     }
 
     /**
+     * Gives an image one more tag, created on first use; a tag it carries
+     * already is left as it is.
+     */
+    public function addTag(LibraryImage $image, string $title): void
+    {
+        $title = trim($title);
+
+        if ('' === $title) {
+            return;
+        }
+
+        $tagId = $this->tagIdFor($title);
+
+        if (0 === LibraryImageTagQuery::create()->filterByImageId($image->getId())->filterByTagId($tagId)->count()) {
+            $this->imageTags->associateImage((string) $image->getId(), (string) $tagId);
+        }
+    }
+
+    /**
+     * Takes a tag off an image. The tag that marks it as CMS content stays.
+     */
+    public function removeTag(LibraryImage $image, string $title): void
+    {
+        $tagId = $this->existingTagId(trim($title));
+
+        if (null === $tagId || $tagId === $this->tagId()) {
+            return;
+        }
+
+        LibraryImageTagQuery::create()->filterByImageId($image->getId())->filterByTagId($tagId)->delete();
+    }
+
+    /**
      * Replaces the tags of an image, keeping the one that marks it as CMS
      * content. Tags are created on first use.
      *
@@ -317,10 +491,17 @@ final readonly class CmsMediaLibrary implements MediaResolver
      */
     private function matching(array $imageIds, string $search): array
     {
-        $byTitle = LibraryImageQuery::create()
+        // What an editor remembers of an image: its name, what it shows or its
+        // caption. The stored file name is random; the uploaded one is the
+        // first title.
+        $byText = LibraryImageQuery::create()
             ->filterById($imageIds, Criteria::IN)
             ->useLibraryImageI18nQuery()
                 ->filterByTitle('%'.$search.'%', Criteria::LIKE)
+                ->_or()
+                ->filterByAlt('%'.$search.'%', Criteria::LIKE)
+                ->_or()
+                ->filterByCaption('%'.$search.'%', Criteria::LIKE)
             ->endUse()
             ->select(['Id'])
             ->find()
@@ -342,7 +523,7 @@ final readonly class CmsMediaLibrary implements MediaResolver
 
         return array_values(array_intersect(
             array_map('intval', $imageIds),
-            array_unique(array_merge(array_map('intval', $byTitle), $byTag)),
+            array_unique(array_merge(array_map('intval', $byText), $byTag)),
         ));
     }
 

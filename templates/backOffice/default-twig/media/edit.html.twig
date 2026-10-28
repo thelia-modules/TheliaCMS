@@ -20,13 +20,32 @@
             <a class="btn btn-sm btn-outline-secondary" href="{{ item.url }}" target="_blank" rel="noopener">
                 <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ 'Open the file'|trans({}, 'theliacms') }}
             </a>
-            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.media.list', { edit_language_id: edit_language_id }) }}">
+            <a class="btn btn-sm btn-outline-secondary" data-testid="cms-media-back" href="{{ path('admin.cms.media.list', list_parameters|merge({ edit_language_id: edit_language_id })) }}">
                 <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to media'|trans({}, 'theliacms') }}
             </a>
         {% endblock %}
     {% endembed %}
 
-    <div class="d-flex justify-content-end mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        {# The description is per language and the decorative flag for all of
+           them: where the image stands everywhere, without opening it in each
+           language. #}
+        {% set state_labels = {
+            described: 'Described'|trans({}, 'theliacms'),
+            missing: 'To describe'|trans({}, 'theliacms'),
+            decorative: 'Decorative'|trans({}, 'theliacms'),
+        } %}
+        <div class="d-flex flex-wrap align-items-center gap-2" data-testid="cms-media-descriptions">
+            <span class="small text-body-secondary">{{ 'Description by language'|trans({}, 'theliacms') }}</span>
+            {% for description in descriptions %}
+                <a class="badge text-decoration-none {{ description.state == 'described' ? 'text-bg-success' : (description.state == 'missing' ? 'text-bg-warning' : 'text-bg-light') }} {{ description.languageId == edit_language_id ? 'border border-2 border-dark' }}"
+                   href="{{ path('admin.cms.media.edit', list_parameters|merge({ id: item.id, edit_language_id: description.languageId })) }}"
+                   data-locale="{{ description.locale }}" data-state="{{ description.state }}"
+                   {{ description.languageId == edit_language_id ? 'aria-current="true"' }}>
+                    {{ description.code }} · {{ state_labels[description.state] }}
+                </a>
+            {% endfor %}
+        </div>
         {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
     </div>
 
@@ -64,7 +83,7 @@
                     {% if used_by == 0 %}
                         {{ 'Not used yet'|trans({}, 'theliacms') }}
                     {% else %}
-                        {{ 'Used in %count% page(s)'|trans({ '%count%': used_by }, 'theliacms') }}
+                        {{ 'Used by %count% page(s) or item(s)'|trans({ '%count%': used_by }, 'theliacms') }}
                     {% endif %}
                 </div>
                 {% if used_by == 0 %}
@@ -109,23 +128,45 @@
 
                 {{ form_row(form.caption) }}
                 {{ form_row(form.title) }}
-                {{ form_row(form.tags) }}
-                {{ form_row(form.file) }}
+                {# Suggested from the tags the library already has: one tag
+                   written twice two ways splits the images it should group. #}
+                {{ form_row(form.tags, { attr: { 'data-cms-media-tags': known_tags|json_encode, 'data-remove-label': 'Remove the tag'|trans({}, 'theliacms') } }) }}
+                {{ form_row(form.file, { attr: { 'data-cms-media-replace': '' } }) }}
+                <div class="mb-3 d-none" data-cms-media-replace-preview>
+                    <p class="small text-body-secondary mb-1">{{ 'The new file, in place of the current one once saved:'|trans({}, 'theliacms') }}</p>
+                    <img class="img-thumbnail" alt="" style="max-height: 200px">
+                    <p class="small text-body-secondary mt-1 mb-0" data-cms-media-replace-size></p>
+                </div>
 
                 <button type="submit" class="btn btn-primary">{{ 'Save'|trans({}, 'theliacms') }}</button>
             {{ form_end(form) }}
 
-            <form method="post" class="mt-3 pt-3 border-top"
-                  action="{{ path('admin.cms.media.delete', { id: item.id, edit_language_id: edit_language_id }) }}"
-                  onsubmit="return confirm('{{ 'Delete this image for good?'|trans({}, 'theliacms')|e('js') }}')">
+            {# Asked in a dialog of the screen by its script, not by the
+               browser's confirm(). #}
+            <form method="post" class="mt-3 pt-3 border-top" data-cms-media-delete
+                  action="{{ path('admin.cms.media.delete', list_parameters|merge({ id: item.id, edit_language_id: edit_language_id })) }}">
                 <input type="hidden" name="_token" value="{{ assignToken() }}">
                 <button type="submit" class="btn btn-sm btn-outline-danger" {{ used_by > 0 ? 'disabled' : '' }}>
                     <i class="bi bi-trash3 me-1" aria-hidden="true"></i>{{ 'Delete this image'|trans({}, 'theliacms') }}
                 </button>
                 {% if used_by > 0 %}
-                    <span class="form-text d-block">{{ 'Remove it from the pages above before deleting it.'|trans({}, 'theliacms') }}</span>
+                    <span class="form-text d-block">{{ 'Remove it from the pages and items above before deleting it.'|trans({}, 'theliacms') }}</span>
                 {% endif %}
             </form>
+
+            <dialog class="border-0 rounded shadow p-0" data-cms-media-delete-dialog aria-labelledby="cms-media-delete-title"
+                    style="width: min(480px, calc(100vw - 32px))">
+                <div class="p-4">
+                    <h2 class="h5" id="cms-media-delete-title">{{ 'Delete this image for good?'|trans({}, 'theliacms') }}</h2>
+                    <p class="text-body-secondary">{{ 'Its file is removed. No page uses it, so none changes.'|trans({}, 'theliacms') }}</p>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-cms-media-delete-cancel>{{ 'Cancel'|trans({}, 'theliacms') }}</button>
+                        <button type="button" class="btn btn-danger" data-cms-media-delete-confirm>{{ 'Delete this image'|trans({}, 'theliacms') }}</button>
+                    </div>
+                </div>
+            </dialog>
         </div>
     </div>
+
+    <script src="{{ module_asset('TheliaCMS', 'assets/media-sheet.js') }}?v={{ assets_version }}" defer></script>
 {% endblock %}

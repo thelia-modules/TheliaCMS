@@ -108,6 +108,26 @@ final class CmsSettingsType extends AbstractType
                 'attr' => ['min' => GeneratorSettings::MIN_MAX_TOKENS],
                 'help' => 'An answer cut at this length loses the end of the page. A long page needs about four tokens a word.',
             ])
+            ->add('textModel', TextType::class, [
+                'label' => 'Model',
+                'required' => false,
+                'help' => 'Left empty, the model of the pages.',
+            ])
+            ->add('textEffort', ChoiceType::class, [
+                'label' => 'Reasoning effort',
+                'choices' => [
+                    'Low: the default' => 'low',
+                    'Medium' => 'medium',
+                    'High' => 'high',
+                    'Very high' => 'xhigh',
+                    'Maximum' => 'max',
+                ],
+            ])
+            ->add('textMaxTokens', IntegerType::class, [
+                'label' => 'Longest answer, in tokens',
+                'attr' => ['min' => GeneratorSettings::MIN_TEXT_MAX_TOKENS],
+                'help' => 'A description of a few paragraphs fits in 2,000.',
+            ])
             ->add('generatorWebFetch', CheckboxType::class, [
                 'label' => 'Read the web pages a brief cites',
                 'required' => false,

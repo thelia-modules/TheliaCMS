@@ -132,7 +132,7 @@ final readonly class ContentScreen
     {
         $assets = __DIR__.'/../../templates/backOffice/default-twig/assets/';
 
-        return substr(hash('xxh3', (string) @filemtime($assets.'content-editor.js').(string) @filemtime($assets.'content-editor.css')), 0, 12);
+        return substr(hash('xxh3', (string) @filemtime($assets.'content-editor.js').(string) @filemtime($assets.'content-editor.css').(string) @filemtime($assets.'media-picker.js')), 0, 12);
     }
 
     /**
@@ -327,6 +327,7 @@ final readonly class ContentScreen
             GenerationRequest::KIND_REVISION => 'Change',
             GenerationRequest::KIND_SECTION => 'Section',
             GenerationRequest::KIND_TRANSLATION => 'Translation',
+            GenerationRequest::KIND_TEXT => 'Text of a field',
             GenerationLog::KIND_MANUAL => 'By hand',
             default => $kind,
         }, [], TheliaCMS::DOMAIN_NAME);

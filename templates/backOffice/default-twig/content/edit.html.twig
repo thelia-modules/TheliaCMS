@@ -21,6 +21,9 @@
     {# The rich-text editor of the back office, when a module answers the
        hook: the html props are textareas it upgrades, and textareas without it. #}
     {{ safe_hook('wysiwyg.js', { location: 'cms-content-js' }) }}
+    {# The picker of images, which content-editor.js binds on every form:
+       loaded before it. #}
+    {{ include('@TheliaCMSModule/backOffice/default-twig/media/_picker.html.twig', { media_picker_version: assets_version }) }}
     <script src="{{ module_asset('TheliaCMS', 'assets/content-editor.js') }}?v={{ assets_version }}" defer></script>
 {% endblock %}
 

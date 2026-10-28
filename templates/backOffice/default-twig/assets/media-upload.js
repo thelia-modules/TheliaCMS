@@ -1,0 +1,233 @@
+/*
+ * Sending images to the media library of the CMS.
+ *
+ * The form of the list posts its files at once without JavaScript. With it,
+ * the form is also a place to drop files on, and each file goes on its own:
+ * a row per file shows its progress, then "added" or why it was refused, and
+ * one refused file costs none of the others. The format and the size are
+ * checked here first, so a file the server would refuse is not sent; the
+ * server checks again.
+ *
+ * Once every file is answered, the describe queue opens on the images just
+ * added. When a file was refused, the screen stays, so the editor reads why,
+ * and offers the queue.
+ */
+(function () {
+    'use strict';
+
+    function element(tag, className, text) {
+        var node = document.createElement(tag);
+
+        if (className) {
+            node.className = className;
+        }
+
+        if (text) {
+            node.textContent = text;
+        }
+
+        return node;
+    }
+
+    function bind(form) {
+        var input = form.querySelector('input[type="file"]');
+        var list = form.querySelector('[data-cms-media-upload-files]');
+        var done = form.querySelector('[data-cms-media-upload-done]');
+        var token = form.querySelector('input[name="_token"]');
+        var accepted = (form.getAttribute('data-accepted') || '').split(',');
+        var maxSize = parseInt(form.getAttribute('data-max-size') || '0', 10);
+        var describeUrl = form.getAttribute('data-describe-url');
+        var m = JSON.parse(form.getAttribute('data-messages') || '{}');
+        var busy = false;
+
+        // The form is sent by the script now, not on change.
+        input.removeAttribute('onchange');
+        input.addEventListener('change', function () {
+            send(Array.prototype.slice.call(input.files));
+            input.value = '';
+        });
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            send(Array.prototype.slice.call(input.files));
+            input.value = '';
+        });
+
+        ['dragenter', 'dragover'].forEach(function (type) {
+            form.addEventListener(type, function (event) {
+                event.preventDefault();
+                form.classList.add('border-primary', 'bg-body-secondary');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(function (type) {
+            form.addEventListener(type, function (event) {
+                event.preventDefault();
+                form.classList.remove('border-primary', 'bg-body-secondary');
+            });
+        });
+
+        form.addEventListener('drop', function (event) {
+            send(Array.prototype.slice.call(event.dataTransfer ? event.dataTransfer.files : []));
+        });
+
+        function refusalOf(file) {
+            if (accepted.indexOf(file.type) === -1) {
+                return m.format;
+            }
+
+            if (maxSize > 0 && file.size > maxSize) {
+                return m.tooLarge;
+            }
+
+            return null;
+        }
+
+        function row(file) {
+            var item = element('li', 'd-flex align-items-center gap-2 py-1');
+            item.setAttribute('data-cms-media-upload-file', '');
+            var name = element('span', 'text-truncate', file.name);
+            name.style.maxWidth = '40%';
+            var bar = element('div', 'progress flex-grow-1');
+            bar.style.height = '6px';
+            var fill = element('div', 'progress-bar');
+            fill.style.width = '0%';
+            bar.appendChild(fill);
+            var status = element('span', 'text-nowrap text-body-secondary', m.sending);
+            item.append(name, bar, status);
+            list.appendChild(item);
+
+            return {
+                progress: function (ratio) { fill.style.width = Math.round(ratio * 100) + '%'; },
+                added: function () {
+                    fill.style.width = '100%';
+                    fill.classList.add('bg-success');
+                    status.className = 'text-nowrap text-success';
+                    status.textContent = m.added;
+                },
+                refused: function (reason) {
+                    bar.remove();
+                    status.className = 'text-danger';
+                    status.textContent = reason;
+                    item.setAttribute('data-cms-media-upload-refused', '');
+                },
+            };
+        }
+
+        // One request per file, one after the other: the rows fill in the
+        // order the files were given, and a large sending never opens tens
+        // of connections at once.
+        function upload(file, view) {
+            return new Promise(function (resolve) {
+                var body = new FormData();
+                body.append('_token', token ? token.value : '');
+                body.append('files[]', file);
+
+                var request = new XMLHttpRequest();
+                request.open('POST', form.action);
+                request.setRequestHeader('Accept', 'application/json');
+                request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                request.upload.addEventListener('progress', function (event) {
+                    if (event.lengthComputable) {
+                        view.progress(event.loaded / event.total);
+                    }
+                });
+                request.addEventListener('load', function () {
+                    var answer = null;
+
+                    try {
+                        answer = JSON.parse(request.responseText);
+                    } catch (error) {
+                        answer = null;
+                    }
+
+                    if (request.status === 200 && answer && answer.stored && answer.stored.length > 0) {
+                        view.added();
+                        resolve(answer.stored[0].id);
+
+                        return;
+                    }
+
+                    view.refused(answer && answer.refused && answer.refused[0] ? answer.refused[0].reason : m.failed);
+                    resolve(null);
+                });
+                request.addEventListener('error', function () {
+                    view.refused(m.failed);
+                    resolve(null);
+                });
+                request.send(body);
+            });
+        }
+
+        function send(files) {
+            if (busy || files.length === 0) {
+                return;
+            }
+
+            busy = true;
+            list.classList.remove('d-none');
+            done.classList.add('d-none');
+            done.replaceChildren();
+
+            var stored = [];
+            var refused = 0;
+
+            files.reduce(function (previous, file) {
+                return previous.then(function () {
+                    var view = row(file);
+                    var refusal = refusalOf(file);
+
+                    if (refusal) {
+                        view.refused(refusal);
+                        refused++;
+
+                        return null;
+                    }
+
+                    return upload(file, view).then(function (id) {
+                        if (id) {
+                            stored.push(id);
+                        } else {
+                            refused++;
+                        }
+                    });
+                });
+            }, Promise.resolve()).then(function () {
+                busy = false;
+                finish(stored, refused);
+            });
+        }
+
+        function finish(stored, refused) {
+            if (stored.length === 0) {
+                return;
+            }
+
+            var queue = describeUrl + (describeUrl.indexOf('?') === -1 ? '?' : '&') + 'images=' + stored.join(',');
+
+            if (refused === 0) {
+                window.location.assign(queue);
+
+                return;
+            }
+
+            var describe = element('a', 'btn btn-sm btn-primary', (m.describe || '').replace('%count%', String(stored.length)));
+            describe.href = queue;
+            describe.setAttribute('data-cms-media-upload-describe', '');
+            var stay = element('a', 'btn btn-sm btn-outline-secondary', m.stay);
+            stay.href = window.location.href;
+            done.append(describe, stay);
+            done.classList.remove('d-none');
+        }
+    }
+
+    function start() {
+        document.querySelectorAll('form[data-cms-media-upload]').forEach(bind);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+    } else {
+        start();
+    }
+})();

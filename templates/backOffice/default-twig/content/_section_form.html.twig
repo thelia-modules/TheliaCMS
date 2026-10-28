@@ -21,14 +21,28 @@
                 {% if file %}{{ form_row(file) }}{% endif %}
                 {% if address %}{{ form_row(address) }}{% endif %}
             </details>
+        {% elseif child.vars.attr['data-cms-choice-buttons'] is defined %}
+            {{ _self.choice_buttons(child) }}
         {% elseif child.vars.name == 'cms_appearance' %}
             {# How the section stands out, besides its props: folded, open
                when the section already has a look of its own. #}
             <details class="cms-content__appearance cms-content__more" data-testid="cms-section-appearance" {{ child.vars.value|filter(value => value is not empty)|length > 0 ? 'open' }}>
                 <summary>{{ child.vars.label|trans({}, 'theliacms') }}</summary>
                 <div class="cms-content__appearance-fields">
-                    {% for setting in child %}
-                        {{ form_row(setting) }}
+                    {# The two colours side by side, each with its help under
+                       its field so both fields stand on one line; then the
+                       room and the alignment, each a row of buttons. #}
+                    <div class="cms-content__colors">
+                        {% for setting in child|filter(setting => setting.vars.attr['data-cms-color'] is defined) %}
+                            {{ _self.color(setting) }}
+                        {% endfor %}
+                    </div>
+                    {% for setting in child|filter(setting => not setting.rendered) %}
+                        {% if setting.vars.attr['data-cms-choice-buttons'] is defined %}
+                            {{ _self.choice_buttons(setting) }}
+                        {% else %}
+                            {{ form_row(setting) }}
+                        {% endif %}
                     {% endfor %}
                 </div>
             </details>
@@ -54,6 +68,76 @@
             {{ form_row(child) }}
         {% endif %}
     {% endfor %}
+{% endmacro %}
+
+{#
+    A choice with a pictogram per value: a row of buttons, the pictogram
+    above the words. Radio buttons underneath, so the form sends what it
+    always sent and the keyboard moves through them as through any radios.
+#}
+{% macro choice_buttons(field) %}
+    {% set domain = field.vars.translation_domain %}
+    <fieldset class="mb-3" data-cms-choice-buttons data-testid="cms-choice-{{ field.vars.name }}">
+        <legend class="form-label fs-6 mb-1">{{ domain is same as(false) ? field.vars.label : field.vars.label|trans({}, domain) }}</legend>
+        {% if field.vars.help %}
+            <div class="form-text mt-0 mb-2">{{ domain is same as(false) ? field.vars.help : field.vars.help|trans({}, domain) }}</div>
+        {% endif %}
+        <div class="cms-content__choices">
+            {% for option in field %}
+                {% set option_domain = option.vars.translation_domain %}
+                <input type="radio" class="btn-check" id="{{ option.vars.id }}" name="{{ option.vars.full_name }}"
+                       value="{{ option.vars.value }}" {{ option.vars.checked ? 'checked' }} autocomplete="off">
+                <label class="btn btn-outline-secondary d-flex flex-column align-items-center justify-content-center gap-1 py-2" for="{{ option.vars.id }}">
+                    {{ _self.icon(option.vars.attr['data-cms-icon']|default('bi-dash-circle')) }}
+                    <span class="small lh-sm">{{ option_domain is same as(false) ? option.vars.label : option.vars.label|trans({}, option_domain) }}</span>
+                </label>
+                {% do option.setRendered %}
+            {% endfor %}
+        </div>
+        {{ form_errors(field) }}
+    </fieldset>
+    {% do field.setRendered %}
+{% endmacro %}
+
+{#
+    A colour of the appearance: its name, the field the script pairs with a
+    swatch, its help under it.
+#}
+{% macro color(field) %}
+    {% set domain = field.vars.translation_domain %}
+    <div class="mb-3">
+        <label class="form-label" for="{{ field.vars.id }}">{{ domain is same as(false) ? field.vars.label : field.vars.label|trans({}, domain) }}</label>
+        {{ form_widget(field) }}
+        {% if field.vars.help %}
+            <div class="form-text">{{ domain is same as(false) ? field.vars.help : field.vars.help|trans({}, domain) }}</div>
+        {% endif %}
+        {{ form_errors(field) }}
+    </div>
+{% endmacro %}
+
+{#
+    The pictograms of the module, drawn here so a width or a room shows its
+    shape; any other name is one of Bootstrap Icons.
+#}
+{% macro icon(name) %}
+    {% set widths = { 'width-narrow': 14, 'width-column': 26, 'width-full': 40 } %}
+    {% set rooms = { 'space-small': 3, 'space-medium': 6, 'space-large': 9 } %}
+    {% if widths[name] is defined %}
+        {% set width = widths[name] %}
+        <svg width="40" height="28" viewBox="0 0 40 28" aria-hidden="true">
+            <rect x="0.5" y="0.5" width="39" height="27" rx="2" fill="none" stroke="currentColor" opacity=".5"/>
+            <rect x="{{ (40 - width) / 2 }}" y="7" width="{{ width }}" height="14" rx="1" fill="currentColor"/>
+        </svg>
+    {% elseif rooms[name] is defined %}
+        {% set room = rooms[name] %}
+        <svg width="40" height="28" viewBox="0 0 40 28" aria-hidden="true">
+            <line x1="2" y1="1" x2="38" y2="1" stroke="currentColor" opacity=".5"/>
+            <line x1="2" y1="27" x2="38" y2="27" stroke="currentColor" opacity=".5"/>
+            <rect x="8" y="{{ 1 + room }}" width="24" height="{{ 26 - 2 * room }}" rx="1" fill="currentColor"/>
+        </svg>
+    {% else %}
+        <i class="bi {{ name }} fs-4 lh-1" aria-hidden="true"></i>
+    {% endif %}
 {% endmacro %}
 
 {% macro item(item) %}

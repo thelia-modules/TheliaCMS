@@ -32,6 +32,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Media\Admin\CmsMediaWriter;
+use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Notice\NativeContentNotice;
 use TheliaCMS\Page\CmsUrlService;
@@ -70,7 +71,7 @@ final readonly class CmsPageAdminController
         private CmsUrlService $addresses,
         private PageListPresenter $listing,
         private NativeContentNotice $nativeContents,
-        private PageImageChoices $imageChoices,
+        private CmsMediaLibrary $library,
         private CmsMediaWriter $media,
         private PageTypeRepository $pageTypes,
         private PageTagRepository $tags,
@@ -256,7 +257,11 @@ final readonly class CmsPageAdminController
     {
         $this->denyUnless(AccessManager::UPDATE);
 
-        $this->writer->toggleVisibility($this->livePageOrFail($id));
+        try {
+            $this->writer->toggleVisibility($this->livePageOrFail($id));
+        } catch (ModelPageSettingException) {
+            $this->flash($request, 'danger', $this->translate('This page is the model of its template: it is never online.'));
+        }
 
         return $this->backToList($request);
     }
@@ -301,7 +306,11 @@ final readonly class CmsPageAdminController
     {
         $this->denyUnless(AccessManager::DELETE);
 
-        $this->writer->moveToTrash($this->livePageOrFail($id));
+        try {
+            $this->writer->moveToTrash($this->livePageOrFail($id));
+        } catch (ModelPageSettingException) {
+            $this->flash($request, 'danger', $this->translate('This page is the model of its template: it is deleted with its template, under CMS > Page templates, never moved to the bin.'));
+        }
 
         return $this->backToList($request);
     }
@@ -349,8 +358,7 @@ final readonly class CmsPageAdminController
     {
         $lang = $this->editLang($request);
         $locale = $lang->getLocale();
-        $images = $this->imageChoices->for($page, $locale);
-        $form = $this->buildForm($page, $lang, array_keys($images));
+        $form = $this->buildForm($page, $lang);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -380,21 +388,17 @@ final readonly class CmsPageAdminController
             'has_fields' => !$type->fields()->isEmpty(),
             'form' => $form->createView(),
             'page' => $page,
-            'images' => $images,
             'status' => $page->isNew() ? PageStatus::Draft : $this->pages->statusOf($page, $locale),
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
             'is_home' => !$page->isNew() && (int) $page->getId() === (int) TheliaCMS::getConfigValue('home_page_id', 0),
             'preview_url' => $page->isNew() ? null : $page->getUrl($locale),
             // The browser keeps the script until its version changes.
-            'assets_version' => substr(hash('xxh3', (string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/page-address.js')), 0, 12),
+            'assets_version' => substr(hash('xxh3', (string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/page-address.js').(string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/media-picker.js')), 0, 12),
         ]));
     }
 
-    /**
-     * @param list<int> $imageChoices
-     */
-    private function buildForm(CmsPage $page, Lang $lang, array $imageChoices): FormInterface
+    private function buildForm(CmsPage $page, Lang $lang): FormInterface
     {
         $locale = $lang->getLocale();
 
@@ -424,7 +428,9 @@ final readonly class CmsPageAdminController
             'pageType' => $page->getPageType(),
             'tag' => $page->getTagId(),
             'image' => $page->getImageId(),
-            'visible' => $page->isNew() ? 1 : $page->getVisible(),
+            // A model is never online, whatever an older version of the module
+            // or an import left in the row.
+            'visible' => $page->isNew() ? 1 : (1 === $page->getModel() ? 0 : $page->getVisible()),
             'publishAt' => $page->getPublishAt(),
             'unpublishAt' => $page->getUnpublishAt(),
             'metaTitle' => $page->isNew() ? null : $page->getMetaTitle(),
@@ -438,7 +444,8 @@ final readonly class CmsPageAdminController
             'fields' => $this->fields->valuesOf($page, $locale, $definitions),
         ], [
             'parent_choices' => $this->pages->parentChoices($locale, $page->isNew() ? null : (int) $page->getId()),
-            'image_choices' => $imageChoices,
+            'image_picker_url' => $this->urls->generate('admin.cms.media.picker'),
+            'image_upload_url' => $this->urls->generate('admin.cms.media.add'),
             'page_type_choices' => array_map(strval(...), array_keys($typeLabels)),
             'page_type_labels' => $typeLabels,
             'is_model' => 1 === $page->getModel(),
@@ -461,7 +468,7 @@ final readonly class CmsPageAdminController
             ->setPageType($data['pageType'] ?? $page->getPageType())
             ->setTagId(null === $data['tag'] ? null : (int) $data['tag'])
             ->setImageId($this->chosenImage($data, $locale))
-            ->setVisible((int) $data['visible'])
+            ->setVisible(1 === $page->getModel() ? 0 : (int) $data['visible'])
             ->setPublishAt($data['publishAt'])
             ->setUnpublishAt($data['unpublishAt']);
 
@@ -493,10 +500,17 @@ final readonly class CmsPageAdminController
     private function chosenImage(array $data, string $locale): ?int
     {
         if (($data['imageUpload'] ?? null) instanceof UploadedFile) {
-            return (int) $this->media->add([$data['imageUpload']], $locale)[0]->getId();
+            $stored = $this->media->add([$data['imageUpload']], $locale)->stored;
+
+            if (isset($stored[0])) {
+                return (int) $stored[0]->getId();
+            }
         }
 
-        return null === $data['image'] ? null : (int) $data['image'];
+        // An id the screen sent is an image of the library of the CMS, or none.
+        $id = (int) ($data['image'] ?? 0);
+
+        return $id > 0 && null !== $this->library->ownedImage($id) ? $id : null;
     }
 
     private function livePageOrFail(int $id): CmsPage

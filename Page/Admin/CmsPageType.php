@@ -112,6 +112,9 @@ final class CmsPageType extends AbstractType
                 'label' => 'Online',
                 'choices' => ['Yes' => 1, 'No' => 0],
                 'expanded' => true,
+                // A model is a reference for new pages, never a page of the site.
+                'disabled' => $options['is_model'],
+                'help' => $options['is_model'] ? 'The model of a template is never online.' : null,
             ])
             ->add('publishAt', DateTimeType::class, [
                 'label' => 'Publish on',
@@ -150,13 +153,17 @@ final class CmsPageType extends AbstractType
                 'choices' => ['Follow links' => 0, 'Do not follow links (nofollow)' => 1],
                 'expanded' => true,
             ])
-            ->add('image', ChoiceType::class, [
+            // The id of the image, drawn and picked in the media library by
+            // the screen; the controller keeps it only for an image the CMS owns.
+            ->add('image', IntegerType::class, [
                 'label' => 'Image of the page',
                 'required' => false,
-                'expanded' => true,
-                'placeholder' => 'No image',
-                'choices' => $options['image_choices'],
-                'choice_label' => static fn (int $imageId): string => (string) $imageId,
+                'help' => 'Shown on the cards that present the page elsewhere on the site and when it is shared.',
+                'attr' => array_filter([
+                    'min' => 0,
+                    'data-cms-image-picker' => $options['image_picker_url'],
+                    'data-cms-image-upload' => $options['allow_image_upload'] ? $options['image_upload_url'] : null,
+                ]),
             ]);
 
         $this->addFields($builder, $options['field_definitions'], $options['field_locale']);
@@ -250,7 +257,8 @@ final class CmsPageType extends AbstractType
             ->setDefaults([
                 'translation_domain' => 'theliacms',
                 'parent_choices' => [],
-                'image_choices' => [],
+                'image_picker_url' => null,
+                'image_upload_url' => null,
                 'page_type_choices' => [PageTypeCode::DEFAULT],
                 'page_type_labels' => [],
                 'tag_choices' => [],
@@ -272,7 +280,8 @@ final class CmsPageType extends AbstractType
             ->setAllowedTypes('field_definitions', FieldDefinitions::class)
             ->setAllowedTypes('field_locale', 'string')
             ->setAllowedTypes('parent_choices', 'array')
-            ->setAllowedTypes('image_choices', 'array')
+            ->setAllowedTypes('image_picker_url', ['null', 'string'])
+            ->setAllowedTypes('image_upload_url', ['null', 'string'])
             ->setAllowedTypes('page_type_choices', 'array')
             ->setAllowedTypes('tag_choices', 'array')
             ->setAllowedTypes('allow_image_upload', 'bool');

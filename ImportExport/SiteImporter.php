@@ -215,12 +215,14 @@ final readonly class SiteImporter
             }
 
             $model = $existing ?? new CmsPage();
+            $isModel = $this->isModel($page, $existing, $report, $connection);
             $model
                 ->setParent($parentId)
                 ->setPosition((int) ($page['position'] ?? 0))
-                ->setVisible(($page['visible'] ?? true) ? 1 : 0)
+                // The model of a type is never online, whatever the file says.
+                ->setVisible(!$isModel && ($page['visible'] ?? true) ? 1 : 0)
                 ->setPageType($this->pageTypeOf($page, $report, $connection, $knownTypes))
-                ->setModel($this->isModel($page, $existing, $report, $connection) ? 1 : 0)
+                ->setModel($isModel ? 1 : 0)
                 ->setFields(self::fieldsJson($page['fields'] ?? null))
                 ->setTagId($this->tagIdOf($page, $report, $connection))
                 ->setImageId($this->mappedImage($page['image_id'] ?? null, $mediaMap))

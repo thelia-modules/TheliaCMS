@@ -30,12 +30,4 @@ final readonly class MediaTally
         public int $undescribed,
     ) {
     }
-
-    /**
-     * Whether the grid is showing everything, given how many rows it holds.
-     */
-    public function isComplete(int $shown): bool
-    {
-        return $shown >= $this->total;
-    }
 }

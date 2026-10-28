@@ -78,7 +78,7 @@ final class CmsMediaType extends AbstractType
                 )],
                 'help' => 'The new file keeps the same address, so the pages using this image show it right away.',
             ])
-            ->addEventListener(FormEvents::SUBMIT, $this->requireAltUnlessDecorative());
+            ->addEventListener(FormEvents::SUBMIT, self::requireAltUnlessDecorative());
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -91,7 +91,7 @@ final class CmsMediaType extends AbstractType
      * and that declaration arrives in the same submission, so the rule cannot
      * be a constraint on the field.
      */
-    private function requireAltUnlessDecorative(): \Closure
+    public static function requireAltUnlessDecorative(): \Closure
     {
         return static function (FormEvent $event): void {
             $data = $event->getData();

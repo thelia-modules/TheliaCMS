@@ -47,4 +47,29 @@ final readonly class ImageSource
 
         return '/image-library/'.$id.'/full/max/0/default.'.strtolower(pathinfo($fileName, \PATHINFO_EXTENSION) ?: 'jpg');
     }
+
+    /**
+     * The alternative text an image prop is drawn with. An image of the
+     * library is described there, once for every page: its text in the
+     * language, or none when it is decorative. The text the section holds
+     * answers for a picture kept elsewhere, and for an image of the library
+     * not described yet, as sections written before kept it.
+     */
+    public static function alt(mixed $image, string $sectionAlt, string $locale): string
+    {
+        $id = \is_string($image) && PropSchema::isExternalImage($image) ? 0 : (int) $image;
+        $library = $id > 0 ? LibraryImageQuery::create()->findPk($id) : null;
+
+        if (null === $library) {
+            return trim($sectionAlt);
+        }
+
+        if (1 === (int) $library->getDecorative()) {
+            return '';
+        }
+
+        $described = trim((string) $library->setLocale($locale)->getAlt());
+
+        return '' !== $described ? $described : trim($sectionAlt);
+    }
 }

@@ -29,6 +29,12 @@ final readonly class GeneratorSettings
     public const string MAX_TOKENS = 'generator_max_tokens';
     public const string WEB_FETCH = 'generator_web_fetch';
 
+    // A text written from a brief in a rich-text field: a paragraph does not
+    // need the effort, nor the length, of a whole page.
+    public const string TEXT_MODEL = 'generator_text_model';
+    public const string TEXT_EFFORT = 'generator_text_effort';
+    public const string TEXT_MAX_TOKENS = 'generator_text_max_tokens';
+
     public const string DEFAULT_MODEL = 'claude-opus-5-5';
     public const string DEFAULT_EFFORT = 'high';
     public const int DEFAULT_MAX_TOKENS = 16000;
@@ -37,6 +43,12 @@ final readonly class GeneratorSettings
     public const int MIN_MAX_TOKENS = 1024;
 
     public const array EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+
+    public const string DEFAULT_TEXT_EFFORT = 'low';
+    public const int DEFAULT_TEXT_MAX_TOKENS = 2000;
+
+    /** Below this, no paragraph fits in the answer, with its envelope. */
+    public const int MIN_TEXT_MAX_TOKENS = 256;
 
     public function model(): string
     {
@@ -66,6 +78,51 @@ final readonly class GeneratorSettings
     public function webFetch(): bool
     {
         return '0' !== (string) TheliaCMS::getConfigValue(self::WEB_FETCH, '1');
+    }
+
+    /**
+     * The model of the texts written from a brief; the one of the pages until
+     * the site names another.
+     */
+    public function textModel(): string
+    {
+        $model = $this->textModelAsSet();
+
+        return '' === $model ? $this->model() : $model;
+    }
+
+    /**
+     * The model of the texts as the site set it: empty while it follows the
+     * model of the pages, which is what the settings screen shows.
+     */
+    public function textModelAsSet(): string
+    {
+        return trim((string) TheliaCMS::getConfigValue(self::TEXT_MODEL, ''));
+    }
+
+    public function textEffort(): string
+    {
+        $effort = (string) TheliaCMS::getConfigValue(self::TEXT_EFFORT, self::DEFAULT_TEXT_EFFORT);
+
+        return \in_array($effort, self::EFFORTS, true) ? $effort : self::DEFAULT_TEXT_EFFORT;
+    }
+
+    public function textMaxTokens(): int
+    {
+        $maxTokens = (int) TheliaCMS::getConfigValue(self::TEXT_MAX_TOKENS, (string) self::DEFAULT_TEXT_MAX_TOKENS);
+
+        return $maxTokens >= self::MIN_TEXT_MAX_TOKENS ? $maxTokens : self::DEFAULT_TEXT_MAX_TOKENS;
+    }
+
+    /**
+     * Writes the settings of the texts. An empty model is kept empty: it
+     * means "the model of the pages", and follows it when that one changes.
+     */
+    public function saveText(string $model, string $effort, int $maxTokens): void
+    {
+        TheliaCMS::setConfigValue(self::TEXT_MODEL, trim($model));
+        TheliaCMS::setConfigValue(self::TEXT_EFFORT, \in_array($effort, self::EFFORTS, true) ? $effort : self::DEFAULT_TEXT_EFFORT);
+        TheliaCMS::setConfigValue(self::TEXT_MAX_TOKENS, (string) ($maxTokens >= self::MIN_TEXT_MAX_TOKENS ? $maxTokens : self::DEFAULT_TEXT_MAX_TOKENS));
     }
 
     /**

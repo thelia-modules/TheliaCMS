@@ -1200,13 +1200,19 @@
             group.append(field, picker);
 
             function fromField() {
-                if (/^#[0-9a-f]{6}$/i.test(field.value.trim())) {
+                var set = /^#[0-9a-f]{6}$/i.test(field.value.trim());
+
+                if (set) {
                     picker.value = field.value.trim().toLowerCase();
                 }
+
+                // No colour yet: the swatch is crossed, not black.
+                picker.classList.toggle("is-empty", !set);
             }
 
             picker.addEventListener("input", function () {
                 field.value = picker.value;
+                picker.classList.remove("is-empty");
             });
             field.addEventListener("input", fromField);
             fromField();
@@ -1249,64 +1255,11 @@
             refresh();
         });
 
-        // An image field shows the picture it holds: the one chosen in the
-        // library, the file about to replace it, or the address typed for it.
-        root.querySelectorAll("select[data-cms-image]").forEach(function (select) {
-            var holder = select.closest(".mb-3") || select.parentElement;
-            var panel = holder ? holder.parentElement : null;
-            var preview = document.createElement("img");
-            preview.className = "cms-content__image-preview";
-            preview.alt = "";
-            preview.hidden = true;
-            holder.insertBefore(preview, select);
-
-            function show(url) {
-                preview.hidden = !url;
-
-                if (url) {
-                    preview.src = url;
-                }
-            }
-
-            function fromSelect() {
-                var option = select.options[select.selectedIndex];
-                show(option ? option.getAttribute("data-url") : null);
-            }
-
-            var address = panel ? panel.querySelector('input[name="' + select.name.replace(/\]$/, "__url]") + '"]') : null;
-            var file = panel ? panel.querySelector('input[name="' + select.name.replace(/\]$/, "__file]") + '"]') : null;
-
-            select.addEventListener("change", function () {
-                if (address) { address.value = ""; }
-                fromSelect();
-            });
-
-            if (address) {
-                address.addEventListener("input", function () {
-                    if (address.value.trim() !== "") {
-                        show(address.value.trim());
-                    } else {
-                        fromSelect();
-                    }
-                });
-            }
-
-            if (file) {
-                file.addEventListener("change", function () {
-                    if (file.files && file.files[0]) {
-                        show(URL.createObjectURL(file.files[0]));
-                    } else {
-                        fromSelect();
-                    }
-                });
-            }
-
-            if (address && address.value.trim() !== "") {
-                show(address.value.trim());
-            } else {
-                fromSelect();
-            }
-        });
+        // An image field is drawn by media-picker.js, which a new section
+        // form asks for too.
+        if (window.CmsMediaPicker) {
+            window.CmsMediaPicker.bind(root);
+        }
 
         // A reference is picked from the list its source answers: a select for a
         // short list, a search box for a long one. The number field, which
