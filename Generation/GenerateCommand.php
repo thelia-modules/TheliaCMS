@@ -62,7 +62,7 @@ final class GenerateCommand extends Command
     {
         $this
             ->addOption('page', null, InputOption::VALUE_REQUIRED, 'The page to write, by id.')
-            ->addOption('item', null, InputOption::VALUE_REQUIRED, 'The item of the catalogue to write the document of, as <type>:<id> (product, category, content or folder), instead of a page.')
+            ->addOption('item', null, InputOption::VALUE_REQUIRED, 'The item of the catalogue to write the document of, as <type>:<id> (product, category, content, folder or dealer), instead of a page.')
             ->addOption('locale', null, InputOption::VALUE_REQUIRED, 'The language of the page, such as fr_FR.')
             ->addOption('brief', null, InputOption::VALUE_REQUIRED, 'The brief, or a path to a file holding it.')
             ->addOption('revise', null, InputOption::VALUE_NONE, 'Reads the brief as a change asked on the document the page holds.')

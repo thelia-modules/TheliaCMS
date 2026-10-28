@@ -31,11 +31,16 @@ final readonly class CatalogueItems
 {
     public function find(CatalogueItemType $type, int $id, string $locale): ?CatalogueItem
     {
+        if (CatalogueItemType::Dealer === $type) {
+            return $this->store($id, $locale);
+        }
+
         $model = match ($type) {
             CatalogueItemType::Product => ProductQuery::create()->findPk($id),
             CatalogueItemType::Category => CategoryQuery::create()->findPk($id),
             CatalogueItemType::Content => ContentQuery::create()->findPk($id),
             CatalogueItemType::Folder => FolderQuery::create()->findPk($id),
+            CatalogueItemType::Dealer => null,
         };
 
         if (!$model instanceof Product && !$model instanceof Category && !$model instanceof Content && !$model instanceof Folder) {
@@ -55,6 +60,33 @@ final readonly class CatalogueItems
             $model instanceof Product ? (string) $model->getRef() : null,
             \is_string($url) && '' !== $url ? $url : null,
             (bool) $model->getVisible(),
+        );
+    }
+
+    /**
+     * A store has no address the core builds: the theme draws its page, so the
+     * preview of the whole page is not offered.
+     */
+    private function store(int $id, string $locale): ?CatalogueItem
+    {
+        $store = DealerStores::find($id, $locale);
+
+        if (null === $store) {
+            return null;
+        }
+
+        $store->setLocale($locale);
+
+        return new CatalogueItem(
+            CatalogueItemType::Dealer,
+            $id,
+            $locale,
+            trim((string) $store->getTitle()),
+            self::plainOrNull($store->getDescription()),
+            self::plainOrNull($store->getBigDescription()),
+            null,
+            null,
+            (bool) $store->getVisible(),
         );
     }
 

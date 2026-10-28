@@ -30,6 +30,7 @@ use Thelia\Model\Lang;
 use TheliaCMS\Catalogue\CatalogueItem;
 use TheliaCMS\Catalogue\CatalogueItems;
 use TheliaCMS\Catalogue\CatalogueItemType;
+use TheliaCMS\Catalogue\DealerStores;
 use TheliaCMS\Catalogue\ItemContentRepository;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\InvalidDocumentException;
@@ -56,7 +57,7 @@ use TheliaCMS\TheliaCMS;
  * ones of the pages: the screen and the changes by hand take the right to
  * change pages, the generator the right to generate.
  */
-#[Route('/admin/cms/catalogue/{type}/{id}/content', name: 'admin.cms.catalogue.content.', requirements: ['type' => 'product|category|content|folder', 'id' => '\d+'])]
+#[Route('/admin/cms/catalogue/{type}/{id}/content', name: 'admin.cms.catalogue.content.', requirements: ['type' => CatalogueItemType::ROUTE_REQUIREMENT, 'id' => '\d+'])]
 final readonly class ItemContentController
 {
     public function __construct(
@@ -396,6 +397,7 @@ final readonly class ItemContentController
             CatalogueItemType::Category => $this->urls->generate('admin.categories.update', ['category_id' => $item->id] + $language),
             CatalogueItemType::Content => $this->urls->generate('admin.content.update', ['content_id' => $item->id] + $language),
             CatalogueItemType::Folder => $this->urls->generate('admin.folders.update', ['folder_id' => $item->id] + $language),
+            CatalogueItemType::Dealer => $this->urls->generate(DealerStores::EDIT_ROUTE, ['dealer_id' => $item->id] + $language),
         };
     }
 

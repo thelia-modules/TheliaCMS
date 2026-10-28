@@ -164,6 +164,7 @@ final readonly class PromptBuilder
             CatalogueItemType::Category => 'its name as the level 1 heading, its summary, its description and the list of its products',
             CatalogueItemType::Content => 'its title as the level 1 heading, its summary and its text',
             CatalogueItemType::Folder => 'its title as the level 1 heading, its summary, its description and the list of its contents',
+            CatalogueItemType::Dealer => 'its name as the level 1 heading, its address and its opening hours',
         };
 
         $lines = [

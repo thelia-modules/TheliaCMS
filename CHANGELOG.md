@@ -7,6 +7,17 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added
+
+- **A store of the Dealer module carries a document.** Up to 1.6.0 a store
+  could carry a content block, which the update to 2.0.0 drops with the item
+  blocks. While Dealer is active, its store screen gets the *CMS content* tab
+  of the other catalogue items, the generator writes for the page of a store,
+  a deleted store takes its documents with it, and an export names a store by
+  the slug of its SEO record. The theme prints the document with
+  `cms_item_content('dealer', id)`. Dealer stays optional: its classes are
+  reached by name.
+
 ### Security (2.3.1)
 
 - **A `style` attribute is filtered like a stylesheet.** The published

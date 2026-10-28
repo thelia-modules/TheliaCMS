@@ -31,7 +31,8 @@ use TheliaCMS\TheliaCMS;
 use Twig\Environment;
 
 /**
- * A tab on the edit screen of a product, a category, a content and a folder:
+ * A tab on the edit screen of a product, a category, a content, a folder and a
+ * store of the Dealer module:
  * where the document of the item stands in each language, and the way to the
  * content screen that writes it. The editor itself stays on its own screen,
  * under the guard of the CMS.
@@ -59,6 +60,8 @@ class ItemContentTabHook extends BaseHook
             'category.tab' => [['type' => 'back', 'method' => 'onCategoryTab']],
             'content.tab' => [['type' => 'back', 'method' => 'onContentTab']],
             'folder.tab' => [['type' => 'back', 'method' => 'onFolderTab']],
+            // The Dealer module named the tab hook of its store screen this way.
+            'dealer.additional' => [['type' => 'back', 'method' => 'onDealerTab']],
         ];
     }
 
@@ -80,6 +83,11 @@ class ItemContentTabHook extends BaseHook
     public function onFolderTab(HookRenderBlockEvent $event): void
     {
         $this->addTab($event, CatalogueItemType::Folder);
+    }
+
+    public function onDealerTab(HookRenderBlockEvent $event): void
+    {
+        $this->addTab($event, CatalogueItemType::Dealer);
     }
 
     private function addTab(HookRenderBlockEvent $event, CatalogueItemType $type): void

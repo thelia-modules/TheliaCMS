@@ -57,4 +57,22 @@ final readonly class ItemDeletionListener
     {
         $this->writer->forget(CatalogueItemType::Folder, $event->getFolderId());
     }
+
+    /**
+     * The event of the Dealer module is named by its string and typed loosely:
+     * its class is absent on a site without the module.
+     */
+    #[AsEventListener(event: DealerStores::DELETED_EVENT)]
+    public function onStoreDelete(object $event): void
+    {
+        if (!method_exists($event, 'getDealer')) {
+            return;
+        }
+
+        $id = $event->getDealer()?->getId();
+
+        if (null !== $id) {
+            $this->writer->forget(CatalogueItemType::Dealer, (int) $id);
+        }
+    }
 }
