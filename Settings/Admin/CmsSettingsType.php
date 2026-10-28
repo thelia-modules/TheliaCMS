@@ -131,7 +131,7 @@ final class CmsSettingsType extends AbstractType
             ->add('generatorWebFetch', CheckboxType::class, [
                 'label' => 'Read the web pages a brief cites',
                 'required' => false,
-                'help' => 'The model reads the public pages whose address the brief gives, through the web fetch tool of the Claude API: Anthropic reads them, not this server. The text read is billed as input tokens. Turn it off if the organisation of the key does not allow the tool.',
+                'help' => 'Off by default. When on, the model can read the public pages whose address the brief gives: this server fetches them (private and internal addresses are refused) and sends their text to the AI provider assigned to the range, which may be outside the European Union. A page is read as data, never as instructions.',
             ]);
 
         $builder->addEventListener(FormEvents::POST_SUBMIT, $this->validateAllowlist(...));

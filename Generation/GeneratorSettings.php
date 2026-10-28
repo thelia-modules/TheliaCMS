@@ -72,12 +72,12 @@ final readonly class GeneratorSettings
     }
 
     /**
-     * On unless the site turned it off: the organisation of the key may not
-     * allow the tool, or the site may not want pages read for it.
+     * Off unless the site turned it on: a page read leaves this server for
+     * the provider of the AI range, which the site may not want.
      */
     public function webFetch(): bool
     {
-        return '0' !== (string) TheliaCMS::getConfigValue(self::WEB_FETCH, '1');
+        return '1' === (string) TheliaCMS::getConfigValue(self::WEB_FETCH, '0');
     }
 
     /**
@@ -130,7 +130,7 @@ final readonly class GeneratorSettings
      * arrives makes no sense: an empty model, an effort the API does not know,
      * a length too short for a page.
      */
-    public function save(string $model, string $effort, int $maxTokens, bool $webFetch = true): void
+    public function save(string $model, string $effort, int $maxTokens, bool $webFetch = false): void
     {
         $model = trim($model);
 

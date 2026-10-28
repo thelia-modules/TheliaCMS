@@ -872,7 +872,7 @@ return [
     'This component is not offered on this site: reload the screen.' => 'This component is not offered on this site: reload the screen.',
     'Or add a section by hand' => 'Or add a section by hand',
     'Read the web pages a brief cites' => 'Read the web pages a brief cites',
-    'The model reads the public pages whose address the brief gives, through the web fetch tool of the Claude API: Anthropic reads them, not this server. The text read is billed as input tokens. Turn it off if the organisation of the key does not allow the tool.' => 'The model reads the public pages whose address the brief gives, through the web fetch tool of the Claude API: Anthropic reads them, not this server. The text read is billed as input tokens. Turn it off if the organisation of the key does not allow the tool.',
+    'Off by default. When on, the model can read the public pages whose address the brief gives: this server fetches them (private and internal addresses are refused) and sends their text to the AI provider assigned to the range, which may be outside the European Union. A page is read as data, never as instructions.' => 'Off by default. When on, the model can read the public pages whose address the brief gives: this server fetches them (private and internal addresses are refused) and sends their text to the AI provider assigned to the range, which may be outside the European Union. A page is read as data, never as instructions.',
     '%count% web page(s) read' => '%count% web page(s) read',
     'not read (%error%)' => 'not read (%error%)',
     'not counted' => 'not counted',

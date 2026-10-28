@@ -36,7 +36,7 @@ final class GeneratorSettingsScreenTest extends AdminScreenTestCase
         self::assertSame(1, $card->filter('select[name="cms_settings[generatorEffort]"]')->count());
         self::assertSame(1, $card->filter('input[name="cms_settings[generatorMaxTokens]"]')->count());
         self::assertSame(1, $card->filter('input[type="checkbox"][name="cms_settings[generatorWebFetch]"]')->count());
-        self::assertStringContainsString('billed as input tokens', $card->filter('[data-testid="cms-settings-web-fetch-help"]')->text(''), 'The box says what reading a page costs, which the theme of the back office leaves out of a checkbox.');
+        self::assertStringContainsString('Off by default', $card->filter('[data-testid="cms-settings-web-fetch-help"]')->text(''), 'The box says where a page read goes, which the theme of the back office leaves out of a checkbox.');
         self::assertSame(0, $card->filter('input[type="password"], input[name*="Key"], input[name*="key"]')->count(), 'No field takes the API key.');
         self::assertStringContainsString('ANTHROPIC_API_KEY', $card->text(''));
     }
@@ -57,26 +57,26 @@ final class GeneratorSettingsScreenTest extends AdminScreenTestCase
         self::assertSame(4096, $settings->maxTokens());
     }
 
-    public function testReadingTheWebPagesABriefCitesIsOnUntilTheSiteTurnsItOff(): void
+    public function testReadingTheWebPagesABriefCitesIsOffUntilTheSiteTurnsItOn(): void
     {
-        self::assertTrue($this->settings()->webFetch(), 'On by default.');
+        self::assertFalse($this->settings()->webFetch(), 'Off by default: a page read leaves the server for the provider.');
 
         $form = $this->settingsForm();
-        self::assertTrue($form['cms_settings[generatorWebFetch]']->hasValue(), 'The box shows the setting ticked.');
-        $form['cms_settings[generatorWebFetch]']->untick();
+        self::assertFalse($form['cms_settings[generatorWebFetch]']->hasValue(), 'The box shows the setting unticked.');
+        $form['cms_settings[generatorWebFetch]']->tick();
 
         self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
 
         ModuleConfigQuery::resetConfigCache();
-        self::assertFalse($this->settings()->webFetch());
+        self::assertTrue($this->settings()->webFetch());
 
         $form = $this->settingsForm();
-        self::assertFalse($form['cms_settings[generatorWebFetch]']->hasValue(), 'The box shows the setting as saved.');
-        $form['cms_settings[generatorWebFetch]']->tick();
+        self::assertTrue($form['cms_settings[generatorWebFetch]']->hasValue(), 'The box shows the setting as saved.');
+        $form['cms_settings[generatorWebFetch]']->untick();
         $this->send('POST', $form->getUri(), $form->getPhpValues());
 
         ModuleConfigQuery::resetConfigCache();
-        self::assertTrue($this->settings()->webFetch());
+        self::assertFalse($this->settings()->webFetch());
     }
 
     /**
