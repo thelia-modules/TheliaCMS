@@ -59,26 +59,26 @@ final class DocumentSchemaTest extends TestCase
             self::assertStringNotContainsString('"'.$keyword.'"', $json, $keyword.' has no place in a grammar the API compiles.');
         }
 
-        self::assertInstanceOf(\stdClass::class, $strict['properties'], 'An object with properties stays a JSON object, never a list.');
+        self::assertIsArray($strict['properties'], 'The gateway of the core reads the properties as an array: an object would make it see none.');
 
-        $section = $strict['properties']->sections['items'];
+        $section = $strict['properties']['sections']['items'];
 
         self::assertSame(['id', 'component', 'props'], $section['required']);
-        self::assertSame([RichTextSection::NAME, FakeSection::NAME], $section['properties']->component['enum']);
-        self::assertSame('string', $section['properties']->props['type'], 'The props travel as a JSON string the validator reads back.');
-        self::assertSame(['background', 'text', 'padding', 'align'], array_keys((array) $section['properties']->appearance['properties']), 'The appearance is optional, and so is each of its settings.');
-        self::assertSame(['small', 'medium', 'large'], $section['properties']->appearance['properties']->padding['enum']);
+        self::assertSame([RichTextSection::NAME, FakeSection::NAME], $section['properties']['component']['enum']);
+        self::assertSame('string', $section['properties']['props']['type'], 'The props travel as a JSON string the validator reads back.');
+        self::assertSame(['background', 'text', 'padding', 'align'], array_keys($section['properties']['appearance']['properties']), 'The appearance is optional, and so is each of its settings.');
+        self::assertSame(['small', 'medium', 'large'], $section['properties']['appearance']['properties']['padding']['enum']);
         self::assertStringNotContainsString('"pattern"', $json, 'A colour is checked when the document is read: the API compiles no pattern.');
-        self::assertSame(1, $strict['properties']->version['const']);
+        self::assertSame(1, $strict['properties']['version']['const']);
     }
 
     public function testTheFieldsOfAPageJoinTheEnvelopeOnlyWhenAsked(): void
     {
-        self::assertObjectNotHasProperty('fields', $this->schema->strict()['properties'], 'A page without fields is asked for the envelope it always was.');
+        self::assertArrayNotHasKey('fields', $this->schema->strict()['properties'], 'A page without fields is asked for the envelope it always was.');
 
         $strict = $this->schema->strict([], withFields: true);
 
-        self::assertSame('string', $strict['properties']->fields['type'], 'The fields travel as a JSON string, like the props.');
+        self::assertSame('string', $strict['properties']['fields']['type'], 'The fields travel as a JSON string, like the props.');
         self::assertSame(['version', 'sections', 'fields'], $strict['required']);
     }
 
@@ -86,7 +86,17 @@ final class DocumentSchemaTest extends TestCase
     {
         $strict = $this->schema->strict();
 
-        self::assertSame(['type' => 'string'], $strict['properties']->left_out['items']);
+        self::assertSame(['type' => 'string'], $strict['properties']['left_out']['items']);
         self::assertNotContains('left_out', $strict['required'], 'A page that holds everything the brief asked says nothing.');
+    }
+
+    public function testTheGatewayOfTheCoreAcceptsADocumentAndRefusesAnUnknownKey(): void
+    {
+        $validator = new \Thelia\Domain\Ai\Guardrail\AiSchemaValidator();
+        $strict = $this->schema->strict();
+        $document = ['version' => 1, 'sections' => [['id' => 'intro', 'component' => RichTextSection::NAME, 'props' => '{}']]];
+
+        self::assertSame([], $validator->validate($strict, $document), 'A document of the envelope passes the check the gateway runs on the answer.');
+        self::assertNotSame([], $validator->validate($strict, $document + ['unknown' => true]), 'The envelope is closed: a key it does not name is refused.');
     }
 }
