@@ -306,10 +306,30 @@ body:has(.cms-content) {
     max-width: 10rem;
 }
 
-.cms-content__appearance-fields {
+/* The two colours of the appearance on one line, their fields level. */
+.cms-content__colors {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
     column-gap: 1rem;
+}
+
+/* A choice drawn as buttons: one row of buttons of one width, wrapping
+   whole on a narrow dialog. */
+.cms-content__choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: 0.5rem;
+}
+
+.cms-content__choices > .btn {
+    height: 100%;
+    margin: 0;
+}
+
+/* A colour not set: the swatch says so instead of showing black. */
+.cms-content__appearance .form-control-color.is-empty {
+    background-image: linear-gradient(to top right, transparent calc(50% - 1px), var(--bs-danger, #dc3545) 50%, transparent calc(50% + 1px));
+    opacity: 0.6;
 }
 
 .cms-content__appearance .form-control-color {

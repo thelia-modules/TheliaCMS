@@ -242,7 +242,9 @@ is cheap to change back.
 
 Each section is also **edited by hand**, on the same screen, in a form read
 from the schema of its component: a field per prop, rows added and removed for
-a list, a picker on the media library for an image. A `html` prop is edited in
+a list, a picker on the media library for an image (thumbnails, search,
+filters, sending), buttons for a choice that gives a pictogram per value
+(`Prop::choice(..., icons: [...])`). A `html` prop is edited in
 the editor of the Tiptap module when it is installed (`thelia/tiptap-module`,
 suggested, not required) and in a plain textarea otherwise. What comes back
 goes through the same validator as a generated document and is stored the same

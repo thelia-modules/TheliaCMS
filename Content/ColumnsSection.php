@@ -55,7 +55,7 @@ final readonly class ColumnsSection implements SectionDefinitionInterface
             Prop::text('title', $this->trans('Heading'), help: $this->trans('Above the columns; none when empty.')),
             Prop::items('columns', $this->trans('Columns'), [
                 Prop::image('image', $this->trans('Image'), help: $this->trans('An image of the media library, or the https address of a picture kept elsewhere.')),
-                Prop::text('image_alt', $this->trans('Text of the image'), help: $this->trans('What the image shows, for a reader who does not see it; empty when the text beside it says it.')),
+                Prop::text('image_alt', $this->trans('Text of the image'), help: $this->trans('For a picture kept elsewhere: what it shows, for a reader who does not see it. An image of the media library is described in the library.')),
                 Prop::text('title', $this->trans('Heading')),
                 Prop::text('text', $this->trans('Text'), max: 500),
             ], min: 2, max: 4),
@@ -96,7 +96,7 @@ final readonly class ColumnsSection implements SectionDefinitionInterface
             $source = ImageSource::of($column['image'] ?? null);
 
             if (null !== $source) {
-                $html .= \sprintf('<img class="cms-columns__image" src="%s" alt="%s" loading="lazy">', self::escape($source), self::escape((string) ($column['image_alt'] ?? '')));
+                $html .= \sprintf('<img class="cms-columns__image" src="%s" alt="%s" loading="lazy">', self::escape($source), self::escape(ImageSource::alt($column['image'] ?? null, (string) ($column['image_alt'] ?? ''), $locale)));
             }
 
             if ('' !== $heading = trim((string) ($column['title'] ?? ''))) {

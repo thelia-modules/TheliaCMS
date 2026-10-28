@@ -22,6 +22,18 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.3.1)
 
+- **The image of a section is chosen in a picker of the media library.**
+  The section shows the image it holds (thumbnail, name, whether it is
+  described) with "Choose in the library" and "Remove"; the picker opens over
+  the section: a grid of thumbnails, searched, filtered by what is still to
+  describe or by a tag, by pages, and an image can be sent from it. It
+  replaces a list of every title, which could not be read past a few dozen
+  and lost an image older than the 200 newest. An id sent for an image of a
+  section is kept only when the CMS owns that image.
+- **A choice with pictograms is chosen on buttons.** A choice prop may give a
+  pictogram per value (`Prop::choice(..., icons: [...])`): the width of the
+  Image section shows its three widths as shapes, and the room above and
+  below and the alignment of a section are buttons too.
 - **The sheet of an image says where its description stands in every
   language**, each language a link to the sheet in it. Tags are chips
   suggested from the tags of the library, written as the library has them; a
@@ -116,6 +128,19 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed (2.3.1)
 
+- **An image of the media library is drawn with the text it has in the
+  library.** The Image and Columns sections published the text they held
+  for the image, whatever the library said: an image described once in the
+  library was published without it, or with another text. An image of the
+  library is now drawn with its text in the language of the page, empty when
+  it is decorative; the text of the section answers for a picture kept
+  elsewhere, and for an image not described yet. In the form, the field of
+  the text shows only for a picture kept elsewhere; for an image of the
+  library, its text in the library is shown, or a link to describe it.
+- **The appearance of a section is laid out as one.** The two colours stand
+  side by side with their help under their field, a colour not set shows a
+  crossed swatch instead of black, and the room and the alignment are each a
+  row of buttons of one width.
 - **The props of the components of the theme read in the language of the
   back office.** Their labels and help come from the comments of the theme,
   in English and sometimes in the words of a developer. The form of a section

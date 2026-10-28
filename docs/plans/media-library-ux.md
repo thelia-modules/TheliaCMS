@@ -22,7 +22,16 @@ broke the whole sending.
 Lot 4 done the same day: `MediaCatalog::descriptionsOf()`, `assets/media-sheet.js`
 (tag chips with suggestions, preview of a replacing file, delete dialog),
 tests in `Tests/Integration/Media/MediaSheetScreenTest.php`; the usage counts
-say "pages or items". Lots 5 and 6 not started. The import of the catalogue
+say "pages or items". Lot 5 started the same day on the sections: `admin.cms.media.picker` (JSON),
+`assets/media-picker.js`, the image prop an id checked against the library
+(`SectionFormBuilder::imageFrom()`), tests in
+`Tests/Integration/Generation/SectionImagePickerTest.php`; choices with
+pictograms (`Prop::$icons`, `_section_form.html.twig`). The image of a page
+still has its radio grid. Same day: an image of the library is drawn with
+its text in the library (`ImageSource::alt()`, Image and Columns sections,
+`Tests/Integration/Content/ImageAltTest.php`), the field of the section
+showing only for a picture kept elsewhere; the picker needs the right to
+see the media (accepted on 2026-10-28). Lot 6 not started. The import of the catalogue
 images it starts from is done: `thelia_cms:media:import-catalogue`
 (`Media/CatalogueImageImporter.php`), a copy, run again without duplicates.
 

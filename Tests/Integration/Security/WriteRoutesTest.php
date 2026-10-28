@@ -61,6 +61,7 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.media.describe',
         'admin.cms.media.edit',
         'admin.cms.media.list',
+        'admin.cms.media.picker',
         'admin.cms.menus.create',
         'admin.cms.menus.edit',
         'admin.cms.menus.entry_save',

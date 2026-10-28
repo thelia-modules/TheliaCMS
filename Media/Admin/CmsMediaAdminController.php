@@ -92,6 +92,52 @@ final readonly class CmsMediaAdminController
     }
 
     /**
+     * The images a picker shows, a page of the library read as the list reads
+     * it, or the one image `id` names: what a section or a page holds, drawn
+     * before anything is picked.
+     */
+    #[Route('/picker', name: 'picker', methods: ['GET'])]
+    public function picker(Request $request): JsonResponse
+    {
+        $locale = $this->editLang($request)->getLocale();
+        $id = $request->query->getInt('id');
+
+        if ($id > 0) {
+            $image = $this->library->ownedImage($id);
+            $item = null === $image ? null : $this->catalog->item($image, $locale, 0);
+
+            return new JsonResponse(['items' => null === $item ? [] : [self::picked($item)]], null === $item ? Response::HTTP_NOT_FOUND : Response::HTTP_OK);
+        }
+
+        $grid = $this->catalog->browse(MediaQuery::fromRequest($request), $locale, withUsage: false);
+
+        return new JsonResponse([
+            'items' => array_map(self::picked(...), $grid->items),
+            'total' => $grid->total,
+            'page' => $grid->page,
+            'pageCount' => $grid->pageCount(),
+            'tags' => $this->library->tagCounts(),
+        ]);
+    }
+
+    /**
+     * @return array{id: int, title: string, thumbnail: ?string, url: string, dimensions: ?string, alt: string, described: bool, decorative: bool}
+     */
+    private static function picked(MediaItem $item): array
+    {
+        return [
+            'id' => $item->id,
+            'title' => $item->title,
+            'thumbnail' => $item->thumbnailUrl,
+            'url' => $item->url,
+            'dimensions' => $item->dimensions(),
+            'alt' => trim((string) $item->alt),
+            'described' => $item->isDescribed(),
+            'decorative' => $item->decorative,
+        ];
+    }
+
+    /**
      * Files sent from the list, all at once without JavaScript, one by one
      * from its script, which asks for JSON to show each file as it lands.
      */

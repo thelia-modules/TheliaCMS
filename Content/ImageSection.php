@@ -56,13 +56,17 @@ final readonly class ImageSection implements SectionDefinitionInterface
     {
         return new PropSchema([
             Prop::image('image', $this->trans('Image'), help: $this->trans('An image of the media library, or the https address of a picture kept elsewhere.')),
-            Prop::text('alt', $this->trans('Text of the image'), help: $this->trans('What the image shows, for a reader who does not see it, even with a caption; empty only for a decorative image.')),
+            Prop::text('alt', $this->trans('Text of the image'), help: $this->trans('For a picture kept elsewhere: what it shows, for a reader who does not see it. An image of the media library is described in the library.')),
             Prop::text('caption', $this->trans('Caption'), help: $this->trans('Under the image; none when empty.')),
             Prop::choice('width', $this->trans('Width'), [
                 'narrow' => $this->trans('Narrow, as a column of text'),
                 'column' => $this->trans('As wide as the content'),
                 'full' => $this->trans('The whole width of the screen'),
-            ], 'narrow', $this->trans('Narrow suits a photo or an illustration; wider only when the brief asks for a large picture.')),
+            ], 'narrow', $this->trans('Narrow suits a photo or an illustration; wider only when the brief asks for a large picture.'), [
+                'narrow' => 'width-narrow',
+                'column' => 'width-column',
+                'full' => 'width-full',
+            ]),
         ]);
     }
 
@@ -89,7 +93,7 @@ final readonly class ImageSection implements SectionDefinitionInterface
             '<figure class="cms-image cms-image--%s"><img class="cms-image__img" src="%s" alt="%s" loading="lazy">',
             $width,
             self::escape($source),
-            self::escape((string) ($props['alt'] ?? '')),
+            self::escape(ImageSource::alt($props['image'] ?? null, (string) ($props['alt'] ?? ''), $locale)),
         );
 
         if ('' !== $caption = trim((string) ($props['caption'] ?? ''))) {

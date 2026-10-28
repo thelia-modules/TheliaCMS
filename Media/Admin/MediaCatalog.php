@@ -37,8 +37,9 @@ final readonly class MediaCatalog
     /**
      * The page of the library a query asks for. Past the last page, the last
      * one: an address kept from a larger library still shows images.
+     * "Unused" reads what uses the images whatever `$withUsage` says.
      */
-    public function browse(MediaQuery $query, string $locale): MediaGrid
+    public function browse(MediaQuery $query, string $locale, bool $withUsage = true): MediaGrid
     {
         $imageIds = $this->library->selection($locale, $query->search, $query->filter, $query->tag);
 
@@ -56,7 +57,9 @@ final readonly class MediaCatalog
             return new MediaGrid([], $total, $page, MediaQuery::PER_PAGE);
         }
 
-        $counts = $this->usages->countsFor(array_map(static fn (LibraryImage $image): int => (int) $image->getId(), $images));
+        // What uses an image is read from the content of every page: only
+        // when the screen says it.
+        $counts = $withUsage ? $this->usages->countsFor(array_map(static fn (LibraryImage $image): int => (int) $image->getId(), $images)) : [];
 
         $items = [];
 

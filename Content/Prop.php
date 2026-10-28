@@ -26,6 +26,7 @@ final readonly class Prop
     /**
      * @param array<string, string> $choices value => label, for a Choice
      * @param list<Prop>            $items   the props of one item, for Items
+     * @param array<string, string> $icons   a pictogram per choice, for a Choice drawn as buttons
      */
     public function __construct(
         public string $name,
@@ -42,6 +43,7 @@ final readonly class Prop
         public ?int $maxItems = null,
         public ?string $picker = null,
         public bool $searchable = false,
+        public array $icons = [],
     ) {
         if (1 !== preg_match('/^[a-z][a-z0-9_]*$/', $name)) {
             throw new \InvalidArgumentException(\sprintf('A prop name is lowercase letters, digits and underscores: "%s" given.', $name));
@@ -79,9 +81,13 @@ final readonly class Prop
     /**
      * @param array<string, string> $choices value => label
      */
-    public static function choice(string $name, string $label, array $choices, string $default, ?string $help = null): self
+    /**
+     * @param array<string, string> $icons a pictogram per choice, `bi-…` (Bootstrap Icons) or one
+     *                                     of the module (`width-narrow`, `width-column`, `width-full`)
+     */
+    public static function choice(string $name, string $label, array $choices, string $default, ?string $help = null, array $icons = []): self
     {
-        return new self($name, PropType::Choice, $label, $default, false, $help, choices: $choices);
+        return new self($name, PropType::Choice, $label, $default, false, $help, choices: $choices, icons: $icons);
     }
 
     public static function image(string $name, string $label, bool $required = false, ?string $help = null): self
