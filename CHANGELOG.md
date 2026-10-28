@@ -61,6 +61,69 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - **No more `Vary: Accept-Language`.** The language of a page comes from its
   address, never from that header: it only multiplied the copies of a page.
 
+### Upgrading to 2.4.0
+
+- The module requires Thelia 3.3.0, whose AI layer the generator goes through.
+- Set up the generator in the AI settings of Thelia: a connection to a
+  provider, then a range of models, a budget and a turn-on for each of the
+  three usages `theliacms.page_generation`, `theliacms.text` and
+  `theliacms.component`. Until then the generator says it is unavailable and
+  calls nothing.
+- `ANTHROPIC_API_KEY` is no longer read by the module. The key lives in the
+  connection of the AI settings.
+- The update to 2.4.0 adds `cms_page_generation.log_id` and the columns that
+  hold the mark of a generated content (`draft_provenance` and
+  `published_provenance` on `cms_page_content` and `cms_item_content`,
+  `provenance` on the revisions, `cms_component` and `cms_page_generation`).
+- A theme that overrides `cmspage.html.twig` calls
+  `ai_provenance_attributes(cms_page.provenance)` on the element that holds the
+  content, and prints `ai_provenance_label(cms_page.provenance, cms_page.locale)`
+  after it, or its pages lose the mark.
+
+### Added (2.4.0)
+
+- **Generated content is marked** (article 50(2) of the AI Act). A page or the
+  document of a catalogue item written by the generator keeps the mark of the
+  core with its draft, its publication and its revisions, and through the
+  export and the import of the site. The public page prints it as
+  `data-ai-*` attributes on the content and as a sentence after it, in the
+  language of the page; `cms_item_content()` wraps a generated document the
+  same way. A text written beside a field carries no public mark: it stays in
+  the AI log of Thelia, which records the usage, the model and the cost of the
+  call.
+- The history of a page points at the row of the usage log of the core that
+  holds the cost of the call (`cms_page_generation.log_id`), and the requests of
+  one call share a correlation id there.
+- The prompts the ledger keeps are emptied by `maintenance:purge` when the core
+  empties its own, so the module adds no retention of its own.
+- When the AI layer refuses a call (budget spent, rate limit, jurisdiction,
+  usage turned off, key unreadable, provider down, safety check), the editor
+  reads one sentence, in French or English, that says what to change.
+
+### Changed (2.4.0)
+
+- The generator, the texts written beside a field and the components made in the
+  back office go through the AI gateway of Thelia: the provider, the key, the
+  model and the budget are set in its AI settings, the Generator card of
+  CMS > Settings keeps the effort, the length of an answer and the reading of
+  web pages. `effort` is passed to the model as its reasoning effort and has no
+  effect on a provider that does not read it.
+- **Reading the web pages a brief cites is off until the site turns it on.**
+  The page is fetched by the server of the shop, through the client of the core
+  that refuses private addresses, and its text is sent to the provider of the
+  range. The tool of the Claude API that read the pages from the provider side
+  is gone with the SDK.
+- The messages of a conversation that never answers (too many turns) are
+  translated.
+
+### Removed (2.4.0)
+
+- The Claude API SDK (`anthropic-ai/sdk`), `nyholm/psr7`, the price list and
+  `ClaudeClientProviderInterface`.
+- The settings `generator_model` and `generator_text_model`, and the model
+  fields of the Generator card: the range of the usage chooses the model. A file
+  written before 2.4.0 that carries them still imports, the keys are ignored.
+
 ### Security (2.3.1)
 
 - **An import filters what it writes like a publication does.** The draft

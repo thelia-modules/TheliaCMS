@@ -92,7 +92,7 @@ shows how to test an update, outside a transaction.
 - To put a fake in place of a service of the module in a screen test
   (`static::getContainer()->set()`), the service has to be public: a private
   service with one consumer is inlined into it and the replacement reaches
-  nobody. `ClaudeClientProviderInterface` is public for that. A service is
+  nobody. `AiGatewayInterface` and `ReadUrlTool` are public for that. A service is
   replaced once per kernel: install a delegating fake in `setUp()` and change
   what it delegates to.
 - The parser of Thelia sets the `app` global of Twig at the first render of
@@ -101,20 +101,27 @@ shows how to test an update, outside a transaction.
   null for the rest of the process: ask for any screen first
   (`SectionEditScreenTest::renderedOnce()`).
 
-## Calling the Claude API
+## Calling the AI layer
 
-- The SDK (`anthropic-ai/sdk`) ships no PSR-17 factory: the module requires
-  `nyholm/psr7`, and so must a host that does not have one.
+- Every call goes through `Thelia\Domain\Ai\AiGatewayInterface`, under one of
+  the three usages the generators declare with `#[AsAiUsage]`
+  (`theliacms.page_generation`, `theliacms.text`, `theliacms.component`). The
+  provider, the key, the model and the budget are the core's: nothing here
+  knows a provider SDK, and the options a provider reads travel in
+  `providerOptions` (`effort`, read by Anthropic models, ignored by the others).
+- The messages an editor reads when the layer refuses a call come from
+  `Generation\Ai\GatewayFailures`, translated: never put the text of a provider
+  in front of an editor. The cost of a call is the sum of the usage log of the
+  core, found by the `log_id` of the response.
 - A closure that reads a counter accumulated after its definition takes the
   variable by reference (`use (&$usage)`), never as an arrow function, which
   captures the value at definition.
-- The answer is read as a stream (`messages->createStream()`, put back
-  together by `Generation\StreamedMessage`). The stream opens a text block
-  before a tool call and may leave it empty: such a block is dropped, or the
-  API refuses the conversation on the next turn ("text content blocks must be
-  non-empty"). An answer constrained to a schema is streamed in a burst at the
-  end of the turn, measured on 2026-10-20: 4.3 s of silence, then every delta
-  within a second.
+- The answer is read as a stream (`Generation\Ai\ObservedStream`). An answer
+  constrained to a schema may arrive in a burst at the end of the turn: the
+  screen shows no text before then.
+- A page cited by a brief is read by `ReadUrlTool` on the server, through the
+  HTTP client of the core that refuses private addresses; its text goes to the
+  model as `UntrustedContent`. Reading is off until the site turns it on.
 - The grammar of structured outputs has limits the documentation does not
   spell out: a `const` needs a `type`, an enum holds strings only (a numeric
   PHP array key becomes an integer), at most 24 optional properties and 16
