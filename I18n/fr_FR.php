@@ -703,6 +703,7 @@ return [
     'Drag a block from the left to start. What you build here appears on the page of this item once published.' => 'Glissez un bloc depuis la gauche pour commencer. Ce que vous composez ici apparaît sur la page de cette fiche une fois publié.',
     'Product' => 'Produit',
     'Category' => 'Catégorie',
+    'Brand' => 'Marque',
     'Offline, not shown on the page: %name%' => 'Hors ligne, absent de la page : %name%',
     'Generator' => 'Générateur',
     'Model' => 'Modèle',

@@ -22,6 +22,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.3.1)
 
+- **The images of the catalogue can be copied into the media library.**
+  `thelia_cms:media:import-catalogue` copies the images of products,
+  categories, brands, folders and contents with their titles, alternative
+  texts and decorative flag in every language, tagged with their kind of item
+  and, for a product, its default category. Run again, it copies only the
+  files the library does not hold yet; `--type` narrows it, `--dry-run`
+  counts.
 - **The draft a generation replaces can be put back.** Before a brief, a
   change, a section rewrite or a translation writes the draft of a page or of
   a catalogue item, the draft as it was is kept as a revision labelled

@@ -703,6 +703,7 @@ return [
     'Drag a block from the left to start. What you build here appears on the page of this item once published.' => 'Drag a block from the left to start. What you build here appears on the page of this item once published.',
     'Product' => 'Product',
     'Category' => 'Category',
+    'Brand' => 'Brand',
     'Offline, not shown on the page: %name%' => 'Offline, not shown on the page: %name%',
     'Generator' => 'Generator',
     'Model' => 'Model',

@@ -470,6 +470,21 @@ content or as their image. One still in use cannot be deleted.
 Uploads accept JPEG, PNG and WebP. SVG is refused: it is a document that can
 carry script.
 
+The images of the catalogue (products, categories, brands, folders, contents)
+are not in the library: the core keeps them in its own tables. To use them in
+pages, copy them in:
+
+```bash
+php Thelia thelia_cms:media:import-catalogue [--type product --type brand] [--dry-run]
+```
+
+Each copy takes the title, the alternative text and the decorative flag of the
+catalogue image in every language, the title of its item when it has none, and
+a tag for its kind of item (and, for a product, its default category). Run it
+again after adding images to the catalogue: a file the library already holds,
+by its content, is not copied twice. A copy does not follow the catalogue: an
+image replaced there is copied again as a new one.
+
 At publication every image becomes a `<picture>` with a WebP alternative, a
 `srcset` bounded by the file's real width and ending on the original, explicit
 `width` and `height`, and lazy loading on everything but the first image.
