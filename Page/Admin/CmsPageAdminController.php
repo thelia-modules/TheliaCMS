@@ -31,6 +31,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
+use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Media\Admin\CmsMediaWriter;
 use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsPage;
@@ -228,6 +229,12 @@ final readonly class CmsPageAdminController
             }
 
             $this->flash($request, 'danger', $this->translate('The page was not published: fix the heading structure first.'));
+        } catch (InvalidDocumentException $exception) {
+            foreach ($exception->problems as $problem) {
+                $this->flash($request, 'danger', $problem);
+            }
+
+            $this->flash($request, 'danger', $this->translate('The page was not published: its content is no longer valid. Open it in the editor to see what to fix.'));
         } catch (EmptyPageContentException) {
             $this->flash($request, 'danger', $this->translate('This page has no content yet: add at least one block in the editor before publishing it.'));
         } catch (PlaceholderPageContentException) {

@@ -574,6 +574,7 @@ return [
     'The page has %count% level 1 headings. Keep a single one: it is the title of the page.' => 'The page has %count% level 1 headings. Keep a single one: it is the title of the page.',
     'The page has to be published in the language of the visitor; otherwise the theme takes over.' => 'The page has to be published in the language of the visitor; otherwise the theme takes over.',
     'The page stays invisible until this date.' => 'The page stays invisible until this date.',
+    'The page was not published: its content is no longer valid. Open it in the editor to see what to fix.' => 'The page was not published: its content is no longer valid. Open it in the editor to see what to fix.',
     'The page was not published: fix the heading structure first.' => 'The page was not published: fix the heading structure first.',
     'The question, as the visitor reads it. Translated per language.' => 'The question, as the visitor reads it. Translated per language.',
     'Thelia CMS module' => 'Thelia CMS module',

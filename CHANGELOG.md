@@ -243,6 +243,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed (2.3.1)
 
+- **A draft the validator refuses no longer goes online.** A publication
+  rendered the draft as it was stored, without the check the editor and
+  `thelia_cms:render` run. A draft written outside the editor, by a script or
+  an import, holding props the catalogue refuses (`"product_ids": [27, 33]`
+  instead of a list of `{"id": 27}`) was announced by
+  `thelia_cms:publish --dry-run` and put online by a real run. It is now
+  validated before it is rendered, and what is rendered is the validated
+  document. The command reports the page under "Refused", and the editor
+  buttons name the problems.
 - **A long page goes online whole.** The published content went through the
   sanitizer of Symfony with its default limit of 20 000 bytes, and whatever
   came after was dropped without a warning: terms of sale, a long FAQ, or a

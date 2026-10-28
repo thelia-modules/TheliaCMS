@@ -574,6 +574,7 @@ return [
     'The page has %count% level 1 headings. Keep a single one: it is the title of the page.' => 'La page contient %count% titres de niveau 1. N’en gardez qu’un : c’est le titre de la page.',
     'The page has to be published in the language of the visitor; otherwise the theme takes over.' => 'La page doit être publiée dans la langue du visiteur ; sinon le thème reprend la main.',
     'The page stays invisible until this date.' => 'La page reste invisible jusqu’à cette date.',
+    'The page was not published: its content is no longer valid. Open it in the editor to see what to fix.' => 'La page n’a pas été publiée : son contenu n’est plus valide. Ouvrez-la dans l’éditeur pour voir ce qu’il faut corriger.',
     'The page was not published: fix the heading structure first.' => 'La page n’a pas été publiée : corrigez d’abord la structure des titres.',
     'The question, as the visitor reads it. Translated per language.' => 'La question, telle que le visiteur la lit. Traduite par langue.',
     'Thelia CMS module' => 'Module Thelia CMS',

@@ -21,6 +21,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Http\ConsoleRequest;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -121,6 +122,8 @@ final class PublishPagesCommand extends Command
                     $refused[] = \sprintf('#%d %s: the model of its type, never published', $page->getId(), $locale);
                 } catch (MissingPageFieldsException $exception) {
                     $refused[] = \sprintf('#%d %s: required fields left empty (%s)', $page->getId(), $locale, implode(', ', $exception->labels));
+                } catch (InvalidDocumentException $exception) {
+                    $refused[] = \sprintf('#%d %s: the draft is not a valid document (%s)', $page->getId(), $locale, $exception->getMessage());
                 } catch (\Throwable $throwable) {
                     $failed[] = \sprintf('#%d %s: %s', $page->getId(), $locale, $throwable->getMessage());
                 }

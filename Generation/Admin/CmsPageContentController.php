@@ -377,6 +377,14 @@ final readonly class CmsPageContentController
             $this->flash($request, 'danger', $this->translate('The page was not published: fix the heading structure first.'));
 
             return $this->back($page, $lang);
+        } catch (InvalidDocumentException $exception) {
+            foreach ($exception->problems as $problem) {
+                $this->flash($request, 'danger', $problem);
+            }
+
+            $this->flash($request, 'danger', $this->translate('The page was not published: its content is no longer valid. Open it in the editor to see what to fix.'));
+
+            return $this->back($page, $lang);
         } catch (EmptyPageContentException) {
             $this->flash($request, 'danger', $this->translate('This page has no content yet: write it from a brief before publishing it.'));
 

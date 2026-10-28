@@ -182,6 +182,39 @@ final class PublishPagesCommandTest extends CmsIntegrationTestCase
         self::assertStringContainsString('0 page/locale pair(s) would be published', $output);
     }
 
+    /**
+     * A draft written by a script or an import never went through the editor,
+     * and the editor is where the document is validated.
+     *
+     * The id below is one the validator refuses and the renderer does not
+     * notice, which is how such a draft used to go online, and be announced by
+     * a dry run, while `thelia_cms:render` refused it.
+     */
+    public function testRefusesADraftWrittenOutsideTheEditorThatTheValidatorRefuses(): void
+    {
+        $page = $this->createPage('Written by hand', published: false);
+        $pageId = (int) $page->getId();
+        $locale = $this->locale();
+
+        $this->contentOf($pageId, $locale)
+            ->setDraftDocument(Document::richText('<p>Some text</p>', 'Not an id')->toJson())
+            ->setPublishedHtml(null)
+            ->setPublishedAt(null)
+            ->save();
+
+        $dryRun = $this->publish(['--page' => [(string) $pageId], '--dry-run' => true]);
+
+        self::assertStringContainsString('not a valid document', $dryRun);
+        self::assertStringContainsString('0 page/locale pair(s) would be published', $dryRun);
+
+        $output = $this->publish(['--page' => [(string) $pageId]]);
+
+        self::assertStringContainsString('not a valid document', $output);
+        self::assertStringContainsString('0 page/locale pair(s) published', $output);
+        self::assertNull($this->contentOf($pageId, $locale)->getPublishedAt());
+        self::assertNull($this->contentOf($pageId, $locale)->getPublishedHtml());
+    }
+
     public function testDryRunPublishesNothing(): void
     {
         $page = $this->createPage('Left alone', published: false);
