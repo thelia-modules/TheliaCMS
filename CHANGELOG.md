@@ -272,6 +272,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   and had it written as plain text. It is now markup, without a length
   limit, filtered by the writer on the rendered page like the text of
   `cms:richtext`.
+- **The right to generate reaches a site that updates the module.** The rows
+  of the rights were only written when the module was activated, so a site
+  that had it active before `admin.cms.generate` existed, and only ran
+  `module:refresh` since, never got the row: generating was refused to every
+  profile but the super administrator, and the profile screen could not grant
+  it. An update now seeds the missing rights, existing profiles without
+  access, like an activation; the right is labelled "CMS: page generation".
 
 ### Added (2.3.0)
 

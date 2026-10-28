@@ -186,6 +186,11 @@ class TheliaCMS extends BaseModule
         foreach (self::migrationsBetween((string) $currentVersion, (string) $newVersion) as $file) {
             (new Database($con))->insertSql(null, [$file]);
         }
+
+        // A site active before a right existed only runs this on its update:
+        // seeded on activation alone, the right would stay denied to every
+        // profile but the super administrator.
+        $this->seedAdminResources();
     }
 
     /**
@@ -294,6 +299,7 @@ class TheliaCMS extends BaseModule
             CmsResources::MEDIA => ['en_US' => 'CMS: media', 'fr_FR' => 'CMS : médias'],
             CmsResources::SETTINGS => ['en_US' => 'CMS: settings', 'fr_FR' => 'CMS : réglages'],
             CmsResources::CUSTOM_CODE => ['en_US' => 'CMS: custom code', 'fr_FR' => 'CMS : code libre'],
+            CmsResources::GENERATE => ['en_US' => 'CMS: page generation', 'fr_FR' => 'CMS : génération de pages'],
         ];
 
         return $labels[$code][$locale] ?? $labels[$code]['en_US'] ?? $code;
