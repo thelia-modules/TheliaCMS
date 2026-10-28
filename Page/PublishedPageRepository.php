@@ -74,6 +74,7 @@ final readonly class PublishedPageRepository
             publishedAt: $content->getPublishedAt(),
             tag: $this->tagOf($page),
             fields: $this->fields->valuesOf($page, $locale),
+            provenance: $content->getPublishedProvenance(),
         );
     }
 
@@ -277,6 +278,7 @@ final readonly class PublishedPageRepository
             nofollow: true,
             tag: $this->tagOf($page),
             fields: $this->fields->valuesOf($page, $locale),
+            provenance: $content->getDraftProvenance(),
         );
     }
 
