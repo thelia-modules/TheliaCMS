@@ -164,4 +164,22 @@ final class PublishedContentSanitizerTest extends TestCase
 
         self::assertSame($css, $this->sanitizer->css($css));
     }
+
+    public function testKeepsALongPageWhole(): void
+    {
+        $html = str_repeat('<p class="wysiwyg">Les conditions générales de vente.</p>', 2_000).'<p>La fin de la page.</p>';
+
+        self::assertGreaterThan(100_000, \strlen($html));
+        self::assertTrue(str_contains((string) $this->sanitizer->html($html), 'La fin de la page.'), 'The end of the page was cut off.');
+    }
+
+    public function testReadsNoMoreMarkupThanItIsGiven(): void
+    {
+        $sanitizer = new PublishedContentSanitizer(maxLength: 40);
+
+        $sanitized = (string) $sanitizer->html('<p>Kept</p><p>Past the length it is given</p>');
+
+        self::assertStringStartsWith('<p>Kept</p>', $sanitized);
+        self::assertStringNotContainsString('given', $sanitized);
+    }
 }
