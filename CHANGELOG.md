@@ -22,6 +22,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added (2.3.1)
 
+- **Several images of the media list are answered at once.** A box on each
+  card and one for the page select images; a tag is given or taken off,
+  they are marked decorative or not, or the unused ones are deleted, asked
+  in a dialog first: an image a page or an item still shows is kept and
+  named.
 - **The image of a section is chosen in a picker of the media library.**
   The section shows the image it holds (thumbnail, name, whether it is
   described) with "Choose in the library" and "Remove"; the picker opens over

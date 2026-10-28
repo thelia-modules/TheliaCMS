@@ -415,6 +415,39 @@ final readonly class CmsMediaLibrary implements MediaResolver
     }
 
     /**
+     * Gives an image one more tag, created on first use; a tag it carries
+     * already is left as it is.
+     */
+    public function addTag(LibraryImage $image, string $title): void
+    {
+        $title = trim($title);
+
+        if ('' === $title) {
+            return;
+        }
+
+        $tagId = $this->tagIdFor($title);
+
+        if (0 === LibraryImageTagQuery::create()->filterByImageId($image->getId())->filterByTagId($tagId)->count()) {
+            $this->imageTags->associateImage((string) $image->getId(), (string) $tagId);
+        }
+    }
+
+    /**
+     * Takes a tag off an image. The tag that marks it as CMS content stays.
+     */
+    public function removeTag(LibraryImage $image, string $title): void
+    {
+        $tagId = $this->existingTagId(trim($title));
+
+        if (null === $tagId || $tagId === $this->tagId()) {
+            return;
+        }
+
+        LibraryImageTagQuery::create()->filterByImageId($image->getId())->filterByTagId($tagId)->delete();
+    }
+
+    /**
      * Replaces the tags of an image, keeping the one that marks it as CMS
      * content. Tags are created on first use.
      *

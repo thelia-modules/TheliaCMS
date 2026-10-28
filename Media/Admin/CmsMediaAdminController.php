@@ -85,7 +85,7 @@ final readonly class CmsMediaAdminController
             'has_library' => $tally->total > 0,
             'accepted_mime_types' => implode(',', CmsMediaType::ACCEPTED_MIME_TYPES),
             'max_upload_size' => (int) UploadedFile::getMaxFilesize(),
-            'assets_version' => substr(hash('xxh3', (string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/media-upload.js')), 0, 12),
+            'assets_version' => substr(hash('xxh3', (string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/media-upload.js').(string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/media-list.js')), 0, 12),
             'edit_locale' => $lang->getLocale(),
             'edit_language_id' => $lang->getId(),
         ]));
@@ -299,6 +299,93 @@ final readonly class CmsMediaAdminController
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
         ]));
+    }
+
+    /**
+     * One answer for several images of the list: a tag given or taken off,
+     * decorative or not, or deleted. An image a page or an item still shows
+     * is not deleted, and the screen names it.
+     */
+    #[Route('/bulk', name: 'bulk', methods: ['POST'])]
+    public function bulk(Request $request): RedirectResponse
+    {
+        $lang = $this->editLang($request);
+        $tag = trim($request->request->getString('tag'));
+        $images = [];
+
+        foreach (array_unique(array_map('intval', $request->request->all('images'))) as $id) {
+            $image = $this->library->ownedImage($id);
+
+            if ($image instanceof LibraryImage) {
+                $images[] = $image;
+            }
+        }
+
+        if ([] === $images) {
+            return $this->backToList($request, $lang, $this->trans('Select at least one image.'), 'warning');
+        }
+
+        $count = ['%count%' => \count($images), '%tag%' => $tag];
+
+        switch ($request->request->getString('action')) {
+            case 'tag-add':
+            case 'tag-remove':
+                $this->denyUnless(AccessManager::UPDATE);
+
+                if ('' === $tag) {
+                    return $this->backToList($request, $lang, $this->trans('Name the tag.'), 'warning');
+                }
+
+                $adding = 'tag-add' === $request->request->getString('action');
+
+                foreach ($images as $image) {
+                    $adding ? $this->library->addTag($image, $tag) : $this->library->removeTag($image, $tag);
+                }
+
+                return $this->backToList($request, $lang, $this->trans($adding ? '%count% image(s) tagged “%tag%”.' : '%count% image(s) no longer tagged “%tag%”.', $count));
+            case 'decorative':
+            case 'not-decorative':
+                $this->denyUnless(AccessManager::UPDATE);
+                $decorative = 'decorative' === $request->request->getString('action');
+
+                foreach ($images as $image) {
+                    $this->writer->setDecorative($image, $decorative);
+                }
+
+                return $this->backToList($request, $lang, $this->trans($decorative ? '%count% image(s) marked decorative.' : '%count% image(s) no longer decorative.', $count));
+            case 'delete':
+                $this->denyUnless(AccessManager::DELETE);
+                $uses = $this->usages->countsFor(array_map(static fn (LibraryImage $image): int => (int) $image->getId(), $images));
+                $kept = [];
+                $deleted = 0;
+
+                foreach ($images as $image) {
+                    if (($uses[(int) $image->getId()] ?? 0) > 0) {
+                        $kept[] = (string) ($image->setLocale($lang->getLocale())->getTitle() ?: '#'.$image->getId());
+
+                        continue;
+                    }
+
+                    $this->writer->delete($image);
+                    ++$deleted;
+                }
+
+                if ([] !== $kept) {
+                    $this->flash($request, 'warning', $this->trans('Kept, still used by a page or an item: %titles%.', ['%titles%' => implode(', ', $kept)]));
+                }
+
+                return $this->backToList($request, $lang, $this->trans('%count% image(s) deleted.', ['%count%' => $deleted]));
+            default:
+                return $this->backToList($request, $lang, $this->trans('Choose what to do with the images.'), 'warning');
+        }
+    }
+
+    /**
+     * @param array<string, int|string> $parameters
+     */
+    private function trans(string $message, array $parameters = []): string
+    {
+        return $this->translator->trans($message, $parameters, TheliaCMS::DOMAIN_NAME);
     }
 
     #[Route('/{id}/delete', name: 'delete', requirements: ['id' => '\d+'], methods: ['POST'])]

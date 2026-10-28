@@ -480,6 +480,9 @@ title, the alternative text, the caption and the tags.
 say nothing in the language edited: one image, one field, Enter saves and
 shows the next one. An image can be answered as decorative or skipped.
 
+Images selected on the list take or lose a tag, are marked decorative or not,
+or are deleted when nothing uses them; the ones still used are kept and named.
+
 Uploads accept JPEG, PNG and WebP. SVG is refused: it is a document that can
 carry script. Files are dropped on the list or chosen, sent one by one, and a
 refused file is named with why without costing the others. The describe queue

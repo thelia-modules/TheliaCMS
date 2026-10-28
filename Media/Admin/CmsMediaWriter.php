@@ -108,6 +108,15 @@ final readonly class CmsMediaWriter
         $image->save();
     }
 
+    /**
+     * Decorative or not, for every language at once; the texts the image has
+     * are kept, for the day it carries information again.
+     */
+    public function setDecorative(LibraryImage $image, bool $decorative): void
+    {
+        $image->setDecorative($decorative ? 1 : 0)->save();
+    }
+
     public function delete(LibraryImage $image): void
     {
         $this->images->deleteImage($image->getId());

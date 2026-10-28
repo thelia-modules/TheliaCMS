@@ -33,7 +33,9 @@ content of a catalogue item using the section forms. Same day: an image of the l
 its text in the library (`ImageSource::alt()`, Image and Columns sections,
 `Tests/Integration/Content/ImageAltTest.php`), the field of the section
 showing only for a picture kept elsewhere; the picker needs the right to
-see the media (accepted on 2026-10-28). Lot 6 not started. The import of the catalogue
+see the media (accepted on 2026-10-28). Lot 6 done the same day: `admin.cms.media.bulk`, `CmsMediaLibrary::addTag()`
+and `removeTag()`, `CmsMediaWriter::setDecorative()`, `assets/media-list.js`,
+tests in `Tests/Integration/Media/MediaBulkTest.php`. The plan is done. The import of the catalogue
 images it starts from is done: `thelia_cms:media:import-catalogue`
 (`Media/CatalogueImageImporter.php`), a copy, run again without duplicates.
 

@@ -138,10 +138,54 @@
             </div>
         </div>
     {% else %}
+        {# Several images answered at once. The boxes of the cards belong to
+           this form by their `form` attribute; without the script, it works
+           as it is, the script counts and asks before deleting. #}
+        <form method="post" id="cms-media-bulk" data-cms-media-bulk data-testid="cms-media-bulk"
+              class="d-flex flex-wrap align-items-center gap-2 mb-3 p-2 border rounded bg-body-tertiary sticky-top"
+              action="{{ path('admin.cms.media.bulk', query.addressParameters|merge({ edit_language_id: edit_language_id })) }}">
+            <input type="hidden" name="_token" value="{{ assignToken() }}">
+            <div class="form-check mb-0 me-2">
+                <input class="form-check-input" type="checkbox" id="cms-media-select-all" data-cms-media-select-all hidden>
+                <label class="form-check-label small" for="cms-media-select-all" data-cms-media-selected hidden>{{ 'Select the page'|trans({}, 'theliacms') }}</label>
+            </div>
+            <label class="visually-hidden" for="cms-media-bulk-action">{{ 'With the selected images'|trans({}, 'theliacms') }}</label>
+            <select class="form-select form-select-sm w-auto" id="cms-media-bulk-action" name="action">
+                <option value="">{{ 'With the selected images…'|trans({}, 'theliacms') }}</option>
+                <option value="tag-add">{{ 'Add a tag'|trans({}, 'theliacms') }}</option>
+                <option value="tag-remove">{{ 'Remove a tag'|trans({}, 'theliacms') }}</option>
+                <option value="decorative">{{ 'Mark decorative'|trans({}, 'theliacms') }}</option>
+                <option value="not-decorative">{{ 'Mark not decorative'|trans({}, 'theliacms') }}</option>
+                <option value="delete">{{ 'Delete the unused ones'|trans({}, 'theliacms') }}</option>
+            </select>
+            <label class="visually-hidden" for="cms-media-bulk-tag">{{ 'Tag'|trans({}, 'theliacms') }}</label>
+            <input class="form-control form-control-sm w-auto" id="cms-media-bulk-tag" name="tag" list="cms-media-bulk-tags"
+                   placeholder="{{ 'Tag'|trans({}, 'theliacms') }}" data-cms-media-bulk-tag>
+            <datalist id="cms-media-bulk-tags">
+                {% for title in tags|keys %}<option value="{{ title }}"></option>{% endfor %}
+            </datalist>
+            <button type="submit" class="btn btn-sm btn-primary" data-cms-media-bulk-apply>{{ 'Apply'|trans({}, 'theliacms') }}</button>
+        </form>
+
+        <dialog class="border-0 rounded shadow p-0" data-cms-media-bulk-dialog aria-labelledby="cms-media-bulk-title"
+                style="width: min(480px, calc(100vw - 32px))">
+            <div class="p-4">
+                <h2 class="h5" id="cms-media-bulk-title">{{ 'Delete the selected images for good?'|trans({}, 'theliacms') }}</h2>
+                <p class="text-body-secondary">{{ 'Their files are removed. An image a page or an item still shows is kept.'|trans({}, 'theliacms') }}</p>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary" data-cms-media-bulk-cancel>{{ 'Cancel'|trans({}, 'theliacms') }}</button>
+                    <button type="button" class="btn btn-danger" data-cms-media-bulk-confirm>{{ 'Delete the unused ones'|trans({}, 'theliacms') }}</button>
+                </div>
+            </div>
+        </dialog>
+
         <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-6 g-3">
             {% for item in grid.items %}
                 <div class="col">
-                    <div class="card h-100" data-testid="cms-media-card-{{ item.id }}">
+                    <div class="card h-100 position-relative" data-testid="cms-media-card-{{ item.id }}">
+                        <input class="form-check-input position-absolute top-0 start-0 m-2 shadow-sm" style="z-index: 2"
+                               type="checkbox" form="cms-media-bulk" name="images[]" value="{{ item.id }}"
+                               data-cms-media-select aria-label="{{ 'Select %title%'|trans({ '%title%': item.title }, 'theliacms') }}">
                         {# `scale-down`, not `cover`: a media library has to show
                            the real shape of a file, and never blow a small image
                            up to fill the card. #}
@@ -217,4 +261,5 @@
         {% endif %}
     {% endif %}
     <script src="{{ module_asset('TheliaCMS', 'assets/media-upload.js') }}?v={{ assets_version }}" defer></script>
+    <script src="{{ module_asset('TheliaCMS', 'assets/media-list.js') }}?v={{ assets_version }}" defer></script>
 {% endblock %}
