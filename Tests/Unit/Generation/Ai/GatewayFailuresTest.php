@@ -74,6 +74,24 @@ final class GatewayFailuresTest extends TestCase
         yield 'a request the core cannot take' => [new InvalidAiArgumentException('secret-provider-text'), GenerationException::class, 'The generator could not reach the AI. Try again, and tell the person who looks after the site if it lasts.'];
     }
 
+    public function testAConversationThatNeverAnswersSaysHowManyTurnsItTookAndForWhat(): void
+    {
+        self::assertSame('The model made more than 8 turns without answering with a document.', $this->failures()->tooManyTurns(8, text: false)->getMessage());
+        self::assertSame('The model made more than 6 turns without answering with a text.', $this->failures()->tooManyTurns(6, text: true)->getMessage());
+    }
+
+    public function testTheTurnsMessagesAreTranslatedInBothLanguages(): void
+    {
+        foreach (['en_US', 'fr_FR'] as $locale) {
+            $messages = require \dirname(__DIR__, 4).'/I18n/'.$locale.'.php';
+
+            foreach (['The model made more than %turns% turns without answering with a document.', 'The model made more than %turns% turns without answering with a text.'] as $key) {
+                self::assertArrayHasKey($key, $messages, $locale);
+                self::assertStringContainsString('%turns%', $messages[$key], $locale);
+            }
+        }
+    }
+
     public function testTheLogRowOfAFailedRequestIsFoundWhenTheExceptionNamesOne(): void
     {
         $failures = $this->failures();

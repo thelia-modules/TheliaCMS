@@ -1268,6 +1268,8 @@ return [
     'Kept, still used by a page or an item: %titles%.' => 'Kept, still used by a page or an item: %titles%.',
     '%count% image(s) deleted.' => '%count% image(s) deleted.',
     'Choose what to do with the images.' => 'Choose what to do with the images.',
+    'The model made more than %turns% turns without answering with a text.' => 'The model made more than %turns% turns without answering with a text.',
+    'The model made more than %turns% turns without answering with a document.' => 'The model made more than %turns% turns without answering with a document.',
     'The AI budget of the site is spent for now. The generator works again next month, or as soon as the budget is raised in the AI settings of Thelia.' => 'The AI budget of the site is spent for now. The generator works again next month, or as soon as the budget is raised in the AI settings of Thelia.',
     'Too many requests were sent to the generator in a short time. Wait a few minutes and try again.' => 'Too many requests were sent to the generator in a short time. Wait a few minutes and try again.',
     'The AI settings of the site only allow providers in the European Union, and the connection of the generator is not one. Choose another connection, or change that setting, in the AI settings of Thelia.' => 'The AI settings of the site only allow providers in the European Union, and the connection of the generator is not one. Choose another connection, or change that setting, in the AI settings of Thelia.',

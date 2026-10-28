@@ -66,6 +66,17 @@ final readonly class GatewayFailures
     }
 
     /**
+     * What stops a conversation that keeps calling tools and never answers.
+     * The message is one of two, so each stays a whole sentence to translate.
+     */
+    public function tooManyTurns(int $turns, bool $text): GenerationException
+    {
+        return GenerationException::because($text
+            ? $this->say('The model made more than %turns% turns without answering with a text.', ['%turns%' => $turns])
+            : $this->say('The model made more than %turns% turns without answering with a document.', ['%turns%' => $turns]));
+    }
+
+    /**
      * The row of the usage log of the core the exception speaks of, when it
      * names one: a refused or failed request is logged there too.
      */

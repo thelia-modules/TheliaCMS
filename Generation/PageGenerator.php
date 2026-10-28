@@ -170,7 +170,7 @@ final readonly class PageGenerator
         try {
             while (true) {
                 if (++$turns > self::MAX_TURNS) {
-                    throw GenerationException::because(\sprintf('The model made more than %d turns without answering with a document.', self::MAX_TURNS));
+                    throw $this->failures->tooManyTurns(self::MAX_TURNS, text: false);
                 }
 
                 try {

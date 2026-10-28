@@ -1268,6 +1268,8 @@ return [
     'Kept, still used by a page or an item: %titles%.' => 'Gardées, encore utilisées par une page ou une fiche : %titles%.',
     '%count% image(s) deleted.' => '%count% image(s) supprimée(s).',
     'Choose what to do with the images.' => 'Choisissez quoi faire des images.',
+    'The model made more than %turns% turns without answering with a text.' => 'Le modèle a enchaîné plus de %turns% tours sans répondre par un texte.',
+    'The model made more than %turns% turns without answering with a document.' => 'Le modèle a enchaîné plus de %turns% tours sans répondre par un document.',
     'The AI budget of the site is spent for now. The generator works again next month, or as soon as the budget is raised in the AI settings of Thelia.' => 'Le budget IA du site est épuisé pour le moment. Le générateur refonctionnera le mois prochain, ou dès que le budget sera relevé dans les réglages IA de Thelia.',
     'Too many requests were sent to the generator in a short time. Wait a few minutes and try again.' => 'Trop de demandes ont été envoyées au générateur en peu de temps. Attendez quelques minutes puis réessayez.',
     'The AI settings of the site only allow providers in the European Union, and the connection of the generator is not one. Choose another connection, or change that setting, in the AI settings of Thelia.' => 'Les réglages IA du site n’autorisent que des fournisseurs de l’Union européenne, et la connexion du générateur n’en est pas un. Choisissez une autre connexion, ou modifiez ce réglage, dans les réglages IA de Thelia.',
