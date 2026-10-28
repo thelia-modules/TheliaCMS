@@ -19,6 +19,7 @@ use Thelia\Model\LangQuery;
 use TheliaCMS\Catalogue\CatalogueItemType;
 use TheliaCMS\Catalogue\ItemContentRepository;
 use TheliaCMS\Content\Document;
+use TheliaCMS\Locale\TranslationFreshness;
 use TheliaCMS\Model\CmsPageContentQuery;
 
 /**
@@ -47,9 +48,9 @@ final readonly class TranslationSources
         return $this->sources($drafts, $locale);
     }
 
-    public function pageDocument(int $pageId, string $sourceLocale): ?Document
+    public function pageSource(int $pageId, string $sourceLocale): ?TranslationSource
     {
-        return Document::fromJson(CmsPageContentQuery::create()->filterByPageId($pageId)->filterByLocale($sourceLocale)->findOne()?->getDraftDocument());
+        return self::source(CmsPageContentQuery::create()->filterByPageId($pageId)->filterByLocale($sourceLocale)->findOne()?->getDraftDocument());
     }
 
     /**
@@ -60,9 +61,9 @@ final readonly class TranslationSources
         return $this->sources($this->items->draftsByLocale($type, $id), $locale);
     }
 
-    public function itemDocument(CatalogueItemType $type, int $id, string $sourceLocale): ?Document
+    public function itemSource(CatalogueItemType $type, int $id, string $sourceLocale): ?TranslationSource
     {
-        return $this->items->draftDocument($type, $id, $sourceLocale);
+        return self::source($this->items->find($type, $id, $sourceLocale)?->getDraftDocument());
     }
 
     /**
@@ -86,6 +87,17 @@ final readonly class TranslationSources
         }
 
         return $sources;
+    }
+
+    /**
+     * The fingerprint is taken from the draft as it was read: a change to it
+     * while the generator writes makes the translation out of date at once.
+     */
+    private static function source(?string $json): ?TranslationSource
+    {
+        $document = Document::fromJson($json);
+
+        return null === $json || !$document instanceof Document ? null : new TranslationSource($document, TranslationFreshness::fingerprint($json));
     }
 
     private static function holdsSomething(?string $json): bool

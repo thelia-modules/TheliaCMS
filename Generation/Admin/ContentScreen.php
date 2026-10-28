@@ -77,6 +77,7 @@ final readonly class ContentScreen
             'brief_form' => $this->forms->create(BriefType::class, $lastBrief, ['action' => $subject->url('generate')])->createView(),
             'change_form' => $this->forms->create(ChangeType::class, null, ['action' => $subject->url('revise')])->createView(),
             'translate_form' => $this->translateForm($subject),
+            'translation' => $this->translation($subject),
             'sections' => null === $document ? [] : $this->sections($document, $subject, $mayPublish),
             'history' => array_map($this->row(...), $this->log->history($subject->target, $subject->locale, 20)),
             'outcome' => $this->outcome($request, $subject),
@@ -122,6 +123,38 @@ final readonly class ContentScreen
                 'sources' => array_column($subject->translationSources, 'locale', 'label'),
             ])
             ->createView();
+    }
+
+    /**
+     * The language this one was written from, whether its draft changed
+     * since, and the form that writes this language from it again when it
+     * did and still holds something.
+     *
+     * @return array{source: string, label: string, stale: bool, retranslate_form: FormView|null}|null
+     */
+    private function translation(ContentSubject $subject): ?array
+    {
+        $link = $subject->translationLink;
+
+        if (null === $link) {
+            return null;
+        }
+
+        $labels = array_column($subject->translationSources, 'label', 'locale');
+        $label = $labels[$link->sourceLocale] ?? $link->sourceLocale;
+        $retranslate = $link->isStale && $subject->hasContent() && isset($labels[$link->sourceLocale]);
+
+        return [
+            'source' => $link->sourceLocale,
+            'label' => $label,
+            'stale' => $link->isStale,
+            'retranslate_form' => $retranslate
+                ? $this->forms->create(TranslateType::class, ['source' => $link->sourceLocale], [
+                    'action' => $subject->url('translate'),
+                    'sources' => [$label => $link->sourceLocale],
+                ])->createView()
+                : null,
+        ];
     }
 
     /**

@@ -70,6 +70,17 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
             $connection->exec('ALTER TABLE cms_page_type ADD COLUMN instructions LONGTEXT DEFAULT NULL AFTER brief_audience');
         }
 
+        // The shape 2.4.0 gives the contents, should its test stop half way.
+        foreach (['cms_page_content', 'cms_item_content'] as $table) {
+            if ([] === $this->rows(\sprintf("SHOW COLUMNS FROM %s LIKE 'translated_from'", $table))) {
+                $connection->exec(\sprintf('ALTER TABLE %s ADD COLUMN translated_from VARCHAR(5) DEFAULT NULL AFTER draft_updated_by', $table));
+            }
+
+            if ([] === $this->rows(\sprintf("SHOW COLUMNS FROM %s LIKE 'source_fingerprint'", $table))) {
+                $connection->exec(\sprintf('ALTER TABLE %s ADD COLUMN source_fingerprint CHAR(64) DEFAULT NULL AFTER translated_from', $table));
+            }
+        }
+
         $connection->exec("CREATE TABLE IF NOT EXISTS cms_page_type_i18n (id INTEGER NOT NULL, locale VARCHAR(5) DEFAULT 'en_US' NOT NULL, title VARCHAR(255), description TEXT, PRIMARY KEY (id, locale), CONSTRAINT cms_page_type_i18n_fk_7b1d2a FOREIGN KEY (id) REFERENCES cms_page_type (id) ON DELETE CASCADE) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC");
         $connection->exec('DELETE FROM cms_page_type');
 
@@ -162,6 +173,33 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
         self::assertCount(1, $column);
         self::assertSame('varchar(60)', strtolower((string) $column[0]['Type']));
         self::assertSame('YES', $column[0]['Null']);
+    }
+
+    public function testTheUpdateTo240GivesTheContentsTheSourceOfTheirTranslationAndCanBePlayedTwice(): void
+    {
+        foreach (['cms_page_content', 'cms_item_content'] as $table) {
+            // A test database prepared before 2.4.0 has no column to drop.
+            foreach (['source_fingerprint', 'translated_from'] as $column) {
+                if ([] !== $this->rows(\sprintf("SHOW COLUMNS FROM %s LIKE '%s'", $table, $column))) {
+                    $this->getPropelConnection()->exec(\sprintf('ALTER TABLE %s DROP COLUMN %s, ALGORITHM=COPY', $table, $column));
+                }
+            }
+
+            self::assertSame([], $this->rows(\sprintf("SHOW COLUMNS FROM %s WHERE Field IN ('translated_from', 'source_fingerprint')", $table)));
+        }
+
+        $module = new TheliaCMS();
+        $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+        $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+
+        foreach (['cms_page_content', 'cms_item_content'] as $table) {
+            $columns = $this->rows(\sprintf("SHOW COLUMNS FROM %s WHERE Field IN ('translated_from', 'source_fingerprint')", $table));
+            self::assertSame(
+                ['translated_from' => 'varchar(5) YES', 'source_fingerprint' => 'char(64) YES'],
+                array_column(array_map(static fn (array $column): array => ['field' => $column['Field'], 'shape' => strtolower((string) $column['Type']).' '.$column['Null']], $columns), 'shape', 'field'),
+                $table,
+            );
+        }
     }
 
     private function withoutInstructions(): void

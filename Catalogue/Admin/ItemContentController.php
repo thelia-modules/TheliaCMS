@@ -46,6 +46,7 @@ use TheliaCMS\Generation\Admin\TranslationSources;
 use TheliaCMS\Generation\Brief;
 use TheliaCMS\Generation\GenerationRequest;
 use TheliaCMS\Generation\GenerationTargets;
+use TheliaCMS\Locale\TranslationFreshness;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaCMS\Preview\ItemPreviewLink;
 use TheliaCMS\Security\CmsResources;
@@ -76,6 +77,7 @@ final readonly class ItemContentController
         private SectionUpdate $sectionUpdate,
         private TranslationSources $translationSources,
         private GenerationTargets $targets,
+        private TranslationFreshness $freshness,
     ) {
     }
 
@@ -236,17 +238,41 @@ final readonly class ItemContentController
         }
 
         $sourceLocale = (string) $form->getData()['source'];
-        $source = $this->translationSources->itemDocument($item->type, $item->id, $sourceLocale);
+        $source = $this->translationSources->itemSource($item->type, $item->id, $sourceLocale);
 
         try {
-            $generation = GenerationRequest::translation($this->targets->forItem($item), $item->locale, $source ?? new Document([]), $sourceLocale);
+            $generation = GenerationRequest::translation($this->targets->forItem($item), $item->locale, $source->document ?? new Document([]), $sourceLocale);
         } catch (\InvalidArgumentException) {
             $this->flash($request, 'danger', $this->translate('That language holds nothing to write from any more: reload the screen.'));
 
             return $this->back($item, $lang);
         }
 
-        return $this->run($request, $item, $lang, $generation);
+        return $this->run($request, $item, $lang, $generation, function () use ($item, $sourceLocale, $source): void {
+            if (null !== $source) {
+                $this->freshness->recordItem($item->type, $item->id, $item->locale, $sourceLocale, $source->fingerprint);
+            }
+        });
+    }
+
+    /**
+     * This language declared up to date with the current draft of another,
+     * as for a page.
+     */
+    #[Route('/translation', name: 'translation', methods: ['POST'])]
+    public function markTranslationCurrent(Request $request, string $type, int $id): Response
+    {
+        $lang = $this->languages->resolve($request);
+        $item = $this->itemOrFail($type, $id, $lang);
+        $this->denyUnlessMayPublish();
+
+        if ($this->freshness->markItemCurrent($item->type, $item->id, $item->locale, (string) $request->request->get('source'))) {
+            $this->flash($request, 'success', $this->translate('This language is marked up to date with the one it was written from.'));
+        } else {
+            $this->flash($request, 'danger', $this->translate('Both languages must hold a draft to tie one to the other.'));
+        }
+
+        return $this->back($item, $lang);
     }
 
     #[Route('/publish', name: 'publish', methods: ['POST'])]
@@ -346,7 +372,10 @@ final readonly class ItemContentController
         return $this->back($item, $lang);
     }
 
-    private function run(Request $request, CatalogueItem $item, Lang $lang, GenerationRequest $generation): Response
+    /**
+     * @param (\Closure(): void)|null $saved what else is written once the answer is saved
+     */
+    private function run(Request $request, CatalogueItem $item, Lang $lang, GenerationRequest $generation, ?\Closure $saved = null): Response
     {
         return $this->runner->respond(
             $request,
@@ -354,9 +383,13 @@ final readonly class ItemContentController
             // An item has no fields of a page type: whatever the answer
             // writes besides the document is left out. The draft the answer
             // replaces is kept first: it can be put back.
-            function (Document $document) use ($item): void {
+            function (Document $document) use ($item, $saved): void {
                 $this->writer->keepDraft($item->type, $item->id, $item->locale);
                 $this->writer->saveContent($item->type, $item->id, $item->locale, $document);
+
+                if (null !== $saved) {
+                    $saved();
+                }
             },
             $this->screenUrl($item, $lang),
         );
@@ -368,7 +401,7 @@ final readonly class ItemContentController
         $parameters = ['type' => $item->type->value, 'id' => $item->id, EditLanguage::PARAMETER => $lang->getId()];
         $routes = ['screen' => $this->screenUrl($item, $lang)];
 
-        foreach (['generate', 'revise', 'section', 'update', 'remove', 'restore', 'move', 'add', 'translate', 'publish'] as $action) {
+        foreach (['generate', 'revise', 'section', 'update', 'remove', 'restore', 'move', 'add', 'translate', 'translation', 'publish'] as $action) {
             $routes[$action] = $this->urls->generate('admin.cms.catalogue.content.'.$action, $parameters);
         }
 
@@ -387,6 +420,7 @@ final readonly class ItemContentController
             routes: $routes,
             testId: 'cms-item-content',
             translationSources: $this->translationSources->forItem($item->type, $item->id, $item->locale),
+            translationLink: $this->freshness->itemLink($item->type, $item->id, $item->locale),
             draftPagePreviewUrl: $this->previewLinks->pageUrlFor($item),
             previousDrafts: $this->writer->previousDrafts($item->type, $item->id, $item->locale),
         );

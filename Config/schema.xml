@@ -164,6 +164,8 @@
         <column name="published_html" type="CLOB"/>
         <column name="published_at" type="TIMESTAMP"/>
         <column name="draft_updated_by" type="INTEGER"/>
+        <column name="translated_from" size="5" type="VARCHAR"/>
+        <column name="source_fingerprint" size="64" type="CHAR"/>
 
         <foreign-key foreignTable="cms_page" name="fk_cms_page_content_page" onDelete="CASCADE" onUpdate="RESTRICT">
             <reference foreign="id" local="page_id"/>
@@ -237,6 +239,8 @@
         <column name="published_html" type="CLOB"/>
         <column name="published_at" type="TIMESTAMP"/>
         <column name="draft_updated_by" type="INTEGER"/>
+        <column name="translated_from" size="5" type="VARCHAR"/>
+        <column name="source_fingerprint" size="64" type="CHAR"/>
 
         <unique name="unq_cms_item_content_item_locale">
             <unique-column name="item_type"/>

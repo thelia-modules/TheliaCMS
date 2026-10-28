@@ -34,6 +34,8 @@ use TheliaCMS\Generation\Pricing;
 use TheliaCMS\Generation\PromptBuilder;
 use TheliaCMS\Generation\Tool\GeneratorTools;
 use TheliaCMS\Http\ConsoleRequest;
+use TheliaCMS\Locale\TranslationFreshness;
+use TheliaCMS\Model\CmsPageRevisionQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 
@@ -88,6 +90,22 @@ final class GenerateCommandTest extends CmsIntegrationTestCase
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode(), $tester->getDisplay());
         self::assertStringContainsString('Fondé en 1987 à Lyon.', json_encode($this->api->requests[0]['messages'], \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR), 'The generator reads the document to translate.');
+    }
+
+    public function testATranslationSavedByTheCommandIsFollowedAndKeepsTheDraftItReplaces(): void
+    {
+        $page = $this->createPage('Notre équipe', html: '<h1>Notre équipe</h1>');
+        $target = 'fr_FR' === $this->locale() ? 'en_US' : 'fr_FR';
+        $this->writer()->saveContent($page, $target, Document::richText('<h1>Our team, by hand</h1>'));
+        $this->answerWith('<h1>Our team</h1>');
+
+        $tester = $this->generate(['--page' => (string) $page->getId(), '--locale' => $target, '--translate-from' => $this->locale()]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode(), $tester->getDisplay());
+        self::assertSame(1, CmsPageRevisionQuery::create()->filterByPageId($page->getId())->filterByLocale($target)->filterByLabel(CmsPageWriter::DRAFT_LABEL)->count(), 'The draft written by hand can be put back.');
+        $link = $this->getService(TranslationFreshness::class)->pageLink((int) $page->getId(), $target);
+        self::assertSame($this->locale(), $link?->sourceLocale);
+        self::assertFalse($link->isStale);
     }
 
     public function testATranslationFromALanguageHoldingNothingFails(): void
@@ -159,6 +177,7 @@ final class GenerateCommandTest extends CmsIntegrationTestCase
             $this->getService(ItemContentRepository::class),
             $this->getService(ItemContentWriter::class),
             $this->getService(TranslationSources::class),
+            $this->getService(TranslationFreshness::class),
         );
 
         $tester = new CommandTester($command);

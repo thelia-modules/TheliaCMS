@@ -16,6 +16,7 @@ namespace TheliaCMS\Page\Admin;
 
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Model\Lang;
+use TheliaCMS\Locale\TranslationFreshness;
 use TheliaCMS\Page\PageTagRepository;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\SampleTextPageFinder;
@@ -38,6 +39,7 @@ final readonly class PageListPresenter
         private UrlGeneratorInterface $urls,
         private PageTagRepository $tags,
         private PageTypeRepository $types,
+        private TranslationFreshness $translations,
     ) {
     }
 
@@ -57,7 +59,7 @@ final readonly class PageListPresenter
 
         return [
             'is_filtering' => $filters->isFiltering(),
-            'rows' => $this->rows($rows, $filters, $languageId, null === $results),
+            'rows' => $this->rows($rows, $filters, $languageId, null === $results, $this->translations->stalePageIds($locale)),
             'results' => $results,
             'live_count' => $liveCount,
             'filters' => $this->filterBar->present($filters, $languageId, $trashCount),
@@ -115,10 +117,11 @@ final readonly class PageListPresenter
 
     /**
      * @param list<PageListRow> $rows
+     * @param array<int, true>  $stale the pages to translate again, by id
      *
      * @return list<array<string, mixed>>
      */
-    private function rows(array $rows, PageFilters $filters, int $languageId, bool $isTree): array
+    private function rows(array $rows, PageFilters $filters, int $languageId, bool $isTree, array $stale): array
     {
         $firstOfParent = [];
         $lastOfParent = [];
@@ -150,6 +153,8 @@ final readonly class PageListPresenter
                 // True when the name on screen comes from another language, so the
                 // row can say the page still has to be written in this one.
                 'is_untranslated' => '' === $localTitle,
+                // Written from another language whose draft changed since.
+                'is_stale_translation' => isset($stale[$id]),
                 'address' => $row->address,
                 'depth' => $row->depth,
                 'level' => $row->depth + 1,

@@ -34,6 +34,7 @@ use TheliaCMS\Generation\Brief;
 use TheliaCMS\Generation\GenerationRequest;
 use TheliaCMS\Generation\GenerationTarget;
 use TheliaCMS\Generation\GenerationTargets;
+use TheliaCMS\Locale\TranslationFreshness;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Page\Admin\CmsPageAdminRepository;
@@ -77,6 +78,7 @@ final readonly class CmsPageContentController
         private TranslationSources $translationSources,
         private GenerationTargets $targets,
         private PageTypeRepository $pageTypes,
+        private TranslationFreshness $freshness,
     ) {
     }
 
@@ -347,17 +349,43 @@ final readonly class CmsPageContentController
         }
 
         $sourceLocale = (string) $form->getData()['source'];
-        $source = $this->translationSources->pageDocument((int) $page->getId(), $sourceLocale);
+        $source = $this->translationSources->pageSource((int) $page->getId(), $sourceLocale);
 
         try {
-            $generation = GenerationRequest::translation($this->target($page, $lang), $lang->getLocale(), $source ?? new Document([]), $sourceLocale);
+            $generation = GenerationRequest::translation($this->target($page, $lang), $lang->getLocale(), $source->document ?? new Document([]), $sourceLocale);
         } catch (\InvalidArgumentException) {
             $this->flash($request, 'danger', $this->translate('That language holds nothing to write from any more: reload the screen.'));
 
             return $this->back($page, $lang);
         }
 
-        return $this->run($request, $page, $lang, $generation);
+        return $this->run($request, $page, $lang, $generation, function () use ($page, $lang, $sourceLocale, $source): void {
+            if (null !== $source) {
+                $this->freshness->recordPage((int) $page->getId(), $lang->getLocale(), $sourceLocale, $source->fingerprint);
+            }
+        });
+    }
+
+    /**
+     * This language declared up to date with the current draft of another:
+     * a translation brought up to date by hand, or written by hand from the
+     * start. No call to the generator, so the right to change pages is
+     * enough.
+     */
+    #[Route('/translation', name: 'translation', methods: ['POST'])]
+    public function markTranslationCurrent(Request $request, int $id): Response
+    {
+        $page = $this->livePageOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $this->denyUnlessMayPublish();
+
+        if ($this->freshness->markPageCurrent((int) $page->getId(), $lang->getLocale(), (string) $request->request->get('source'))) {
+            $this->flash($request, 'success', $this->translate('This language is marked up to date with the one it was written from.'));
+        } else {
+            $this->flash($request, 'danger', $this->translate('Both languages must hold a draft to tie one to the other.'));
+        }
+
+        return $this->back($page, $lang);
     }
 
     #[Route('/publish', name: 'publish', methods: ['POST'])]
@@ -414,20 +442,27 @@ final readonly class CmsPageContentController
         return $this->back($page, $lang);
     }
 
-    private function run(Request $request, CmsPage $page, Lang $lang, GenerationRequest $generation): Response
+    /**
+     * @param (\Closure(): void)|null $saved what else is written once the answer is saved
+     */
+    private function run(Request $request, CmsPage $page, Lang $lang, GenerationRequest $generation, ?\Closure $saved = null): Response
     {
         $locale = $lang->getLocale();
 
         return $this->runner->respond(
             $request,
             $generation,
-            function (Document $document, ?array $fields = null) use ($page, $locale): void {
+            function (Document $document, ?array $fields = null) use ($page, $locale, $saved): void {
                 // The draft the answer replaces is kept first: it can be put back.
                 $this->writer->keepDraft($page, $locale);
                 $this->writer->saveContent($page, $locale, $document);
 
                 if (null !== $fields && [] !== $fields) {
                     $this->writer->saveFields($page, $locale, $fields);
+                }
+
+                if (null !== $saved) {
+                    $saved();
                 }
             },
             $this->screenUrl($page, $lang),
@@ -464,10 +499,12 @@ final readonly class CmsPageContentController
                 'move' => $this->urls->generate('admin.cms.pages.content.move', $parameters),
                 'add' => $this->urls->generate('admin.cms.pages.content.add', $parameters),
                 'translate' => $this->urls->generate('admin.cms.pages.content.translate', $parameters),
+                'translation' => $this->urls->generate('admin.cms.pages.content.translation', $parameters),
                 'publish' => $this->urls->generate('admin.cms.pages.content.publish', $parameters),
             ],
             testId: 'cms-page-content',
             translationSources: $this->translationSources->forPage((int) $page->getId(), $locale),
+            translationLink: $this->freshness->pageLink((int) $page->getId(), $locale),
             publishable: 1 !== $page->getModel(),
             draftPagePreviewUrl: $this->previewLinks->urlFor((int) $page->getId(), $locale),
             template: $this->template($page, $locale),

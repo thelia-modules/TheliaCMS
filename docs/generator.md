@@ -155,6 +155,20 @@ the signed preview link of the draft.
   reader rather than word for word. One language is picked by default, in
   the order of the shop; a select lets the editor choose when there are
   several. The brief form stays at hand for a page written on its own.
+- **Out of date translations**: the language written from another keeps
+  which one (`translated_from`) and the SHA-256 of the draft it was written
+  from (`source_fingerprint`), on `cms_page_content` and `cms_item_content`
+  (`Locale\TranslationFreshness`). Once the draft of that language changes,
+  the panel says so and offers to write this language again from it (the
+  draft it replaces is kept with the previous drafts) or to mark it up to
+  date; put back as it was, the source is up to date again. A language
+  written by hand is followed once tied to the one it translates, from the
+  same panel. The list of pages shows "To be translated again" on the row,
+  and the dashboard of a showcase site counts the pages of each language.
+  The draft is compared, not the published version: it is what a
+  translation reads. The title and the fields of the page are not part of
+  the fingerprint. The command `thelia_cms:generate --translate-from` keeps
+  the draft it replaces and records the source the same way.
 - **History**: the calls of the ledger for this page and language, with their
   outcome, turns, duration and cost, and what each one left out of the brief.
 - **Publish**: the usual pipeline, with the heading check.

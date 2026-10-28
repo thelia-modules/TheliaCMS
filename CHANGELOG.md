@@ -7,8 +7,24 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added (2.4.0)
+
+- **A translation whose source changed is reported.** A language written
+  from another one by the generator keeps which one and the fingerprint of
+  the draft it was written from. Once that draft changes, the content screen
+  says so and offers to write the language again from it (the draft it
+  replaces is kept with the previous drafts) or to mark it up to date; the
+  list of pages shows "To be translated again" on the row, and the dashboard
+  counts these pages for each language. A language written by hand is
+  followed once tied to the one it translates. Pages and the documents of
+  the items of the catalogue alike. 2.4.0 gives `cms_page_content` and
+  `cms_item_content` the columns `translated_from` and `source_fingerprint`.
+
 ### Fixed
 
+- **The command keeps the draft a generation replaces.** `thelia_cms:generate`
+  overwrote the draft of the language it wrote; it now keeps it with the
+  previous drafts first, as the content screen does.
 - **A publication no longer empties the shared cache of the whole site.**
   Every change to a page purged `cms` and `cms-menu`, which every page of the
   site carries, the shop included when the shared cache of Thelia is on. A

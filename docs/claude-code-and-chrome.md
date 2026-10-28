@@ -99,7 +99,9 @@ What works, and why:
   message of the screen stays in the page after the call.
 - **Translating a page** is offered in the middle of the screen, not in the
   panel on the left, when the language on screen holds nothing and another
-  does: **Write it in this language from the … version**.
+  does: **Write it in this language from the … version**. A translation
+  whose source changed since is written again from the panel on the left
+  (**Write it again from the … version**).
 - **An empty draft cannot be published.** To take a content off the site,
   use **Take offline** on the CMS content tab of the item.
 - **A component that changes** is drawn again in drafts at once; a published
