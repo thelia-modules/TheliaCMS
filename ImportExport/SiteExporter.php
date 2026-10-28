@@ -156,8 +156,10 @@ final readonly class SiteExporter
             $document['contents'][(string) $content->getLocale()] = [
                 'draft_document' => $content->getDraftDocument(),
                 'draft_html' => $content->getDraftHtml(),
+                'draft_provenance' => $content->getDraftProvenance(),
                 'published_document' => $content->getPublishedDocument(),
                 'published_html' => $content->getPublishedHtml(),
+                'published_provenance' => $content->getPublishedProvenance(),
                 'published_at' => $this->date($content->getPublishedAt()),
                 // Carried because the back office compares it with the
                 // publication date to tell whether a page holds unpublished
@@ -198,8 +200,10 @@ final readonly class SiteExporter
             $items[$index]['contents'][(string) $content->getLocale()] = [
                 'draft_document' => $content->getDraftDocument(),
                 'draft_html' => $content->getDraftHtml(),
+                'draft_provenance' => $content->getDraftProvenance(),
                 'published_document' => $content->getPublishedDocument(),
                 'published_html' => $content->getPublishedHtml(),
+                'published_provenance' => $content->getPublishedProvenance(),
                 'published_at' => $this->date($content->getPublishedAt()),
                 'updated_at' => $this->date($content->getUpdatedAt()),
             ];
@@ -258,6 +262,7 @@ final readonly class SiteExporter
             'sample' => (object) $component->sample,
             'template' => $component->template,
             'css' => $component->css,
+            'provenance' => $component->provenance,
         ], $this->components?->ready() ?? []);
     }
 

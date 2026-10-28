@@ -30,6 +30,7 @@ use TheliaCMS\Content\Document;
 use TheliaCMS\Content\DocumentValidator;
 use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
+use TheliaCMS\Content\ProvenanceMark;
 use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
@@ -369,6 +370,7 @@ final readonly class SiteImporter
                     \is_array($row['sample'] ?? null) ? $row['sample'] : [],
                     \is_string($row['template'] ?? null) ? $row['template'] : '',
                     \is_string($row['css'] ?? null) ? $row['css'] : '',
+                    ProvenanceMark::normalize($row['provenance'] ?? null),
                 ));
             } catch (InvalidSiteComponentException $exception) {
                 $report->warn(\sprintf('The component "%s" was left out: %s', $code, implode(' ', $exception->problems)));
@@ -502,8 +504,10 @@ final readonly class SiteImporter
             $model
                 ->setDraftDocument($this->importedDocument($content['draft_document'] ?? null, $mediaMap, $report, 'The draft of '.$where))
                 ->setDraftHtml($this->importedHtml($content['draft_html'] ?? null, $mediaMap, $options, $report, 'The draft of '.$where))
+                ->setDraftProvenance(ProvenanceMark::normalize($content['draft_provenance'] ?? null))
                 ->setPublishedDocument($this->importedDocument($published['published_document'] ?? null, $mediaMap, $report, 'The published version of '.$where))
                 ->setPublishedHtml($publishedHtml)
+                ->setPublishedProvenance(ProvenanceMark::normalize($published['published_provenance'] ?? null))
                 ->setPublishedAt($this->date($published['published_at'] ?? null));
 
             // The back office reads "edited since it went live" from this
@@ -573,8 +577,10 @@ final readonly class SiteImporter
                 $model
                     ->setDraftDocument($this->importedDocument($content['draft_document'] ?? null, $mediaMap, $report, 'The draft of '.$where))
                     ->setDraftHtml($this->importedHtml($content['draft_html'] ?? null, $mediaMap, $options, $report, 'The draft of '.$where))
+                    ->setDraftProvenance(ProvenanceMark::normalize($content['draft_provenance'] ?? null))
                     ->setPublishedDocument($this->importedDocument($content['published_document'] ?? null, $mediaMap, $report, 'The published version of '.$where))
                     ->setPublishedHtml($this->importedHtml($content['published_html'] ?? null, $mediaMap, $options, $report, 'The published version of '.$where))
+                    ->setPublishedProvenance(ProvenanceMark::normalize($content['published_provenance'] ?? null))
                     ->setPublishedAt($this->date($content['published_at'] ?? null));
 
                 // As for a page: kept, or every imported document would read
