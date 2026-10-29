@@ -50,6 +50,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- **The generator of components leaves out a skill the site switched off**
+  under CMS > Skills, as the generator of pages and `read_skill` do: it read
+  the skill on accessibility whether it was on or not. Its heading is no
+  longer written twice in the prompt.
 - **A component is refused when it draws what a page does not keep.** The
   template was checked against a short list (`script`, `iframe`, `form`…)
   while the page filters against the elements of HTML text and layout: an

@@ -91,6 +91,25 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
         self::assertNull($this->getService(SiteComponentRepository::class)->find('PriceTable'), 'Nothing is kept before the editor says so.');
     }
 
+    public function testASkillTheSiteSwitchedOffIsNotRead(): void
+    {
+        $skills = $this->getService(SkillRepository::class);
+
+        foreach (['accessibility', 'motion'] as $code) {
+            $skill = $skills->find($code);
+            self::assertNotNull($skill);
+            $skills->save($code, $skill->body, false);
+        }
+
+        $this->api->answer(self::answer(PriceTable::component()));
+        $this->generator()->generate(new ComponentRequest('Un tableau de prix de deux à quatre formules.', $this->locale()));
+
+        $system = (string) $this->api->requests[0]->system;
+        self::assertStringNotContainsString('# Accessibility', $system, 'A skill switched off under CMS > Skills is read by no generator.');
+        self::assertStringNotContainsString('# Movement and interaction without script', $system);
+        self::assertStringContainsString('# Stylesheet', $system, 'The rules of the site are still sent.');
+    }
+
     public function testTheMarkOfTheCoreFollowsTheComponentFromTheCallToTheComponentKept(): void
     {
         $this->api->answer(FakeAiGateway::response(ComponentPrompt::json(PriceTable::component()), provenance: FakeAiGateway::provenance('theliacms.component')));

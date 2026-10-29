@@ -166,8 +166,8 @@ final readonly class ComponentPrompt
 
     private function rules(): string
     {
-        $accessibility = $this->skills->find('accessibility')?->body;
-        $motion = $this->skills->find('motion')?->body;
+        $accessibility = $this->skill('accessibility');
+        $motion = $this->skill('motion');
 
         return implode("\n", [
             '# Props',
@@ -216,18 +216,25 @@ final readonly class ComponentPrompt
             '',
             'The props of the example: what the toolkit shows and what the generator of pages sees. Fill every prop with realistic text in the language of the site, as many items as a real page would hold. An image is null unless the request gives the `https` address of a picture.',
             '',
-            '# Accessibility',
-            '',
-            null !== $accessibility ? trim($accessibility) : '',
-            '',
-            null !== $motion ? trim($motion) : '',
-            '',
+            // Each skill opens with its own heading.
+            ...array_map(static fn (string $skill): string => trim($skill)."\n", array_filter([$accessibility, $motion])),
             '# Example',
             '',
             '```json',
             '{"code": "ProcessSteps", "label": "Étapes", "description": "The steps of a process in order, each a short title and a sentence. Use it for how an order, a booking or a service goes.", "props": "[{\"name\": \"title\", \"type\": \"text\", \"label\": \"Heading\", \"max\": 120}, {\"name\": \"steps\", \"type\": \"items\", \"label\": \"Steps\", \"min\": 2, \"max\": 8, \"items\": [{\"name\": \"title\", \"type\": \"text\", \"label\": \"Step\", \"required\": true, \"max\": 80}, {\"name\": \"text\", \"type\": \"text\", \"label\": \"What happens\", \"max\": 300}]}]", "sample": "{\"title\": \"Comment ça marche\", \"steps\": [{\"title\": \"Vous réservez\", \"text\": \"Choisissez un créneau en ligne.\"}, {\"title\": \"Nous confirmons\", \"text\": \"Un e-mail vous le confirme dans l’heure.\"}]}", "template": "<section class=\"steps\">{% if props.title is not empty %}<h2 class=\"steps__title\">{{ props.title }}</h2>{% endif %}<ol class=\"steps__list\">{% for step in props.steps %}<li class=\"step\"><h3 class=\"step__title\">{{ step.title }}</h3>{% if step.text is not empty %}<p class=\"step__text\">{{ step.text }}</p>{% endif %}</li>{% endfor %}</ol></section>", "css": ".steps__list { display: grid; gap: 1.5rem; padding: 0; list-style: none; counter-reset: step; }\n.step { counter-increment: step; padding-top: 1rem; border-top: 2px solid var(--cms-color-accent); }\n.step__title::before { content: counter(step) \". \"; }\n.step__text { color: var(--cms-color-text-muted); }\n@media (min-width: 48rem) { .steps__list { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); } }"}',
             '```',
         ]);
+    }
+
+    /**
+     * The text of a skill, null when the site has none of that code or
+     * switched it off under CMS > Skills.
+     */
+    private function skill(string $code): ?string
+    {
+        $skill = $this->skills->find($code);
+
+        return null !== $skill && $skill->enabled ? $skill->body : null;
     }
 
     /**
