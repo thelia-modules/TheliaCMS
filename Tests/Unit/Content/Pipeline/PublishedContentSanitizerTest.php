@@ -16,7 +16,15 @@ namespace TheliaCMS\Tests\Unit\Content\Pipeline;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\UX\TwigComponent\ComponentRendererInterface;
+use Thelia\Core\Template\TemplateDefinition;
+use Thelia\Core\Template\TemplateHelperInterface;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
+use TheliaCMS\Content\Theme\ComponentPropsReader;
+use TheliaCMS\Content\Theme\ThemeComponentSections;
+use Twig\Environment;
 
 /**
  * The editor profile is a client, not a trusted administrator: whatever the
@@ -125,6 +133,69 @@ final class PublishedContentSanitizerTest extends TestCase
         self::assertStringContainsString('data-props', $sanitized);
     }
 
+    /**
+     * A component of the theme wires its behaviour with Stimulus: published
+     * without its controller, a carousel is a strip of pictures whose arrows
+     * do nothing. The theme names the controllers its components use; those
+     * are kept, any other is dropped, so that written text cannot wire one
+     * the theme never opened to pages.
+     */
+    public function testKeepsTheStimulusAttributesOfTheControllersTheThemeDeclares(): void
+    {
+        $directory = sys_get_temp_dir().'/theliacms-theme-'.bin2hex(random_bytes(4));
+        mkdir($directory.'/config', 0o777, true);
+
+        try {
+            file_put_contents($directory.'/config/theliacms.yaml', "sections:\n    components: []\n    controllers:\n        - Organisms--Carousel--base\n");
+            $sanitizer = new PublishedContentSanitizer(theme: $this->themeIn($directory));
+
+            $sanitized = (string) $sanitizer->html(
+                '<section class="Carousel" data-controller="Organisms--Carousel--base" data-organisms--carousel--base-interval-value="5">'
+                .'<div tabindex="0" data-organisms--carousel--base-target="viewport" data-action="keydown->Organisms--Carousel--base#keydown"></div>'
+                .'<div hidden data-organisms--carousel--base-target="controls">'
+                .'<button type="button" data-action="Organisms--Carousel--base#goTo" data-organisms--carousel--base-index-param="1">2</button>'
+                .'</div></section>'
+                .'<div data-controller="Organisms--Carousel--base hijack" data-action="click->hijack#run Organisms--Carousel--base#next" data-hijack-url-value="https://evil.test" data-hijack-target="x">Written text</div>'
+                .'<div data-controller="hijack" data-other="x">Written text</div>',
+            );
+
+            foreach ([
+                'data-controller="Organisms--Carousel--base"', 'data-organisms--carousel--base-interval-value="5"',
+                'data-organisms--carousel--base-target="viewport"', 'data-action="keydown-&gt;Organisms--Carousel--base#keydown"',
+                'data-organisms--carousel--base-target="controls"', 'data-action="Organisms--Carousel--base#goTo"',
+                'data-organisms--carousel--base-index-param="1"', 'data-action="Organisms--Carousel--base#next"',
+            ] as $expected) {
+                self::assertStringContainsString($expected, $sanitized);
+            }
+
+            foreach (['hijack', 'evil.test', 'data-other'] as $forbidden) {
+                self::assertStringNotContainsString($forbidden, $sanitized, 'A controller the theme does not name is dropped.');
+            }
+
+            self::assertSame(
+                '<div>Text</div>',
+                (new PublishedContentSanitizer())->html('<div data-controller="Organisms--Carousel--base" data-action="Organisms--Carousel--base#next">Text</div>'),
+                'Without a theme naming it, no controller is kept.',
+            );
+        } finally {
+            @unlink($directory.'/config/theliacms.yaml');
+            @rmdir($directory.'/config');
+            @rmdir($directory);
+        }
+    }
+
+    /**
+     * Controls a script reveals start hidden, and a carousel says what it is
+     * to a screen reader: neither carries script nor an address.
+     */
+    public function testKeepsHiddenControlsAndTheRoleDescriptionOfAWidget(): void
+    {
+        $sanitized = (string) $this->sanitizer->html('<section role="group" aria-roledescription="carousel"><div hidden>Controls</div></section>');
+
+        self::assertStringContainsString('aria-roledescription="carousel"', $sanitized);
+        self::assertStringContainsString('<div hidden', $sanitized);
+    }
+
     public function testDropsAnIframeUnlessCustomCodeIsAllowed(): void
     {
         $html = '<iframe src="https://player.test/embed/1" title="A video"></iframe>';
@@ -187,5 +258,22 @@ final class PublishedContentSanitizerTest extends TestCase
             .'@media (min-width:768px){.cms-page-content h1{font-size:3rem}}';
 
         self::assertSame($css, $this->sanitizer->css($css));
+    }
+
+    private function themeIn(string $directory): ThemeComponentSections
+    {
+        $theme = $this->createStub(TemplateDefinition::class);
+        $theme->method('getAbsolutePath')->willReturn($directory);
+        $theme->method('getParentList')->willReturn([]);
+
+        $templates = $this->createStub(TemplateHelperInterface::class);
+        $templates->method('getActiveFrontTemplate')->willReturn($theme);
+
+        return new ThemeComponentSections(
+            $templates,
+            new ComponentPropsReader($this->createStub(Environment::class), $this->createStub(UrlGeneratorInterface::class)),
+            $this->createStub(ComponentRendererInterface::class),
+            new NullLogger(),
+        );
     }
 }

@@ -17,6 +17,7 @@ namespace TheliaCMS\Content\Pipeline;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizer;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
 use TheliaCMS\Content\DocumentRenderer;
+use TheliaCMS\Content\Theme\ThemeComponentSections;
 
 /**
  * Filters what is about to go online.
@@ -54,6 +55,7 @@ final readonly class PublishedContentSanitizer
         'aria-expanded',
         'aria-controls',
         'aria-live',
+        'aria-roledescription',
         'lang',
         'dir',
     ];
@@ -67,8 +69,17 @@ final readonly class PublishedContentSanitizer
      */
     public const int DEFAULT_MAX_LENGTH = 1_000_000;
 
+    /**
+     * What a Stimulus controller reads off an element, after `data-<identifier>-`.
+     */
+    private const string STIMULUS_ATTRIBUTE = '/^(?:target|[a-z0-9]+(?:-[a-z0-9]+)*-(?:value|param|class|outlet))$/';
+
+    /**
+     * @param ThemeComponentSections|null $theme the theme that names the Stimulus controllers its components use; without it, none is kept
+     */
     public function __construct(
         private int $maxLength = self::DEFAULT_MAX_LENGTH,
+        private ?ThemeComponentSections $theme = null,
     ) {
     }
 
@@ -78,7 +89,39 @@ final readonly class PublishedContentSanitizer
             return $html;
         }
 
-        return $this->filterStyleAttributes($this->sanitizerFor($allowCustomCode)->sanitize($html));
+        return $this->filterStyleAttributes($this->sanitizerFor($allowCustomCode, $html)->sanitize($html));
+    }
+
+    /**
+     * The attributes of the Stimulus controllers the theme names, as the
+     * markup spells them. The sanitizer only takes exact names, and those of
+     * a value or a parameter are made of the name the component gives it.
+     *
+     * @param list<string> $controllers
+     *
+     * @return list<string>
+     */
+    private static function stimulusAttributes(string $html, array $controllers): array
+    {
+        if ([] === $controllers) {
+            return [];
+        }
+
+        $prefixes = array_map(static fn (string $controller): string => 'data-'.strtolower($controller).'-', $controllers);
+        $attributes = ['data-controller', 'data-action'];
+        preg_match_all('/\sdata-[a-z0-9-]+/i', $html, $matches);
+
+        foreach (array_unique(array_map(static fn (string $name): string => strtolower(trim($name)), $matches[0])) as $name) {
+            foreach ($prefixes as $prefix) {
+                if (str_starts_with($name, $prefix) && 1 === preg_match(self::STIMULUS_ATTRIBUTE, substr($name, \strlen($prefix)))) {
+                    $attributes[] = $name;
+
+                    break;
+                }
+            }
+        }
+
+        return $attributes;
     }
 
     /**
@@ -146,7 +189,7 @@ final readonly class PublishedContentSanitizer
         return $filtered ?? '';
     }
 
-    private function sanitizerFor(bool $allowCustomCode): HtmlSanitizer
+    private function sanitizerFor(bool $allowCustomCode, string $html): HtmlSanitizer
     {
         $config = (new HtmlSanitizerConfig())
             ->withMaxInputLength($this->maxLength)
@@ -167,6 +210,9 @@ final readonly class PublishedContentSanitizer
             // `open` is what an author toggles on a question that should start
             // expanded; without it a `<details>` always comes back closed.
             ->allowAttribute('open', ['details'])
+            // Controls a script reveals start hidden; without the attribute
+            // they show, and do nothing, until it runs.
+            ->allowAttribute('hidden', '*')
             ->allowLinkSchemes(['https', 'http', 'mailto', 'tel'])
             // No data: URI — an SVG smuggled into one carries script.
             ->allowMediaSchemes(['https', 'http'])
@@ -175,6 +221,20 @@ final readonly class PublishedContentSanitizer
 
         foreach (self::ACCESSIBILITY_ATTRIBUTES as $attribute) {
             $config = $config->allowAttribute($attribute, '*');
+        }
+
+        // A component of the theme wires its behaviour with Stimulus. The
+        // attributes of the controllers the theme names are kept, and their
+        // values are held to those controllers: written text cannot wire one
+        // the theme never opened to pages.
+        $controllers = $this->theme?->declaration()->controllers ?? [];
+
+        foreach (self::stimulusAttributes($html, $controllers) as $attribute) {
+            $config = $config->allowAttribute($attribute, '*');
+        }
+
+        if ([] !== $controllers) {
+            $config = $config->withAttributeSanitizer(new StimulusAttributeSanitizer($controllers));
         }
 
         foreach (self::EMBED_ELEMENTS as $element) {

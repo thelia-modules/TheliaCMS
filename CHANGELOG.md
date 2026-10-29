@@ -9,6 +9,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- **A component of the theme keeps its Stimulus controller once published.**
+  The filter a page goes through before it goes online dropped
+  `data-controller`, `data-action` and the targets of a component: a carousel
+  went online with arrows that did nothing. A theme now names the controllers
+  its components use under `sections.controllers` of `config/theliacms.yaml`;
+  their attributes are kept, and a controller it does not name is dropped from
+  the markup. `hidden` and `aria-roledescription` are kept too.
 - **The `label` column of `cms_item_revision` reaches every site.** It was
   shipped as the update to 2.3.1, a version the module already carried: a
   site installed at 2.3.1 before that column existed never ran the update

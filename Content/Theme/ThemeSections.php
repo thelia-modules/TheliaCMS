@@ -37,6 +37,16 @@ use Symfony\Component\Yaml\Yaml;
  * `hidden` names the sections of the module the theme puts away, because it
  * opens a component of its own for the same thing.
  *
+ * `controllers` names the Stimulus controllers the opened components wire
+ * themselves with. The filter a page goes through before it is published
+ * keeps the attributes of these controllers and drops those of any other,
+ * so that a component keeps its behaviour online and written text cannot
+ * wire a controller the theme never opened to pages:
+ *
+ *     sections:
+ *         controllers:
+ *             - Organisms--Carousel--base
+ *
  * `examples` gives a component the props it is shown with, written as the
  * component names them: what the toolkit draws and the generator is shown,
  * and what a section added by hand starts from. The defaults of its props
@@ -57,12 +67,14 @@ final readonly class ThemeSections
      * @param list<string>                        $hidden
      * @param array<string, array<string, mixed>> $examples      props as the component names them, by component
      * @param string|null                         $richTextClass the classes the theme styles written text with, added to the free text sections
+     * @param list<string>                        $controllers   the identifiers of the Stimulus controllers the components wire themselves with
      */
     public function __construct(
         public array $components = [],
         public array $hidden = [],
         public array $examples = [],
         public ?string $richTextClass = null,
+        public array $controllers = [],
     ) {
     }
 
@@ -77,7 +89,7 @@ final readonly class ThemeSections
             $declared = self::readFrom($directory);
 
             if (null !== $declared) {
-                return new self($declared['components'], $declared['hidden'], $declared['examples'], $declared['richtext_class']);
+                return new self($declared['components'], $declared['hidden'], $declared['examples'], $declared['richtext_class'], $declared['controllers']);
             }
         }
 
@@ -85,7 +97,7 @@ final readonly class ThemeSections
     }
 
     /**
-     * @return array{components: list<string>, hidden: list<string>, examples: array<string, array<string, mixed>>, richtext_class: string|null}|null null when the theme declares nothing
+     * @return array{components: list<string>, hidden: list<string>, examples: array<string, array<string, mixed>>, richtext_class: string|null, controllers: list<string>}|null null when the theme declares nothing
      */
     private static function readFrom(string $themeDirectory): ?array
     {
@@ -116,7 +128,33 @@ final readonly class ThemeSections
             'hidden' => self::names($sections['hidden'] ?? [], 'sections.hidden', $file),
             'examples' => self::examples($sections['examples'] ?? [], $file),
             'richtext_class' => self::classes($sections['richtext_class'] ?? null, $file),
+            'controllers' => self::controllers($sections['controllers'] ?? null, $file),
         ];
+    }
+
+    /**
+     * Identifiers of Stimulus controllers and nothing else: they become the
+     * names of attributes the published pages keep.
+     *
+     * @return list<string>
+     */
+    private static function controllers(mixed $controllers, string $file): array
+    {
+        if (null === $controllers) {
+            return [];
+        }
+
+        if (!\is_array($controllers) || !array_is_list($controllers)) {
+            throw new \InvalidArgumentException(\sprintf('The "sections.controllers" key of %s must be a list of Stimulus controller identifiers.', $file));
+        }
+
+        foreach ($controllers as $controller) {
+            if (!\is_string($controller) || 1 !== preg_match('/^[A-Za-z0-9]+(-{1,2}[A-Za-z0-9]+)*$/', $controller)) {
+                throw new \InvalidArgumentException(\sprintf('"%s" in %s is not a Stimulus controller identifier such as Organisms--Carousel--base.', \is_scalar($controller) ? (string) $controller : \gettype($controller), $file));
+            }
+        }
+
+        return array_values(array_unique($controllers));
     }
 
     /**
