@@ -122,6 +122,39 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
         self::assertSame(0, $this->rowCount(\sprintf('cms_page_search WHERE page_id = %d', $pageId)));
     }
 
+    public function testAFreshInstallEndsWithNoLegacyTable(): void
+    {
+        // What the core does on a fresh install: every update replayed, the
+        // ones of 1.x included, which create the tables of the blocks empty.
+        (new TheliaCMS())->update('0.0.0', '2.0.0', $this->getPropelConnection());
+
+        foreach (array_merge(self::LEGACY_TABLES, ['cms_block', 'cms_block_i18n', 'cms_block_content', 'cms_item_block', 'cms_page_template']) as $table) {
+            self::assertFalse($this->tableExists($table), $table.' has nothing to keep on a fresh install.');
+        }
+    }
+
+    public function testTablesWithNoRowAreDroppedWhereThereIsNothingToKeep(): void
+    {
+        $page = $this->createPage('Page sans bloc', html: '<p>Texte</p>');
+        $this->backTo150((int) $page->getId(), $this->locale());
+
+        $connection = $this->getPropelConnection();
+        $connection->exec('DELETE FROM cms_item_block');
+        $connection->exec('DELETE FROM cms_block_content');
+        $connection->exec('DELETE FROM cms_block_i18n');
+        $connection->exec('DELETE FROM cms_block');
+        $connection->exec('DELETE FROM cms_page_template');
+
+        (new TheliaCMS())->update('1.5.0', '2.0.0', $connection);
+
+        foreach (['cms_block', 'cms_block_i18n', 'cms_block_content', 'cms_item_block', 'cms_page_template'] as $table) {
+            self::assertFalse($this->tableExists($table), $table.' is gone.');
+            self::assertFalse($this->tableExists(str_replace('cms_', 'cms_legacy_', $table)), $table.' held nothing: no legacy table for it.');
+        }
+
+        self::assertTrue($this->tableExists('cms_legacy_page_content'), 'The content of the pages is kept whether or not there are blocks.');
+    }
+
     public function testAFreshInstallIsLeftAlone(): void
     {
         $page = $this->createPage('Page écrite en 2.0.0', html: '<h1>Après</h1><p>Un texte de 2.0.0.</p>');
