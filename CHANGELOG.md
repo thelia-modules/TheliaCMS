@@ -15,7 +15,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   and revision, with no copy. The tables of the blocks and of the saved page
   templates are now renamed `cms_legacy_block`, `cms_legacy_block_i18n`,
   `cms_legacy_block_content`, `cms_legacy_item_block` and
-  `cms_legacy_page_template`, rows and keys included, and the content of the
+  `cms_legacy_page_template`, rows and keys included (a table with no row is
+  dropped, so a fresh install has none), and the content of the
   pages and revisions (HTML, editor project, stylesheets) is copied to
   `cms_legacy_page_content` and `cms_legacy_page_revision` before it is
   cleared. 2.x never reads those tables: they are there to get the old markup

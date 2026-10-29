@@ -11,8 +11,9 @@
 -- are copied to `cms_legacy_page_content` and `cms_legacy_page_revision`
 -- before the purge, and the tables of the blocks and of the saved page
 -- templates, which the module no longer reads, are renamed `cms_legacy_*`
--- instead of dropped. The module never reads those tables; they are for the
--- people who want the old markup back, and can be dropped by hand.
+-- instead of dropped when they hold rows. The module never reads those
+-- tables; they are for the people who want the old markup back, and can be
+-- dropped by hand.
 --
 -- Written to be replayable: the same file is applied by a fresh install (after
 -- TheliaMain.sql, which already declares the new shape) and by an update of an
@@ -153,14 +154,28 @@ DEALLOCATE PREPARE cms_prepared;
 -- Blocks (the reusable ones and the one of a catalogue item) and saved page
 -- templates are no longer part of the module, and nothing in 2.x holds their
 -- content: a block is markup of the former editor, which no document can be
--- read back from. The tables are kept under a `cms_legacy_` name, with their
--- rows and their keys. A table is only renamed where the new name is free, so
--- a second play leaves them alone.
+-- read back from. A table holding rows is kept under a `cms_legacy_` name,
+-- with its rows and its keys, and only where the new name is free, so a second
+-- play leaves it alone. A table with no row has nothing to keep and is
+-- dropped: a fresh install replays the updates of 1.x, which create these
+-- tables empty, and must not end with legacy tables of nothing.
+-- The blocks of a site are counted on `cms_block`: its other tables only hold
+-- rows that point at one of its rows.
 
+SET @cms_blocks_held := 0;
 SET @cms_statement := IF(
-    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_item_block')
-    AND 0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_item_block'),
-    'RENAME TABLE `cms_item_block` TO `cms_legacy_item_block`',
+    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block'),
+    'SELECT COUNT(*) INTO @cms_blocks_held FROM `cms_block`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_templates_held := 0;
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_page_template'),
+    'SELECT COUNT(*) INTO @cms_templates_held FROM `cms_page_template`',
     'DO 0'
 );
 PREPARE cms_prepared FROM @cms_statement;
@@ -168,40 +183,65 @@ EXECUTE cms_prepared;
 DEALLOCATE PREPARE cms_prepared;
 
 SET @cms_statement := IF(
-    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block_content')
-    AND 0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block_content'),
-    'RENAME TABLE `cms_block_content` TO `cms_legacy_block_content`',
-    'DO 0'
+    0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_item_block'),
+    'DO 0',
+    IF(
+        0 < @cms_blocks_held,
+        IF(0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_item_block'), 'RENAME TABLE `cms_item_block` TO `cms_legacy_item_block`', 'DO 0'),
+        'DROP TABLE `cms_item_block`'
+    )
 );
 PREPARE cms_prepared FROM @cms_statement;
 EXECUTE cms_prepared;
 DEALLOCATE PREPARE cms_prepared;
 
 SET @cms_statement := IF(
-    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block_i18n')
-    AND 0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block_i18n'),
-    'RENAME TABLE `cms_block_i18n` TO `cms_legacy_block_i18n`',
-    'DO 0'
+    0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block_content'),
+    'DO 0',
+    IF(
+        0 < @cms_blocks_held,
+        IF(0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block_content'), 'RENAME TABLE `cms_block_content` TO `cms_legacy_block_content`', 'DO 0'),
+        'DROP TABLE `cms_block_content`'
+    )
 );
 PREPARE cms_prepared FROM @cms_statement;
 EXECUTE cms_prepared;
 DEALLOCATE PREPARE cms_prepared;
 
 SET @cms_statement := IF(
-    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block')
-    AND 0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block'),
-    'RENAME TABLE `cms_block` TO `cms_legacy_block`',
-    'DO 0'
+    0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block_i18n'),
+    'DO 0',
+    IF(
+        0 < @cms_blocks_held,
+        IF(0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block_i18n'), 'RENAME TABLE `cms_block_i18n` TO `cms_legacy_block_i18n`', 'DO 0'),
+        'DROP TABLE `cms_block_i18n`'
+    )
 );
 PREPARE cms_prepared FROM @cms_statement;
 EXECUTE cms_prepared;
 DEALLOCATE PREPARE cms_prepared;
 
 SET @cms_statement := IF(
-    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_page_template')
-    AND 0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_page_template'),
-    'RENAME TABLE `cms_page_template` TO `cms_legacy_page_template`',
-    'DO 0'
+    0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block'),
+    'DO 0',
+    IF(
+        0 < @cms_blocks_held,
+        IF(0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block'), 'RENAME TABLE `cms_block` TO `cms_legacy_block`', 'DO 0'),
+        'DROP TABLE `cms_block`'
+    )
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_page_template'),
+    'DO 0',
+    IF(
+        0 < @cms_templates_held,
+        IF(0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_page_template'), 'RENAME TABLE `cms_page_template` TO `cms_legacy_page_template`', 'DO 0'),
+        'DROP TABLE `cms_page_template`'
+    )
 );
 PREPARE cms_prepared FROM @cms_statement;
 EXECUTE cms_prepared;
