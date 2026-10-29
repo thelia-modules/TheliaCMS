@@ -43,7 +43,8 @@ The module never reads them. The reason: a site that updates in production
 lost its blocks and its saved templates with no way back, and 2.x has no
 model that holds them (a block is markup of the former editor, which no
 document can be read back from), so a rename costs nothing and keeps the data
-for whoever needs it. A table with no row has nothing to keep and is dropped,
+for whoever needs it. The copies of the pages and of the revisions follow the
+same rule: they are made only where something was written. A table with no row has nothing to keep and is dropped,
 which is what a fresh install meets: it replays the updates of 1.x, and they
 create the tables of the blocks empty. The replay of the update leaves the
 legacy tables alone.

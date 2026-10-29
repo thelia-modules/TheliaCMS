@@ -9,6 +9,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- **The history of a generation says in words why a cited web page was not
+  read**, in French or English, instead of showing the code (`url_not_accessible`).
+- **The update to 2.0.0 keeps `cms_legacy_page_content` and
+  `cms_legacy_page_revision` only where the pages or revisions held something
+  written**, so a fresh install ends with no legacy table.
 - **The update from 1.x to 2.0.0 no longer destroys what the former editor
   wrote.** It dropped the tables of the blocks and of the saved page templates
   and cleared the HTML, the editor project and the stylesheets of every page
