@@ -21,16 +21,18 @@ use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Menu\Admin\CmsMenuRepository;
 
 /**
- * Drops the cached menus whenever a content or a folder of the shop changes.
+ * Drops the cached menus whenever a content, a folder, a category or a product
+ * of the shop changes.
  *
- * A menu entry can point at a content or a folder, and shows its title, its
- * address and whether it is online. Those are written by the screens of the
- * shop, which know nothing of this cache, so without this a renamed or hidden
- * content kept its old place in the menu until the cache expired.
+ * A menu entry can point at any of them, and shows its title, its address and
+ * whether it is online. Those are written by the screens of the shop, which
+ * know nothing of this cache, so without this a renamed or hidden content kept
+ * its old place in the menu until the cache expired.
  *
  * The menus are drawn on every page, so a shared cache in front of the site
  * keeps them as well. That one is dropped only when a menu links to what
- * changed: dropping it empties the cache of the whole site.
+ * changed: dropping it empties the cache of the whole site, and a catalogue
+ * import writes thousands of products no menu names.
  *
  * Runs after the action of the core (priority -128), so the menu is rebuilt
  * from what the write left in the database.
@@ -73,6 +75,29 @@ final readonly class NativeContentMenuCacheListener
     public function onFolderChange(object $event): void
     {
         $this->changed(MenuTargetType::Folder, $event);
+    }
+
+    // Only what a menu shows: the title, the address, whether it is online,
+    // whether it exists. A product has many more events (prices, stock,
+    // associations) which would drop the menus for nothing.
+    #[AsEventListener(event: TheliaEvents::CATEGORY_CREATE, priority: self::AFTER_THE_CORE)]
+    #[AsEventListener(event: TheliaEvents::CATEGORY_UPDATE, priority: self::AFTER_THE_CORE)]
+    #[AsEventListener(event: TheliaEvents::CATEGORY_DELETE, priority: self::AFTER_THE_CORE)]
+    #[AsEventListener(event: TheliaEvents::CATEGORY_TOGGLE_VISIBILITY, priority: self::AFTER_THE_CORE)]
+    #[AsEventListener(event: TheliaEvents::CATEGORY_UPDATE_SEO, priority: self::AFTER_THE_CORE)]
+    public function onCategoryChange(object $event): void
+    {
+        $this->changed(MenuTargetType::Category, $event);
+    }
+
+    #[AsEventListener(event: TheliaEvents::PRODUCT_CREATE, priority: self::AFTER_THE_CORE)]
+    #[AsEventListener(event: TheliaEvents::PRODUCT_UPDATE, priority: self::AFTER_THE_CORE)]
+    #[AsEventListener(event: TheliaEvents::PRODUCT_DELETE, priority: self::AFTER_THE_CORE)]
+    #[AsEventListener(event: TheliaEvents::PRODUCT_TOGGLE_VISIBILITY, priority: self::AFTER_THE_CORE)]
+    #[AsEventListener(event: TheliaEvents::PRODUCT_UPDATE_SEO, priority: self::AFTER_THE_CORE)]
+    public function onProductChange(object $event): void
+    {
+        $this->changed(MenuTargetType::Product, $event);
     }
 
     private function changed(MenuTargetType $type, object $event): void

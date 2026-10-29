@@ -1,0 +1,89 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% set title = component ? component.label : 'Component not made'|trans({}, 'theliacms') %}
+{% block title %}{{ title }}{% endblock %}
+{% block body_testid %}cms-site-component-candidate{% endblock %}
+
+{% block scripts_extra %}
+    <script src="{{ module_asset('TheliaCMS', 'assets/component-generator.js') }}?v={{ assets_version }}" defer></script>
+{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: title } %}
+        {% block actions %}
+            {% if kept_code %}
+                <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.components.site.show', { component: kept_code }) }}">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to the component'|trans({}, 'theliacms') }}
+                </a>
+            {% else %}
+                <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.components.list') }}">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to components'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
+        {% endblock %}
+    {% endembed %}
+
+    <div class="alert {{ failed ? 'alert-warning' : 'alert-light' }} small" data-testid="cms-site-component-outcome" data-status="{{ candidate.status }}">
+        <div><strong>{{ 'Asked:'|trans({}, 'theliacms') }}</strong> {{ candidate.request }}</div>
+        <div class="text-muted">
+            {{ '%turns% turn(s), %seconds% s, %cost% USD'|trans({ '%turns%': candidate.turns, '%seconds%': (candidate.durationMs / 1000)|round(1), '%cost%': candidate.costUsd|number_format(3, '.', '') }, 'theliacms') }}
+        </div>
+        {% if failed %}
+            <div class="mt-2">{{ 'The generator could not make a component the site can keep:'|trans({}, 'theliacms') }} {{ candidate.error }}</div>
+        {% endif %}
+    </div>
+
+    {% if component %}
+        <div class="row g-3">
+            <div class="col-xl-8">
+                {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_preview.html.twig', { url: preview_url }) }}
+            </div>
+            <div class="col-xl-4">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <p class="mb-1"><code>Site:{{ component.code }}</code></p>
+                        <p class="text-muted small">{{ component.description }}</p>
+                        {% if may_make %}
+                            {% if kept_code and pages > 0 %}
+                                <p class="small">{{ 'Used by %count% page(s): keeping this version draws their drafts again with it; published pages change at their next publication.'|trans({ '%count%': pages }, 'theliacms') }}</p>
+                            {% endif %}
+                            <form method="post" action="{{ path('admin.cms.components.site.keep', { id: candidate.logId }) }}" data-testid="cms-site-component-keep">
+                                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                <button class="btn btn-success" type="submit">
+                                    <i class="bi bi-check2 me-1" aria-hidden="true"></i>{{ kept_code ? 'Keep this version'|trans({}, 'theliacms') : 'Keep the component'|trans({}, 'theliacms') }}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if may_make %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_request_form.html.twig', {
+                                testid: 'cms-site-component-change',
+                                hidden: { candidate: candidate.logId },
+                                label: 'Ask a change'|trans({}, 'theliacms'),
+                                rows: 3,
+                                help: 'The generator starts from this version.'|trans({}, 'theliacms'),
+                                button: 'Change it'|trans({}, 'theliacms'),
+                            }) }}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_definition.html.twig') }}
+    {% elseif may_make %}
+        <div class="card">
+            <div class="card-body">
+                {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_request_form.html.twig', {
+                    testid: 'cms-site-component-request',
+                    hidden: kept_code ? { component: kept_code } : {},
+                    label: 'Ask again'|trans({}, 'theliacms'),
+                    help: 'Reword the request, or say more about what the component shows.'|trans({}, 'theliacms'),
+                    button: 'Make the component'|trans({}, 'theliacms'),
+                }) }}
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

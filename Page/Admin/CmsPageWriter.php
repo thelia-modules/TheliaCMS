@@ -19,13 +19,20 @@ use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Domain\Ai\AiProvenance;
 use Thelia\Model\LangQuery;
 use Thelia\Model\RewritingUrlQuery;
-use TheliaCMS\Builder\EmptyContentChecker;
-use TheliaCMS\Builder\ImageRewriter;
-use TheliaCMS\Builder\PageContentNormalizer;
-use TheliaCMS\Builder\PlaceholderContentChecker;
-use TheliaCMS\Builder\PublishedContentSanitizer;
+use TheliaCMS\Content\Document;
+use TheliaCMS\Content\DocumentRenderer;
+use TheliaCMS\Content\DocumentValidator;
+use TheliaCMS\Content\InvalidDocumentException;
+use TheliaCMS\Content\Pipeline\EmptyContentChecker;
+use TheliaCMS\Content\Pipeline\HeadingChecker;
+use TheliaCMS\Content\Pipeline\ImageRewriter;
+use TheliaCMS\Content\Pipeline\PageContentNormalizer;
+use TheliaCMS\Content\Pipeline\PlaceholderContentChecker;
+use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
+use TheliaCMS\Content\ProvenanceMark;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -37,9 +44,12 @@ use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Model\Map\CmsPageI18nTableMap;
 use TheliaCMS\Model\Map\CmsPageTableMap;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\Field\PageFields;
 use TheliaCMS\Page\PageInvalidator;
+use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Search\SearchTextExtractor;
 use TheliaCMS\Security\CmsResources;
+use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\TheliaCMS;
 
 /**
@@ -52,6 +62,12 @@ final readonly class CmsPageWriter
     /** Revisions kept per (page, locale) before the oldest ones are dropped. */
     private const int REVISION_RETENTION = 20;
 
+    /** Drafts a generation replaced, kept per (page, locale) to put one back. */
+    private const int DRAFT_RETENTION = 5;
+
+    /** The label of a revision holding a draft, rather than a publication. */
+    public const string DRAFT_LABEL = 'draft';
+
     public function __construct(
         private CmsUrlService $urls,
         private SecurityContext $securityContext,
@@ -62,9 +78,15 @@ final readonly class CmsPageWriter
         private PlaceholderContentChecker $placeholders,
         private ImageRewriter $images,
         private SearchTextExtractor $searchText,
+        private DocumentValidator $validator,
+        private DocumentRenderer $renderer,
+        private HeadingChecker $headings,
+        private CmsSettings $settings,
         // Menus, lists of pages and a shared cache in front of the site hold
         // what this writer changes, and none of them can know on its own.
         private PageInvalidator $invalidator,
+        private PageFields $fields,
+        private PageTypeRepository $types,
     ) {
     }
 
@@ -96,6 +118,10 @@ final readonly class CmsPageWriter
             // Read before the save clears it: whether the menus and the
             // breadcrumbs that name this page have to follow.
             $presenceChanged = $this->presenceChanges($page);
+            $this->assertSoleModel($page, $connection);
+            // Written on every save, values or not: a page whose type changed
+            // drops here the values the new type does not define.
+            $this->fields->write($page, $locale, $draft->fields ?? []);
             $page->save($connection);
 
             // The content itself belongs to the builder screen. The row is
@@ -116,6 +142,10 @@ final readonly class CmsPageWriter
             // site where some pages answer and others do not.
             if (null !== $formerAddress && $formerAddress !== $address) {
                 $this->urls->rebuildSubtree($page);
+            } elseif (null === $formerAddress && !$wasNew) {
+                // A first address in this locale: the pages under it translated
+                // before it answer at the root of that language until then.
+                $this->urls->rebuildDescendants($page, $locale);
             }
 
             $connection->commit();
@@ -144,26 +174,198 @@ final readonly class CmsPageWriter
     }
 
     /**
-     * Stores what the builder produced, without touching the published
-     * snapshot: saving in the editor never changes what visitors see.
+     * Stores the document and its rendering, without touching the published
+     * snapshot: saving never changes what visitors see.
+     *
+     * A generation hands in its provenance, which replaces the mark of the
+     * draft. A person editing the draft hands in none, and the mark stays:
+     * a section rewritten by hand is still part of a page the model wrote,
+     * and nothing here can tell when that stops being true.
+     *
+     * @throws InvalidDocumentException when the document cannot be stored
      */
-    public function saveContent(CmsPage $page, string $locale, BuilderContent $content): void
+    public function saveContent(CmsPage $page, string $locale, Document $document, ?AiProvenance $provenance = null): void
     {
         $adminId = $this->securityContext->getAdminUser()?->getId();
+        $document = $this->validator->validate($document);
 
         // Drafts are filtered too, not only what goes online: the draft is
-        // loaded back into the editor of whoever opens the page next, so a
-        // script left in it would run in their back office.
-        $html = $this->sanitizer->html($this->normalizer->html($content->html), $this->mayPublishCustomCode());
+        // shown by the preview and loaded back in the back office of whoever
+        // opens the page next, so a script left in it would run there.
+        $html = $this->sanitizer->html($this->normalizer->html($this->renderer->render($document, $locale)), $this->mayPublishCustomCode());
 
-        $this->contentFor($page, $locale)
-            ->setDraftProjectData($content->projectData)
+        $content = $this->contentFor($page, $locale)
+            ->setDraftDocument($document->toJson())
             ->setDraftHtml($html)
-            ->setDraftCss($this->sanitizer->css($this->normalizer->css($content->css)))
-            ->setDraftUpdatedBy($adminId)
-            ->save();
+            ->setDraftUpdatedBy($adminId);
+
+        if (null !== $provenance) {
+            $content->setDraftProvenance(ProvenanceMark::encode($provenance));
+        }
+
+        $content->save();
 
         $this->activityLog->record('UPDATE', (int) $page->getId(), \sprintf('CMS page #%d content edited in %s', $page->getId(), $locale));
+    }
+
+    /**
+     * Keeps the draft as it is before a generation replaces it: a revision
+     * labelled "draft", which `restoreDraft()` puts back. An empty draft is
+     * not worth keeping.
+     */
+    public function keepDraft(CmsPage $page, string $locale): void
+    {
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($locale)->findOne();
+        $document = $content instanceof CmsPageContent ? $this->documentOf($content->getDraftDocument()) : null;
+
+        if (!$document instanceof Document || $document->isEmpty()) {
+            return;
+        }
+
+        (new CmsPageRevision())
+            ->setPageId($page->getId())
+            ->setLocale($locale)
+            ->setDocument($content->getDraftDocument())
+            ->setHtml($content->getDraftHtml())
+            ->setProvenance($content->getDraftProvenance())
+            ->setLabel(self::DRAFT_LABEL)
+            ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
+            ->save();
+
+        $this->prune($page, $locale, self::DRAFT_LABEL, self::DRAFT_RETENTION);
+    }
+
+    /**
+     * The drafts kept for this page in this language, the latest first.
+     *
+     * @return list<array{id: int, date: \DateTimeInterface|null, sections: int}>
+     */
+    public function previousDrafts(CmsPage $page, string $locale): array
+    {
+        $drafts = [];
+
+        foreach ($this->draftRevisions($page, $locale)->orderByCreatedAt(Criteria::DESC)->orderById(Criteria::DESC)->find() as $revision) {
+            $document = $this->documentOf($revision->getDocument());
+            $drafts[] = ['id' => (int) $revision->getId(), 'date' => $revision->getCreatedAt(), 'sections' => $document instanceof Document ? \count($document->sections) : 0];
+        }
+
+        return $drafts;
+    }
+
+    /**
+     * Puts a kept draft back as the draft, the current one kept in its
+     * place: a restore is undone the same way.
+     *
+     * @throws \InvalidArgumentException when the revision is not a kept draft of this page in this language
+     * @throws InvalidDocumentException  when the kept document no longer passes
+     */
+    public function restoreDraft(CmsPage $page, string $locale, int $revisionId): void
+    {
+        $revision = $this->draftRevisions($page, $locale)->filterById($revisionId)->findOne();
+        $document = $revision instanceof CmsPageRevision ? Document::fromJson($revision->getDocument()) : null;
+
+        if (!$document instanceof Document) {
+            throw new \InvalidArgumentException(\sprintf('Revision #%d is not a kept draft of page #%d in %s.', $revisionId, $page->getId(), $locale));
+        }
+
+        $this->keepDraft($page, $locale);
+        $this->saveContent($page, $locale, $document);
+        // The draft put back brings its own mark, or none.
+        $this->contentFor($page, $locale)->setDraftProvenance($revision->getProvenance())->save();
+    }
+
+    private function draftRevisions(CmsPage $page, string $locale): CmsPageRevisionQuery
+    {
+        return CmsPageRevisionQuery::create()->filterByPageId($page->getId())->filterByLocale($locale)->filterByLabel(self::DRAFT_LABEL);
+    }
+
+    /**
+     * The document a revision holds; null when it no longer reads, which
+     * only an older row could.
+     */
+    private function documentOf(?string $json): ?Document
+    {
+        try {
+            return Document::fromJson($json);
+        } catch (InvalidDocumentException) {
+            return null;
+        }
+    }
+
+    /**
+     * Drops the oldest revisions of one kind beyond what is kept: the
+     * publications and the drafts are counted apart.
+     */
+    private function prune(CmsPage $page, string $locale, ?string $label, int $keep, ?ConnectionInterface $connection = null): void
+    {
+        $obsolete = CmsPageRevisionQuery::create()
+            ->filterByPageId($page->getId())
+            ->filterByLocale($locale)
+            ->filterByLabel($label, null === $label ? Criteria::ISNULL : Criteria::EQUAL)
+            ->orderByCreatedAt(Criteria::DESC)
+            ->orderById(Criteria::DESC)
+            ->offset($keep)
+            ->limit(1000)
+            ->find($connection);
+
+        foreach ($obsolete as $revision) {
+            $revision->delete($connection);
+        }
+    }
+
+    /**
+     * Sets the values of the fields of a page in this language, the others
+     * kept: what the generator wrote along with the document. Like the other
+     * settings of a page, they are live as soon as they are saved.
+     *
+     * @param array<string, mixed> $values
+     *
+     * @throws \TheliaCMS\Page\Field\InvalidFieldsException when a value is not one its field takes
+     */
+    public function saveFields(CmsPage $page, string $locale, array $values): void
+    {
+        $this->fields->write($page, $locale, $values);
+        $page->setUpdatedBy($this->securityContext->getAdminUser()?->getId())->save();
+
+        $this->invalidator->contentChanged((int) $page->getId());
+        $this->activityLog->record('UPDATE', (int) $page->getId(), \sprintf('CMS page #%d fields written in %s', $page->getId(), $locale));
+    }
+
+    /**
+     * Renders the draft again from its document, for a rendering the module
+     * or the theme changed since it was saved: the document, its author and
+     * what is online stay as they are.
+     *
+     * The right to custom code is the one of whoever runs this, nobody from
+     * the command line: a rendering that would take out an iframe the stored
+     * one holds is not written, and the page waits for a save by someone who
+     * holds the right.
+     *
+     * @throws InvalidDocumentException when the document is no longer accepted by the catalogue
+     */
+    public function renderDraftAgain(CmsPage $page, string $locale): DraftRendering
+    {
+        $content = $this->contentFor($page, $locale);
+        $document = Document::fromJson($content->getDraftDocument());
+
+        if (null === $document) {
+            return DraftRendering::NoDraft;
+        }
+
+        $stored = $content->getDraftHtml();
+        $html = $this->sanitizer->html($this->normalizer->html($this->renderer->render($this->validator->validate($document), $locale)), $this->mayPublishCustomCode());
+
+        if ($html === $stored) {
+            return DraftRendering::Unchanged;
+        }
+
+        if ($this->sanitizer->customCodeCount($html) < $this->sanitizer->customCodeCount($stored)) {
+            return DraftRendering::KeptForCustomCode;
+        }
+
+        $content->setDraftHtml($html)->save();
+
+        return DraftRendering::Rendered;
     }
 
     /**
@@ -172,6 +374,10 @@ final readonly class CmsPageWriter
      *
      * @throws EmptyPageContentException       when the draft would put nothing online
      * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
+     * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
+     * @throws ModelPagePublicationException   when the page is the model of its type
+     * @throws MissingPageFieldsException      when a field the type requires is empty
+     * @throws InvalidDocumentException        when the draft is not a document the catalogue accepts
      */
     public function publish(CmsPage $page, string $locale): void
     {
@@ -183,11 +389,11 @@ final readonly class CmsPageWriter
 
             $content = $this->contentFor($page, $locale);
             $html = $this->publishableHtml($page, $locale, $content, $withCustomCode);
-            $css = $this->sanitizer->css($this->normalizer->css($content->getDraftCss()));
             $wasOnline = null !== $content->getPublishedAt();
 
-            $content->setPublishedHtml($html)
-                ->setPublishedCss($css)
+            $content->setPublishedDocument($content->getDraftDocument())
+                ->setPublishedHtml($html)
+                ->setPublishedProvenance($content->getDraftProvenance())
                 ->setPublishedAt(new \DateTimeImmutable())
                 ->save($connection);
 
@@ -227,6 +433,10 @@ final readonly class CmsPageWriter
      *
      * @throws EmptyPageContentException       when the draft would put nothing online
      * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
+     * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
+     * @throws ModelPagePublicationException   when the page is the model of its type
+     * @throws MissingPageFieldsException      when a field the type requires is empty
+     * @throws InvalidDocumentException        when the draft is not a document the catalogue accepts
      */
     public function assertPublishable(CmsPage $page, string $locale): void
     {
@@ -236,22 +446,61 @@ final readonly class CmsPageWriter
     /**
      * What would actually be served, or the reason it must not be.
      *
-     * Both refusals are decided here, on the filtered HTML, because that is what
-     * a visitor would have been given and not what the editor holds.
+     * The refusals are decided here, on the filtered HTML, because that is what
+     * a visitor would have been given and not what the editor holds. The page
+     * is rendered again from its document rather than read from the draft
+     * HTML, so a component whose template changed since the last save is
+     * published the way it looks today.
      *
      * @throws EmptyPageContentException       when the draft would put nothing online
      * @throws PlaceholderPageContentException when the draft is still the sample text of a seeded page
+     * @throws HeadingStructureException       when the headings are broken and the site keeps such a page offline
+     * @throws ModelPagePublicationException   when the page is the model of its type
+     * @throws MissingPageFieldsException      when a field the type requires is empty
+     * @throws InvalidDocumentException        when the draft is not a document the catalogue accepts
      */
     private function publishableHtml(CmsPage $page, string $locale, CmsPageContent $content, bool $withCustomCode): string
     {
+        if (1 === $page->getModel()) {
+            throw ModelPagePublicationException::for((int) $page->getId());
+        }
+
+        // Checked before the content: a list of the type sorts and filters
+        // on these values, and a page without them has no place in it.
+        $definitions = $this->fields->definitionsOf($page);
+        $missing = $definitions->missingIn($this->fields->valuesOf($page, $locale, $definitions));
+
+        if ([] !== $missing) {
+            throw MissingPageFieldsException::for((int) $page->getId(), $locale, array_map(static fn ($field): string => $field->label($locale), $missing));
+        }
+
+        $document = Document::fromJson($content->getDraftDocument());
+
+        if (null === $document) {
+            throw EmptyPageContentException::for((int) $page->getId(), $locale);
+        }
+
+        // Validated here as on every other path that renders a document: a
+        // draft written by a script or an import never went through the
+        // editor, and the renderer is only meant to meet what the validator
+        // let through.
         $html = $this->images->rewrite(
-            $this->sanitizer->html($this->normalizer->html($content->getDraftHtml()), $withCustomCode),
+            $this->sanitizer->html($this->normalizer->html($this->renderer->render($this->validator->validate($document), $locale)), $withCustomCode),
         );
 
         // Refused rather than stored: the column would be null, the front would
         // answer 404, and the back office would still read "published".
         if ($this->emptiness->isEmpty($html)) {
             throw EmptyPageContentException::for((int) $page->getId(), $locale);
+        }
+
+        // Checked on every path a page goes online by — the editor, the
+        // settings screen, the command — and not only in the editor, or the
+        // mode that keeps a broken page offline would only hold there.
+        $problems = $this->headings->check($html, underTitle: true);
+
+        if ([] !== $problems && $this->settings->headingCheckBlocks()) {
+            throw HeadingStructureException::for((int) $page->getId(), $locale, $problems);
         }
 
         // The legal pages are seeded as drafts holding instructions, on purpose.
@@ -277,7 +526,13 @@ final readonly class CmsPageWriter
 
         $wasOnline = null !== $content?->getPublishedAt();
 
-        $content?->setPublishedAt(null)->save();
+        // The snapshot goes with the date: nothing online means nothing kept
+        // that a later read could mistake for a page.
+        $content?->setPublishedAt(null)
+            ->setPublishedDocument(null)
+            ->setPublishedHtml(null)
+            ->setPublishedProvenance(null)
+            ->save();
 
         if ($wasOnline) {
             $this->invalidator->presenceChanged((int) $page->getId());
@@ -299,9 +554,15 @@ final readonly class CmsPageWriter
      * that no longer resolves, which is a 500 and not a 404.
      *
      * @return list<int> the pages actually binned, deepest first
+     *
+     * @throws ModelPageSettingException when the page is the model of its type
      */
     public function moveToTrash(CmsPage $page): array
     {
+        if (1 === $page->getModel()) {
+            throw ModelPageSettingException::trash((int) $page->getId());
+        }
+
         $connection = Propel::getConnection('TheliaMain');
         $connection->beginTransaction();
 
@@ -383,6 +644,64 @@ final readonly class CmsPageWriter
      */
     public function duplicate(CmsPage $page, string $locale, string $titleSuffix): CmsPage
     {
+        $copy = $this->copyOf($page, ' '.$titleSuffix, visible: false);
+
+        $this->activityLog->record('CREATE', (int) $copy->getId(), \sprintf('CMS page #%d duplicated from #%d', $copy->getId(), $page->getId()));
+
+        return $copy;
+    }
+
+    /**
+     * The model of a page type: a page of that type nobody publishes, holding
+     * the demo content its pages start from. Kept at the root of the tree,
+     * offline, out of the page list.
+     *
+     * @throws \LogicException when the type has a model already
+     */
+    public function createModel(string $pageType, string $locale, string $title): CmsPage
+    {
+        if (null !== $this->types->modelOf($pageType)) {
+            throw new \LogicException(\sprintf('The page type "%s" has a model already.', $pageType));
+        }
+
+        $model = new CmsPage();
+        $model->setParent(0)
+            ->setPosition(0)
+            ->setVisible(0)
+            ->setPageType($pageType)
+            ->setModel(1);
+
+        $this->saveDraft($model, $locale, new PageDraft(title: $title));
+
+        return $model;
+    }
+
+    /**
+     * A new page of the type of this model: its content in every language,
+     * its fields, its settings, as a draft at the root of the tree, named
+     * in this language as the editor asked. Online once published, like any
+     * page created in the back office.
+     *
+     * @throws \LogicException when the page is not a model
+     */
+    public function startFromModel(CmsPage $model, string $locale, string $title): CmsPage
+    {
+        if (1 !== $model->getModel()) {
+            throw new \LogicException(\sprintf('CMS page #%d is not the model of a type.', $model->getId()));
+        }
+
+        $page = $this->copyOf($model, '', visible: true, titles: [$locale => trim($title)]);
+
+        $this->activityLog->record('CREATE', (int) $page->getId(), \sprintf('CMS page #%d started from the model of the type "%s"', $page->getId(), $model->getPageType()));
+
+        return $page;
+    }
+
+    /**
+     * @param array<string, string> $titles the title of the copy in a language, over the one of the page
+     */
+    private function copyOf(CmsPage $page, string $titleSuffix, bool $visible, array $titles = []): CmsPage
+    {
         $connection = Propel::getConnection('TheliaMain');
         $connection->beginTransaction();
 
@@ -390,8 +709,9 @@ final readonly class CmsPageWriter
             $copy = new CmsPage();
             $copy->setParent($page->getParent())
                 ->setPosition($page->getPosition() + 1)
-                ->setVisible(0)
+                ->setVisible($visible ? 1 : 0)
                 ->setPageType($page->getPageType())
+                ->setFields($page->getFields())
                 ->setTagId($page->getTagId())
                 ->setImageId($page->getImageId())
                 ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
@@ -400,12 +720,12 @@ final readonly class CmsPageWriter
                 $source = $page->setLocale($lang->getLocale());
                 $title = trim((string) $source->getTitle());
 
-                if ('' === $title) {
+                if ('' === $title && !isset($titles[$lang->getLocale()])) {
                     continue;
                 }
 
                 $copy->setLocale($lang->getLocale())
-                    ->setTitle($title.' '.$titleSuffix)
+                    ->setTitle($titles[$lang->getLocale()] ?? $title.$titleSuffix)
                     ->setChapo($source->getChapo())
                     ->setDescription($source->getDescription())
                     ->setMetaTitle($source->getMetaTitle())
@@ -415,7 +735,8 @@ final readonly class CmsPageWriter
                     ->setOgImageId($source->getOgImageId())
                     ->setTwitterCard($source->getTwitterCard())
                     ->setNoindex($source->getNoindex())
-                    ->setNofollow($source->getNofollow());
+                    ->setNofollow($source->getNofollow())
+                    ->setTranslatedFields($source->getTranslatedFields());
                 // `canonical` is not copied: it points at this exact page.
             }
 
@@ -427,9 +748,9 @@ final readonly class CmsPageWriter
                 (new CmsPageContent())
                     ->setPageId($copy->getId())
                     ->setLocale($content->getLocale())
-                    ->setDraftProjectData($content->getDraftProjectData())
+                    ->setDraftDocument($content->getDraftDocument() ?? $content->getPublishedDocument())
                     ->setDraftHtml($content->getDraftHtml() ?? $content->getPublishedHtml())
-                    ->setDraftCss($content->getDraftCss() ?? $content->getPublishedCss())
+                    ->setDraftProvenance(null !== $content->getDraftDocument() ? $content->getDraftProvenance() : $content->getPublishedProvenance())
                     ->setDraftUpdatedBy($this->securityContext->getAdminUser()?->getId())
                     ->save($connection);
 
@@ -438,13 +759,28 @@ final readonly class CmsPageWriter
 
             $connection->commit();
 
-            $this->activityLog->record('CREATE', (int) $copy->getId(), \sprintf('CMS page #%d duplicated from #%d', $copy->getId(), $page->getId()));
-
             return $copy;
         } catch (\Throwable $throwable) {
             $connection->rollBack();
 
             throw $throwable;
+        }
+    }
+
+    /**
+     * A type has one model: two would leave the site guessing which one new
+     * pages start from.
+     */
+    private function assertSoleModel(CmsPage $page, ConnectionInterface $connection): void
+    {
+        if (1 !== $page->getModel()) {
+            return;
+        }
+
+        $model = $this->types->modelOf((string) $page->getPageType(), $connection);
+
+        if (null !== $model && (int) $model->getId() !== (int) $page->getId()) {
+            throw new \LogicException(\sprintf('The page type "%s" has a model already.', $page->getPageType()));
         }
     }
 
@@ -554,8 +890,15 @@ final readonly class CmsPageWriter
         return array_values(array_unique(array_map(strval(...), $locales)));
     }
 
+    /**
+     * @throws ModelPageSettingException when the page is the model of its type
+     */
     public function toggleVisibility(CmsPage $page): void
     {
+        if (1 === $page->getModel()) {
+            throw ModelPageSettingException::visibility((int) $page->getId());
+        }
+
         $page->setVisible(1 === $page->getVisible() ? 0 : 1)->save();
         $this->invalidator->presenceChanged((int) $page->getId());
 
@@ -641,27 +984,17 @@ final readonly class CmsPageWriter
             ->save($connection);
     }
 
-    private function snapshot(CmsPage $page, string $locale, CmsPageContent $content, $connection): void
+    private function snapshot(CmsPage $page, string $locale, CmsPageContent $content, ConnectionInterface $connection): void
     {
         (new CmsPageRevision())
             ->setPageId($page->getId())
             ->setLocale($locale)
-            ->setProjectData($content->getDraftProjectData())
+            ->setDocument($content->getPublishedDocument())
             ->setHtml($content->getPublishedHtml())
-            ->setCss($content->getPublishedCss())
+            ->setProvenance($content->getPublishedProvenance())
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
             ->save($connection);
 
-        $obsolete = CmsPageRevisionQuery::create()
-            ->filterByPageId($page->getId())
-            ->filterByLocale($locale)
-            ->orderByCreatedAt(Criteria::DESC)
-            ->offset(self::REVISION_RETENTION)
-            ->limit(1000)
-            ->find();
-
-        foreach ($obsolete as $revision) {
-            $revision->delete($connection);
-        }
+        $this->prune($page, $locale, null, self::REVISION_RETENTION, $connection);
     }
 }

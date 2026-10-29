@@ -21,12 +21,14 @@ namespace TheliaCMS\Partial;
 final readonly class PartialProp
 {
     /**
-     * @param array<string, string> $choices     value => label, for a Choice prop
-     * @param string|null           $source      endpoint feeding a Reference prop with its options
-     * @param int|null              $min         lower bound of an Integer, or minimum length of a Text
-     * @param int|null              $max         upper bound of an Integer, or maximum length of a Text
-     * @param bool                  $searchable  whether the editor searches the source of a Reference
-     *                                           rather than listing all of it
+     * @param array<string, string> $choices    value => label, for a Choice prop
+     * @param string|null           $source     endpoint feeding a Reference prop with its options
+     * @param int|null              $min        lower bound of an Integer, or minimum length of a Text
+     * @param int|null              $max        upper bound of an Integer, or maximum length of a Text
+     * @param bool                  $searchable whether the editor searches the source of a Reference
+     *                                          rather than listing all of it
+     * @param string|null           $itemName   the key each record of a References prop is stored under
+     * @param string|null           $itemLabel  what one record of a References prop is called
      */
     public function __construct(
         public string $name,
@@ -40,6 +42,8 @@ final readonly class PartialProp
         public ?int $max = null,
         public ?string $help = null,
         public bool $searchable = false,
+        public ?string $itemName = null,
+        public ?string $itemLabel = null,
     ) {
     }
 
@@ -78,6 +82,16 @@ final readonly class PartialProp
     public static function reference(string $name, string $label, string $source, bool $required = true, ?string $help = null, bool $searchable = false): self
     {
         return new self($name, PartialPropType::Reference, $label, required: $required, source: $source, help: $help, searchable: $searchable);
+    }
+
+    /**
+     * Several records picked from `$source`, stored as a list of
+     * `{<itemName>: id}` in the order they were picked: a strip of products,
+     * a row of categories. `$min` of them are required.
+     */
+    public static function references(string $name, string $label, string $source, string $itemName, int $min = 0, int $max = 12, ?string $help = null, bool $searchable = false, ?string $itemLabel = null): self
+    {
+        return new self($name, PartialPropType::References, $label, required: $min > 0, source: $source, min: $min, max: $max, help: $help, searchable: $searchable, itemName: $itemName, itemLabel: $itemLabel);
     }
 
     /**

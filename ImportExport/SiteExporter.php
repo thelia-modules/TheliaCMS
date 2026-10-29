@@ -17,18 +17,22 @@ namespace TheliaCMS\ImportExport;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Model\LangQuery;
 use Thelia\Model\ModuleQuery;
-use TheliaCMS\Block\Admin\CmsBlockRepository;
-use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsBlockContentQuery;
+use TheliaCMS\Catalogue\CatalogueItemKeys;
+use TheliaCMS\Catalogue\CatalogueItemType;
+use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormFieldQuery;
 use TheliaCMS\Model\CmsFormQuery;
+use TheliaCMS\Model\CmsItemContentQuery;
 use TheliaCMS\Model\CmsMenu;
 use TheliaCMS\Model\CmsMenuItemQuery;
 use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Model\CmsPageTypeDefinitionQuery;
+use TheliaCMS\Page\Field\FieldDefinitions;
+use TheliaCMS\Page\Field\PageFields;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\TheliaCMS;
 use TheliaLibrary\Model\LibraryImageQuery;
@@ -44,7 +48,8 @@ use TheliaLibrary\Model\LibraryImageQuery;
  *   belong;
  * - **third-party snippets**, because they carry the measurement accounts of
  *   one site, and importing them elsewhere sends that site's traffic to them;
- * - **revisions**, because they are the history of one site, not its content;
+ * - **revisions**, because they are the history of one site, not its content
+ *   (the documents of the catalogue items travel without theirs either);
  * - **image files**, whose names travel so the importing site can point at its
  *   own copies (§2.13).
  */
@@ -53,7 +58,8 @@ final readonly class SiteExporter
     public function __construct(
         private CmsSettings $settings,
         private MediaReferences $media,
-        private CmsBlockRepository $blocks,
+        private ?SiteComponentRepository $components = null,
+        private CatalogueItemKeys $itemKeys = new CatalogueItemKeys(),
     ) {
     }
 
@@ -72,45 +78,23 @@ final readonly class SiteExporter
             $mediaIds = [...$mediaIds, ...$this->mediaOf($document)];
         }
 
-        $blocks = [];
+        $catalogueContents = $this->catalogueContents();
 
-        // The reusable blocks only. The block of a catalogue item is tied to
-        // a product or a category by id, and neither exists on the other site.
-        foreach ($this->blocks->reusableQuery()->orderById()->find() as $block) {
-            $document = $this->blockDocument($block, $locales);
-            $blocks[] = $document;
+        foreach ($catalogueContents as $document) {
             $mediaIds = [...$mediaIds, ...$this->mediaOf($document)];
         }
 
         return [
             ...ExportFormat::header($this->moduleVersion(), $locales, new \DateTimeImmutable()),
+            'page_types' => $this->pageTypes($locales),
+            // Before the pages: a page names the components it is made of.
+            'components' => $this->siteComponents(),
             'pages' => $pages,
-            'blocks' => $blocks,
+            'catalogue_contents' => $catalogueContents,
             'menus' => $this->menus($locales),
             'forms' => $this->forms($locales),
             'settings' => $this->settingsDocument(),
             'media' => $this->mediaDocument($mediaIds),
-        ];
-    }
-
-    /**
-     * One page on its own, in the same envelope as a full export.
-     *
-     * This is what a template stores, and it is deliberately the same shape:
-     * the file a template is made of can be handed to the import command, and
-     * an exported page can be turned into a template.
-     *
-     * @return array<string, mixed>
-     */
-    public function exportPage(CmsPage $page): array
-    {
-        $locales = $this->locales();
-        $document = $this->pageDocument($page, $locales, withTree: false);
-
-        return [
-            ...ExportFormat::header($this->moduleVersion(), $locales, new \DateTimeImmutable()),
-            'pages' => [$document],
-            'media' => $this->mediaDocument($this->mediaOf($document)),
         ];
     }
 
@@ -121,16 +105,18 @@ final readonly class SiteExporter
      *
      * @return array<string, mixed>
      */
-    public function pageDocument(CmsPage $page, array $locales, bool $withTree = true): array
+    public function pageDocument(CmsPage $page, array $locales): array
     {
         $parent = (int) $page->getParent();
 
         $document = [
             'uid' => self::pageUid((int) $page->getId()),
-            'parent' => $withTree && $parent > 0 ? self::pageUid($parent) : null,
+            'parent' => $parent > 0 ? self::pageUid($parent) : null,
             'position' => (int) $page->getPosition(),
             'visible' => 1 === $page->getVisible(),
             'page_type' => (string) $page->getPageType(),
+            'model' => 1 === $page->getModel(),
+            'fields' => PageFields::decode($page->getFields()),
             'tag' => $page->getCmsTag()?->getName(),
             'image_id' => $page->getImageId(),
             'publish_at' => $this->date($page->getPublishAt()),
@@ -150,6 +136,7 @@ final readonly class SiteExporter
             $document['translations'][$locale] = [
                 'title' => $title,
                 'slug' => $this->slugOf($page, $locale),
+                'fixed_url' => $page->getFixedUrl(),
                 'chapo' => $page->getChapo(),
                 'description' => $page->getDescription(),
                 'meta_title' => $page->getMetaTitle(),
@@ -161,16 +148,18 @@ final readonly class SiteExporter
                 'canonical' => $page->getCanonical(),
                 'noindex' => 1 === $page->getNoindex(),
                 'nofollow' => 1 === $page->getNofollow(),
+                'fields' => PageFields::decode($page->getTranslatedFields()),
             ];
         }
 
         foreach (CmsPageContentQuery::create()->filterByPageId($page->getId())->find() as $content) {
             $document['contents'][(string) $content->getLocale()] = [
-                'project_data' => $content->getDraftProjectData(),
+                'draft_document' => $content->getDraftDocument(),
                 'draft_html' => $content->getDraftHtml(),
-                'draft_css' => $content->getDraftCss(),
+                'draft_provenance' => $content->getDraftProvenance(),
+                'published_document' => $content->getPublishedDocument(),
                 'published_html' => $content->getPublishedHtml(),
-                'published_css' => $content->getPublishedCss(),
+                'published_provenance' => $content->getPublishedProvenance(),
                 'published_at' => $this->date($content->getPublishedAt()),
                 // Carried because the back office compares it with the
                 // publication date to tell whether a page holds unpublished
@@ -183,45 +172,107 @@ final readonly class SiteExporter
         return $document;
     }
 
-    public static function pageUid(int $id): string
-    {
-        return 'page-'.$id;
-    }
-
     /**
-     * @param list<string> $locales
+     * The documents of the catalogue items, one entry per item: its type,
+     * the key another site finds it by (CatalogueItemKeys) and its contents
+     * by locale, in the shape of the contents of a page.
      *
-     * @return array<string, mixed>
+     * @return list<array<string, mixed>>
      */
-    private function blockDocument(CmsBlock $block, array $locales): array
+    private function catalogueContents(): array
     {
-        $document = [
-            'code' => (string) $block->getCode(),
-            'translations' => [],
-            'contents' => [],
-        ];
+        $items = [];
 
-        foreach ($locales as $locale) {
-            $block->setLocale($locale);
-            $title = (string) $block->getTitle();
+        foreach (CmsItemContentQuery::create()->orderByItemType()->orderByItemId()->orderByLocale()->find() as $content) {
+            $type = CatalogueItemType::tryFrom((string) $content->getItemType());
 
-            if ('' !== trim($title)) {
-                $document['translations'][$locale] = ['title' => $title];
+            if (null === $type) {
+                continue;
             }
-        }
 
-        foreach (CmsBlockContentQuery::create()->filterByBlockId($block->getId())->find() as $content) {
-            $document['contents'][(string) $content->getLocale()] = [
-                'project_data' => $content->getDraftProjectData(),
+            $index = $type->value.'-'.$content->getItemId();
+            $items[$index] ??= [
+                'type' => $type->value,
+                'key' => $this->itemKeys->keyOf($type, (int) $content->getItemId()),
+                'contents' => [],
+            ];
+
+            $items[$index]['contents'][(string) $content->getLocale()] = [
+                'draft_document' => $content->getDraftDocument(),
                 'draft_html' => $content->getDraftHtml(),
-                'draft_css' => $content->getDraftCss(),
+                'draft_provenance' => $content->getDraftProvenance(),
+                'published_document' => $content->getPublishedDocument(),
                 'published_html' => $content->getPublishedHtml(),
-                'published_css' => $content->getPublishedCss(),
+                'published_provenance' => $content->getPublishedProvenance(),
                 'published_at' => $this->date($content->getPublishedAt()),
+                'updated_at' => $this->date($content->getUpdatedAt()),
             ];
         }
 
-        return $document;
+        return array_values($items);
+    }
+
+    /**
+     * The page types described as templates: a type that is only a code
+     * travels with the pages that carry it, as it always has.
+     *
+     * @param list<string> $locales
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function pageTypes(array $locales): array
+    {
+        $types = [];
+
+        foreach (CmsPageTypeDefinitionQuery::create()->orderByCode()->find() as $type) {
+            $fields = FieldDefinitions::fromJson($type->getFields());
+            $translations = $this->translationsOf($type, $locales, ['title' => 'getTitle', 'description' => 'getDescription']);
+
+            if ($fields->isEmpty() && null === $type->getBrief() && null === $type->getInstructions() && [] === $translations) {
+                continue;
+            }
+
+            $types[] = [
+                'code' => (string) $type->getCode(),
+                'brief' => $type->getBrief(),
+                'brief_tone' => $type->getBriefTone(),
+                'brief_audience' => $type->getBriefAudience(),
+                'instructions' => $type->getInstructions(),
+                'fields' => $fields->toArray(),
+                'translations' => $translations,
+            ];
+        }
+
+        return $types;
+    }
+
+    /**
+     * The components the site made, as written, the prototypes marked as
+     * such: a page of the export may hold one. A candidate never kept is a
+     * call of the ledger, not a component.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function siteComponents(): array
+    {
+        $prototypes = $this->components?->prototypes() ?? [];
+
+        return array_map(static fn ($component): array => [
+            'code' => $component->code,
+            'label' => $component->label,
+            'description' => $component->description,
+            'props' => $component->props,
+            'sample' => (object) $component->sample,
+            'template' => $component->template,
+            'css' => $component->css,
+            'provenance' => $component->provenance,
+            'status' => \in_array($component->code, $prototypes, true) ? SiteComponentRepository::STATUS_DRAFT : SiteComponentRepository::STATUS_READY,
+        ], $this->components?->all() ?? []);
+    }
+
+    public static function pageUid(int $id): string
+    {
+        return 'page-'.$id;
     }
 
     /**
@@ -269,9 +320,9 @@ final readonly class SiteExporter
                 'position' => (int) $item->getPosition(),
                 'target_type' => (string) $item->getTargetType(),
                 // A menu entry pointing at a CMS page travels as the page it
-                // points at; one pointing at a core content or folder keeps the
-                // raw id, which only means something on a site holding the same
-                // catalogue.
+                // points at; one pointing at a content, a folder, a category or
+                // a product of the core keeps the raw id, which only means
+                // something on a site holding the same catalogue.
                 'target' => 'page' === $item->getTargetType() && null !== $targetId
                     ? self::pageUid((int) $targetId)
                     : null,
@@ -374,10 +425,6 @@ final readonly class SiteExporter
             'maintenance_page' => null !== $maintenancePageId ? self::pageUid($maintenancePageId) : null,
             'trash_retention_days' => $this->settings->trashRetentionDays(),
             'http_cache_ttl' => $this->settings->httpCacheTtl(),
-            // Which blocks the editor offers is part of what the site is made
-            // of, as the mode is: a starter kit built without a gallery stays
-            // without one.
-            'disabled_blocks' => $this->settings->disabledBlocks()->ids(),
             // Left out on purpose: whether the site is under maintenance right
             // now, and the addresses allowed through it. Those describe how one
             // installation is being operated, not what it holds.

@@ -18,7 +18,6 @@ use TheliaCMS\Http\CachePurgerInterface;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\ImportExport\ImportOptions;
 use TheliaCMS\ImportExport\SiteDocument;
-use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\ImportExport\SiteImporter;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
@@ -30,6 +29,7 @@ use TheliaCMS\Page\PageTagExistsException;
 use TheliaCMS\Page\PageTagRepository;
 use TheliaCMS\Page\PageTagWriter;
 use TheliaCMS\Page\PublishedPageRepository;
+use TheliaCMS\Partial\Definition\PageListPartial;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\Twig\CmsExtension;
 
@@ -186,7 +186,7 @@ final class PageTagTest extends CmsIntegrationTestCase
             }
         };
         $writer = $this->purgingWith(PageTagWriter::class, $purger);
-        $dropped = [CacheTags::PAGE_LISTS, CacheTags::page((int) $page->getId())];
+        $dropped = [CacheTags::partial(PageListPartial::NAME), CacheTags::page((int) $page->getId())];
 
         $writer->rename($tag, 'Recettes');
         $writer->delete($tag);
@@ -198,7 +198,7 @@ final class PageTagTest extends CmsIntegrationTestCase
     public function testTheTagTravelsWithTheExportAndIsCreatedByTheImport(): void
     {
         $page = $this->tagged('Gratin de pâtes', $this->tagWriter()->add('Recette'));
-        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        $document = $this->exportedPage($page);
 
         self::assertSame('Recette', $document['pages'][0]['tag']);
 
@@ -214,7 +214,7 @@ final class PageTagTest extends CmsIntegrationTestCase
     public function testAFileWrittenBeforeTagsImportsPagesWithoutOne(): void
     {
         $page = $this->tagged('Gratin de pâtes', $this->tagWriter()->add('Recette'));
-        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        $document = $this->exportedPage($page);
         unset($document['pages'][0]['tag']);
 
         $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
@@ -225,24 +225,13 @@ final class PageTagTest extends CmsIntegrationTestCase
     public function testAnImportedTagThatIsNotANameIsLeftOut(): void
     {
         $page = $this->createPage('Gratin de pâtes');
-        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        $document = $this->exportedPage($page);
         $document['pages'][0]['tag'] = ['Recette'];
 
         $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
 
         self::assertNull($this->tagIdInDatabase($page));
         self::assertCount(1, $report->warnings());
-    }
-
-    public function testAPageStartedFromATemplateGetsTheTagOfTheTemplateCreatedIfNeeded(): void
-    {
-        $page = $this->tagged('Modèle de recette', $this->tagWriter()->add('Recette'));
-        $document = $this->getService(SiteExporter::class)->exportPage($page);
-        $document['pages'][0]['tag'] = 'Étiquette du modèle';
-
-        $created = $this->getService(SiteImporter::class)->importPageFrom(SiteDocument::fromArray($document), 0, 'Nouvelle recette', $this->locale());
-
-        self::assertSame('Étiquette du modèle', $created->getCmsTag()?->getName());
     }
 
     private function tagged(string $title, CmsTag $tag): CmsPage

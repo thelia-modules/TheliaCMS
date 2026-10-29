@@ -17,7 +17,6 @@ namespace TheliaCMS\Tests\Integration\Security;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouterInterface;
-use TheliaCMS\Model\CmsBlock;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsMenu;
 use TheliaCMS\Model\CmsTag;
@@ -39,7 +38,7 @@ final class WriteRoutesTest extends AdminScreenTestCase
     private const string PREFIX = '/admin/cms';
 
     /** Out of the back office on purpose, CmsAdminGuard answers 404 for them. */
-    private const array HIDDEN_PREFIXES = ['/admin/cms/scripts', '/admin/cms/settings/styles'];
+    private const array HIDDEN_PREFIXES = ['/admin/cms/scripts'];
 
     /**
      * The routes answering a GET. Each one only reads: it renders a screen, an
@@ -47,51 +46,58 @@ final class WriteRoutesTest extends AdminScreenTestCase
      * answers GET and POST, the POST being the submission of its form.
      */
     private const array SCREENS = [
-        'admin.cms.blocks.builder',
-        'admin.cms.blocks.create',
-        'admin.cms.blocks.edit',
-        'admin.cms.blocks.list',
+        'admin.cms.catalogue.content.edit',
+        'admin.cms.components.list',
+        'admin.cms.components.site.candidate',
+        'admin.cms.components.site.new',
+        'admin.cms.components.site.show',
+        'admin.cms.documentation',
         'admin.cms.forms.create',
         'admin.cms.forms.edit',
         'admin.cms.forms.field_save',
         'admin.cms.forms.list',
         'admin.cms.forms.submissions',
         'admin.cms.forms.submissions_export',
+        'admin.cms.media.describe',
         'admin.cms.media.edit',
         'admin.cms.media.list',
+        'admin.cms.media.picker',
         'admin.cms.menus.create',
         'admin.cms.menus.edit',
         'admin.cms.menus.entry_save',
         'admin.cms.menus.list',
-        'admin.cms.pages.builder',
+        'admin.cms.pages.content.edit',
         'admin.cms.pages.create',
         'admin.cms.pages.edit',
         'admin.cms.pages.list',
         'admin.cms.pages.trash',
-        'admin.cms.partials.sources.blocks',
         'admin.cms.partials.sources.categories',
         'admin.cms.partials.sources.folders',
         'admin.cms.partials.sources.forms',
-        'admin.cms.partials.sources.images',
         'admin.cms.partials.sources.menus',
         'admin.cms.partials.sources.products',
         'admin.cms.scripts.create',
         'admin.cms.scripts.edit',
         'admin.cms.scripts.list',
         'admin.cms.settings.edit',
+        'admin.cms.settings.page_types.edit',
+        'admin.cms.settings.page_types.field_save',
         'admin.cms.settings.page_types.list',
-        'admin.cms.settings.styles.edit',
+        'admin.cms.skills.edit',
+        'admin.cms.skills.list',
         'admin.cms.tags.edit',
         'admin.cms.tags.list',
-        'admin.cms.templates.list',
-        'openstudio_page_builder_image_list',
     ];
 
     /** Placeholder values that match no record, so a refused write had nothing to touch. */
     private const array SAMPLE_PARAMETERS = [
         'direction' => 'up',
         'format' => 'csv',
-        // The item blocks routes take the kind of item; the id stays unknown.
+        // The code of a field of a page type starts with a letter.
+        'field' => 'sample_field',
+        // The code of a component of the site is PascalCase.
+        'component' => 'SampleComponent',
+        // The type of a catalogue item carrying a document.
         'type' => 'product',
     ];
 
@@ -164,10 +170,6 @@ final class WriteRoutesTest extends AdminScreenTestCase
         $menu->setLocale($this->locale())->setTitle('Token screens menu');
         $menu->save();
 
-        $block = (new CmsBlock())->setCode('token-screens-block');
-        $block->setLocale($this->locale())->setTitle('Token screens block');
-        $block->save();
-
         $form = (new CmsForm())->setCode('token-screens-form');
         $form->setLocale($this->locale())->setTitle('Token screens form');
         $form->save();
@@ -179,23 +181,21 @@ final class WriteRoutesTest extends AdminScreenTestCase
             '/admin/cms/pages',
             '/admin/cms/pages/new',
             '/admin/cms/pages/'.$page->getId(),
-            '/admin/cms/pages/'.$page->getId().'/builder',
+            '/admin/cms/pages/'.$page->getId().'/content',
             '/admin/cms/pages/trash',
             '/admin/cms/menus',
             '/admin/cms/menus/new',
             '/admin/cms/menus/'.$menu->getId(),
-            '/admin/cms/blocks',
-            '/admin/cms/blocks/new',
-            '/admin/cms/blocks/'.$block->getId(),
-            '/admin/cms/blocks/'.$block->getId().'/builder',
             '/admin/cms/forms',
             '/admin/cms/forms/new',
             '/admin/cms/forms/'.$form->getId(),
             '/admin/cms/forms/'.$form->getId().'/submissions',
             '/admin/cms/media',
-            '/admin/cms/templates',
+            '/admin/cms/components',
             '/admin/cms/settings',
             '/admin/cms/settings/page-types',
+            '/admin/cms/skills',
+            '/admin/cms/skills/seo',
             '/admin/cms/tags',
             '/admin/cms/tags/'.$tag->getId(),
         ];

@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Hook;
 
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Hook\BaseHook;
@@ -51,6 +52,8 @@ class CmsSideNavHook extends BaseHook
         private readonly UrlGeneratorInterface $urls,
         private readonly Environment $twig,
         private readonly CmsSettings $settings,
+        // Read on every rendering: BaseHook keeps the first request it is given.
+        private readonly RequestStack $requests,
         ?EventDispatcherInterface $dispatcher = null,
         ?ParserResolver $parserResolver = null,
     ) {
@@ -90,15 +93,20 @@ class CmsSideNavHook extends BaseHook
         // by CmsAdminGuard, which says why.
         $event->add($this->twig->render('@TheliaCMSModule/backOffice/default-twig/side-nav.html.twig', [
             'pages_url' => $maySeePages ? $this->urls->generate('admin.cms.pages.list') : null,
-            // Reusable blocks belong to the page resource: whoever may edit a
-            // page may edit what pages share.
-            'blocks_url' => $maySeePages ? $this->urls->generate('admin.cms.blocks.list') : null,
-            'templates_url' => $maySeePages ? $this->urls->generate('admin.cms.templates.list') : null,
             'tags_url' => $maySeePages ? $this->urls->generate('admin.cms.tags.list') : null,
+            // The templates of pages are the page types, a screen of the
+            // settings: reached from here too, where the pages are.
+            'page_templates_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.page_types.list') : null,
             'menus_url' => $maySeeMenus ? $this->urls->generate('admin.cms.menus.list') : null,
             'forms_url' => $maySeeForms ? $this->urls->generate('admin.cms.forms.list') : null,
             'media_url' => $maySeeMedia ? $this->urls->generate('admin.cms.media.list') : null,
+            // The components and the skills steer the generator: whoever may
+            // see the settings may read them.
+            'components_url' => $maySeeSettings ? $this->urls->generate('admin.cms.components.list') : null,
+            'skills_url' => $maySeeSettings ? $this->urls->generate('admin.cms.skills.list') : null,
             'settings_url' => $maySeeSettings ? $this->urls->generate('admin.cms.settings.edit') : null,
+            // Written for whoever edits the pages, who is who reads it.
+            'documentation_url' => $maySeePages ? $this->urls->generate('admin.cms.documentation') : null,
             'is_active' => $this->isOnACmsScreen(),
             // On a showcase site the content *is* the site, so its section comes
             // before the shop ones. The sidebar is a flex column, so ordering it
@@ -106,14 +114,16 @@ class CmsSideNavHook extends BaseHook
             'is_first' => $this->settings->isShowcase(),
             'section_label' => $this->trans('CMS', [], TheliaCMS::DOMAIN_NAME),
             'pages_label' => $this->trans('Pages', [], TheliaCMS::DOMAIN_NAME),
-            'blocks_label' => $this->trans('Blocks', [], TheliaCMS::DOMAIN_NAME),
-            'templates_label' => $this->trans('Templates', [], TheliaCMS::DOMAIN_NAME),
             'tags_label' => $this->trans('Tags', [], TheliaCMS::DOMAIN_NAME),
+            'page_templates_label' => $this->trans('Page templates', [], TheliaCMS::DOMAIN_NAME),
             'menus_label' => $this->trans('Menus', [], TheliaCMS::DOMAIN_NAME),
             'folders_label' => $this->trans('Folders', [], TheliaCMS::DOMAIN_NAME),
             'forms_label' => $this->trans('Forms', [], TheliaCMS::DOMAIN_NAME),
             'media_label' => $this->trans('Media', [], TheliaCMS::DOMAIN_NAME),
+            'components_label' => $this->trans('Components', [], TheliaCMS::DOMAIN_NAME),
+            'skills_label' => $this->trans('Skills', [], TheliaCMS::DOMAIN_NAME),
             'settings_label' => $this->trans('Settings', [], TheliaCMS::DOMAIN_NAME),
+            'documentation_label' => $this->trans('Documentation', [], TheliaCMS::DOMAIN_NAME),
         ]));
     }
 
@@ -126,7 +136,7 @@ class CmsSideNavHook extends BaseHook
      */
     private function isOnACmsScreen(): bool
     {
-        $path = (string) $this->getRequest()?->getPathInfo();
+        $path = (string) $this->requests->getMainRequest()?->getPathInfo();
 
         if (self::SECTION_PATH === $path || str_starts_with($path, self::SECTION_PATH.'/')) {
             return true;

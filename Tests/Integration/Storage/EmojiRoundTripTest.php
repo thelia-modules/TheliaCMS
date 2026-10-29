@@ -15,13 +15,10 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Storage;
 
 use Propel\Runtime\Propel;
-use TheliaCMS\Block\Admin\CmsBlockWriter;
-use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsBlockContentQuery;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsPageRevisionQuery;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 
@@ -102,11 +99,7 @@ final class EmojiRoundTripTest extends CmsIntegrationTestCase
     {
         $page = $this->createPage('Brouillon', published: false);
 
-        $this->writer()->saveContent($page, $this->locale(), new BuilderContent(
-            projectData: '{"pages":[{"note":"'.self::EMOJI.'"}]}',
-            html: '<h1>Brouillon</h1><p>'.self::EMOJI.'</p>',
-            css: '.note::after { content: "'.self::EMOJI.'"; }',
-        ));
+        $this->writer()->saveContent($page, $this->locale(), Document::richText('<h1>Brouillon</h1><p>'.self::EMOJI.'</p>'));
 
         $content = CmsPageContentQuery::create()
             ->filterByPageId($page->getId())
@@ -116,15 +109,16 @@ final class EmojiRoundTripTest extends CmsIntegrationTestCase
         self::assertNotNull($content);
         self::assertStringContainsString(self::EMOJI, (string) $content->getDraftHtml());
         self::assertStringContainsString(
-            '\\01f4f7',
-            (string) $content->getDraftCss(),
-            'A stylesheet keeps the escape a stylesheet understands, not the markup one.',
-        );
-        self::assertStringContainsString(
             self::EMOJI,
-            (string) $content->getDraftProjectData(),
-            'The project the editor reloads holds it too, or the character is lost on the next open.',
+            (string) $content->getDraftDocument(),
+            'The document the page is edited from holds it too, or the character is lost on the next change.',
         );
+
+        $stored = (string) $this->getPropelConnection()
+            ->query(\sprintf('SELECT draft_document FROM cms_page_content WHERE page_id = %d', (int) $page->getId()))
+            ->fetchColumn();
+
+        self::assertStringContainsString('&#128247;', $stored, 'The document column is written out like the markup columns.');
     }
 
     /**
@@ -162,32 +156,5 @@ final class EmojiRoundTripTest extends CmsIntegrationTestCase
 
         self::assertNotNull($reloaded);
         self::assertSame('Nos services '.self::EMOJI, $reloaded->setLocale($this->locale())->getTitle());
-    }
-
-    /**
-     * A reusable block is written by its own writer, on its own tables.
-     */
-    public function testAReusableBlockContainingAnEmojiIsSaved(): void
-    {
-        $writer = $this->getService(CmsBlockWriter::class);
-        $locale = $this->locale();
-
-        $block = new CmsBlock();
-        $writer->save($block, $locale, 'bandeau-emoji', 'Bandeau');
-
-        $writer->saveContent($block, $locale, new BuilderContent(
-            projectData: '{"pages":[]}',
-            html: '<p>Suivez-nous '.self::EMOJI.'</p>',
-            css: '',
-        ));
-        $writer->publish($block, $locale);
-
-        $content = CmsBlockContentQuery::create()
-            ->filterByBlockId($block->getId())
-            ->filterByLocale($locale)
-            ->findOne();
-
-        self::assertNotNull($content);
-        self::assertStringContainsString(self::EMOJI, (string) $content->getPublishedHtml());
     }
 }

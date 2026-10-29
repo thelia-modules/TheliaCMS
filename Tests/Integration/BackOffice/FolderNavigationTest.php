@@ -91,6 +91,28 @@ final class FolderNavigationTest extends CmsIntegrationTestCase
         self::assertStringNotContainsString('data-testid="bo-nav-cms-folders"', $markup, 'A link leading straight to a 403 is worse than no link.');
     }
 
+    public function testTheCmsSectionLinksToTheTemplatesOfPages(): void
+    {
+        $this->loginAsAdminInSession();
+
+        $markup = $this->renderSideNav();
+        $typesUrl = $this->getService(UrlGeneratorInterface::class)->generate('admin.cms.settings.page_types.list');
+
+        self::assertStringContainsString('data-testid="bo-nav-cms-page-templates"', $markup);
+        self::assertStringContainsString('href="'.$typesUrl.'"', $markup);
+        self::assertLessThan(strpos($markup, 'bo-nav-cms-tags'), strpos($markup, 'bo-nav-cms-page-templates'), 'Between the pages and the tags.');
+    }
+
+    public function testAProfileWithoutTheSettingsDoesNotSeeTheTemplatesOfPages(): void
+    {
+        $factory = $this->createFixtureFactory();
+        $profile = $factory->profile();
+        $factory->profileResource($profile, CmsResources::PAGE);
+        $this->loginAsAdminInSession($factory->admin(['profile' => $profile]));
+
+        self::assertStringNotContainsString('data-testid="bo-nav-cms-page-templates"', $this->renderSideNav(), 'The screen of the types takes the settings right.');
+    }
+
     private function renderSideNav(): string
     {
         $event = new HookRenderEvent('main.in-top-menu-items');

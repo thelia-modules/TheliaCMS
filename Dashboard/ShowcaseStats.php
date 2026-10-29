@@ -137,6 +137,7 @@ final readonly class ShowcaseStats
      */
     private function livePages(): \Propel\Runtime\ActiveQuery\ModelCriteria
     {
-        return CmsPageQuery::create()->filterByDeletedAt(null, Criteria::ISNULL);
+        // The models of the page types are demos, not pages of the site.
+        return CmsPageQuery::create()->filterByDeletedAt(null, Criteria::ISNULL)->filterByModel(0);
     }
 }

@@ -22,8 +22,6 @@ use Symfony\Component\Routing\Attribute\Route;
 use Thelia\Model\FolderQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
-use TheliaCMS\Block\Admin\CmsBlockRepository;
-use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsFormQuery;
 use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Partial\MissingPartialPropException;
@@ -43,8 +41,6 @@ final readonly class CmsPartialController
 {
     public function __construct(
         private PartialRenderer $partials,
-        private CmsMediaLibrary $library,
-        private CmsBlockRepository $blocks,
     ) {
     }
 
@@ -82,7 +78,7 @@ final readonly class CmsPartialController
     }
 
     /**
-     * Folders an editor may point a news block at.
+     * Folders an editor may pick for a component of the theme.
      */
     #[Route('/admin/cms/partials/sources/folders', name: 'admin.cms.partials.sources.folders', methods: ['GET'])]
     public function folders(Request $request): Response
@@ -101,7 +97,7 @@ final readonly class CmsPartialController
     }
 
     /**
-     * Menus an editor may drop into a page.
+     * Menus an editor may pick for a component of the theme.
      */
     #[Route('/admin/cms/partials/sources/menus', name: 'admin.cms.partials.sources.menus', methods: ['GET'])]
     public function menus(Request $request): Response
@@ -118,31 +114,6 @@ final readonly class CmsPartialController
                 return ['id' => (int) $menu->getId(), 'name' => '' === $title ? (string) $menu->getCode() : $title];
             },
             iterator_to_array($menus, false),
-        ));
-    }
-
-    /**
-     * Reusable blocks an editor may drop into a page.
-     */
-    #[Route('/admin/cms/partials/sources/blocks', name: 'admin.cms.partials.sources.blocks', methods: ['GET'])]
-    public function blocks(Request $request): Response
-    {
-        $locale = $request->getLocale();
-        // Reusable blocks only: the block of a catalogue item belongs to the
-        // page of that item, and offering it here would show it twice.
-        $blocks = $this->blocks->reusableQuery()
-            ->orderByCode()
-            ->find();
-
-        return new JsonResponse(array_map(
-            static function ($block) use ($locale): array {
-                $block->setLocale($locale);
-
-                $title = trim((string) $block->getTitle());
-
-                return ['id' => (int) $block->getId(), 'name' => '' === $title ? (string) $block->getCode() : $title];
-            },
-            iterator_to_array($blocks, false),
         ));
     }
 
@@ -167,29 +138,6 @@ final readonly class CmsPartialController
                 return ['id' => (int) $form->getId(), 'name' => '' === $title ? (string) $form->getCode() : $title];
             },
             iterator_to_array($forms, false),
-        ));
-    }
-
-    /**
-     * Images of the media library, for the blocks that point at one — the
-     * poster of a video, for instance, which is served by the site so the
-     * platform is not called before the visitor asks for the video.
-     */
-    #[Route('/admin/cms/partials/sources/images', name: 'admin.cms.partials.sources.images', methods: ['GET'])]
-    public function images(): Response
-    {
-        $locale = $this->library->locale();
-
-        return new JsonResponse(array_map(
-            static function ($image) use ($locale): array {
-                $title = trim((string) $image->setLocale($locale)->getTitle());
-
-                return [
-                    'id' => (int) $image->getId(),
-                    'name' => '' === $title ? (string) $image->getFileName() : $title,
-                ];
-            },
-            iterator_to_array($this->library->images(), false),
         ));
     }
 

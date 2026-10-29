@@ -115,17 +115,8 @@
     margin-top: 1rem;
   }
 
-  /* Blocks span the page, their content is held at a readable width. */
-  .cms-hero,
-  .cms-media-text,
-  .cms-cta,
-  .cms-quote,
-  .cms-testimonials,
-  .cms-figures,
-  .cms-logos,
-  .cms-gallery,
-  .cms-questions,
-  .cms-section {
+  /* Free text written as a section of its own is held at a readable width. */
+  .cms-richtext {
     --cms-block-inline: min(75rem, 100% - 2rem);
 
     margin-inline: auto;
@@ -156,485 +147,129 @@
     text-underline-offset: 0.2em;
   }
 
-  /* Buttons and links ------------------------------------------------------- */
+  /* Columns ------------------------------------------------------------------ */
 
-  .cms-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    /* 2.75rem tall, well past the 24px floor of WCAG 2.2, and comfortable on a
-       phone. */
-    min-height: 2.75rem;
-    padding-inline: 1.5rem;
-    border-radius: 999px;
-    background: var(--cms-color-accent);
-    color: var(--cms-color-on-accent);
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  .cms-button:hover,
-  .cms-button:focus-visible {
-    background: var(--cms-color-accent-strong);
-  }
-
-  .cms-link {
-    color: var(--cms-color-text-muted);
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
-    /* A link on its own line is a target too. */
-    display: inline-block;
-    min-height: 1.5rem;
-  }
-
-  .cms-link:hover,
-  .cms-link:focus-visible {
-    color: var(--cms-color-text);
-  }
-
-  /* Hero -------------------------------------------------------------------- */
-
-  .cms-hero {
-    display: flex;
-    align-items: center;
-    min-height: min(32rem, 70vh);
-    padding-block: 4rem;
-    background: var(--cms-color-accent-surface);
-    border-radius: 1.5rem;
-  }
-
-  .cms-hero__body {
-    max-width: 42rem;
-    padding-inline: clamp(1.5rem, 5vw, 4rem);
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .cms-hero__title {
-    font-size: clamp(2rem, 5vw, 3.25rem);
-    line-height: 1.1;
-    margin: 0;
-  }
-
-  .cms-hero__text {
-    font-size: 1.125rem;
-    margin: 0;
-  }
-
-  .cms-hero__actions {
-    margin: 0.5rem 0 0;
-  }
-
-  /* Text and image ---------------------------------------------------------- */
-
-  .cms-media-text {
-    display: grid;
-    gap: 2rem;
-    align-items: center;
-  }
-
-  @media (min-width: 48rem) {
-    .cms-media-text {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    /* An editor flips the block by adding this class in the settings panel. */
-    .cms-media-text--reversed .cms-media-text__media {
-      order: 2;
-    }
-  }
-
-  .cms-media-text__media {
-    margin: 0;
-  }
-
-  .cms-media-text__media img {
-    width: 100%;
-    height: auto;
-    border-radius: 1rem;
-    display: block;
-  }
-
-  .cms-media-text__body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .cms-media-text__title {
-    font-size: 1.75rem;
-    margin: 0;
-  }
-
-  /* Call to action ---------------------------------------------------------- */
-
-  .cms-cta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    padding: 2.5rem clamp(1.5rem, 4vw, 3rem);
-    background: var(--cms-color-text);
-    border-radius: 1.5rem;
-  }
-
-  .cms-cta__title {
-    margin: 0 0 0.5rem;
-    font-size: 1.5rem;
-    color: var(--cms-color-on-dark);
-  }
-
-  .cms-cta__text,
-  .cms-cta :is(p) {
-    margin: 0;
-    color: var(--cms-color-border);
-  }
-
-  .cms-cta__actions {
-    margin: 0;
-  }
-
-  /* Quote ------------------------------------------------------------------- */
-
-  .cms-quote {
-    margin: 0 auto;
-    max-width: 48rem;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .cms-quote__text {
-    margin: 0;
-    font-size: clamp(1.25rem, 3vw, 1.75rem);
-    line-height: 1.4;
-    color: var(--cms-color-text);
-  }
-
-  .cms-quote__text p {
-    margin: 0;
-    color: inherit;
-  }
-
-  .cms-quote__text::before {
-    content: "“";
-    display: block;
-    font-size: 3rem;
-    line-height: 1;
-    color: var(--cms-color-accent);
-  }
-
-  .cms-quote__author {
-    color: var(--cms-color-text-subtle);
-    font-size: 0.9375rem;
-  }
-
-  /* Testimonials ------------------------------------------------------------ */
-
-  .cms-testimonials__title,
-  .cms-figures__title,
-  .cms-logos__title,
-  .cms-gallery__title,
-  .cms-questions__title,
-  .cms-section__title {
-    font-size: 1.75rem;
-    margin: 0 0 2rem;
-  }
-
-  .cms-testimonials__list,
-  .cms-figures__list,
-  .cms-logos__list,
-  .cms-gallery__list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 1.5rem;
-  }
-
-  @media (min-width: 48rem) {
-    .cms-testimonials__list,
-    .cms-gallery__list {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-
-  .cms-testimonials__item figure {
-    margin: 0;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1.5rem;
-    background: var(--cms-color-surface);
-    border-radius: 1rem;
-  }
-
-  .cms-testimonials__item blockquote {
-    margin: 0;
-    flex: 1;
-  }
-
-  .cms-testimonials__item blockquote p {
-    margin: 0;
-    color: var(--cms-color-text);
-  }
-
-  .cms-testimonials__item figcaption {
-    color: var(--cms-color-text-subtle);
-    font-size: 0.9375rem;
-  }
-
-  /* Key figures ------------------------------------------------------------- */
-
-  @media (min-width: 40rem) {
-    .cms-figures__list {
-      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-      text-align: center;
-    }
-  }
-
-  .cms-figures__value {
-    margin: 0;
-    font-size: clamp(2.25rem, 6vw, 3.5rem);
-    font-weight: 700;
-    line-height: 1.1;
-    color: var(--cms-color-text);
-  }
-
-  .cms-figures__label {
-    margin: 0.25rem 0 0;
-    color: var(--cms-color-text-subtle);
-  }
-
-  /* Logos ------------------------------------------------------------------- */
-
-  .cms-logos__list {
-    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
-    align-items: center;
-    gap: 2rem;
-  }
-
-  .cms-logos__item img {
-    max-width: 100%;
-    max-height: 3.5rem;
+  /* Held at the width of free text, and stacked below 48rem: three columns of a
+     few words each on a phone are three words a line. */
+  .cms-columns {
     margin-inline: auto;
-    display: block;
-    /* Logos are usually multicoloured on white; the neutral treatment keeps the
-       row from looking like a rainbow, and hovering shows them as they are. */
-    filter: grayscale(1);
-    opacity: 0.75;
-    transition: filter 0.2s ease, opacity 0.2s ease;
+    width: min(75rem, 100% - 2rem);
   }
 
-  .cms-logos__item img:hover {
-    filter: none;
-    opacity: 1;
+  .cms-columns__title {
+    margin: 0 0 2rem;
+    font-size: var(--font-size-h2-d, 1.75rem);
+    font-weight: var(--font-weight-h2, 600);
+    line-height: 1.2;
   }
 
-  /* Gallery ----------------------------------------------------------------- */
-
-  .cms-gallery__item figure {
-    margin: 0;
-  }
-
-  .cms-gallery__item img {
-    width: 100%;
-    height: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    border-radius: 1rem;
-    display: block;
-  }
-
-  .cms-gallery__item figcaption {
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: var(--cms-color-text-subtle);
-  }
-
-  /* Questions and answers --------------------------------------------------- */
-
-  .cms-questions__item {
-    border-top: 1px solid var(--cms-color-border);
-  }
-
-  .cms-questions__item:last-of-type {
-    border-bottom: 1px solid var(--cms-color-border);
-  }
-
-  .cms-questions__question {
-    /* A summary is focusable and operable with a keyboard on its own; the size
-       below keeps it a comfortable target too. */
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    min-height: 3.5rem;
-    padding-block: 0.75rem;
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--cms-color-text);
-    list-style: none;
-  }
-
-  .cms-questions__question::-webkit-details-marker {
-    display: none;
-  }
-
-  .cms-questions__question::after {
-    content: "+";
-    font-size: 1.5rem;
-    line-height: 1;
-    color: var(--cms-color-text-subtle);
-  }
-
-  .cms-questions__item[open] .cms-questions__question::after {
-    content: "−";
-  }
-
-  .cms-questions__answer {
-    padding-block: 0 1.25rem;
-  }
-
-  .cms-questions__answer p {
-    margin: 0;
-  }
-
-  /* Section ----------------------------------------------------------------- */
-
-  .cms-section {
-    padding: clamp(2rem, 5vw, 4rem);
-    background: var(--cms-color-surface);
-    border-radius: 1.5rem;
-  }
-
-  .cms-section__title {
-    margin-bottom: 1.5rem;
-  }
-
-  .cms-section__body {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  /* Reusable blocks and dynamic partials ------------------------------------ */
-
-  /* Read out, not shown: what tells two "See the product" links apart. */
-  .cms-visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  /* A product or a category of the catalogue: the card of the module, for a
-     theme that draws none of its own. The width is the column's. */
-  .cms-product-card,
-  .cms-category-card {
+  .cms-columns__grid {
     display: grid;
-    align-content: start;
-    justify-items: start;
-    gap: 0.5rem;
-    padding: 1rem;
-    border: 1px solid var(--cms-color-border);
-    border-radius: 0.5rem;
-    color: var(--cms-color-text);
+    grid-template-columns: 1fr;
+    gap: 2rem;
   }
 
-  .cms-product-card__image,
-  .cms-category-card__image {
-    justify-self: stretch;
+  @media (min-width: 48rem) {
+    .cms-columns--2 .cms-columns__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cms-columns--3 .cms-columns__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cms-columns--4 .cms-columns__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  /* The image keeps its proportions inside a band of fixed height, so a row of
+     logos of different shapes lines up; it follows the alignment of the text. */
+  .cms-columns__image {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: 5rem;
+    margin-bottom: 1rem;
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  :where([style*="text-align:center"]) .cms-columns__image {
+    margin-inline: auto;
+    object-position: center;
+  }
+
+  :where([style*="text-align:right"]) .cms-columns__image {
+    margin-left: auto;
+    object-position: right center;
+  }
+
+  .cms-columns__heading {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-h3-d, 1.375rem);
+    font-weight: var(--font-weight-h2, 600);
+    line-height: 1.25;
+  }
+
+  .cms-columns__text {
+    margin: 0;
+  }
+
+  /* Image -------------------------------------------------------------------- */
+
+  /* `column` is the width of free text, `narrow` the reading column, `full` the
+     whole screen, edge to edge. The publication may wrap the image in a
+     `<picture>`, which is inline by default and would leave a gap under it. */
+  .cms-image {
+    margin: 0 auto;
+    width: min(75rem, 100% - 2rem);
+  }
+
+  /* Components made on the site --------------------------------------------- */
+
+  /* Held at the width of the content like the other blocks: the stylesheet of
+     a component lays out what is inside, never the page around it. */
+  .cms-site {
+    margin-inline: auto;
+    width: min(75rem, 100% - 2rem);
+  }
+
+  .cms-image--narrow {
+    width: min(48rem, 100% - 2rem);
+  }
+
+  .cms-image--full {
+    width: 100%;
+  }
+
+  .cms-image picture,
+  .cms-image__img {
+    display: block;
+  }
+
+  .cms-image__img {
     width: 100%;
     height: auto;
-    aspect-ratio: 1;
-    object-fit: contain;
   }
 
-  .cms-product-card__title,
-  .cms-category-card__title {
-    margin: 0;
-    font-size: 1.125rem;
+  .cms-image__caption {
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--cms-color-text-muted, currentColor);
   }
 
-  .cms-category-card__kicker {
-    margin: 0;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    color: var(--cms-color-text-muted);
+  .cms-image--full .cms-image__caption {
+    margin-inline: auto;
+    width: min(75rem, 100% - 2rem);
   }
 
-  .cms-product-card__price {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.5rem;
-    margin: 0;
-    font-weight: 600;
-  }
+  /* The footer menu ---------------------------------------------------------- */
 
-  .cms-product-card__original-price {
-    font-weight: 400;
-    color: var(--cms-color-text-muted);
-  }
-
-  .cms-product-card__link,
-  .cms-category-card__link {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    color: var(--cms-color-text);
-    font-weight: 600;
-  }
-
-
-  .cms-block {
-    display: contents;
-  }
-
-  .cms-latest-contents__list,
   .cms-menu__list {
     list-style: none;
     margin: 0;
     padding: 0;
-  }
-
-  .cms-latest-contents__list {
-    display: grid;
-    gap: 1.5rem;
-  }
-
-  @media (min-width: 48rem) {
-    .cms-latest-contents__list {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-
-  .cms-latest-contents__title {
-    font-size: 1.25rem;
-    margin: 0 0 0.25rem;
-  }
-
-  .cms-latest-contents__title a {
-    color: var(--cms-color-text);
-    text-decoration: none;
-  }
-
-  .cms-latest-contents__title a:hover,
-  .cms-latest-contents__title a:focus-visible {
-    text-decoration: underline;
-  }
-
-  .cms-latest-contents__date {
-    margin: 0 0 0.5rem;
-    font-size: 0.875rem;
-    color: var(--cms-color-text-subtle);
   }
 
   .cms-menu__link {
@@ -645,8 +280,7 @@
   }
 
   .cms-menu__link:hover,
-  .cms-menu__link:focus-visible,
-  .cms-menu__item.is-current > .cms-menu__link {
+  .cms-menu__link:focus-visible {
     color: var(--cms-color-text);
     text-decoration: underline;
   }
@@ -674,134 +308,6 @@
      neighbours reads as a heading. */
   .cms-menu--footer .cms-menu__link {
     text-decoration: underline;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .cms-logos__item img {
-      transition: none;
-    }
-  }
-
-  /* Click-to-load embeds ---------------------------------------------------- */
-
-  .cms-facade {
-    position: relative;
-    border-radius: 1rem;
-    overflow: hidden;
-    background: var(--cms-color-surface);
-  }
-
-  .cms-facade__action {
-    display: block;
-    position: relative;
-    min-height: 12rem;
-    text-decoration: none;
-    color: var(--cms-color-text);
-  }
-
-  .cms-facade__poster {
-    display: block;
-    width: 100%;
-    height: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-  }
-
-  /* The label sits over the poster when there is one, and fills the card when
-     there is not. */
-  .cms-facade__label {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: 1.5rem;
-    text-align: center;
-    /* Solid by default: white on a translucent layer over the light card ends up
-       at 3.9:1, which is not a contrast ratio. Only a poster underneath makes the
-       translucent version safe, and even then it is dark enough to carry text. */
-    background: var(--cms-color-text);
-    color: var(--cms-color-on-dark);
-  }
-
-  .cms-facade__action:has(.cms-facade__poster) .cms-facade__label {
-    background: rgb(40 40 40 / 65%);
-  }
-
-  .cms-facade__icon {
-    display: grid;
-    place-items: center;
-    width: 3.5rem;
-    height: 3.5rem;
-    border-radius: 999px;
-    background: var(--cms-color-accent);
-    color: var(--cms-color-on-accent);
-    font-size: 1.25rem;
-  }
-
-  .cms-facade__text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .cms-facade__title {
-    font-size: 1.125rem;
-  }
-
-  .cms-facade__summary,
-  .cms-facade__cta {
-    font-size: 0.9375rem;
-  }
-
-  .cms-facade__cta {
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
-  }
-
-  .cms-facade__action:hover .cms-facade__icon,
-  .cms-facade__action:focus-visible .cms-facade__icon {
-    background: var(--cms-color-accent-strong);
-  }
-
-  .cms-facade__notice {
-    margin: 0;
-    padding: 0.625rem 0.875rem;
-    font-size: 0.8125rem;
-    /* Not dimmed: this sentence is the one that says a third party is about to
-       receive something about the visitor. */
-    color: var(--cms-color-text-muted);
-    background: var(--cms-color-on-dark);
-    border-top: 1px solid var(--cms-color-border);
-  }
-
-  .cms-facade__frame {
-    display: block;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    border: 0;
-  }
-
-  .cms-facade--social .cms-facade__frame {
-    aspect-ratio: 3 / 4;
-  }
-
-  .cms-map {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .cms-map__address {
-    margin: 0;
-    font-weight: 600;
-  }
-
-  .cms-map__link {
-    margin: 0;
-    font-size: 0.9375rem;
   }
 
   /* Forms ------------------------------------------------------------------- */
@@ -972,5 +478,142 @@
   .cms-form__submit:focus-visible {
     outline: 2px solid var(--cms-color-text);
     outline-offset: 2px;
+  }
+
+  /* The page around its sections ----------------------------------------------- */
+
+  /* The title and the summary the fallback template of the module draws, for a
+     theme that has no heading band of its own. */
+  .cms-page__header {
+    margin-inline: auto;
+    width: min(75rem, 100% - 2rem);
+    padding-block: 3rem 1rem;
+  }
+
+  .cms-page__title {
+    margin: 0;
+    color: var(--cms-color-text);
+    font-size: var(--font-size-h1-d, 2.5rem);
+    font-weight: var(--font-weight-h1, 700);
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  .cms-page__summary {
+    margin-top: 1rem;
+    color: var(--cms-color-text-muted);
+  }
+
+  /* The fields of the type of the page, read at a glance: "4 pers. · 45 min". */
+  .cms-page__fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2.5rem;
+    margin: 0 auto 2.5rem;
+    width: min(75rem, 100% - 2rem);
+  }
+
+  .cms-page__field dt {
+    color: var(--cms-color-text-subtle);
+    font-size: 0.875rem;
+  }
+
+  .cms-page__field dd {
+    margin: 0;
+    color: var(--cms-color-text);
+    font-weight: 600;
+  }
+
+  /* Pages of a type -------------------------------------------------------- */
+
+  .cms-page-list {
+    margin-inline: auto;
+    width: min(75rem, 100% - 2rem);
+  }
+
+  .cms-page-list__title {
+    margin: 0 0 2rem;
+    font-size: var(--font-size-h2-d, 1.75rem);
+    font-weight: var(--font-weight-h2, 600);
+    line-height: 1.2;
+  }
+
+  .cms-page-list__empty {
+    color: var(--cms-color-text-subtle);
+  }
+
+  .cms-page-list__items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 2rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .cms-page-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+    padding: 1.25rem;
+    border: 1px solid var(--cms-color-border);
+    border-radius: 0.5rem;
+    background: var(--cms-color-on-dark);
+  }
+
+  .cms-page-card__image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 0.25rem;
+  }
+
+  .cms-page-card__title {
+    margin: 0;
+    font-size: var(--font-size-h3-d, 1.375rem);
+    font-weight: var(--font-weight-h3, 600);
+    line-height: 1.25;
+  }
+
+  /* The whole card answers the click, its title says where it goes. */
+  .cms-page-card__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .cms-page-card__link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .cms-page-card:has(.cms-page-card__link:focus-visible) {
+    outline: 2px solid var(--cms-color-text);
+    outline-offset: 2px;
+  }
+
+  .cms-page-card__fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    margin: 0;
+    font-size: 0.875rem;
+  }
+
+  .cms-page-card__fields dt {
+    color: var(--cms-color-text-subtle);
+  }
+
+  .cms-page-card__fields dd {
+    margin: 0;
+    color: var(--cms-color-text);
+    font-weight: 600;
+  }
+
+  .cms-page-card__summary {
+    color: var(--cms-color-text-muted);
   }
 }

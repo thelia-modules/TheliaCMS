@@ -1,0 +1,35 @@
+{# What the component is made of: its props, then its template and its stylesheet, read only. #}
+<div class="card mb-3">
+    <div class="card-header">{{ 'Props'|trans({}, 'theliacms') }}</div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0" data-testid="cms-site-component-props">
+            <thead>
+                <tr>
+                    <th scope="col">{{ 'Name'|trans({}, 'theliacms') }}</th>
+                    <th scope="col">{{ 'Type'|trans({}, 'theliacms') }}</th>
+                    <th scope="col">{{ 'Label'|trans({}, 'theliacms') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prop in props %}
+                    <tr>
+                        <td><code>{{ prop.name }}</code>{% if prop.required %} <span class="text-danger" title="{{ 'Required'|trans({}, 'theliacms') }}">*</span>{% endif %}</td>
+                        <td>{{ prop.type }}{% if prop.items is not empty %}<div class="text-muted small text-wrap">{{ prop.items|join(', ') }}</div>{% endif %}</td>
+                        <td class="text-wrap">{{ prop.label }}{% if prop.help %}<div class="text-muted small">{{ prop.help }}</div>{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<details class="card mb-3">
+    <summary class="card-header">{{ 'Template and stylesheet'|trans({}, 'theliacms') }}</summary>
+    <div class="card-body">
+        <pre class="small mb-3" data-testid="cms-site-component-template"><code>{{ component.template }}</code></pre>
+        {% if component.css is not empty %}
+            <pre class="small mb-0" data-testid="cms-site-component-css"><code>{{ component.css }}</code></pre>
+        {% else %}
+            <p class="text-muted small mb-0">{{ 'No stylesheet.'|trans({}, 'theliacms') }}</p>
+        {% endif %}
+    </div>
+</details>

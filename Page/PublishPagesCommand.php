@@ -21,11 +21,16 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use TheliaCMS\Content\InvalidDocumentException;
+use TheliaCMS\Http\ConsoleRequest;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\EmptyPageContentException;
+use TheliaCMS\Page\Admin\HeadingStructureException;
+use TheliaCMS\Page\Admin\MissingPageFieldsException;
+use TheliaCMS\Page\Admin\ModelPagePublicationException;
 use TheliaCMS\Page\Admin\PlaceholderPageContentException;
 
 /**
@@ -52,6 +57,7 @@ final class PublishPagesCommand extends Command
 {
     public function __construct(
         private readonly CmsPageWriter $writer,
+        private readonly ConsoleRequest $request,
     ) {
         parent::__construct();
     }
@@ -62,7 +68,8 @@ final class PublishPagesCommand extends Command
             ->addOption('page', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'A page to publish, by id. Repeatable.')
             ->addOption('all', null, InputOption::VALUE_NONE, 'Every page that is not in the bin, drafts in progress included.')
             ->addOption('locale', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Restricts to these locales. Defaults to every locale the page has a draft in.')
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Lists what would be published, and publishes nothing.');
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Lists what would be published, and publishes nothing.')
+            ->addOption('url', null, InputOption::VALUE_REQUIRED, 'The address of the shop the links of a page point at, over the url_site setting.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -74,6 +81,7 @@ final class PublishPagesCommand extends Command
         /** @var list<string> $locales */
         $locales = $input->getOption('locale');
         $dryRun = (bool) $input->getOption('dry-run');
+        $url = $input->getOption('url');
 
         if ([] === $pageIds && !$input->getOption('all')) {
             $io->error('Name the pages with --page, or ask for every page with --all.');
@@ -98,7 +106,7 @@ final class PublishPagesCommand extends Command
                 try {
                     // A dry run runs the refusals and not the writes, so the
                     // count it announces is the count a real run reaches.
-                    $dryRun ? $this->writer->assertPublishable($page, $locale) : $this->writer->publish($page, $locale);
+                    $this->request->around(fn () => $dryRun ? $this->writer->assertPublishable($page, $locale) : $this->writer->publish($page, $locale), \is_string($url) ? $url : null);
                     ++$published;
 
                     if ($dryRun) {
@@ -108,6 +116,14 @@ final class PublishPagesCommand extends Command
                     $refused[] = \sprintf('#%d %s: nothing to show', $page->getId(), $locale);
                 } catch (PlaceholderPageContentException) {
                     $refused[] = \sprintf('#%d %s: still the sample text it was created with', $page->getId(), $locale);
+                } catch (HeadingStructureException $exception) {
+                    $refused[] = \sprintf('#%d %s: %s', $page->getId(), $locale, implode(' ', $exception->problems));
+                } catch (ModelPagePublicationException) {
+                    $refused[] = \sprintf('#%d %s: the model of its type, never published', $page->getId(), $locale);
+                } catch (MissingPageFieldsException $exception) {
+                    $refused[] = \sprintf('#%d %s: required fields left empty (%s)', $page->getId(), $locale, implode(', ', $exception->labels));
+                } catch (InvalidDocumentException $exception) {
+                    $refused[] = \sprintf('#%d %s: the draft is not a valid document (%s)', $page->getId(), $locale, $exception->getMessage());
                 } catch (\Throwable $throwable) {
                     $failed[] = \sprintf('#%d %s: %s', $page->getId(), $locale, $throwable->getMessage());
                 }
@@ -142,6 +158,10 @@ final class PublishPagesCommand extends Command
 
         if ([] !== $pageIds) {
             $query->filterById(array_map('intval', $pageIds), Criteria::IN);
+        } else {
+            // Every page means every page of the site: the models of the
+            // types are demos, refused one by one otherwise.
+            $query->filterByModel(0);
         }
 
         return array_values(iterator_to_array($query->find(), false));
@@ -159,7 +179,7 @@ final class PublishPagesCommand extends Command
     {
         $query = CmsPageContentQuery::create()
             ->filterByPageId($page->getId())
-            ->filterByDraftHtml(null, Criteria::ISNOTNULL);
+            ->filterByDraftDocument(null, Criteria::ISNOTNULL);
 
         if ([] !== $wanted) {
             $query->filterByLocale($wanted, Criteria::IN);

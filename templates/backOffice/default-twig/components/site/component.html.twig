@@ -1,0 +1,92 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ component.label }}{% endblock %}
+{% block body_testid %}cms-site-component{% endblock %}
+
+{% block scripts_extra %}
+    <script src="{{ module_asset('TheliaCMS', 'assets/component-generator.js') }}?v={{ assets_version }}" defer></script>
+{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: component.label } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.components.list') }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to components'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">
+        <code>Site:{{ component.code }}</code> &middot; {{ component.description }}
+        &middot; {% if pages > 0 %}{{ '%count% page(s)'|trans({ '%count%': pages }, 'theliacms') }}{% else %}{{ 'Unused'|trans({}, 'theliacms') }}{% endif %}
+        &middot; {% if prototype %}{{ 'Prototype: shown on the pages that hold it, offered to nobody else'|trans({}, 'theliacms') }}{% else %}{{ offered ? 'Offered to the generator'|trans({}, 'theliacms') : 'Not offered to the generator'|trans({}, 'theliacms') }}{% endif %}
+    </p>
+
+    {% if prototype and may_make %}
+        <div class="alert alert-warning d-flex align-items-center gap-3" data-testid="cms-site-component-prototype">
+            <div class="me-auto">
+                {{ 'This component was prototyped from a page. Keep it for the whole site to offer it to the generator and on the content screen of every page.'|trans({}, 'theliacms') }}
+            </div>
+            <form method="post" action="{{ path('admin.cms.components.site.promote', { component: component.code }) }}" data-testid="cms-site-component-promote">
+                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                <button class="btn btn-sm btn-primary text-nowrap" type="submit">
+                    <i class="bi bi-check2-all me-1" aria-hidden="true"></i>{{ 'Keep for the whole site'|trans({}, 'theliacms') }}
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-xl-8">
+            {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_preview.html.twig', { url: preview_url }) }}
+        </div>
+        <div class="col-xl-4">
+            {% if may_make %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_request_form.html.twig', {
+                            testid: 'cms-site-component-change',
+                            hidden: { component: component.code },
+                            label: 'Ask a change'|trans({}, 'theliacms'),
+                            rows: 3,
+                            help: 'You see the new version before it replaces this one.'|trans({}, 'theliacms'),
+                            button: 'Change it'|trans({}, 'theliacms'),
+                        }) }}
+                    </div>
+                </div>
+            {% endif %}
+            {% if may_make %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        {% if pages > 0 %}
+                            <p class="text-muted small mb-0" data-testid="cms-site-component-in-use">{{ 'Used by %count% page(s): it can be deleted once no page holds it.'|trans({ '%count%': pages }, 'theliacms') }}</p>
+                        {% else %}
+                            <form method="post" action="{{ path('admin.cms.components.site.delete', { component: component.code }) }}" data-testid="cms-site-component-delete"
+                                  onsubmit="return confirm('{{ 'Delete this component? It cannot be undone.'|trans({}, 'theliacms')|e('js') }}')">
+                                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">
+                                    <i class="bi bi-trash me-1" aria-hidden="true"></i>{{ 'Delete the component'|trans({}, 'theliacms') }}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            <div class="card mb-3">
+                <div class="card-header">{{ 'History'|trans({}, 'theliacms') }}</div>
+                <ul class="list-group list-group-flush" data-testid="cms-site-component-history">
+                    {% for call in history %}
+                        <li class="list-group-item small">
+                            <a href="{{ path('admin.cms.components.site.candidate', { id: call.logId }) }}">{{ call.createdAt ? call.createdAt|date('Y-m-d H:i') : '' }}</a>
+                            <span class="badge text-bg-{{ call.status == 'done' ? 'light' : 'warning' }}">{{ call.status }}</span>
+                            <div class="text-muted text-wrap">{{ call.request }}</div>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item small text-muted">{{ 'No call recorded.'|trans({}, 'theliacms') }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_definition.html.twig') }}
+{% endblock %}

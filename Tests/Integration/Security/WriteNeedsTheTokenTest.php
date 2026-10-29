@@ -15,8 +15,6 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Security;
 
 use TheliaCMS\Media\CmsMediaLibrary;
-use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsBlockQuery;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormQuery;
 use TheliaCMS\Model\CmsMenu;
@@ -24,7 +22,6 @@ use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
-use TheliaCMS\Model\Map\CmsBlockTableMap;
 use TheliaCMS\Model\Map\CmsFormTableMap;
 use TheliaCMS\Model\Map\CmsMenuTableMap;
 use TheliaCMS\Model\Map\CmsPageContentTableMap;
@@ -93,23 +90,6 @@ final class WriteNeedsTheTokenTest extends AdminScreenTestCase
         self::assertNull(CmsMenuQuery::create()->findPk($id));
     }
 
-    public function testBlocks(): void
-    {
-        $block = (new CmsBlock())->setCode('token-block');
-        $block->setLocale($this->locale())->setTitle('Token block');
-        $block->save();
-        $id = (int) $block->getId();
-        $action = \sprintf('/admin/cms/blocks/%d/delete', $id);
-
-        self::assertSame(403, $this->send('POST', $action));
-        self::assertNull($this->freshBlock($id)->getDeletedAt(), 'Refused, the block stays.');
-
-        $token = $this->tokenOfTheForm($this->screen(\sprintf('/admin/cms/blocks/%d', $id)), $action);
-
-        self::assertSame(302, $this->send('POST', $action, ['_token' => $token]));
-        self::assertNotNull($this->freshBlock($id)->getDeletedAt());
-    }
-
     public function testForms(): void
     {
         $form = (new CmsForm())->setCode('token-form');
@@ -135,15 +115,14 @@ final class WriteNeedsTheTokenTest extends AdminScreenTestCase
         $image->save();
         $this->getService(CmsMediaLibrary::class)->tag($image);
         $id = (int) $image->getId();
-        $action = \sprintf('/admin/cms/media/%d', $id);
+        $action = \sprintf('/admin/cms/media/%d/delete', $id);
 
-        // The image library of the editor deletes with a script.
-        self::assertSame(403, $this->send('DELETE', $action, [], self::XHR));
+        self::assertSame(403, $this->send('POST', $action));
         self::assertNotNull(LibraryImageQuery::create()->findPk($id), 'Refused, the image stays.');
 
-        $token = $this->tokenOfTheScripts($this->screen('/admin/cms/media'));
+        $token = $this->tokenOfTheForm($this->screen(\sprintf('/admin/cms/media/%d', $id)), $action);
 
-        self::assertSame(204, $this->send('DELETE', $action, [], [...self::XHR, 'HTTP_X_CSRF_TOKEN' => $token]));
+        self::assertSame(302, $this->send('POST', $action, ['_token' => $token]));
         LibraryImageTableMap::clearInstancePool();
         self::assertNull(LibraryImageQuery::create()->findPk($id));
     }
@@ -170,30 +149,6 @@ final class WriteNeedsTheTokenTest extends AdminScreenTestCase
         self::assertSame($wanted, $settings->trashRetentionDays());
     }
 
-    public function testBuilder(): void
-    {
-        $page = $this->createPage('Token builder');
-        $id = (int) $page->getId();
-
-        $form = $this->screen(\sprintf('/admin/cms/pages/%d/builder', $id))->filter('form.cms-builder__form')->form();
-        $values = $form->getPhpValues();
-        $values['save'] = 'autosave';
-
-        self::assertArrayHasKey('_token', $values, 'The builder form carries the token.');
-
-        $fields = array_key_first(array_filter($values, 'is_array'));
-        $values[$fields]['html'] = '<h1>Token builder</h1><p>Saved in the background.</p>';
-
-        $withoutToken = $values;
-        unset($withoutToken['_token']);
-
-        self::assertSame(403, $this->send('POST', $form->getUri(), $withoutToken, self::XHR));
-        self::assertStringNotContainsString('Saved in the background', $this->draftHtmlOf($id), 'Refused, the draft stays.');
-
-        self::assertSame(200, $this->send('POST', $form->getUri(), $values, self::XHR));
-        self::assertStringContainsString('Saved in the background', $this->draftHtmlOf($id));
-    }
-
     private function statusOf(int $id): PageStatus
     {
         return $this->getService(CmsPageAdminRepository::class)->statusOf($this->freshPage($id), $this->locale());
@@ -208,16 +163,6 @@ final class WriteNeedsTheTokenTest extends AdminScreenTestCase
         self::assertNotNull($page);
 
         return $page;
-    }
-
-    private function freshBlock(int $id): CmsBlock
-    {
-        CmsBlockTableMap::clearInstancePool();
-
-        $block = CmsBlockQuery::create()->findPk($id);
-        self::assertNotNull($block);
-
-        return $block;
     }
 
     private function freshForm(int $id): CmsForm

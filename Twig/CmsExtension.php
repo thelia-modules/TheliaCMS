@@ -17,15 +17,19 @@ namespace TheliaCMS\Twig;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\Lang;
-use TheliaCMS\Block\Item\ItemType;
-use TheliaCMS\Block\Item\PublishedItemBlock;
-use TheliaCMS\Block\Item\PublishedItemBlockRepository;
+use TheliaCMS\Content\Partial\PartialSection;
+use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Http\ShownTags;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
+use TheliaCMS\Page\Field\FieldFormatter;
 use TheliaCMS\Page\PageCard;
+use TheliaCMS\Page\PageListQuery;
+use TheliaCMS\Page\PageTypeRepository;
+use TheliaCMS\Page\PublishedPage;
 use TheliaCMS\Page\PublishedPageRepository;
+use TheliaCMS\Partial\Definition\PageListPartial;
 use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Settings\SiteIcon;
 use TheliaCMS\TheliaCMS;
@@ -48,7 +52,9 @@ final class CmsExtension extends AbstractExtension
         private readonly CmsSettings $settings,
         private readonly PublishedPageRepository $pages,
         private readonly LangService $langService,
-        private readonly PublishedItemBlockRepository $itemBlocks,
+        private readonly SectionCatalog $sections,
+        private readonly PageTypeRepository $pageTypes,
+        private readonly FieldFormatter $fieldFormatter,
         private readonly ShownTags $shownTags,
     ) {
     }
@@ -56,6 +62,11 @@ final class CmsExtension extends AbstractExtension
     public function getFunctions(): array
     {
         return [
+            // The one function that answers markup: a section is markup by
+            // definition, and the theme calls it to show a section outside a
+            // page — in the toolkit, on a template of its own.
+            new TwigFunction('cms_section', $this->section(...), ['is_safe' => ['html']]),
+            new TwigFunction('cms_catalogue', $this->catalogue(...)),
             new TwigFunction('cms_menu', $this->menus->menu(...)),
             new TwigFunction('cms_page_alternates', $this->alternates->all(...)),
             new TwigFunction('cms_site_icon', $this->siteIcon(...)),
@@ -64,26 +75,55 @@ final class CmsExtension extends AbstractExtension
             // on every page of the site.
             new TwigFunction('cms_is_showcase', $this->settings->isShowcase(...)),
             new TwigFunction('cms_pages_tagged', $this->pagesTagged(...)),
-            new TwigFunction('cms_item_block', $this->itemBlock(...)),
+            new TwigFunction('cms_pages_of_type', $this->pagesOfType(...)),
+            new TwigFunction('cms_page_type', $this->pageType(...)),
+            new TwigFunction('cms_page_fields', $this->pageFields(...)),
             new TwigFunction('cms_is_home', $this->isHome(...)),
         ];
     }
 
     /**
-     * The published block of a catalogue item — `cms_item_block('product',
-     * product.id)` — in the language being served unless told otherwise, or
-     * null when the item has none online in it. Data, not markup: where the
-     * theme puts it on the page of the item is the theme's business.
+     * A section of the catalogue rendered with the given props, or with its
+     * sample props when none are given: `cms_section('cms:richtext', {html: '…'})`.
+     * An unknown section renders nothing.
+     *
+     * @param array<string, mixed>|null $props
      */
-    public function itemBlock(string $type, int $itemId, ?string $locale = null): ?PublishedItemBlock
+    public function section(string $name, ?array $props = null, ?string $locale = null): string
     {
-        $itemType = ItemType::tryFrom($type);
+        $definition = $this->sections->find($name);
 
-        if (!$itemType instanceof ItemType) {
-            return null;
+        if (null === $definition) {
+            return '';
         }
 
-        return $this->itemBlocks->find($itemType, $itemId, $locale ?? $this->currentLocale());
+        return $definition->render(
+            $definition->normalizeProps($props ?? $definition->sample()),
+            $locale ?? $this->langService->getLocale(),
+        );
+    }
+
+    /**
+     * Every section the site offers, as the toolkit lists them: what
+     * to call it, what it is for, and whether it renders on its own or is
+     * live content the server fills when the page is served.
+     *
+     * @return list<array{name: string, label: string, description: string, live: bool}>
+     */
+    public function catalogue(): array
+    {
+        $catalogue = [];
+
+        foreach ($this->sections->offered() as $definition) {
+            $catalogue[] = [
+                'name' => $definition->name(),
+                'label' => $definition->label(),
+                'description' => $definition->description(),
+                'live' => str_starts_with($definition->name(), PartialSection::PREFIX),
+            ];
+        }
+
+        return $catalogue;
     }
 
     /**
@@ -100,18 +140,64 @@ final class CmsExtension extends AbstractExtension
         return $this->pages->withTag($tag, $locale ?? $this->currentLocale());
     }
 
+    /**
+     * The pages online of a type, the model left out, ordered, filtered and
+     * cut as the options say (see PageListQuery):
+     * `cms_pages_of_type('recipe', {sort: 'cooking_time', filter: {servings: {min: 4}}, limit: 6})`.
+     *
+     * @param array<string, mixed> $options sort, direction, filter, limit, offset
+     *
+     * @return list<PageCard>
+     */
+    public function pagesOfType(string $pageType, array $options = [], ?string $locale = null): array
+    {
+        $this->showsPageList();
+
+        return $this->pages->ofType($pageType, $locale ?? $this->currentLocale(), PageListQuery::fromArray($options));
+    }
+
+    /**
+     * What a heading of a list says about the type: its name and its
+     * description in the language served.
+     *
+     * @return array{code: string, title: string, description: string|null}
+     */
+    public function pageType(string $pageType, ?string $locale = null): array
+    {
+        $locale ??= $this->currentLocale();
+        $details = $this->pageTypes->details($pageType);
+
+        return ['code' => $details->code, 'title' => $details->title($locale), 'description' => $details->description($locale)];
+    }
+
+    /**
+     * The fields of a page or a card that hold a value, each with its label
+     * and its value written for a visitor ("1 h 30 min"), in the order of
+     * the type. `page.fields.<code>` is the raw value.
+     *
+     * @return list<array{code: string, label: string, value: int|float|string|bool, text: string}>
+     */
+    public function pageFields(PublishedPage|PageCard $page): array
+    {
+        if ([] === $page->fields) {
+            return [];
+        }
+
+        return $this->fieldFormatter->rows($this->pageTypes->fieldsOf($page->pageType), $page->fields, $page->locale);
+    }
+
     private function currentLocale(): string
     {
         return $this->langService->getLang()?->getLocale() ?? Lang::getDefaultLanguage()->getLocale();
     }
 
     /**
-     * A list read from a template changes with pages the page that shows it
-     * never names, and is dropped with them.
+     * A list read from a template changes with the same pages as the block a
+     * page holds, and is dropped with it.
      */
     private function showsPageList(): void
     {
-        $this->shownTags->add(CacheTags::PAGE_LISTS);
+        $this->shownTags->add(CacheTags::partial(PageListPartial::NAME));
     }
 
     /**
@@ -123,8 +209,14 @@ final class CmsExtension extends AbstractExtension
         return $this->icon->exists() ? $this->urls->generate('cms.site_icon') : null;
     }
 
-    public function isHome(string $id): ?bool
+    /**
+     * A theme passes the id of a page as it holds it, or nothing on a screen
+     * that is not a page: a site with no home page set has none, whatever id.
+     */
+    public function isHome(int|string|null $id): bool
     {
-        return (int) $id === (int) TheliaCMS::getConfigValue('home_page_id', 0);
+        $home = (int) TheliaCMS::getConfigValue('home_page_id', 0);
+
+        return $home > 0 && (int) $id === $home;
     }
 }

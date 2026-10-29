@@ -1,0 +1,135 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'Components'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-components{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Components'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            {% if may_make %}
+                <a class="btn btn-sm btn-primary me-1" href="{{ path('admin.cms.components.site.new') }}" data-testid="cms-components-new">
+                    <i class="bi bi-stars me-1" aria-hidden="true"></i>{{ 'New component'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
+            {# The toolkit shows the components offered to the generator: a
+               component switched off here is not on it. It answers only in
+               debug, where ToolkitLink gives an address. #}
+            {% if toolkit_url %}
+                <a class="btn btn-sm btn-outline-primary me-1" href="{{ toolkit_url }}" target="_blank" rel="noopener" data-testid="cms-components-toolkit">
+                    <i class="bi bi-grid-3x3-gap me-1" aria-hidden="true"></i>{{ 'See how they render in the toolkit'|trans({}, 'theliacms') }}
+                </a>
+            {% endif %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.skills.list') }}">
+                <i class="bi bi-journal-text me-1" aria-hidden="true"></i>{{ 'Skills'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">
+        {{ 'The components a page may be made of: those of the module, the partials of the site, the components the theme opens to pages and the ones made on this site. A component you disable is no longer offered to the generator; the pages that already use it keep displaying it, and its sections can still be edited.'|trans({}, 'theliacms') }}
+    </p>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'Name'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Description'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Origin'|trans({}, 'theliacms') }}</th>
+                        <th scope="col" class="text-end">{{ 'Pages'|trans({}, 'theliacms') }}</th>
+                        <th scope="col">{{ 'Offered to the generator'|trans({}, 'theliacms') }}</th>
+                        <th scope="col" class="text-end">{{ 'Actions'|trans({}, 'theliacms') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for component in components %}
+                        <tr data-testid="cms-component-row-{{ component.name }}"{% if not component.offered %} class="table-light"{% endif %}>
+                            <td>
+                                <span class="fw-medium">{{ component.label }}</span>
+                                <div class="text-muted small"><code>{{ component.name }}</code></div>
+                            </td>
+                            <td class="text-muted small text-wrap" style="min-width: 20rem">{{ component.description }}</td>
+                            <td data-testid="cms-component-origin-{{ component.name }}">
+                                {% if component.origin == 'theme' %}
+                                    {{ 'Theme'|trans({}, 'theliacms') }}
+                                {% elseif component.origin == 'partial' %}
+                                    {{ 'Partial'|trans({}, 'theliacms') }}
+                                {% elseif component.origin == 'site' and component.prototype %}
+                                    {{ 'Prototype made on this site'|trans({}, 'theliacms') }}
+                                {% elseif component.origin == 'site' %}
+                                    {{ 'Made on this site'|trans({}, 'theliacms') }}
+                                {% else %}
+                                    {{ 'Module'|trans({}, 'theliacms') }}
+                                {% endif %}
+                            </td>
+                            <td class="text-end" data-testid="cms-component-pages-{{ component.name }}" data-pages="{{ component.pages }}">
+                                {% if component.pages > 0 %}
+                                    {{ '%count% page(s)'|trans({ '%count%': component.pages }, 'theliacms') }}
+                                {% else %}
+                                    <span class="text-muted">{{ 'Unused'|trans({}, 'theliacms') }}</span>
+                                {% endif %}
+                            </td>
+                            <td data-testid="cms-component-offered-{{ component.name }}" data-offered="{{ component.offered ? '1' : '0' }}">
+                                {% if component.prototype %}
+                                    {# A prototype renders on the pages that hold it and nowhere
+                                       else until someone keeps it for the whole site. #}
+                                    <span class="badge text-bg-warning">{{ 'Prototype'|trans({}, 'theliacms') }}</span>
+                                    <div class="text-muted small">{{ 'Offered once kept for the whole site'|trans({}, 'theliacms') }}</div>
+                                {% elseif component.offered %}
+                                    <span class="badge text-bg-success">{{ 'Enabled'|trans({}, 'theliacms') }}</span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary">{{ 'Disabled'|trans({}, 'theliacms') }}</span>
+                                {% endif %}
+                                {% if not component.may_disable and not component.prototype %}
+                                    <div class="text-muted small">{{ 'Always offered'|trans({}, 'theliacms') }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if component.site_url %}
+                                    <a class="btn btn-sm btn-outline-secondary" href="{{ component.site_url }}" data-testid="cms-component-open-{{ component.name }}">
+                                        <i class="bi bi-pencil me-1" aria-hidden="true"></i>{{ 'Open'|trans({}, 'theliacms') }}
+                                    </a>
+                                {% endif %}
+                                {# A component switched off is not on the toolkit page. #}
+                                {% if component.toolkit_url and component.offered %}
+                                    <a class="btn btn-sm btn-outline-secondary" href="{{ component.toolkit_url }}" target="_blank" rel="noopener" data-testid="cms-component-see-{{ component.name }}">
+                                        <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>{{ 'See'|trans({}, 'theliacms') }}
+                                    </a>
+                                {% endif %}
+                                {% if may_make and component.promote_url %}
+                                    <form method="post" action="{{ component.promote_url }}" class="d-inline" data-testid="cms-component-promote-{{ component.name }}">
+                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                        <button class="btn btn-sm btn-outline-primary" type="submit">
+                                            <i class="bi bi-check2-all me-1" aria-hidden="true"></i>{{ 'Keep for the whole site'|trans({}, 'theliacms') }}
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                {% if may_update and component.may_disable %}
+                                    <form method="post" action="{{ path('admin.cms.components.availability') }}" class="d-inline">
+                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                        <input type="hidden" name="component" value="{{ component.name }}">
+                                        <input type="hidden" name="offered" value="{{ component.offered ? '0' : '1' }}">
+                                        {% if component.offered %}
+                                            <button class="btn btn-sm btn-outline-secondary" type="submit" data-testid="cms-component-toggle-{{ component.name }}">
+                                                <i class="bi bi-eye-slash me-1" aria-hidden="true"></i>{{ 'Disable'|trans({}, 'theliacms') }}
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-outline-primary" type="submit" data-testid="cms-component-toggle-{{ component.name }}">
+                                                <i class="bi bi-eye me-1" aria-hidden="true"></i>{{ 'Enable'|trans({}, 'theliacms') }}
+                                            </button>
+                                        {% endif %}
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-muted" data-testid="cms-components-empty">{{ 'No component is available.'|trans({}, 'theliacms') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

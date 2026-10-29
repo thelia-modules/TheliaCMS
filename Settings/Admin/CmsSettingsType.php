@@ -17,7 +17,6 @@ namespace TheliaCMS\Settings\Admin;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -25,6 +24,7 @@ use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Http\PageCachePolicy;
 use TheliaCMS\Page\TrashRetention;
 use TheliaCMS\Settings\IpAllowlist;
@@ -85,26 +85,48 @@ final class CmsSettingsType extends AbstractType
                 'required' => false,
                 'attr' => ['rows' => 4, 'placeholder' => "203.0.113.42\n2001:db8::/32"],
                 'help' => 'One IP address or range per line. Yours is shown below.',
-            ]);
-
-        // One list of ticks per group of the panel. Ticked means offered: the
-        // setting stores the opposite, so that a block a module adds later is
-        // offered without anybody ticking it.
-        $blocks = $builder->create('enabledBlocks', FormType::class, ['label' => false, 'required' => false]);
-
-        foreach ($options['block_groups'] as $key => $group) {
-            $blocks->add($key, ChoiceType::class, [
-                'label' => $group['label'],
+            ])
+            ->add('generatorEffort', ChoiceType::class, [
+                'label' => 'Reasoning effort',
+                'choices' => [
+                    'Low: fast, for a short page' => 'low',
+                    'Medium' => 'medium',
+                    'High: the default' => 'high',
+                    'Very high' => 'xhigh',
+                    'Maximum: slow, for a demanding brief' => 'max',
+                ],
+                'help' => 'How long the model thinks before it writes. More effort costs more and takes longer.',
+            ])
+            ->add('generatorMaxTokens', IntegerType::class, [
+                'label' => 'Longest answer, in tokens',
+                'attr' => ['min' => GeneratorSettings::MIN_MAX_TOKENS],
+                'help' => 'An answer cut at this length loses the end of the page. A long page needs about four tokens a word.',
+            ])
+            ->add('textEffort', ChoiceType::class, [
+                'label' => 'Reasoning effort',
+                'choices' => [
+                    'Low: the default' => 'low',
+                    'Medium' => 'medium',
+                    'High' => 'high',
+                    'Very high' => 'xhigh',
+                    'Maximum' => 'max',
+                ],
+            ])
+            ->add('textMaxTokens', IntegerType::class, [
+                'label' => 'Longest answer, in tokens',
+                'attr' => ['min' => GeneratorSettings::MIN_TEXT_MAX_TOKENS],
+                'help' => 'A description of a few paragraphs fits in 2,000.',
+            ])
+            ->add('generatorWebFetch', CheckboxType::class, [
+                'label' => 'Read the web pages a brief cites',
                 'required' => false,
-                'multiple' => true,
-                'expanded' => true,
-                'choices' => $group['choices'],
-                // The labels arrive translated: they are the words of the panel.
-                'translation_domain' => false,
+                'help' => 'Off by default. When on, the model can read the public pages whose address the brief gives: this server fetches them (private and internal addresses are refused) and sends their text to the AI provider assigned to the range, which may be outside the European Union. A page is read as data, never as instructions.',
+            ])
+            ->add('generatorComponentMaking', CheckboxType::class, [
+                'label' => 'Let a brief make a component of the site',
+                'required' => false,
+                'help' => 'Off by default. When on, the generator writing a page may make a new component (its props, its template, its styles) when none of the catalogue shows what the brief asks, at most twice per page: each one is a call of its own, up to a minute and a few cents. The component is kept as a prototype of the site, shown on the pages that hold it and offered to nobody else until CMS > Components keeps it for the whole site. Only an editor who may make components from CMS > Components is offered it.',
             ]);
-        }
-
-        $builder->add($blocks);
 
         $builder->addEventListener(FormEvents::POST_SUBMIT, $this->validateAllowlist(...));
     }
@@ -115,11 +137,8 @@ final class CmsSettingsType extends AbstractType
             ->setDefaults([
                 'translation_domain' => 'theliacms',
                 'page_choices' => [],
-                // Group key => ['label' => heading, 'choices' => label => block id].
-                'block_groups' => [],
             ])
-            ->setAllowedTypes('page_choices', 'array')
-            ->setAllowedTypes('block_groups', 'array');
+            ->setAllowedTypes('page_choices', 'array');
     }
 
     /**

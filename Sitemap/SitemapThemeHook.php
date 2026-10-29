@@ -113,6 +113,7 @@ final readonly class SitemapThemeHook implements ThemeHookInterface
         $pages = CmsPageQuery::create()
             ->filterByDeletedAt(null, Criteria::ISNULL)
             ->filterByVisible(1)
+            ->filterByModel(0)
             ->find();
 
         $noindex = [];

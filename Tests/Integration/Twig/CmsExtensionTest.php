@@ -19,6 +19,7 @@ use TheliaCMS\Settings\SiteMode;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\TheliaCMS;
 use TheliaCMS\Twig\CmsExtension;
+use Twig\Environment;
 use Twig\TwigFunction;
 
 /**
@@ -63,17 +64,66 @@ final class CmsExtensionTest extends CmsIntegrationTestCase
     }
 
     /**
+     * A theme marks the home page in its navigation: it passes the id of a page
+     * as it holds it, a number.
+     */
+    public function testThePageSetAsHomeIsReportedAndNoOtherIs(): void
+    {
+        $previous = TheliaCMS::getConfigValue('home_page_id');
+        $home = $this->createPage('Accueil du test');
+        $other = $this->createPage('Autre page du test');
+        TheliaCMS::setConfigValue('home_page_id', (string) $home->getId());
+
+        try {
+            self::assertSame('home', $this->render('{{ cms_is_home(id) ? "home" : "not" }}', ['id' => (int) $home->getId()]));
+            self::assertSame('not', $this->render('{{ cms_is_home(id) ? "home" : "not" }}', ['id' => (int) $other->getId()]));
+            self::assertTrue($this->call('cms_is_home', (string) $home->getId()));
+        } finally {
+            TheliaCMS::setConfigValue('home_page_id', $previous);
+        }
+    }
+
+    /**
+     * A site with no home page has none: not the page of id 0, nor a page whose
+     * id the theme does not have (a product page passes nothing).
+     */
+    public function testWithoutAHomePageNoIdIsTheHomePage(): void
+    {
+        $previous = TheliaCMS::getConfigValue('home_page_id');
+        TheliaCMS::setConfigValue('home_page_id', '');
+
+        try {
+            self::assertFalse($this->call('cms_is_home', '0'));
+            self::assertFalse($this->call('cms_is_home', ''));
+            self::assertSame('not', $this->render('{{ cms_is_home(id) ? "home" : "not" }}', ['id' => null]));
+        } finally {
+            TheliaCMS::setConfigValue('home_page_id', $previous);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function render(string $source, array $context): string
+    {
+        $twig = $this->getService(Environment::class);
+        \assert($twig instanceof Environment);
+
+        return $twig->createTemplate($source)->render($context);
+    }
+
+    /**
      * Through the registered function and not through the service behind it: what
      * a theme writes is the name, and a function renamed or dropped takes every
      * template using it down at compile time.
      */
-    private function call(string $name): mixed
+    private function call(string $name, mixed ...$arguments): mixed
     {
         foreach ($this->getService(CmsExtension::class)->getFunctions() as $function) {
             \assert($function instanceof TwigFunction);
 
             if ($name === $function->getName()) {
-                return ($function->getCallable())();
+                return ($function->getCallable())(...$arguments);
             }
         }
 

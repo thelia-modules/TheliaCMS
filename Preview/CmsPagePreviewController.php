@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Preview;
 
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
@@ -43,7 +44,7 @@ final readonly class CmsPagePreviewController
         requirements: ['id' => '\d+', 'locale' => '[a-z]{2}_[A-Z]{2}', 'expires' => '\d+', 'signature' => '[a-f0-9]{64}'],
         methods: ['GET'],
     )]
-    public function __invoke(int $id, string $locale, int $expires, string $signature): Response
+    public function __invoke(Request $request, int $id, string $locale, int $expires, string $signature): Response
     {
         if (!$this->links->isValid($id, $locale, $expires, $signature)) {
             throw new NotFoundHttpException();
@@ -55,7 +56,9 @@ final readonly class CmsPagePreviewController
             throw new NotFoundHttpException();
         }
 
-        $response = new Response($this->renderer->render($page));
+        $response = new Response($request->query->getBoolean(PreviewLink::CONTENT_ONLY)
+            ? $this->renderer->renderContent($page)
+            : $this->renderer->render($page));
 
         // A draft must leave no trace: not in a search index, not in a shared
         // cache, not in the browser's history cache either.

@@ -24,6 +24,7 @@ use Thelia\Model\ConfigQuery;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Http\PageCacheListener;
 use TheliaCMS\Http\PageCachePolicy;
+use TheliaCMS\Partial\Definition\PageListPartial;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\TheliaCMS;
 use TheliaCMS\Twig\CmsExtension;
@@ -52,9 +53,9 @@ final class PageCacheHeadersTest extends CmsIntegrationTestCase
 
     public function testAPageOfTheModuleIsFiledUnderTheListsItShows(): void
     {
-        $response = $this->respond(CacheTags::forPage(12), [CacheTags::PAGE_LISTS]);
+        $response = $this->respond(CacheTags::forPage(12), [CacheTags::partial(PageListPartial::NAME)]);
 
-        self::assertSame('cms,cms-menu,cms-page-12,cms-page-list', $response->headers->get('Cache-Tag'));
+        self::assertSame('cms,cms-menu,cms-page-12,cms-partial-cms-page-list', $response->headers->get('Cache-Tag'));
     }
 
     /**
@@ -63,7 +64,7 @@ final class PageCacheHeadersTest extends CmsIntegrationTestCase
      */
     public function testAPageOfTheShopThatShowsAListKeepsTheHeadersOfTheShop(): void
     {
-        $response = $this->respond(null, [CacheTags::PAGE_LISTS]);
+        $response = $this->respond(null, [CacheTags::partial(PageListPartial::NAME)]);
 
         self::assertFalse($response->headers->has('Cache-Tag'));
         self::assertFalse($response->headers->has('Surrogate-Key'));
@@ -105,14 +106,14 @@ final class PageCacheHeadersTest extends CmsIntegrationTestCase
         $request->attributes->remove(PageCacheListener::SHOWN_TAGS_ATTRIBUTE);
 
         try {
-            $this->getService(CmsExtension::class)->pagesTagged('Recette');
+            $this->getService(CmsExtension::class)->pagesOfType('default');
         } finally {
             if ($pushed) {
                 $requests->pop();
             }
         }
 
-        self::assertSame([CacheTags::PAGE_LISTS], $request->attributes->get(PageCacheListener::SHOWN_TAGS_ATTRIBUTE));
+        self::assertSame([CacheTags::partial(PageListPartial::NAME)], $request->attributes->get(PageCacheListener::SHOWN_TAGS_ATTRIBUTE));
     }
 
     /**

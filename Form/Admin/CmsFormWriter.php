@@ -78,9 +78,9 @@ final readonly class CmsFormWriter
     }
 
     /**
-     * Forms go to a soft delete like pages and reusable blocks: a page may
-     * still be pointing at this one, and its submissions are records somebody
-     * may have to answer for.
+     * Forms go to a soft delete like pages: a page may still be pointing at
+     * this one, and its submissions are records somebody may have to answer
+     * for.
      */
     public function delete(CmsForm $form): void
     {

@@ -24,7 +24,7 @@ namespace TheliaCMS\ImportExport;
 final readonly class ImportOptions
 {
     public function __construct(
-        /** Whether pages, menus, blocks and forms already here are overwritten. */
+        /** Whether pages, menus and forms already here are overwritten. */
         public bool $replace = false,
         /** Whether the settings of the file are applied to this site. */
         public bool $withSettings = false,

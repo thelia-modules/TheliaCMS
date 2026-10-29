@@ -20,6 +20,7 @@ use Symfony\Component\HttpKernel\EventListener\AbstractSessionListener;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use TheliaCMS\Content\Site\SiteComponentStyles;
 use TheliaCMS\Settings\SiteFonts;
 use TheliaCMS\Settings\SiteStyles;
 use TheliaCMS\Settings\SiteStylesCss;
@@ -39,7 +40,27 @@ final readonly class SiteStylesController
         private SiteFonts $fonts,
         private BlockStyles $blocks,
         private UrlGeneratorInterface $urls,
+        private SiteComponentStyles $components,
     ) {
+    }
+
+    /**
+     * The stylesheet of the components the site made and kept. Same bargain
+     * as the others: the address carries the hash of what it serves.
+     */
+    #[Route('/cms/site-components.css', name: 'cms.site_component_styles', methods: ['GET'])]
+    public function components(): Response
+    {
+        $response = new Response($this->components->css(), Response::HTTP_OK, [
+            'Content-Type' => 'text/css; charset=utf-8',
+        ]);
+
+        $response->setPublic();
+        $response->setMaxAge(31536000);
+        $response->setImmutable();
+        $response->headers->set(AbstractSessionListener::NO_AUTO_CACHE_CONTROL_HEADER, 'true');
+
+        return $response;
     }
 
     #[Route('/cms/blocks.css', name: 'cms.block_styles', methods: ['GET'])]

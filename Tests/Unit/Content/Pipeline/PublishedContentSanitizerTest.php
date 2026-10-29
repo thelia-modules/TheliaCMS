@@ -1,0 +1,279 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Tests\Unit\Content\Pipeline;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\UX\TwigComponent\ComponentRendererInterface;
+use Thelia\Core\Template\TemplateDefinition;
+use Thelia\Core\Template\TemplateHelperInterface;
+use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
+use TheliaCMS\Content\Theme\ComponentPropsReader;
+use TheliaCMS\Content\Theme\ThemeComponentSections;
+use Twig\Environment;
+
+/**
+ * The editor profile is a client, not a trusted administrator: whatever the
+ * browser sends is treated as hostile and filtered on the server before it can
+ * reach a published page.
+ */
+final class PublishedContentSanitizerTest extends TestCase
+{
+    private PublishedContentSanitizer $sanitizer;
+
+    protected function setUp(): void
+    {
+        $this->sanitizer = new PublishedContentSanitizer();
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1: string}>
+     */
+    public static function hostileHtml(): iterable
+    {
+        yield 'script element' => ['<p>Hello</p><script>alert(1)</script>', 'alert(1)'];
+        yield 'inline event handler' => ['<p onclick="alert(1)">Hello</p>', 'onclick'];
+        yield 'error handler on a broken image' => ['<img src="x" onerror="alert(1)">', 'onerror'];
+        yield 'javascript scheme in a link' => ['<a href="javascript:alert(1)">x</a>', 'javascript:'];
+        yield 'javascript scheme with mixed case' => ['<a href="JaVaScRiPt:alert(1)">x</a>', 'avascript'];
+        yield 'data url document in a link' => ['<a href="data:text/html;base64,PHNjcmlwdD4=">x</a>', 'text/html'];
+        yield 'form posting elsewhere' => ['<form action="https://evil.test"><input name="p"></form>', 'evil.test'];
+        yield 'inline svg' => ['<svg><script>alert(1)</script></svg>', '<svg'];
+        yield 'object element' => ['<object data="https://evil.test/x.swf"></object>', '<object'];
+        yield 'embed element' => ['<embed src="https://evil.test/x">', '<embed'];
+        yield 'base tag rewriting every link' => ['<base href="https://evil.test/">', '<base'];
+        yield 'meta refresh' => ['<meta http-equiv="refresh" content="0;url=https://evil.test">', 'evil.test'];
+        yield 'style element' => ['<style>body{background:url(https://evil.test/x)}</style>', 'evil.test'];
+        yield 'srcdoc iframe' => ['<iframe srcdoc="<script>alert(1)</script>"></iframe>', 'srcdoc'];
+        yield 'style attribute loading a picture from another host' => ['<p style="background:url(https://evil.test/t.png)">x</p>', 'evil.test'];
+        yield 'style attribute loading from another host without a scheme' => ['<p style="background-image:url(&quot;//evil.test/t.png&quot;)">x</p>', 'evil.test'];
+        yield 'style attribute with the legacy expression vector' => ['<p style="width:expression(alert(1))">x</p>', 'expression('];
+        yield 'style attribute with the legacy behaviour vector' => ['<p style="behavior:url(x.htc)">x</p>', 'behavior'];
+    }
+
+    #[DataProvider('hostileHtml')]
+    public function testStripsHostileMarkup(string $html, string $forbidden): void
+    {
+        self::assertStringNotContainsStringIgnoringCase(
+            $forbidden,
+            (string) $this->sanitizer->html($html),
+        );
+    }
+
+    public function testKeepsTheMarkupAPageIsMadeOf(): void
+    {
+        $html = '<div class="cms-page-content"><h1 id="title">Hello</h1>'
+            .'<p style="color:#333">A <strong>bold</strong> <em>claim</em>, with a '
+            .'<a href="/contact" title="Contact">link</a>.</p>'
+            .'<ul><li>One</li></ul>'
+            .'<img src="/image-library/1/full/max/0/default.jpg" alt="A picture" '
+            .'width="800" height="600" loading="lazy" decoding="async" fetchpriority="high">'
+            .'</div>';
+
+        $sanitized = (string) $this->sanitizer->html($html);
+
+        foreach ([
+            'class="cms-page-content"', 'id="title"', '<h1', '<strong>', '<em>',
+            'href="/contact"', 'title="Contact"', '<li>One</li>', 'alt="A picture"',
+            'width="800"', 'height="600"', 'loading="lazy"', 'decoding="async"',
+            'fetchpriority="high"', 'style="color:#333"',
+        ] as $expected) {
+            self::assertStringContainsString($expected, $sanitized);
+        }
+    }
+
+    /**
+     * The catalogue names each section by its own heading and hides decorative
+     * icons; dropping those attributes on the way out would undo, silently, the
+     * one thing the blocks are careful about.
+     */
+    public function testKeepsWhatMakesAPageAccessible(): void
+    {
+        $html = '<section aria-labelledby="cms-hero-title" role="region">'
+            .'<h2 id="cms-hero-title">Hello</h2>'
+            .'<i class="icon" aria-hidden="true"></i>'
+            .'<a href="/" aria-current="page">Home</a>'
+            .'<details open><summary>A question</summary><p>An answer</p></details>'
+            .'<p lang="en" dir="ltr">In English</p>'
+            .'</section>';
+
+        $sanitized = (string) $this->sanitizer->html($html);
+
+        foreach ([
+            'aria-labelledby="cms-hero-title"', 'role="region"', 'aria-hidden="true"',
+            'aria-current="page"', '<details open', 'lang="en"', 'dir="ltr"',
+        ] as $expected) {
+            self::assertStringContainsString($expected, $sanitized);
+        }
+    }
+
+    public function testKeepsThePartialMarkersTheRendererSubstitutes(): void
+    {
+        $html = '<div data-cms-partial="cms-form" data-props=\'{"code":"contact"}\'></div>';
+
+        $sanitized = (string) $this->sanitizer->html($html);
+
+        self::assertStringContainsString('data-cms-partial="cms-form"', $sanitized);
+        self::assertStringContainsString('data-cms-section="hero"', $this->sanitizer->html('<section data-cms-section="hero" data-other="x"><p>Hi</p></section>'), 'The anchor of a section survives the filter; any other data attribute does not.');
+        self::assertStringNotContainsString('data-other', $this->sanitizer->html('<section data-cms-section="hero" data-other="x"><p>Hi</p></section>'));
+        self::assertStringContainsString('data-props', $sanitized);
+    }
+
+    /**
+     * A component of the theme wires its behaviour with Stimulus: published
+     * without its controller, a carousel is a strip of pictures whose arrows
+     * do nothing. The theme names the controllers its components use; those
+     * are kept, any other is dropped, so that written text cannot wire one
+     * the theme never opened to pages.
+     */
+    public function testKeepsTheStimulusAttributesOfTheControllersTheThemeDeclares(): void
+    {
+        $directory = sys_get_temp_dir().'/theliacms-theme-'.bin2hex(random_bytes(4));
+        mkdir($directory.'/config', 0o777, true);
+
+        try {
+            file_put_contents($directory.'/config/theliacms.yaml', "sections:\n    components: []\n    controllers:\n        - Organisms--Carousel--base\n");
+            $sanitizer = new PublishedContentSanitizer(theme: $this->themeIn($directory));
+
+            $sanitized = (string) $sanitizer->html(
+                '<section class="Carousel" data-controller="Organisms--Carousel--base" data-organisms--carousel--base-interval-value="5">'
+                .'<div tabindex="0" data-organisms--carousel--base-target="viewport" data-action="keydown->Organisms--Carousel--base#keydown"></div>'
+                .'<div hidden data-organisms--carousel--base-target="controls">'
+                .'<button type="button" data-action="Organisms--Carousel--base#goTo" data-organisms--carousel--base-index-param="1">2</button>'
+                .'</div></section>'
+                .'<div data-controller="Organisms--Carousel--base hijack" data-action="click->hijack#run Organisms--Carousel--base#next" data-hijack-url-value="https://evil.test" data-hijack-target="x">Written text</div>'
+                .'<div data-controller="hijack" data-other="x">Written text</div>',
+            );
+
+            foreach ([
+                'data-controller="Organisms--Carousel--base"', 'data-organisms--carousel--base-interval-value="5"',
+                'data-organisms--carousel--base-target="viewport"', 'data-action="keydown-&gt;Organisms--Carousel--base#keydown"',
+                'data-organisms--carousel--base-target="controls"', 'data-action="Organisms--Carousel--base#goTo"',
+                'data-organisms--carousel--base-index-param="1"', 'data-action="Organisms--Carousel--base#next"',
+            ] as $expected) {
+                self::assertStringContainsString($expected, $sanitized);
+            }
+
+            foreach (['hijack', 'evil.test', 'data-other'] as $forbidden) {
+                self::assertStringNotContainsString($forbidden, $sanitized, 'A controller the theme does not name is dropped.');
+            }
+
+            self::assertSame(
+                '<div>Text</div>',
+                (new PublishedContentSanitizer())->html('<div data-controller="Organisms--Carousel--base" data-action="Organisms--Carousel--base#next">Text</div>'),
+                'Without a theme naming it, no controller is kept.',
+            );
+        } finally {
+            @unlink($directory.'/config/theliacms.yaml');
+            @rmdir($directory.'/config');
+            @rmdir($directory);
+        }
+    }
+
+    /**
+     * Controls a script reveals start hidden, and a carousel says what it is
+     * to a screen reader: neither carries script nor an address.
+     */
+    public function testKeepsHiddenControlsAndTheRoleDescriptionOfAWidget(): void
+    {
+        $sanitized = (string) $this->sanitizer->html('<section role="group" aria-roledescription="carousel"><div hidden>Controls</div></section>');
+
+        self::assertStringContainsString('aria-roledescription="carousel"', $sanitized);
+        self::assertStringContainsString('<div hidden', $sanitized);
+    }
+
+    public function testDropsAnIframeUnlessCustomCodeIsAllowed(): void
+    {
+        $html = '<iframe src="https://player.test/embed/1" title="A video"></iframe>';
+
+        self::assertStringNotContainsString('<iframe', (string) $this->sanitizer->html($html));
+        self::assertStringContainsString('<iframe', (string) $this->sanitizer->html($html, allowCustomCode: true));
+    }
+
+    public function testKeepsALongPageWhole(): void
+    {
+        $html = str_repeat('<p class="wysiwyg">Les conditions générales de vente.</p>', 2_000).'<p>La fin de la page.</p>';
+
+        self::assertGreaterThan(100_000, \strlen($html));
+        self::assertTrue(str_contains((string) $this->sanitizer->html($html), 'La fin de la page.'), 'The end of the page was cut off.');
+    }
+
+    public function testReadsNoMoreMarkupThanItIsGiven(): void
+    {
+        $sanitizer = new PublishedContentSanitizer(maxLength: 40);
+
+        $sanitized = (string) $sanitizer->html('<p>Kept</p><p>Past the length it is given</p>');
+
+        self::assertStringStartsWith('<p>Kept</p>', $sanitized);
+        self::assertStringNotContainsString('given', $sanitized);
+    }
+
+    public function testLeavesEmptyContentAlone(): void
+    {
+        self::assertNull($this->sanitizer->html(null));
+        self::assertSame('', $this->sanitizer->html(''));
+        self::assertSame('   ', $this->sanitizer->html('   '));
+        self::assertNull($this->sanitizer->css(null));
+        self::assertSame('', $this->sanitizer->css(''));
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1: string}>
+     */
+    public static function hostileCss(): iterable
+    {
+        yield 'import of a remote sheet' => ['@import url("https://evil.test/x.css"); p{color:red}', '@import'];
+        yield 'import without url()' => ["@import 'https://evil.test/x.css';", '@import'];
+        yield 'legacy expression' => ['p{width:expression(alert(1))}', 'expression('];
+        yield 'behavior property' => ['p{behavior:url(#default#time2)}', 'behavior'];
+        yield 'remote background' => ['p{background:url(https://evil.test/track.png)}', 'evil.test'];
+        yield 'protocol relative background' => ['p{background:url(//evil.test/track.png)}', 'evil.test'];
+    }
+
+    #[DataProvider('hostileCss')]
+    public function testFiltersHostileCss(string $css, string $forbidden): void
+    {
+        self::assertStringNotContainsStringIgnoringCase($forbidden, (string) $this->sanitizer->css($css));
+    }
+
+    public function testKeepsTheCssAPageIsStyledWith(): void
+    {
+        $css = '.cms-page-content h1{color:#333;font-size:2rem}'
+            .'.cms-page-content .hero{background-image:url(/image-library/1/full/max/0/default.jpg)}'
+            .'.cms-page-content .logo{background-image:url(data:image/png;base64,iVBORw0KGgo=)}'
+            .'@media (min-width:768px){.cms-page-content h1{font-size:3rem}}';
+
+        self::assertSame($css, $this->sanitizer->css($css));
+    }
+
+    private function themeIn(string $directory): ThemeComponentSections
+    {
+        $theme = $this->createStub(TemplateDefinition::class);
+        $theme->method('getAbsolutePath')->willReturn($directory);
+        $theme->method('getParentList')->willReturn([]);
+
+        $templates = $this->createStub(TemplateHelperInterface::class);
+        $templates->method('getActiveFrontTemplate')->willReturn($theme);
+
+        return new ThemeComponentSections(
+            $templates,
+            new ComponentPropsReader($this->createStub(Environment::class), $this->createStub(UrlGeneratorInterface::class)),
+            $this->createStub(ComponentRendererInterface::class),
+            new NullLogger(),
+        );
+    }
+}

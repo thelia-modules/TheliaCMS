@@ -1,0 +1,102 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Tests\Unit\Content;
+
+use PHPUnit\Framework\TestCase;
+use TheliaCMS\Content\DocumentSchema;
+use TheliaCMS\Content\RichTextSection;
+use TheliaCMS\Content\SectionCatalog;
+
+/**
+ * The full schema documents and validates the catalogue; the strict one is
+ * the small envelope a generator can be constrained with.
+ */
+final class DocumentSchemaTest extends TestCase
+{
+    private DocumentSchema $schema;
+
+    protected function setUp(): void
+    {
+        $this->schema = new DocumentSchema(new SectionCatalog([new RichTextSection(), new FakeSection()]));
+    }
+
+    public function testTheFullSchemaDescribesOneAlternativePerComponent(): void
+    {
+        $full = $this->schema->full();
+
+        self::assertSame(['version', 'sections'], $full['required']);
+        self::assertSame(1, $full['properties']['version']['const']);
+
+        $alternatives = $full['properties']['sections']['items']['anyOf'];
+
+        self::assertCount(2, $alternatives);
+        self::assertSame(RichTextSection::NAME, $alternatives[0]['properties']['component']['const']);
+        self::assertSame(FakeSection::NAME, $alternatives[1]['properties']['component']['const']);
+        self::assertFalse($alternatives[1]['additionalProperties']);
+        self::assertSame(['id', 'component', 'props'], $alternatives[1]['required']);
+        self::assertSame(['title'], $alternatives[1]['properties']['props']['required']);
+        self::assertSame(1, ((array) $alternatives[1]['properties']['props']['properties'])['level']['minimum'], 'The full schema keeps the ranges.');
+    }
+
+    public function testTheStrictSchemaIsTheEnvelopeAlone(): void
+    {
+        $strict = $this->schema->strict();
+        $json = json_encode($strict, \JSON_THROW_ON_ERROR);
+
+        foreach (['minimum', 'maximum', 'maxLength', 'minLength', 'minItems', 'maxItems', 'anyOf', 'null'] as $keyword) {
+            self::assertStringNotContainsString('"'.$keyword.'"', $json, $keyword.' has no place in a grammar the API compiles.');
+        }
+
+        self::assertIsArray($strict['properties'], 'The gateway of the core reads the properties as an array: an object would make it see none.');
+
+        $section = $strict['properties']['sections']['items'];
+
+        self::assertSame(['id', 'component', 'props'], $section['required']);
+        self::assertSame([RichTextSection::NAME, FakeSection::NAME], $section['properties']['component']['enum']);
+        self::assertSame('string', $section['properties']['props']['type'], 'The props travel as a JSON string the validator reads back.');
+        self::assertSame(['background', 'text', 'padding', 'align'], array_keys($section['properties']['appearance']['properties']), 'The appearance is optional, and so is each of its settings.');
+        self::assertSame(['small', 'medium', 'large'], $section['properties']['appearance']['properties']['padding']['enum']);
+        self::assertStringNotContainsString('"pattern"', $json, 'A colour is checked when the document is read: the API compiles no pattern.');
+        self::assertSame(1, $strict['properties']['version']['const']);
+    }
+
+    public function testTheFieldsOfAPageJoinTheEnvelopeOnlyWhenAsked(): void
+    {
+        self::assertArrayNotHasKey('fields', $this->schema->strict()['properties'], 'A page without fields is asked for the envelope it always was.');
+
+        $strict = $this->schema->strict([], withFields: true);
+
+        self::assertSame('string', $strict['properties']['fields']['type'], 'The fields travel as a JSON string, like the props.');
+        self::assertSame(['version', 'sections', 'fields'], $strict['required']);
+    }
+
+    public function testWhatThePageLeavesOutIsAnOptionalListOfSentences(): void
+    {
+        $strict = $this->schema->strict();
+
+        self::assertSame(['type' => 'string'], $strict['properties']['left_out']['items']);
+        self::assertNotContains('left_out', $strict['required'], 'A page that holds everything the brief asked says nothing.');
+    }
+
+    public function testTheGatewayOfTheCoreAcceptsADocumentAndRefusesAnUnknownKey(): void
+    {
+        $validator = new \Thelia\Domain\Ai\Guardrail\AiSchemaValidator();
+        $strict = $this->schema->strict();
+        $document = ['version' => 1, 'sections' => [['id' => 'intro', 'component' => RichTextSection::NAME, 'props' => '{}']]];
+
+        self::assertSame([], $validator->validate($strict, $document), 'A document of the envelope passes the check the gateway runs on the answer.');
+        self::assertNotSame([], $validator->validate($strict, $document + ['unknown' => true]), 'The envelope is closed: a key it does not name is refused.');
+    }
+}

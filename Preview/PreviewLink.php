@@ -33,6 +33,9 @@ final readonly class PreviewLink
 
     private const string ROUTE = 'cms.page.preview';
 
+    /** The query parameter of a link showing the sections alone. */
+    public const string CONTENT_ONLY = 'content';
+
     public function __construct(
         private UrlGeneratorInterface $urls,
         #[Autowire('%kernel.secret%')]
@@ -50,6 +53,16 @@ final readonly class PreviewLink
             'expires' => $expiresAt,
             'signature' => $this->sign($pageId, $locale, $expiresAt),
         ], UrlGeneratorInterface::ABSOLUTE_URL);
+    }
+
+    /**
+     * The same link showing the sections of the draft alone, without the
+     * header, the footer or the title the template of the page draws. The
+     * mode is no part of the signature: it shows nothing the page does not.
+     */
+    public function contentUrlFor(int $pageId, string $locale, ?\DateTimeImmutable $now = null): string
+    {
+        return $this->urlFor($pageId, $locale, $now).'?'.self::CONTENT_ONLY.'=1';
     }
 
     public function isValid(int $pageId, string $locale, int $expiresAt, string $signature, ?\DateTimeImmutable $now = null): bool

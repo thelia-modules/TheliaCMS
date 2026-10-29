@@ -16,6 +16,7 @@ namespace TheliaCMS\Media\Admin;
 
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use TheliaCMS\Media\CmsMediaLibrary;
+use TheliaLibrary\Exception\UnsupportedLibraryImageException;
 use TheliaLibrary\Model\LibraryImage;
 use TheliaLibrary\Service\LibraryImageService;
 
@@ -31,24 +32,39 @@ final readonly class CmsMediaWriter
     }
 
     /**
-     * Stores uploaded files and marks them as CMS content.
+     * Stores uploaded files and marks them as CMS content, each on its own:
+     * a file of another format, too large or not an image is refused and
+     * the others are stored.
+     *
+     * The formats are the ones of the module, not all the ones the library
+     * would take: the screens say JPEG, PNG and WebP.
      *
      * @param list<UploadedFile> $files
-     *
-     * @return list<LibraryImage>
      */
-    public function add(array $files, string $locale): array
+    public function add(array $files, string $locale): MediaUpload
     {
         $stored = [];
+        $refused = [];
 
         foreach ($files as $file) {
-            $image = $this->images->createImage($file, $file->getClientOriginalName(), $locale);
-            $this->library->tag($image);
+            $refusal = $this->refusalOf($file);
 
-            $stored[] = $image;
+            if (null === $refusal) {
+                try {
+                    $image = $this->images->createImage($file, $file->getClientOriginalName(), $locale);
+                    $this->library->tag($image);
+                    $stored[] = $image;
+
+                    continue;
+                } catch (UnsupportedLibraryImageException) {
+                    $refusal = MediaUploadRefusal::Unreadable;
+                }
+            }
+
+            $refused[] = ['name' => $file->getClientOriginalName(), 'refusal' => $refusal];
         }
 
-        return $stored;
+        return new MediaUpload($stored, $refused);
     }
 
     /**
@@ -81,9 +97,40 @@ final readonly class CmsMediaWriter
         $this->library->retag($image, $this->splitTags($data['tags']));
     }
 
+    /**
+     * What the image shows in a language, or that it is decorative: the two
+     * answers of the describe queue.
+     */
+    public function describe(LibraryImage $image, string $locale, ?string $alt, bool $decorative): void
+    {
+        $image->setDecorative($decorative ? 1 : 0);
+        $image->setLocale($locale)->setAlt($decorative ? null : $alt);
+        $image->save();
+    }
+
+    /**
+     * Decorative or not, for every language at once; the texts the image has
+     * are kept, for the day it carries information again.
+     */
+    public function setDecorative(LibraryImage $image, bool $decorative): void
+    {
+        $image->setDecorative($decorative ? 1 : 0)->save();
+    }
+
     public function delete(LibraryImage $image): void
     {
         $this->images->deleteImage($image->getId());
+    }
+
+    private function refusalOf(UploadedFile $file): ?MediaUploadRefusal
+    {
+        if (!$file->isValid()) {
+            return \in_array($file->getError(), [\UPLOAD_ERR_INI_SIZE, \UPLOAD_ERR_FORM_SIZE], true)
+                ? MediaUploadRefusal::TooLarge
+                : MediaUploadRefusal::Failed;
+        }
+
+        return \in_array($file->getMimeType(), CmsMediaType::ACCEPTED_MIME_TYPES, true) ? null : MediaUploadRefusal::Format;
     }
 
     /**

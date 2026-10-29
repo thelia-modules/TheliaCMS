@@ -20,11 +20,15 @@ use Thelia\Core\Template\TemplateDefinition;
 use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\ConfigQuery;
+use Thelia\Model\LangQuery;
 use Thelia\Test\IntegrationTestCase;
+use TheliaCMS\Content\Document;
+use TheliaCMS\Content\Theme\ThemeComponentSections;
 use TheliaCMS\Http\CachePurger;
 use TheliaCMS\Http\CachePurgerInterface;
+use TheliaCMS\ImportExport\ExportFormat;
+use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\Model\CmsPage;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Page\PageInvalidator;
@@ -126,6 +130,17 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
     }
 
     /**
+     * The class of a free text section under the active theme, which may
+     * name classes of its own for written text.
+     */
+    protected function richTextClass(): string
+    {
+        $themeClass = $this->getService(ThemeComponentSections::class)->declaration()->richTextClass;
+
+        return null === $themeClass ? 'cms-richtext' : 'cms-richtext '.$themeClass;
+    }
+
+    /**
      * Points the shop at a front theme it actually has.
      *
      * `bin/test-prepare` seeds the theme name of a stock install, which is not
@@ -149,6 +164,22 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
         }
 
         ConfigQuery::write('active-front-template', $installed[0]->getName());
+    }
+
+    /**
+     * The export file of one page, in every active language: what a test of
+     * the import changes before reading it back.
+     *
+     * @return array<string, mixed>
+     */
+    protected function exportedPage(CmsPage $page): array
+    {
+        $locales = array_map(strval(...), LangQuery::create()->filterByActive(1)->select(['Locale'])->find()->getData());
+
+        return [
+            ...ExportFormat::header('test', $locales, new \DateTimeImmutable()),
+            'pages' => [$this->getService(SiteExporter::class)->pageDocument($page, $locales)],
+        ];
     }
 
     protected function writer(): CmsPageWriter
@@ -227,11 +258,7 @@ abstract class CmsIntegrationTestCase extends IntegrationTestCase
 
         $writer = $this->writer();
         $writer->saveDraft($page, $locale, new PageDraft(title: $title));
-        $writer->saveContent($page, $locale, new BuilderContent(
-            projectData: '{"pages":[]}',
-            html: $html ?? \sprintf('<h1>%s</h1>', htmlspecialchars($title)),
-            css: '',
-        ));
+        $writer->saveContent($page, $locale, Document::richText($html ?? \sprintf('<h1>%s</h1>', htmlspecialchars($title))));
 
         if ($published) {
             $writer->publish($page, $locale);

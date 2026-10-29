@@ -14,14 +14,11 @@ declare(strict_types=1);
 
 namespace TheliaCMS;
 
-use OpenStudio\PageBuilderBundle\Contract\ImageLibraryPortInterface;
-use OpenStudio\PageBuilderBundle\Contract\ImageUploadPortInterface;
-use OpenStudio\PageBuilderBundle\Contract\PageBuilderConfigProviderInterface;
+use FlexyBundle\Toolkit\StoryProviderInterface;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use SEOne\Service\SeoDefaultModels\SeoElementInterface;
-use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Install\Database;
@@ -34,13 +31,11 @@ use Thelia\Model\Resource;
 use Thelia\Model\ResourceQuery;
 use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
-use TheliaCMS\Builder\CmsBuilderConfig;
+use TheliaCMS\Content\Section\SectionStories;
 use TheliaCMS\Http\SharedCache\CmsSharedCacheContributor;
 use TheliaCMS\Http\SharedCache\CoreSharedCache;
 use TheliaCMS\Install\LegalPagesSeeder;
 use TheliaCMS\Install\MenuSeeder;
-use TheliaCMS\Media\LibraryImageCatalog;
-use TheliaCMS\Media\LibraryImageUploader;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Notice\NativeContentConsoleNotice;
@@ -189,6 +184,11 @@ class TheliaCMS extends BaseModule
         foreach (self::migrationsBetween((string) $currentVersion, (string) $newVersion) as $file) {
             (new Database($con))->insertSql(null, [$file]);
         }
+
+        // A site active before a right existed only runs this on its update:
+        // seeded on activation alone, the right would stay denied to every
+        // profile but the super administrator.
+        $this->seedAdminResources();
     }
 
     /**
@@ -297,6 +297,7 @@ class TheliaCMS extends BaseModule
             CmsResources::MEDIA => ['en_US' => 'CMS: media', 'fr_FR' => 'CMS : médias'],
             CmsResources::SETTINGS => ['en_US' => 'CMS: settings', 'fr_FR' => 'CMS : réglages'],
             CmsResources::CUSTOM_CODE => ['en_US' => 'CMS: custom code', 'fr_FR' => 'CMS : code libre'],
+            CmsResources::GENERATE => ['en_US' => 'CMS: page generation', 'fr_FR' => 'CMS : génération de pages'],
         ];
 
         return $labels[$code][$locale] ?? $labels[$code]['en_US'] ?? $code;
@@ -326,28 +327,6 @@ class TheliaCMS extends BaseModule
         return [new CmsAdminResourcesCompiler()];
     }
 
-    /**
-     * The page builder bundle registers its GrapesJS sources with the asset
-     * mapper. On Thelia the asset mapper belongs to the front-office theme, and
-     * the bundle's bare imports (`grapesjs`, `grapesjs/dist/css/grapes.min.css`)
-     * are absent from that importmap: in `strict` mode every front asset then
-     * fails, the theme stylesheet included.
-     *
-     * Excluding those sources is not a loss — a published page must ship no
-     * builder JavaScript at all, and the editor is bundled by this module's own
-     * npm build and served with `module_asset()` on the admin route only.
-     */
-    public static function configureContainer(ContainerConfigurator $containerConfigurator): void
-    {
-        $containerConfigurator->extension('framework', [
-            'asset_mapper' => [
-                'excluded_patterns' => [
-                    '*/openstudio/page-builder-bundle/assets/*',
-                ],
-            ],
-        ]);
-    }
-
     public static function configureServices(ServicesConfigurator $servicesConfigurator): void
     {
         $servicesConfigurator->load(self::getModuleCode().'\\', __DIR__)
@@ -362,8 +341,39 @@ class TheliaCMS extends BaseModule
                 __DIR__.'/Tests/*',
                 // Value objects: instantiated by the services that build them,
                 // never wired by the container.
-                __DIR__.'/Block/Item/PublishedItemBlock.php',
-                __DIR__.'/Builder/ThemeCanvas.php',
+                __DIR__.'/Catalogue/CatalogueItem.php',
+                __DIR__.'/Evaluation/Run.php',
+                __DIR__.'/Evaluation/BriefReport.php',
+                __DIR__.'/Content/Document.php',
+                __DIR__.'/Content/Section.php',
+                __DIR__.'/Content/Pipeline/StimulusAttributeSanitizer.php',
+                __DIR__.'/Content/Prop.php',
+                __DIR__.'/Content/PropSchema.php',
+                __DIR__.'/Content/PropType.php',
+                __DIR__.'/Content/InvalidDocumentException.php',
+                __DIR__.'/Content/UnknownSectionException.php',
+                // Built by their providers, one per partial or per component
+                // of the theme, never wired by the container.
+                __DIR__.'/Content/Partial/PartialSection.php',
+                __DIR__.'/Content/Theme/ThemeComponentSection.php',
+                __DIR__.'/Content/Theme/ThemeSections.php',
+                __DIR__.'/Content/Site/SiteComponentSection.php',
+                __DIR__.'/Content/Site/SiteComponent.php',
+                __DIR__.'/Content/Site/InvalidSiteComponentException.php',
+                __DIR__.'/Generation/Brief.php',
+                __DIR__.'/Generation/Component/ComponentRequest.php',
+                __DIR__.'/Generation/Component/ComponentResult.php',
+                __DIR__.'/Generation/Component/ComponentCandidate.php',
+                __DIR__.'/Generation/GenerationRequest.php',
+                __DIR__.'/Generation/GenerationResult.php',
+                __DIR__.'/Generation/GenerationTarget.php',
+                __DIR__.'/Generation/Admin/ContentSubject.php',
+                __DIR__.'/Generation/Admin/GenerationOutcome.php',
+                __DIR__.'/Generation/Usage.php',
+                __DIR__.'/Skill/Skill.php',
+                // Registered below, guarded: it implements an interface of the
+                // Flexy theme.
+                __DIR__.'/Content/Section/SectionStories.php',
                 __DIR__.'/Page/PageCard.php',
                 __DIR__.'/Page/PageImage.php',
                 __DIR__.'/Page/PageTagName.php',
@@ -385,16 +395,6 @@ class TheliaCMS extends BaseModule
             ])
             ->autowire(true)
             ->autoconfigure(true);
-
-        // The bundle ships a static provider aliased to the interface; the
-        // editor has to follow the site instead — the theme stylesheet, the
-        // project palette, the theme breakpoints.
-        $servicesConfigurator->alias(PageBuilderConfigProviderInterface::class, CmsBuilderConfig::class);
-
-        // Same for the image ports: the bundle aliases them to null objects
-        // that accept nothing, waiting for the host to say where images live.
-        $servicesConfigurator->alias(ImageUploadPortInterface::class, LibraryImageUploader::class);
-        $servicesConfigurator->alias(ImageLibraryPortInterface::class, LibraryImageCatalog::class);
 
         // Dynamic blocks are rendered through an interface so the substitution
         // of a page can be unit-tested without a theme behind it.
@@ -424,6 +424,14 @@ class TheliaCMS extends BaseModule
                 ->autoconfigure(true);
 
             $servicesConfigurator->set(CoreSharedCache::class)
+                ->autowire(true)
+                ->autoconfigure(true);
+        }
+
+        // The toolkit of the Flexy theme lists the sections of the module when
+        // the theme is there; another theme has no toolkit to list them in.
+        if (interface_exists(StoryProviderInterface::class)) {
+            $servicesConfigurator->set(SectionStories::class)
                 ->autowire(true)
                 ->autoconfigure(true);
         }

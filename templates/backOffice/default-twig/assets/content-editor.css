@@ -1,0 +1,933 @@
+/*
+ * The content screen fills the window: the draft on the right has to be seen
+ * at the width visitors will see it, and the brief on the left stays in reach
+ * while it is read.
+ */
+body:has(.cms-content) {
+    overflow: hidden;
+}
+
+.cms-content {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--bs-body-bg, #fff);
+    /* The dimmed text of the theme (hints, "optional" on a label, the
+       language switcher) is a 75 % veil of the body colour, which drops
+       under 4.5:1 on the grey panel; this is the colour every one of them
+       resolves to on this screen. */
+    --bs-secondary-color: #495057;
+}
+
+.cms-content__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+/* The template of pages the page belongs to, next to its status. */
+.cms-content__template {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    color: #495057;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.cms-content__template:hover,
+.cms-content__template:focus-visible {
+    border-color: var(--bs-primary, #0d6efd);
+    color: var(--bs-primary, #0d6efd);
+}
+
+.cms-content__title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cms-content__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.cms-content__stage {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* The panel scrolls on its own: the draft stays in view while the brief is
+   long, and the other way round. */
+.cms-content__panel {
+    flex: 0 0 26rem;
+    max-width: 40vw;
+    overflow-y: auto;
+    padding: 1rem;
+    border-right: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+.cms-content__section + .cms-content__section {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.cms-content__heading {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+}
+
+.cms-content__sections {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.cms-content__item {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    background: #fff;
+}
+
+.cms-content__item.is-hover,
+.cms-content__item:hover,
+.cms-content__item:focus-within {
+    border-color: var(--bs-primary, #0d6efd);
+    box-shadow: 0 0 0 1px var(--bs-primary, #0d6efd);
+}
+
+.cms-content__item-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.cms-content__item-locate {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.cms-content__item-locate:hover .cms-content__item-label,
+.cms-content__item-locate:focus-visible .cms-content__item-label {
+    text-decoration: underline;
+}
+
+.cms-content__item-rank {
+    flex: 0 0 auto;
+    min-width: 1.5rem;
+    padding: 0 0.4rem;
+    border-radius: 1rem;
+    background: var(--bs-primary, #0d6efd);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.5rem;
+    text-align: center;
+}
+
+.cms-content__item-label {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.cms-content__item-grip {
+    flex: 0 0 auto;
+    color: #5c636a;
+    cursor: grab;
+    touch-action: none;
+}
+
+.cms-content__item--dragged {
+    opacity: 0.5;
+    border-style: dashed;
+}
+
+.cms-content__item-actions {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-left: auto;
+}
+
+.cms-content__item-move-form,
+.cms-content__item-remove-form {
+    line-height: 1;
+}
+
+.cms-content__item-component {
+    font-size: 0.75rem;
+    /* Dimmed as an aside, and still 4.5:1 on white. */
+    color: #5c636a;
+}
+
+.cms-content__item-excerpt {
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    color: #495057;
+}
+
+/* The brief a page was written from, recalled in a few lines once there is
+   one: the form itself opens in a dialog. */
+.cms-content__brief-recall {
+    display: -webkit-box;
+    margin: 0 0 0.25rem;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    font-size: 0.875rem;
+    color: #495057;
+    white-space: pre-line;
+}
+
+.cms-content__brief-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0 0 0.5rem;
+    font-size: 0.8125rem;
+    color: #5c636a;
+}
+
+.cms-content__edit-open {
+    display: block;
+    margin-top: 0.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 0.875rem;
+    color: var(--bs-link-color, #0d6efd);
+    cursor: pointer;
+}
+
+.cms-content__edit-open:hover {
+    text-decoration: underline;
+}
+
+/* A section by hand, a section rewritten, the brief, a section added: each
+   opens in a drawer on the left, over the panel, the whole height of the
+   screen. The draft stays in view on the right, under a light veil: the
+   point of editing a section is to see it change. Wide enough for the
+   rich-text editor, scrolled inside when the section holds many fields. */
+.cms-content__edit,
+.cms-content__add {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: clamp(26rem, 40vw, 50rem);
+    max-width: calc(100vw - 2rem);
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    padding: 1rem 1.25rem;
+    border: 0;
+    border-right: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0;
+    box-shadow: 0.5rem 0 1.5rem rgba(33, 37, 41, 0.15);
+    overflow-y: auto;
+}
+
+.cms-content__edit {
+    font-size: 0.875rem;
+}
+
+.cms-content__edit::backdrop,
+.cms-content__add::backdrop {
+    background: rgba(33, 37, 41, 0.2);
+}
+
+/* Slid in from the left when opened. */
+.cms-content__edit[open],
+.cms-content__add[open] {
+    transition: transform 0.2s ease-out;
+}
+
+@starting-style {
+    .cms-content__edit[open],
+    .cms-content__add[open] {
+        transform: translateX(-100%);
+    }
+}
+
+.cms-content__edit > form:not([method="dialog"]) {
+    margin-top: 1rem;
+}
+
+.cms-content__appearance {
+    margin-bottom: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+/* Folded parts of a section form: the other sources of a picture, the
+   appearance. Closed, they take one line. */
+.cms-content__more {
+    margin: -0.5rem 0 1rem;
+}
+
+.cms-content__more > summary {
+    width: fit-content;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--bs-primary, #0d6efd);
+    cursor: pointer;
+}
+
+.cms-content__more[open] > summary {
+    margin-bottom: 0.75rem;
+}
+
+.cms-content__appearance.cms-content__more {
+    margin-top: 0;
+}
+
+.cms-content__appearance > summary {
+    color: inherit;
+}
+
+/* The save button stays in view at the bottom of a long form. */
+.cms-content__edit-actions {
+    position: sticky;
+    bottom: -1rem;
+    margin: 0 -1.25rem -1rem;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-body-bg, #fff);
+}
+
+/* Most props are optional: the mark says nothing in this form. */
+.cms-content__edit .bo-form-label__optional {
+    display: none;
+}
+
+/* A number is a few digits: its field needs no full line. */
+.cms-content__edit input[type="number"] {
+    max-width: 10rem;
+}
+
+/* A compact form. Two fields side by side once the drawer is wide enough
+   (measured on the drawer, not on the window); a field that needs the room
+   (a text of several lines, a picture, a list of rows, a folded part, the
+   two colours) takes the line. */
+.cms-content__edit {
+    container-type: inline-size;
+}
+
+.cms-content__edit form[data-cms-section-form],
+.cms-content__item-fields,
+.cms-content__appearance-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 1rem;
+    align-items: start;
+}
+
+@container (min-width: 34rem) {
+    .cms-content__edit form[data-cms-section-form],
+    .cms-content__item-fields,
+    .cms-content__appearance-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.cms-content__edit form[data-cms-section-form] > :is(.mb-3:has(textarea), .mb-3:has([data-cms-long]), .mb-3:has([data-cms-image-field]), fieldset:not([data-cms-choice-buttons]), details, .cms-content__edit-actions),
+.cms-content__item-fields > :is(.mb-3:has(textarea), .mb-3:has([data-cms-long]), .mb-3:has([data-cms-image-field]), fieldset:not([data-cms-choice-buttons]), details),
+.cms-content__appearance-fields > .cms-content__colors {
+    grid-column: 1 / -1;
+}
+
+/* A field is three parts: its label with the "?" of its help, the control,
+   then the errors under the control (`_section_form_theme.html.twig`). Side
+   by side, the fields of a line state their three parts in the same three
+   rows of the grid, so the labels line up and the controls line up whatever
+   the wording. Without subgrid the parts stack. */
+.cms-content__field > * {
+    align-self: start;
+}
+
+.cms-content__field-foot:empty {
+    display: none;
+}
+
+/* The help of a field is a tooltip on the "?" beside its label: shown while
+   the pointer or the focus is on the button, held open by a click. */
+.cms-content__field-head {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.cms-content__help {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 5;
+    display: none;
+    width: max-content;
+    max-width: 100%;
+    margin-top: 0.25rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.375rem;
+    background: var(--bs-dark, #212529);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.4;
+    text-align: left;
+    box-shadow: 0 0.25rem 0.75rem rgba(33, 37, 41, 0.2);
+}
+
+.cms-content__help-toggle:hover ~ .cms-content__help,
+.cms-content__help-toggle:focus-visible ~ .cms-content__help,
+.cms-content__field[data-cms-help-open] .cms-content__help {
+    display: block;
+}
+
+.cms-content__help-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    padding: 0;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 50%;
+    background: var(--bs-body-bg, #fff);
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.cms-content__help-toggle:hover,
+.cms-content__help-toggle:focus-visible,
+.cms-content__field[data-cms-help-open] .cms-content__help-toggle {
+    color: var(--bs-primary, #0d6efd);
+    border-color: currentColor;
+}
+
+
+@supports (grid-template-rows: subgrid) {
+    .cms-content__edit form[data-cms-section-form] > .cms-content__field,
+    .cms-content__item-fields > .cms-content__field {
+        display: grid;
+        grid-row: span 3;
+        grid-template-rows: subgrid;
+        row-gap: 0.125rem;
+    }
+
+    .cms-content__edit form[data-cms-section-form] > .cms-content__field > .cms-content__field-head > .form-label,
+    .cms-content__item-fields > .cms-content__field > .cms-content__field-head > .form-label {
+        margin-bottom: 0;
+    }
+
+    .cms-content__edit form[data-cms-section-form] .cms-content__field-foot:empty {
+        display: block;
+    }
+}
+
+
+/* The two colours of the appearance on one line, their fields level. */
+.cms-content__colors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    column-gap: 1rem;
+}
+
+/* A choice drawn as buttons: one row of buttons of one width, wrapping
+   whole on a narrow dialog. */
+.cms-content__choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: 0.5rem;
+}
+
+.cms-content__choices > .btn {
+    height: 100%;
+    margin: 0;
+}
+
+/* A colour not set: the swatch says so instead of showing black. */
+.cms-content__appearance .form-control-color.is-empty {
+    background-image: linear-gradient(to top right, transparent calc(50% - 1px), var(--bs-danger, #dc3545) 50%, transparent calc(50% + 1px));
+    opacity: 0.6;
+}
+
+.cms-content__appearance .form-control-color {
+    flex: 0 0 3rem;
+}
+
+/* The drafts a generation replaced, one line each with its button. */
+.cms-content__draft {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 0.8125rem;
+}
+
+.cms-content__draft form {
+    margin-left: auto;
+}
+
+.cms-content__history {
+    font-size: 0.8125rem;
+}
+
+/* An address, or the identifier in an error of the API, is one unbroken
+   word: without a break anywhere, it widens the table past the panel and
+   pushes its figures out of sight. */
+.cms-content__history-break {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.cms-content__preview {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    background: #e9ecef;
+}
+
+.cms-content__frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+}
+
+.cms-content__width {
+    width: auto;
+}
+
+/* At the width of a breakpoint, as in the toolkit of the theme: the frame
+   centred on a dark ground, scrolled sideways when it is wider than the
+   stage. A ring, never a border, which would eat into the width. */
+.cms-content__preview--sized {
+    overflow-x: auto;
+    background: #212529;
+}
+
+.cms-content__preview--sized .cms-content__frame {
+    flex: none;
+    margin-inline: auto;
+    border-radius: 0.5rem;
+    box-shadow: 0 0 0 1px #495057;
+}
+
+/* Adding a section: the components, in the drawer opened from the button
+   the script writes into the preview after the last section. */
+.cms-content__add-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+/* The title and the close button of a dialog stay in view while its form
+   scrolls. */
+.cms-content__edit > .cms-content__add-head,
+.cms-content__add > .cms-content__add-head {
+    position: sticky;
+    top: -1rem;
+    z-index: 2;
+    margin: -1rem -1.25rem 0.5rem;
+    padding: 1rem 1.25rem 0.5rem;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-body-bg, #fff);
+}
+
+.cms-content__add-hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.8125rem;
+    color: #495057;
+}
+
+.cms-content__add-family {
+    margin: 1rem 0 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #5c636a;
+}
+
+.cms-content__add-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cms-content__add-list form {
+    height: 100%;
+}
+
+.cms-content__add-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    height: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    background: #fff;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.cms-content__add-choice:hover,
+.cms-content__add-choice:focus-visible {
+    border-color: var(--bs-primary, #0d6efd);
+}
+
+.cms-content__add-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.375rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: var(--bs-primary, #0d6efd);
+    font-size: 1.125rem;
+}
+
+.cms-content__add-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.cms-content__add-label {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.cms-content__add-description {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    font-size: 0.8125rem;
+    color: #495057;
+}
+
+.cms-content__empty {
+    position: absolute;
+    inset: 4rem 1rem auto 1rem;
+    text-align: center;
+}
+
+.cms-content__empty-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+    color: #212529;
+}
+
+.cms-content__translate {
+    margin-top: 1rem;
+}
+
+.cms-content__empty-hint {
+    font-size: 0.875rem;
+    margin: 0;
+    max-width: 30rem;
+    margin-inline: auto;
+    color: #495057;
+}
+
+/* The props of a section, by hand. */
+.cms-content__items {
+    margin: 0 0 1rem;
+    padding: 0;
+    border: 0;
+}
+
+.cms-content__items-legend {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.cms-content__items-list {
+    list-style: none;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.cms-content__image-preview {
+    display: block;
+    max-width: 100%;
+    max-height: 8rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    background: #fff;
+    object-fit: contain;
+}
+
+.cms-content__items-list {
+    counter-reset: cms-item;
+}
+
+/* Each row carries its number, so "the second column" is easy to find. */
+.cms-content__item-row::before {
+    counter-increment: cms-item;
+    content: counter(cms-item);
+    flex: 0 0 auto;
+    min-width: 1.5rem;
+    padding: 0 0.4rem;
+    border-radius: 1rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.75rem;
+    line-height: 1.5rem;
+    text-align: center;
+}
+
+.cms-content__item-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px dashed var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+}
+
+.cms-content__item-fields {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cms-content__item-fields .mb-3:last-child {
+    margin-bottom: 0 !important;
+}
+
+.cms-content__item-remove {
+    flex: none;
+}
+
+/* The progress of a generation, over the draft it is about to replace. */
+.cms-content__progress {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 4rem;
+    background: rgba(233, 236, 239, 0.85);
+}
+
+.cms-content__progress[hidden] {
+    display: none;
+}
+
+.cms-content__progress-box {
+    width: min(32rem, calc(100% - 2rem));
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    background: #fff;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
+    font-size: 0.875rem;
+}
+
+.cms-content__steps {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: #495057;
+}
+
+.cms-content__steps li + li {
+    margin-top: 0.25rem;
+}
+
+.cms-content__steps li.is-warning {
+    color: #997404;
+}
+
+/* Notices, shared with the builder screens in their markup. */
+.cms-toasts {
+    position: fixed;
+    inset-block-end: 1rem;
+    inset-inline-end: 1rem;
+    z-index: 1080;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: min(26rem, calc(100vw - 2rem));
+    pointer-events: none;
+}
+
+.cms-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: 0.5rem;
+    border-inline-start: 4px solid currentColor;
+    background: #ffffff;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
+    font-size: 0.875rem;
+    line-height: 1.45;
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.cms-toast--visible {
+    opacity: 1;
+    transform: none;
+}
+
+.cms-toast--success { color: #146c43; }
+.cms-toast--danger { color: #b02a37; }
+.cms-toast--warning { color: #997404; }
+.cms-toast--info { color: #087990; }
+
+.cms-toast__icon {
+    flex: none;
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.cms-toast__message {
+    flex: 1 1 auto;
+    margin: 0;
+    color: #212529;
+}
+
+.cms-toast__close {
+    flex: none;
+    border: 0;
+    background: none;
+    padding: 0.125rem 0.25rem;
+    line-height: 1;
+    color: #6c757d;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.cms-toast__close:hover,
+.cms-toast__close:focus-visible {
+    color: #212529;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+/* A component prototyped from this screen: its panel stands out from the
+   sections of the draft while the preview shows it in their place. */
+.cms-content__prototype {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--bs-warning-border-subtle, #ffe69c);
+    border-radius: 0.5rem;
+    background: var(--bs-warning-bg-subtle, #fff3cd);
+}
+
+.cms-content__section + .cms-content__prototype,
+.cms-content__prototype + .cms-content__section {
+    border-top: 0;
+    padding-top: 0.75rem;
+}
+
+.cms-content__prototype + .cms-content__section {
+    padding-top: 1.25rem;
+}
+
+.cms-content__prototype-asked {
+    margin: 0.25rem 0 0;
+    font-size: 0.875rem;
+    white-space: pre-line;
+}
+
+.cms-content__prototype-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.cms-content__prototype-form {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cms-toast {
+        transition: none;
+        transform: none;
+    }
+
+    .cms-content__edit[open],
+    .cms-content__add[open] {
+        transition: none;
+    }
+}
+
+@media (max-width: 991px) {
+    .cms-content__stage {
+        flex-direction: column;
+    }
+
+    .cms-content__edit,
+    .cms-content__add {
+        width: 100vw;
+        max-width: 100vw;
+        border-right: 0;
+    }
+
+    .cms-content__panel {
+        flex: 0 0 auto;
+        max-width: none;
+        max-height: 50vh;
+        border-right: 0;
+        border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    }
+}

@@ -22,8 +22,8 @@ use Thelia\Model\Lang;
 use Thelia\Model\ModuleConfigQuery;
 use Thelia\Test\FixtureFactory;
 use Thelia\Test\WebIntegrationTestCase;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPage;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\PageDraft;
 
@@ -145,11 +145,7 @@ abstract class AdminScreenTestCase extends WebIntegrationTestCase
         $page->setParent(0)->setPosition(0)->setVisible(1)->setPageType('default');
 
         $writer->saveDraft($page, $this->locale(), new PageDraft(title: $title));
-        $writer->saveContent($page, $this->locale(), new BuilderContent(
-            projectData: '{"pages":[]}',
-            html: \sprintf('<h1>%s</h1><p>Written for the test.</p>', $title),
-            css: '',
-        ));
+        $writer->saveContent($page, $this->locale(), Document::richText(\sprintf('<h1>%s</h1><p>Written for the test.</p>', $title)));
 
         if ($published) {
             $writer->publish($page, $this->locale());

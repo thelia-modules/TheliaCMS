@@ -1,0 +1,166 @@
+{#
+    The props of one section, by hand: a field per prop, read from the schema
+    of its component. A list prop is a set of rows the script adds and removes
+    from the prototype of the collection; without the script, the rows the
+    section holds are editable and nothing more.
+#}
+{% macro fields(form) %}
+    {% for child in form.children %}
+        {% if child.rendered %}
+            {# Already drawn with the field it goes with. #}
+        {% elseif child.vars.name == 'section' %}
+            {{ form_widget(child) }}
+        {% elseif child.vars.name ends with '__file' or child.vars.name ends with '__url' %}
+            {# The other sources of a picture, folded under its choice: open
+               when an address is already there. #}
+            {% set base = child.vars.name|split('__')|first %}
+            {% set file = form.children[base ~ '__file'] ?? null %}
+            {% set address = form.children[base ~ '__url'] ?? null %}
+            <details class="cms-content__more" {{ address and address.vars.value ? 'open' }}>
+                <summary>{{ 'Another source: a file or an address'|trans({}, 'theliacms') }}</summary>
+                {% if file %}{{ form_row(file) }}{% endif %}
+                {% if address %}{{ form_row(address) }}{% endif %}
+            </details>
+        {% elseif child.vars.attr['data-cms-choice-buttons'] is defined %}
+            {{ _self.choice_buttons(child) }}
+        {% elseif child.vars.name == 'cms_appearance' %}
+            {# How the section stands out, besides its props: folded, open
+               when the section already has a look of its own. #}
+            <details class="cms-content__appearance cms-content__more" data-testid="cms-section-appearance" {{ child.vars.value|filter(value => value is not empty)|length > 0 ? 'open' }}>
+                <summary>{{ child.vars.label|trans({}, 'theliacms') }}</summary>
+                <div class="cms-content__appearance-fields">
+                    {# The two colours side by side, each with its help under
+                       its field so both fields stand on one line; then the
+                       room and the alignment, each a row of buttons. #}
+                    <div class="cms-content__colors">
+                        {% for setting in child|filter(setting => setting.vars.attr['data-cms-color'] is defined) %}
+                            {{ _self.color(setting) }}
+                        {% endfor %}
+                    </div>
+                    {% for setting in child|filter(setting => not setting.rendered) %}
+                        {% if setting.vars.attr['data-cms-choice-buttons'] is defined %}
+                            {{ _self.choice_buttons(setting) }}
+                        {% else %}
+                            {{ form_row(setting) }}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </details>
+            {% do child.setRendered %}
+        {% elseif child.vars.prototype is defined %}
+            <fieldset class="cms-content__items" data-cms-items
+                      data-cms-items-min="{{ child.vars.attr['data-cms-items-min']|default(0) }}"
+                      data-cms-items-max="{{ child.vars.attr['data-cms-items-max']|default(12) }}"
+                      data-prototype="{{ _self.item(child.vars.prototype, child.vars.full_name ~ '[__name__]')|e('html_attr') }}">
+                <legend class="cms-content__items-legend">{{ child.vars.label }}</legend>
+                {% if child.vars.help %}<p class="form-text mt-0">{{ child.vars.help }}</p>{% endif %}
+                <ol class="cms-content__items-list" data-cms-items-list>
+                    {% for item in child %}
+                        {{ _self.item(item) }}
+                    {% endfor %}
+                </ol>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-cms-items-add hidden>
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ 'Add a row'|trans({}, 'theliacms') }}
+                </button>
+                {% do child.setRendered %}
+            </fieldset>
+        {% else %}
+            {{ form_row(child) }}
+        {% endif %}
+    {% endfor %}
+{% endmacro %}
+
+{#
+    A choice with a pictogram per value: a row of buttons, the pictogram
+    above the words. Radio buttons underneath, so the form sends what it
+    always sent and the keyboard moves through them as through any radios.
+#}
+{% macro choice_buttons(field) %}
+    {% set domain = field.vars.translation_domain %}
+    <fieldset class="mb-3" data-cms-choice-buttons data-testid="cms-choice-{{ field.vars.name }}">
+        <legend class="form-label fs-6 mb-1">{{ domain is same as(false) ? field.vars.label : field.vars.label|trans({}, domain) }}</legend>
+        {% if field.vars.help %}
+            <div class="form-text mt-0 mb-2">{{ domain is same as(false) ? field.vars.help : field.vars.help|trans({}, domain) }}</div>
+        {% endif %}
+        <div class="cms-content__choices">
+            {% for option in field %}
+                {% set option_domain = option.vars.translation_domain %}
+                <input type="radio" class="btn-check" id="{{ option.vars.id }}" name="{{ option.vars.full_name }}"
+                       value="{{ option.vars.value }}" {{ option.vars.checked ? 'checked' }} autocomplete="off">
+                <label class="btn btn-outline-secondary d-flex flex-column align-items-center justify-content-center gap-1 py-2" for="{{ option.vars.id }}">
+                    {{ _self.icon(option.vars.attr['data-cms-icon']|default('bi-dash-circle')) }}
+                    <span class="small lh-sm">{{ option_domain is same as(false) ? option.vars.label : option.vars.label|trans({}, option_domain) }}</span>
+                </label>
+                {% do option.setRendered %}
+            {% endfor %}
+        </div>
+        {{ form_errors(field) }}
+    </fieldset>
+    {% do field.setRendered %}
+{% endmacro %}
+
+{#
+    A colour of the appearance: its name, the field the script pairs with a
+    swatch, its help under it.
+#}
+{% macro color(field) %}
+    {% set domain = field.vars.translation_domain %}
+    <div class="mb-3">
+        <label class="form-label" for="{{ field.vars.id }}">{{ domain is same as(false) ? field.vars.label : field.vars.label|trans({}, domain) }}</label>
+        {{ form_widget(field) }}
+        {% if field.vars.help %}
+            <div class="form-text">{{ domain is same as(false) ? field.vars.help : field.vars.help|trans({}, domain) }}</div>
+        {% endif %}
+        {{ form_errors(field) }}
+    </div>
+{% endmacro %}
+
+{#
+    The pictograms of the module, drawn here so a width or a room shows its
+    shape; any other name is one of Bootstrap Icons.
+#}
+{% macro icon(name) %}
+    {% set widths = { 'width-narrow': 14, 'width-column': 26, 'width-full': 40 } %}
+    {% set rooms = { 'space-small': 3, 'space-medium': 6, 'space-large': 9 } %}
+    {% if widths[name] is defined %}
+        {% set width = widths[name] %}
+        <svg width="40" height="28" viewBox="0 0 40 28" aria-hidden="true">
+            <rect x="0.5" y="0.5" width="39" height="27" rx="2" fill="none" stroke="currentColor" opacity=".5"/>
+            <rect x="{{ (40 - width) / 2 }}" y="7" width="{{ width }}" height="14" rx="1" fill="currentColor"/>
+        </svg>
+    {% elseif rooms[name] is defined %}
+        {% set room = rooms[name] %}
+        <svg width="40" height="28" viewBox="0 0 40 28" aria-hidden="true">
+            <line x1="2" y1="1" x2="38" y2="1" stroke="currentColor" opacity=".5"/>
+            <line x1="2" y1="27" x2="38" y2="27" stroke="currentColor" opacity=".5"/>
+            <rect x="8" y="{{ 1 + room }}" width="24" height="{{ 26 - 2 * room }}" rx="1" fill="currentColor"/>
+        </svg>
+    {% else %}
+        <i class="bi {{ name }} fs-4 lh-1" aria-hidden="true"></i>
+    {% endif %}
+{% endmacro %}
+
+{% macro item(item) %}
+    <li class="cms-content__item-row" data-cms-item>
+        <div class="cms-content__item-fields">
+            {{ _self.fields(item) }}
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger cms-content__item-remove" data-cms-item-remove hidden
+                aria-label="{{ 'Remove this row'|trans({}, 'theliacms') }}" title="{{ 'Remove this row'|trans({}, 'theliacms') }}">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+    </li>
+{% endmacro %}
+
+{# The last theme of the list wins: the rows of this form come from the
+   module's theme, the widgets from the back-office theme. #}
+{% form_theme form with bo_form_themes|merge(['@TheliaCMSModule/backOffice/default-twig/content/_section_form_theme.html.twig']) only %}
+{{ form_start(form, { attr: { 'data-cms-section-form': '', novalidate: 'novalidate' } }) }}
+    <input type="hidden" name="_token" value="{{ assignToken() }}">
+    {{ _self.fields(form) }}
+    <div class="cms-content__edit-actions">
+        <button type="submit" class="btn btn-sm btn-primary" data-testid="cms-section-save">
+            {{ 'Save this section'|trans({}, 'theliacms') }}
+        </button>
+    </div>
+{{ form_end(form, { render_rest: false }) }}

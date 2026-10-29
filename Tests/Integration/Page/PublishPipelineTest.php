@@ -15,13 +15,20 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Page;
 
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Content\Document;
+use TheliaCMS\Content\InvalidDocumentException;
+use TheliaCMS\Content\RichTextSection;
+use TheliaCMS\Content\Section;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageRevisionQuery;
 use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Page\Admin\EmptyPageContentException;
+use TheliaCMS\Page\Admin\HeadingStructureException;
 use TheliaCMS\Page\Admin\PageDraft;
+use TheliaCMS\Settings\CmsSettings;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\TheliaCMS;
 
 /**
  * Publishing writes to four tables and has to leave the four of them agreeing
@@ -57,6 +64,86 @@ final class PublishPipelineTest extends CmsIntegrationTestCase
             1,
             RewritingUrlQuery::create()->filterByView('cmspage')->filterByViewId($id)->filterByViewLocale($this->locale())->count(),
         );
+    }
+
+    public function testPublishingKeepsTheDocumentNextToItsRendering(): void
+    {
+        $page = $this->createPage('Document publié', html: '<h1>Titre</h1><p>Texte</p>');
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+
+        self::assertNotNull($content);
+        self::assertSame($content->getDraftDocument(), $content->getPublishedDocument(), 'What went online is the draft as it stood.');
+
+        $document = Document::fromJson($content->getPublishedDocument());
+
+        self::assertNotNull($document);
+        self::assertSame(RichTextSection::NAME, $document->sections[0]->component);
+        self::assertStringContainsString(\sprintf('<div class="cms-page-content"><div data-cms-section="content" class="%s"><h1>Titre</h1><p>Texte</p></div></div>', $this->richTextClass()), (string) $content->getPublishedHtml());
+
+        $revision = CmsPageRevisionQuery::create()->filterByPageId($page->getId())->findOne();
+
+        self::assertSame($content->getPublishedDocument(), $revision?->getDocument(), 'The revision holds the document, not only its rendering.');
+    }
+
+    public function testUnpublishingDropsTheSnapshotAndKeepsTheDraft(): void
+    {
+        $page = $this->createPage('Page retirée');
+
+        $this->writer()->unpublish($page, $this->locale());
+
+        $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+
+        self::assertNotNull($content);
+        self::assertNull($content->getPublishedAt());
+        self::assertNull($content->getPublishedHtml());
+        self::assertNull($content->getPublishedDocument());
+        self::assertNotNull($content->getDraftDocument(), 'The draft is what the page is published again from.');
+    }
+
+    public function testADocumentNamingAComponentTheCatalogueLacksIsRefused(): void
+    {
+        $page = $this->pageWithoutContent('Page cassée');
+
+        $this->expectException(InvalidDocumentException::class);
+        $this->expectExceptionMessage('"Nope:Missing", which is not a component of the catalogue');
+
+        $this->writer()->saveContent($page, $this->locale(), new Document([new Section('a', 'Nope:Missing', [])]));
+    }
+
+    /**
+     * The check used to live in the editor alone, so a page published from
+     * the settings screen or from the command skipped it.
+     */
+    public function testABrokenHeadingStructureKeepsThePageOfflineWhenTheSiteAsksForIt(): void
+    {
+        $previous = TheliaCMS::getConfigValue(CmsSettings::HEADING_CHECK_MODE, 'warn');
+        TheliaCMS::setConfigValue(CmsSettings::HEADING_CHECK_MODE, 'block');
+
+        try {
+            $page = $this->pageWithoutContent('Titres cassés');
+            $this->writer()->saveContent($page, $this->locale(), Document::richText('<h1>Un</h1><h1>Deux</h1><h4>Saut</h4>'));
+
+            try {
+                $this->writer()->publish($page, $this->locale());
+                self::fail('The page should have been refused.');
+            } catch (HeadingStructureException $exception) {
+                self::assertCount(2, $exception->problems, 'Two level 1 headings, and a jump from 1 to 4.');
+            }
+
+            $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
+
+            self::assertNotNull($content);
+            self::assertNull($content->getPublishedAt());
+
+            TheliaCMS::setConfigValue(CmsSettings::HEADING_CHECK_MODE, 'warn');
+            $this->writer()->publish($page, $this->locale());
+            $content->reload();
+
+            self::assertNotNull($content->getPublishedAt(), 'In warn mode the page goes online and its author is told.');
+        } finally {
+            TheliaCMS::setConfigValue(CmsSettings::HEADING_CHECK_MODE, (string) $previous);
+        }
     }
 
     public function testAPageWithNothingOnItIsNotPublished(): void

@@ -15,19 +15,25 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\ImportExport;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use Thelia\Test\FixtureFactory;
+use TheliaCMS\Catalogue\CatalogueItemType;
+use TheliaCMS\Catalogue\ItemContentRepository;
+use TheliaCMS\Content\Document;
+use TheliaCMS\Content\DocumentValidator;
+use TheliaCMS\Content\RichTextSection;
+use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\ImportExport\ExportFormat;
 use TheliaCMS\ImportExport\ImportOptions;
 use TheliaCMS\ImportExport\ImportReport;
 use TheliaCMS\ImportExport\SiteDocument;
 use TheliaCMS\ImportExport\SiteImporter;
-use TheliaCMS\Model\CmsBlockContentQuery;
-use TheliaCMS\Model\CmsBlockQuery;
 use TheliaCMS\Model\CmsFormQuery;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageI18nQuery;
 use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\Tests\Unit\Content\Site\PriceTable;
 
 /**
  * An export file is not a trusted author: whoever can hand one to the import
@@ -39,8 +45,6 @@ final class HostileImportTest extends CmsIntegrationTestCase
     private const string HOSTILE = '<p>Bonjour</p><script>alert(1)</script><img src="/x.png" onerror="alert(2)" alt=""><a href="javascript:alert(3)">lien</a>';
 
     private const string EMBED = '<iframe src="https://www.youtube.com/embed/abc"></iframe>';
-
-    private const string REMOTE_CSS = '.hero { background: url(https://tracker.example/pixel.png); }';
 
     public function testTheMarkupOfAPageIsFilteredLikeAPublication(): void
     {
@@ -56,13 +60,9 @@ final class HostileImportTest extends CmsIntegrationTestCase
             self::assertStringNotContainsString('<iframe', (string) $html, 'Custom code needs the import to allow it.');
         }
 
-        foreach (['draft' => $content->getDraftCss(), 'published' => $content->getPublishedCss()] as $state => $css) {
-            self::assertStringNotContainsString('tracker.example', (string) $css, \sprintf('The %s stylesheet calls no other host.', $state));
-        }
-
         self::assertStringNotContainsString('alert(1)', (string) CmsPageSearchQuery::create()->filterByPageId($content->getPageId())->findOne()?->getContent(), 'The search index is built from the filtered markup.');
-        $this->assertWarned($report, 'Page hostile', 'filtered', 'custom code');
-        $this->assertWarned($report, 'Page hostile', 'stylesheet');
+        $this->assertWarned($report, 'Page hostile', 'filtered');
+        $this->assertWarned($report, 'Page hostile', 'custom code');
     }
 
     public function testCustomCodeComesInWhenTheImportAllowsIt(): void
@@ -76,27 +76,96 @@ final class HostileImportTest extends CmsIntegrationTestCase
         $this->assertNotWarned($report, 'custom code');
     }
 
-    public function testTheMarkupOfABlockIsFilteredToo(): void
+    public function testTheMarkupOfACatalogueItemIsFilteredToo(): void
     {
-        $report = $this->import(['blocks' => [[
-            'code' => 'import-hostile',
-            'translations' => [$this->locale() => ['title' => 'Bloc hostile']],
+        $factory = new FixtureFactory($this->getPropelConnection());
+        $product = $factory->product($factory->category(), $factory->taxRule(), $factory->currency(), ['ref' => 'HOSTILE-REF']);
+
+        $report = $this->import(['catalogue_contents' => [[
+            'type' => 'product',
+            'key' => ['reference' => 'HOSTILE-REF', 'urls' => []],
             'contents' => [$this->locale() => $this->contents(self::HOSTILE)],
         ]]]);
 
-        $content = CmsBlockContentQuery::create()
-            ->filterByBlockId((int) CmsBlockQuery::create()->findOneByCode('import-hostile')?->getId())
-            ->filterByLocale($this->locale())
-            ->findOne();
+        $content = $this->getService(ItemContentRepository::class)->find(CatalogueItemType::Product, (int) $product->getId(), $this->locale());
 
         foreach (['draft' => $content?->getDraftHtml(), 'published' => $content?->getPublishedHtml()] as $state => $html) {
-            self::assertStringContainsString('<p>Bonjour</p>', (string) $html, \sprintf('The %s keeps what a block may hold.', $state));
+            self::assertStringContainsString('<p>Bonjour</p>', (string) $html, \sprintf('The %s keeps what an item may hold.', $state));
             self::assertStringNotContainsString('<script', (string) $html, \sprintf('The %s loses its script.', $state));
             self::assertStringNotContainsString('onerror', (string) $html);
         }
 
-        self::assertStringNotContainsString('tracker.example', (string) $content?->getPublishedCss());
-        $this->assertWarned($report, 'import-hostile', 'filtered');
+        $this->assertWarned($report, 'HOSTILE-REF', 'filtered');
+    }
+
+    public function testADocumentTheCatalogueRefusesIsLeftOut(): void
+    {
+        $refused = json_encode(['version' => 1, 'sections' => [['id' => 'Not an id', 'component' => RichTextSection::NAME, 'props' => ['html' => '<p>Bonjour</p>']]]], \JSON_THROW_ON_ERROR);
+        $page = $this->page('Page au document refusé', '<p>Bonjour</p>');
+        $page['contents'][$this->locale()]['draft_document'] = $refused;
+        $page['contents'][$this->locale()]['published_document'] = '{"sections": "none"}';
+
+        $report = $this->import(['pages' => [$page]]);
+        $content = $this->contentOf('Page au document refusé');
+
+        self::assertNull($content->getDraftDocument(), 'A document the screen would refuse is not stored.');
+        self::assertNull($content->getPublishedDocument(), 'Nor is one that is not shaped like a document.');
+        self::assertStringContainsString('<p>Bonjour</p>', (string) $content->getPublishedHtml(), 'The page still shows its filtered markup.');
+        $this->assertWarned($report, 'Page au document refusé', 'document');
+    }
+
+    public function testAnAcceptedDocumentIsStoredAsTheValidatorWritesIt(): void
+    {
+        $this->import(['pages' => [$this->page('Page saine', '<p>Bonjour</p>')]]);
+
+        self::assertSame(
+            $this->getService(DocumentValidator::class)->validate(Document::richText('<p>Bonjour</p>'))->toJson(),
+            $this->contentOf('Page saine')->getDraftDocument(),
+        );
+    }
+
+    public function testAPageMadeOfAMissingComponentOfTheSiteKeepsItsDocument(): void
+    {
+        $ghost = json_encode(['version' => 1, 'sections' => [['id' => 'x', 'component' => 'Site:Ghost', 'props' => []]]], \JSON_THROW_ON_ERROR);
+        $page = $this->page('Page fantôme', '<div></div>');
+        $page['contents'][$this->locale()]['draft_document'] = $ghost;
+
+        $this->import(['pages' => [$page]]);
+
+        self::assertSame($ghost, $this->contentOf('Page fantôme')->getDraftDocument(), 'It is saved again once the component is made here.');
+    }
+
+    public function testAMissingComponentOfTheSiteDoesNotShieldTheOtherSections(): void
+    {
+        $page = $this->page('Page fantôme piégée', '<div></div>');
+        $page['contents'][$this->locale()]['draft_document'] = json_encode(['version' => 1, 'sections' => [
+            ['id' => 'x', 'component' => 'Site:Ghost', 'props' => []],
+            ['id' => 'Not an id', 'component' => RichTextSection::NAME, 'props' => ['html' => '<p>Bonjour</p>']],
+        ]], \JSON_THROW_ON_ERROR);
+
+        $report = $this->import(['pages' => [$page]]);
+
+        self::assertNull($this->contentOf('Page fantôme piégée')->getDraftDocument());
+        $this->assertWarned($report, 'Page fantôme piégée', 'document');
+    }
+
+    public function testAPageIsCheckedAgainstTheComponentsOfItsOwnFile(): void
+    {
+        $component = PriceTable::component();
+        $page = $this->page('Page de tarifs', '<div></div>');
+        $page['contents'][$this->locale()]['draft_document'] = json_encode(['version' => 1, 'sections' => [
+            ['id' => 'plans', 'component' => $component->name(), 'props' => ['plans' => 'pas une liste']],
+        ]], \JSON_THROW_ON_ERROR);
+        // A catalogue already read in this process, before the component came in.
+        $this->getService(SectionCatalog::class)->all();
+
+        $report = $this->import([
+            'components' => [['code' => $component->code, 'label' => $component->label, 'description' => $component->description, 'props' => $component->props, 'sample' => $component->sample, 'template' => $component->template, 'css' => $component->css]],
+            'pages' => [$page],
+        ]);
+
+        self::assertNull($this->contentOf('Page de tarifs')->getDraftDocument(), 'The component came with the file, so its sections are read against it.');
+        $this->assertWarned($report, 'Page de tarifs', 'document');
     }
 
     public function testAFormIsCheckedLikeTheFormScreenChecksIt(): void
@@ -129,7 +198,7 @@ final class HostileImportTest extends CmsIntegrationTestCase
         return $this->getService(SiteImporter::class)->import(SiteDocument::fromArray([
             'format' => ExportFormat::NAME,
             'version' => ExportFormat::VERSION,
-            'module_version' => '1.6.0',
+            'module_version' => '2.3.1',
             'locales' => [$this->locale()],
             ...$sections,
         ]), $options);
@@ -156,12 +225,13 @@ final class HostileImportTest extends CmsIntegrationTestCase
      */
     private function contents(string $html): array
     {
+        $document = Document::richText('<p>Bonjour</p>')->toJson();
+
         return [
-            'project_data' => '{"pages":[]}',
+            'draft_document' => $document,
             'draft_html' => $html,
-            'draft_css' => self::REMOTE_CSS,
+            'published_document' => $document,
             'published_html' => $html,
-            'published_css' => self::REMOTE_CSS,
             'published_at' => '2026-10-01T00:00:00+00:00',
         ];
     }

@@ -5,7 +5,7 @@
     <fullnamespace>TheliaCMS\TheliaCMS</fullnamespace>
     <descriptive locale="en_US">
         <title>Thelia CMS</title>
-        <description>Page tree, visual page builder, menus, forms and media for content-driven Thelia sites.</description>
+        <description>Page tree, pages written from a brief through the AI layer of Thelia, menus, forms and media for content-driven Thelia sites.</description>
     </descriptive>
     <descriptive locale="fr_FR">
         <title>Thelia CMS</title>
@@ -15,7 +15,7 @@
         <language>en_US</language>
         <language>fr_FR</language>
     </languages>
-    <version>1.6.2</version>
+    <version>2.4.0</version>
     <authors>
         <author>
             <name>OpenStudio</name>
@@ -23,7 +23,7 @@
         </author>
     </authors>
     <type>classic</type>
-    <thelia>3.2.0</thelia>
+    <thelia>3.3.0</thelia>
     <stability>prod</stability>
     <mandatory>0</mandatory>
     <hidden>0</hidden>

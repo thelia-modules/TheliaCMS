@@ -16,6 +16,7 @@ namespace TheliaCMS\Install;
 
 use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Model\LangQuery;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Page\CmsUrlService;
@@ -82,10 +83,15 @@ final readonly class LegalPagesSeeder
             foreach ($locales as $locale) {
                 $translation = $translations[$locale];
 
+                // One piece of free markup, as a document: what the writer
+                // renders and publishes later, the same as any other page.
+                $html = LegalPageTemplates::html($translation);
+
                 (new CmsPageContent())
                     ->setPageId($page->getId())
                     ->setLocale($locale)
-                    ->setDraftHtml(LegalPageTemplates::html($translation))
+                    ->setDraftDocument(Document::richText($html)->toJson())
+                    ->setDraftHtml($html)
                     ->save();
 
                 // No explicit slug: the URL is derived from the localized

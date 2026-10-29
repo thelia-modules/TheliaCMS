@@ -16,14 +16,18 @@ namespace TheliaCMS\Page\Admin;
 
 /**
  * The locale-specific part of the settings form. The rest of the form writes
- * straight onto the Propel object; the page content belongs to the builder
- * screen and travels as a BuilderContent.
+ * straight onto the Propel object; the page content belongs to the content
+ * screen and travels as a TheliaCMS\Content\Document.
  */
 final readonly class PageDraft
 {
+    /**
+     * @param array<string, mixed>|null $fields the values of the fields of the type of the page, by code; null leaves them as they are
+     */
     public function __construct(
         public string $title,
         public ?string $slug = null,
+        public ?array $fields = null,
     ) {
     }
 }

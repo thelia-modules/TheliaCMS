@@ -15,7 +15,9 @@ declare(strict_types=1);
 namespace TheliaCMS\Media\Admin;
 
 use Thelia\Model\Lang;
+use Thelia\Model\LangQuery;
 use TheliaCMS\Media\CmsMediaLibrary;
+use TheliaCMS\Media\MediaFilter;
 use TheliaLibrary\Model\LibraryImage;
 
 /**
@@ -33,17 +35,31 @@ final readonly class MediaCatalog
     }
 
     /**
-     * @return list<MediaItem>
+     * The page of the library a query asks for. Past the last page, the last
+     * one: an address kept from a larger library still shows images.
+     * "Unused" reads what uses the images whatever `$withUsage` says.
      */
-    public function grid(string $locale, ?string $search = null): array
+    public function browse(MediaQuery $query, string $locale, bool $withUsage = true): MediaGrid
     {
-        $images = $this->library->images($search);
+        $imageIds = $this->library->selection($locale, $query->search, $query->filter, $query->tag);
 
-        if ([] === $images) {
-            return [];
+        if ([] !== $imageIds && MediaFilter::Unused === $query->filter) {
+            // What uses an image is read from the content of every page and
+            // item, once for all of them.
+            $imageIds = array_keys(array_filter($this->usages->countsFor($imageIds), static fn (int $count): bool => 0 === $count));
         }
 
-        $counts = $this->usages->countsFor(array_map(static fn (LibraryImage $image): int => (int) $image->getId(), $images));
+        $total = \count($imageIds);
+        $page = min($query->page, max(1, (int) ceil($total / MediaQuery::PER_PAGE)));
+        $images = $this->library->sorted($imageIds, $query->order, $locale, ($page - 1) * MediaQuery::PER_PAGE, MediaQuery::PER_PAGE);
+
+        if ([] === $images) {
+            return new MediaGrid([], $total, $page, MediaQuery::PER_PAGE);
+        }
+
+        // What uses an image is read from the content of every page: only
+        // when the screen says it.
+        $counts = $withUsage ? $this->usages->countsFor(array_map(static fn (LibraryImage $image): int => (int) $image->getId(), $images)) : [];
 
         $items = [];
 
@@ -55,7 +71,24 @@ final readonly class MediaCatalog
             }
         }
 
-        return $items;
+        return new MediaGrid($items, $total, $page, MediaQuery::PER_PAGE);
+    }
+
+    /**
+     * The image of the describe queue at a position: the images of the list
+     * the queue was opened from that say nothing in the language, in its
+     * order. A described image leaves the queue, so the next one takes its
+     * position; past the end, the last one.
+     */
+    public function toDescribe(MediaQuery $query, string $locale, int $position): MediaGrid
+    {
+        $imageIds = $this->library->selection($locale, $query->search, MediaFilter::ToDescribe, $query->tag, $query->images);
+        $total = \count($imageIds);
+        $position = max(0, min($position, $total - 1));
+        $images = $this->library->sorted($imageIds, $query->order, $locale, $position, 1);
+        $item = [] === $images ? null : $this->item($images[0], $locale);
+
+        return new MediaGrid(null === $item ? [] : [$item], $total, $position + 1, 1);
     }
 
     /**
@@ -66,6 +99,33 @@ final readonly class MediaCatalog
         $counts = $this->library->counts($locale, $search);
 
         return new MediaTally(total: $counts['total'], undescribed: $counts['undescribed']);
+    }
+
+    /**
+     * Where the image stands in each language of the shop: described, still
+     * to describe, or decorative, which holds for every language.
+     *
+     * @return list<array{languageId: int, locale: string, code: string, state: 'described'|'missing'|'decorative'}>
+     */
+    public function descriptionsOf(LibraryImage $image, string $editedLocale): array
+    {
+        $descriptions = [];
+
+        foreach (LangQuery::create()->filterByActive(1)->orderByPosition()->find() as $language) {
+            $locale = (string) $language->getLocale();
+            $alt = trim((string) $image->setLocale($locale)->getAlt());
+
+            $descriptions[] = [
+                'languageId' => (int) $language->getId(),
+                'locale' => $locale,
+                'code' => strtoupper((string) $language->getCode()),
+                'state' => 1 === $image->getDecorative() ? 'decorative' : ('' === $alt ? 'missing' : 'described'),
+            ];
+        }
+
+        $image->setLocale($editedLocale);
+
+        return $descriptions;
     }
 
     public function item(LibraryImage $image, string $locale, ?int $usageCount = null): ?MediaItem

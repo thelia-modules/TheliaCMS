@@ -20,6 +20,8 @@ use TheliaCMS\Menu\Admin\CmsMenuRepository;
 use TheliaCMS\Menu\MenuCache;
 use TheliaCMS\Menu\MenuTargetType;
 use TheliaCMS\Page\Admin\CmsPageAdminRepository;
+use TheliaCMS\Partial\Definition\PageListPartial;
+use TheliaCMS\Partial\PartialCache;
 
 /**
  * Drops what shows a page once it changed: the page itself in a shared cache,
@@ -34,6 +36,7 @@ final readonly class PageInvalidator
 {
     public function __construct(
         private MenuCache $menuCache,
+        private PartialCache $partials,
         private CachePurger $httpCache,
         private CmsMenuRepository $menus,
         private CmsPageAdminRepository $tree,
@@ -81,6 +84,6 @@ final readonly class PageInvalidator
      */
     public function listsChanged(): void
     {
-        $this->httpCache->purge([CacheTags::PAGE_LISTS]);
+        $this->partials->invalidate(PageListPartial::NAME);
     }
 }

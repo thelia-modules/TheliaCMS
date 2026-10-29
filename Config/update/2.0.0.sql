@@ -1,0 +1,424 @@
+-- 2.0.0: the content of a page becomes a document (see
+-- TheliaCMS\Content\Document), rendered to HTML on save and on publish. The
+-- columns of the former editor go: the project it reloaded from and the
+-- stylesheets it wrote.
+--
+-- A site coming from 1.x keeps its pages (tree, addresses, SEO, tags, types)
+-- but not their content: the markup of the former editor has no document to
+-- be read back from, and serving it without one would leave pages nobody can
+-- edit. Those pages are put back to draft, their revisions and search entries
+-- emptied. Nothing the former editor wrote is destroyed, though: its columns
+-- are copied to `cms_legacy_page_content` and `cms_legacy_page_revision`
+-- before the purge, and the tables of the blocks and of the saved page
+-- templates, which the module no longer reads, are renamed `cms_legacy_*`
+-- instead of dropped when they hold rows. The module never reads those
+-- tables; they are for the people who want the old markup back, and can be
+-- dropped by hand.
+--
+-- Written to be replayable: the same file is applied by a fresh install (after
+-- TheliaMain.sql, which already declares the new shape) and by an update of an
+-- existing site. Every statement tolerates being run twice, and the copy and
+-- the purge only run where a column of the former editor still exists, which
+-- is a 1.x site and never a fresh one.
+
+-- cms_page_content ---------------------------------------------------------
+
+SET @cms_page_content_from_1x := (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = 'cms_page_content' AND column_name = 'draft_project_data'
+);
+
+-- What the former editor wrote is copied before the purge, where there is
+-- something written: a table of pages without any HTML, project or stylesheet
+-- has nothing to keep, and a fresh install replays the updates of 1.x, which
+-- create these tables empty. IF NOT EXISTS: an update that stopped half way
+-- and is played again finds the copy it made.
+SET @cms_page_content_held := 0;
+SET @cms_statement := IF(
+    0 < @cms_page_content_from_1x,
+    'SELECT COUNT(*) INTO @cms_page_content_held FROM `cms_page_content` WHERE `draft_project_data` <> \'\' OR `draft_html` <> \'\' OR `published_html` <> \'\' OR `draft_css` <> \'\' OR `published_css` <> \'\'',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_page_revision_held := 0;
+SET @cms_statement := IF(
+    0 < @cms_page_content_from_1x,
+    'SELECT COUNT(*) INTO @cms_page_revision_held FROM `cms_page_revision` WHERE `project_data` <> \'\' OR `html` <> \'\' OR `css` <> \'\'',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < @cms_page_content_held,
+    'CREATE TABLE IF NOT EXISTS `cms_legacy_page_content` AS SELECT `id`, `page_id`, `locale`, `draft_project_data`, `draft_html`, `draft_css`, `published_html`, `published_css`, `published_at`, `draft_updated_by`, `created_at`, `updated_at` FROM `cms_page_content`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < @cms_page_revision_held,
+    'CREATE TABLE IF NOT EXISTS `cms_legacy_page_revision` AS SELECT `id`, `page_id`, `locale`, `project_data`, `html`, `css`, `label`, `created_by`, `created_at`, `updated_at` FROM `cms_page_revision`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < @cms_page_content_from_1x,
+    'UPDATE `cms_page_content` SET `draft_html` = NULL, `published_html` = NULL, `published_at` = NULL',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < @cms_page_content_from_1x,
+    'DELETE FROM `cms_page_revision`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < @cms_page_content_from_1x,
+    'DELETE FROM `cms_page_search`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_content' AND column_name = 'draft_document'),
+    'ALTER TABLE `cms_page_content` ADD COLUMN `draft_document` LONGTEXT AFTER `locale`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_content' AND column_name = 'published_document'),
+    'ALTER TABLE `cms_page_content` ADD COLUMN `published_document` LONGTEXT AFTER `draft_html`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < @cms_page_content_from_1x,
+    'ALTER TABLE `cms_page_content` DROP COLUMN `draft_project_data`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_content' AND column_name = 'draft_css'),
+    'ALTER TABLE `cms_page_content` DROP COLUMN `draft_css`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_content' AND column_name = 'published_css'),
+    'ALTER TABLE `cms_page_content` DROP COLUMN `published_css`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+-- cms_page_revision --------------------------------------------------------
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_revision' AND column_name = 'document'),
+    'ALTER TABLE `cms_page_revision` ADD COLUMN `document` LONGTEXT AFTER `locale`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_revision' AND column_name = 'project_data'),
+    'ALTER TABLE `cms_page_revision` DROP COLUMN `project_data`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_revision' AND column_name = 'css'),
+    'ALTER TABLE `cms_page_revision` DROP COLUMN `css`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+-- cms_block, cms_block_i18n, cms_block_content, cms_item_block,
+-- cms_page_template ---------------------------------------------------------
+-- Blocks (the reusable ones and the one of a catalogue item) and saved page
+-- templates are no longer part of the module, and nothing in 2.x holds their
+-- content: a block is markup of the former editor, which no document can be
+-- read back from. A table holding rows is kept under a `cms_legacy_` name,
+-- with its rows and its keys, and only where the new name is free, so a second
+-- play leaves it alone. A table with no row has nothing to keep and is
+-- dropped: a fresh install replays the updates of 1.x, which create these
+-- tables empty, and must not end with legacy tables of nothing.
+-- The blocks of a site are counted on `cms_block`: its other tables only hold
+-- rows that point at one of its rows.
+
+SET @cms_blocks_held := 0;
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block'),
+    'SELECT COUNT(*) INTO @cms_blocks_held FROM `cms_block`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_templates_held := 0;
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_page_template'),
+    'SELECT COUNT(*) INTO @cms_templates_held FROM `cms_page_template`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_item_block'),
+    'DO 0',
+    IF(
+        0 < @cms_blocks_held,
+        IF(0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_item_block'), 'RENAME TABLE `cms_item_block` TO `cms_legacy_item_block`', 'DO 0'),
+        'DROP TABLE `cms_item_block`'
+    )
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block_content'),
+    'DO 0',
+    IF(
+        0 < @cms_blocks_held,
+        IF(0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block_content'), 'RENAME TABLE `cms_block_content` TO `cms_legacy_block_content`', 'DO 0'),
+        'DROP TABLE `cms_block_content`'
+    )
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block_i18n'),
+    'DO 0',
+    IF(
+        0 < @cms_blocks_held,
+        IF(0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block_i18n'), 'RENAME TABLE `cms_block_i18n` TO `cms_legacy_block_i18n`', 'DO 0'),
+        'DROP TABLE `cms_block_i18n`'
+    )
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block'),
+    'DO 0',
+    IF(
+        0 < @cms_blocks_held,
+        IF(0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block'), 'RENAME TABLE `cms_block` TO `cms_legacy_block`', 'DO 0'),
+        'DROP TABLE `cms_block`'
+    )
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_page_template'),
+    'DO 0',
+    IF(
+        0 < @cms_templates_held,
+        IF(0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_page_template'), 'RENAME TABLE `cms_page_template` TO `cms_legacy_page_template`', 'DO 0'),
+        'DROP TABLE `cms_page_template`'
+    )
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+-- cms_skill and cms_page_generation ----------------------------------------
+-- The skills the generator reads, and its ledger. Created here for a site
+-- coming from 1.x; TheliaMain.sql already declares them on a fresh install.
+
+CREATE TABLE IF NOT EXISTS `cms_skill`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(50) NOT NULL,
+    `name` VARCHAR(120) NOT NULL,
+    `description` VARCHAR(500),
+    `body` LONGTEXT,
+    `shipped_body` LONGTEXT,
+    `origin` VARCHAR(20) DEFAULT 'module' NOT NULL,
+    `position` INTEGER DEFAULT 0 NOT NULL,
+    `enabled` TINYINT DEFAULT 1 NOT NULL,
+    `always` TINYINT DEFAULT 0 NOT NULL,
+    `updated_by` INTEGER,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_skill_code` (`code`)
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `cms_page_generation`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `target_type` VARCHAR(20) DEFAULT 'page' NOT NULL,
+    `target_id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) NOT NULL,
+    `kind` VARCHAR(20) DEFAULT 'brief' NOT NULL,
+    `prompt` LONGTEXT,
+    `brief` LONGTEXT,
+    `model` VARCHAR(60),
+    `request_id` VARCHAR(80),
+    `status` VARCHAR(20) DEFAULT 'done' NOT NULL,
+    `stop_reason` VARCHAR(30),
+    `stop_category` VARCHAR(60),
+    `input_tokens` INTEGER DEFAULT 0 NOT NULL,
+    `output_tokens` INTEGER DEFAULT 0 NOT NULL,
+    `cache_read_tokens` INTEGER DEFAULT 0 NOT NULL,
+    `cache_write_tokens` INTEGER DEFAULT 0 NOT NULL,
+    `turns` INTEGER DEFAULT 0 NOT NULL,
+    `cost_usd` DECIMAL(12,6),
+    `duration_ms` INTEGER DEFAULT 0 NOT NULL,
+    `error` TEXT,
+    `document` LONGTEXT,
+    `web_pages` LONGTEXT,
+    `left_out` LONGTEXT,
+    `created_by` INTEGER,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_cms_page_generation_target` (`target_type`, `target_id`, `locale`)
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+-- The web pages a call read, added after the table: a site already on a
+-- pre-release of 2.0.0 holds the table without the column.
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_generation' AND column_name = 'web_pages'),
+    'ALTER TABLE `cms_page_generation` ADD COLUMN `web_pages` LONGTEXT AFTER `document`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+-- What the brief asked and the page does not hold, as the model said it,
+-- added after the table like the web pages.
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_generation' AND column_name = 'left_out'),
+    'ALTER TABLE `cms_page_generation` ADD COLUMN `left_out` LONGTEXT AFTER `web_pages`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+-- cms_page_type, cms_page_type_i18n, cms_page, cms_page_i18n ---------------
+-- A page type becomes a template of pages (docs/adr/0009): a name and a
+-- description per language, a brief, the definition of the fields its pages
+-- carry, and a model page. Pages carry the values of those fields.
+
+CREATE TABLE IF NOT EXISTS `cms_page_type_i18n`
+(
+    `id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
+    `title` VARCHAR(255),
+    `description` TEXT,
+    PRIMARY KEY (`id`,`locale`),
+    CONSTRAINT `cms_page_type_i18n_fk_7b1d2a`
+        FOREIGN KEY (`id`)
+        REFERENCES `cms_page_type` (`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_type' AND column_name = 'brief'),
+    'ALTER TABLE `cms_page_type` ADD COLUMN `brief` LONGTEXT AFTER `code`, ADD COLUMN `brief_tone` VARCHAR(200) AFTER `brief`, ADD COLUMN `brief_audience` VARCHAR(200) AFTER `brief_tone`, ADD COLUMN `fields` LONGTEXT AFTER `brief_audience`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page' AND column_name = 'model'),
+    'ALTER TABLE `cms_page` ADD COLUMN `model` TINYINT(4) DEFAULT 0 NOT NULL AFTER `page_type`, ADD COLUMN `fields` LONGTEXT AFTER `model`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'cms_page' AND index_name = 'idx_cms_page_page_type'),
+    'ALTER TABLE `cms_page` ADD INDEX `idx_cms_page_page_type` (`page_type`)',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cms_page_i18n' AND column_name = 'translated_fields'),
+    'ALTER TABLE `cms_page_i18n` ADD COLUMN `translated_fields` LONGTEXT AFTER `nofollow`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+-- cms_component --------------------------------------------------------------
+-- The components the site makes in the back office.
+
+CREATE TABLE IF NOT EXISTS `cms_component`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(40) NOT NULL,
+    `label` VARCHAR(120) NOT NULL,
+    `description` VARCHAR(500) NOT NULL,
+    `props` LONGTEXT,
+    `sample` LONGTEXT,
+    `template` LONGTEXT,
+    `css` LONGTEXT,
+    `status` VARCHAR(20) DEFAULT 'draft' NOT NULL,
+    `created_by` INTEGER,
+    `updated_by` INTEGER,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_component_code` (`code`)
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;

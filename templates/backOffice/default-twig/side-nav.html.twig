@@ -13,12 +13,13 @@
             <li class="nav-item">
                 <a class="nav-link" href="{{ pages_url }}">{{ pages_label }}</a>
             </li>
+        {% endif %}
+        {% if page_templates_url %}
             <li class="nav-item">
-                <a class="nav-link" href="{{ blocks_url }}">{{ blocks_label }}</a>
+                <a class="nav-link" href="{{ page_templates_url }}" data-testid="bo-nav-cms-page-templates">{{ page_templates_label }}</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ templates_url }}">{{ templates_label }}</a>
-            </li>
+        {% endif %}
+        {% if pages_url %}
             <li class="nav-item">
                 <a class="nav-link" href="{{ tags_url }}" data-testid="bo-nav-cms-tags">{{ tags_label }}</a>
             </li>
@@ -46,9 +47,24 @@
                 <a class="nav-link" href="{{ media_url }}">{{ media_label }}</a>
             </li>
         {% endif %}
+        {% if components_url %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ components_url }}" data-testid="bo-nav-cms-components">{{ components_label }}</a>
+            </li>
+        {% endif %}
+        {% if skills_url %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ skills_url }}" data-testid="bo-nav-cms-skills">{{ skills_label }}</a>
+            </li>
+        {% endif %}
         {% if settings_url %}
             <li class="nav-item">
                 <a class="nav-link" href="{{ settings_url }}">{{ settings_label }}</a>
+            </li>
+        {% endif %}
+        {% if documentation_url %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ documentation_url }}" data-testid="bo-nav-cms-documentation">{{ documentation_label }}</a>
             </li>
         {% endif %}
     </ul>

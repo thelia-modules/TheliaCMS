@@ -16,11 +16,13 @@ namespace TheliaCMS\Tests\Integration\Page;
 
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
+use Thelia\Model\RewritingUrl;
 use Thelia\Model\RewritingUrlQuery;
+use TheliaCMS\Content\Document;
 use TheliaCMS\Model\CmsPage;
-use TheliaCMS\Page\Admin\BuilderContent;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\FixedAddressException;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 
 /**
@@ -280,11 +282,7 @@ final class PageAddressTest extends CmsIntegrationTestCase
 
         // Content in the second language, and no address in it: what an import,
         // or a translation written in the builder alone, leaves behind.
-        $this->writer()->saveContent($leaf, $second, new BuilderContent(
-            projectData: '{"pages":[]}',
-            html: '<h1>Assistance</h1>',
-            css: '',
-        ));
+        $this->writer()->saveContent($leaf, $second, Document::richText('<h1>Assistance</h1>'));
 
         self::assertNull($leaf->getRewrittenUrl($second), 'Saving content in a language does not address the page in it.');
 
@@ -295,6 +293,87 @@ final class PageAddressTest extends CmsIntegrationTestCase
             $leaf->getRewrittenUrl($second),
             'A rebuild puts addresses back and never gives one to a language the page did not answer in.',
         );
+    }
+
+    /**
+     * An address is unique across the languages of the shop, so a page titled
+     * alike in two of them answers on `cookies` in one and `cookies-2` in the
+     * other. The suffix belongs to the address: stored as the slug, it shows in
+     * the field of the screen and comes back on every rebuild, long after the
+     * address it dodged is gone.
+     */
+    public function testTheSuffixThatKeepsAnAddressUniqueIsNotKeptAsTheSlug(): void
+    {
+        $second = $this->secondLocale();
+        $urls = $this->getService(CmsUrlService::class);
+
+        $page = $this->bilingualPage('Témoins de connexion', 'Témoins de connexion', $second);
+
+        self::assertSame('temoins-de-connexion', $page->getRewrittenUrl($this->locale()));
+        self::assertSame('temoins-de-connexion-2', $page->getRewrittenUrl($second));
+        self::assertSame(
+            'temoins-de-connexion',
+            $urls->slugOf($page, $second),
+            'The slug is the segment asked for; the suffix is only in the address.',
+        );
+    }
+
+    /**
+     * A child translated before its parent has no parent address to sit under
+     * in that language, and answers at the root. Once the parent is translated,
+     * the child moves under it, in that language only, and a sibling never
+     * written in that language is given no address in it.
+     */
+    public function testTranslatingAParentAfterItsChildPutsTheChildUnderIt(): void
+    {
+        $second = $this->secondLocale();
+
+        $parent = $this->createPage('Our workshops');
+        $child = $this->bilingualPage('Pottery', 'Poterie', $second, (int) $parent->getId());
+        $untranslated = $this->createPage('Weaving', parent: (int) $parent->getId());
+
+        self::assertSame('poterie', $child->getRewrittenUrl($second), 'Before the parent is translated, the child answers at the root.');
+
+        $this->writer()->saveDraft($parent, $second, new PageDraft(title: 'Nos ateliers'));
+
+        self::assertSame('nos-ateliers', $parent->getRewrittenUrl($second));
+        self::assertSame(
+            'nos-ateliers/poterie',
+            $child->getRewrittenUrl($second),
+            'A child sits under the address its parent was given in its language.',
+        );
+        self::assertSame('our-workshops/pottery', $child->getRewrittenUrl($this->locale()));
+        self::assertNull(
+            $untranslated->getRewrittenUrl($second),
+            'Translating a parent gives no address to a child never written in that language.',
+        );
+    }
+
+    /**
+     * What the edit screen offers before the form is saved: the address a new
+     * title would give, under the parent, suffixed when another page holds it,
+     * and nothing written.
+     */
+    public function testAProposedAddressIsComputedWithoutBeingWritten(): void
+    {
+        $urls = $this->getService(CmsUrlService::class);
+        $parent = $this->pageWithSlug('Nos ateliers du soir', 'ateliers-soir');
+        $page = $this->createPage('Céramique', parent: (int) $parent->getId());
+        $this->createPage('Raku', parent: (int) $parent->getId());
+
+        $proposal = $urls->propose((int) $page->getId(), (int) $parent->getId(), $this->locale(), 'Raku');
+
+        self::assertSame('raku', $proposal->segment);
+        self::assertSame('ateliers-soir/raku-2', $proposal->address);
+        self::assertTrue($proposal->suffixed, 'The address of the sibling is taken: the proposal says so.');
+        self::assertSame('ateliers-soir/ceramique', $page->getRewrittenUrl($this->locale()), 'A proposal moves no page.');
+        self::assertSame('ceramique', $urls->slugOf($page, $this->locale()));
+        self::assertNull(RewritingUrlQuery::create()->findOneByUrl('ateliers-soir/raku-2'));
+
+        $new = $urls->propose(0, 0, $this->locale(), 'Céramique');
+
+        self::assertSame('ceramique', $new->address, 'A page not created yet is offered an address at the root.');
+        self::assertFalse($new->suffixed);
     }
 
     /**
@@ -322,6 +401,113 @@ final class PageAddressTest extends CmsIntegrationTestCase
         $this->writer()->saveDraft($page, $otherLocale, new PageDraft(title: $otherTitle));
 
         return $page;
+    }
+
+    /**
+     * A site taken over keeps the addresses search engines know: a fixed
+     * address is the address, `.html` included, whatever the parent of the
+     * page. (An address inserted anew loses its accents to the core; one a
+     * site already holds keeps them, its row being reassigned.).
+     */
+    public function testAFixedAddressIsKeptAsTypedUnderAParent(): void
+    {
+        $parent = $this->pageWithSlug('La société', 'societe');
+        $child = $this->pageWithFixedAddress('Notre suivi qualité', 'notre-suivi-qualite-fige.html', (int) $parent->getId());
+
+        self::assertSame('notre-suivi-qualite-fige.html', $child->getRewrittenUrl($this->locale()));
+    }
+
+    /**
+     * The addresses are rebuilt on every activation of the module, and on every
+     * move of an ancestor: a fixed address survives both.
+     */
+    public function testRebuildingTheAddressesOfABranchKeepsAFixedAddress(): void
+    {
+        $parent = $this->pageWithSlug('La société', 'societe');
+        $child = $this->pageWithFixedAddress('Notre histoire', 'histoire.html', (int) $parent->getId());
+
+        $this->getService(CmsUrlService::class)->rebuildSubtree($parent);
+        $this->moveUnder($parent, (int) $this->createPage('Accueil du groupe')->getId());
+
+        self::assertSame('histoire.html', $child->getRewrittenUrl($this->locale()));
+    }
+
+    /**
+     * The address a page had before it was given a fixed one answers 301 on it.
+     */
+    public function testTheBuiltAddressOfAPageGivenAFixedOneRedirectsToIt(): void
+    {
+        $parent = $this->pageWithSlug('La société', 'societe');
+        $child = $this->createPage('Notre savoir-faire', parent: (int) $parent->getId());
+
+        $this->fix($child, 'notre-savoir-faire.html');
+
+        $former = RewritingUrlQuery::create()->findOneByUrl('societe/notre-savoir-faire');
+        $target = RewritingUrlQuery::create()->findOneByUrl('notre-savoir-faire.html');
+
+        self::assertNotNull($former);
+        self::assertNotNull($target, 'The page answers on its fixed address.');
+        self::assertSame((int) $target->getId(), (int) $former->getRedirected());
+    }
+
+    /**
+     * A child of a page with a fixed address sits under the path the parent
+     * would have, not under `about-us.html/`.
+     */
+    public function testAChildOfAPageWithAFixedAddressIsAddressedFromTheSlugOfItsParent(): void
+    {
+        $parent = $this->pageWithSlug('La société', 'societe');
+        $this->fix($parent, 'about-us.html');
+
+        $child = $this->createPage('Nos engagements', parent: (int) $parent->getId());
+
+        self::assertSame('about-us.html', $parent->getRewrittenUrl($this->locale()));
+        self::assertSame('societe/nos-engagements', $child->getRewrittenUrl($this->locale()));
+    }
+
+    /**
+     * An address a redirection holds goes to the page: it is the former address
+     * of the content the page replaces.
+     */
+    public function testAFixedAddressTakesOverARedirection(): void
+    {
+        $target = $this->createPage('Cible');
+        $alias = (new RewritingUrl())
+            ->setUrl('ancienne-adresse.html')
+            ->setRedirected((int) RewritingUrlQuery::create()->findOneByUrl((string) $target->getRewrittenUrl($this->locale()))?->getId());
+        $alias->save();
+
+        $page = $this->pageWithFixedAddress('Ancienne page', 'ancienne-adresse.html');
+
+        self::assertSame('ancienne-adresse.html', $page->getRewrittenUrl($this->locale()));
+        self::assertNull(RewritingUrlQuery::create()->findOneByUrl('ancienne-adresse.html')?->getRedirected());
+    }
+
+    public function testAFixedAddressAnotherPageAnswersOnIsRefused(): void
+    {
+        $this->pageWithSlug('Contact', 'nous-contacter');
+        $page = $this->createPage('Autre contact');
+
+        $this->expectException(FixedAddressException::class);
+
+        $this->fix($page, 'nous-contacter');
+    }
+
+    private function pageWithFixedAddress(string $title, string $address, int $parent = 0): CmsPage
+    {
+        $page = $this->createPage($title, parent: $parent);
+        $this->fix($page, $address);
+
+        return $page;
+    }
+
+    private function fix(CmsPage $page, string $address): void
+    {
+        $locale = $this->locale();
+        $urls = $this->getService(CmsUrlService::class);
+
+        $page->setLocale($locale)->setFixedUrl($urls->normalizeFixedAddress($address));
+        $this->writer()->saveDraft($page, $locale, new PageDraft(title: (string) $page->getTitle(), slug: $urls->slugOf($page, $locale)));
     }
 
     private function pageWithSlug(string $title, string $slug, int $parent = 0): CmsPage

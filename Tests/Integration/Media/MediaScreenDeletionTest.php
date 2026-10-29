@@ -15,35 +15,31 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Media;
 
 use TheliaCMS\Media\CmsMediaLibrary;
-use TheliaCMS\Model\CmsBlock;
-use TheliaCMS\Model\CmsBlockContent;
+use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
 use TheliaLibrary\Model\LibraryImage;
 use TheliaLibrary\Model\LibraryImageQuery;
 use TheliaLibrary\Model\Map\LibraryImageTableMap;
 
 /**
- * Deleting an image from the media screen. A reusable block shows its images
- * on every page it is placed on, so an image a block holds is as much in use as
- * one a page holds.
+ * Deleting an image from the media screen: an image a page shows is kept.
  */
 final class MediaScreenDeletionTest extends AdminScreenTestCase
 {
-    public function testAnImageABlockShowsIsKept(): void
+    public function testAnImageAPageShowsIsKept(): void
     {
-        $image = $this->cmsImage('in-a-block.jpg');
-        $block = (new CmsBlock())->setCode('media-screen-block');
-        $block->setLocale($this->locale())->setTitle('Block with a picture');
-        $block->save();
-        (new CmsBlockContent())
-            ->setBlockId($block->getId())
-            ->setLocale($this->locale())
+        $image = $this->cmsImage('in-a-page.jpg');
+        $page = $this->createPage('Page with a picture');
+        CmsPageContentQuery::create()
+            ->filterByPageId($page->getId())
+            ->filterByLocale($this->locale())
+            ->findOneOrCreate()
             ->setDraftHtml(\sprintf('<img src="/image-library/%d/full/max/0/default.webp" alt="">', $image->getId()))
             ->save();
 
         $this->deleteFromTheScreen($image);
 
-        self::assertTrue($this->exists($image), 'The block still shows the image.');
+        self::assertTrue($this->exists($image), 'The page still shows the image.');
     }
 
     public function testAnUnusedImageIsDeleted(): void

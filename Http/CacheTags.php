@@ -14,16 +14,13 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Http;
 
-use TheliaCMS\Block\Item\ItemType;
-
 /**
  * The names a cached page is filed under, so a change can drop exactly the
  * pages it affects.
  *
  * Without tags the only way to publish a correction is to empty the whole cache
  * and let the site rebuild itself under traffic. With them, publishing a page
- * drops that page, saving a menu drops every page (they all render it), and
- * editing a reusable block drops the pages that use it.
+ * drops that page, and saving a menu drops every page (they all render it).
  *
  * What a change drops is decided by `PageInvalidator`, never by purging the
  * tags a page is filed under: `cms` and `cms-menu` are on every page of the
@@ -34,26 +31,9 @@ final readonly class CacheTags
     public const string SITE = 'cms';
     public const string MENUS = 'cms-menu';
 
-    /** The lists of pages a template reads (`cms_pages_tagged`): they change with any page. */
-    public const string PAGE_LISTS = 'cms-page-list';
-
     public static function page(int $pageId): string
     {
         return 'cms-page-'.$pageId;
-    }
-
-    public static function block(int $blockId): string
-    {
-        return 'cms-block-'.$blockId;
-    }
-
-    /**
-     * The page of a catalogue item, under the name the shared cache of the core files
-     * it: `product-42`, `category-7`, `brand-3`.
-     */
-    public static function item(ItemType $type, int $itemId): string
-    {
-        return $type->value.'-'.$itemId;
     }
 
     /**

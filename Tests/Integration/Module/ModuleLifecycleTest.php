@@ -143,7 +143,7 @@ final class ModuleLifecycleTest extends CmsIntegrationTestCase
         (new TheliaCMS())->update('0.0.0', $latest, $this->getPropelConnection());
 
         self::assertTrue(
-            $this->tableExists('cms_page_template'),
+            $this->tableExists('cms_skill'),
             'A table added by a migration is missing after an update.',
         );
 

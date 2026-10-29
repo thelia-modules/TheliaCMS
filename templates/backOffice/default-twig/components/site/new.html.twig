@@ -1,0 +1,38 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ 'New component'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-site-component-new{% endblock %}
+
+{% block scripts_extra %}
+    <script src="{{ module_asset('TheliaCMS', 'assets/component-generator.js') }}?v={{ assets_version }}" defer></script>
+{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'New component'|trans({}, 'theliacms') } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.components.list') }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to components'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">
+        {{ 'Describe a section pages are missing. The generator writes the component; you see it in the theme before keeping it, and ask for changes until it is right. Once kept, pages may use it and the generator of pages is offered it.'|trans({}, 'theliacms') }}
+    </p>
+
+    <div class="card">
+        <div class="card-body">
+            {% if may_make %}
+                {{ include('@TheliaCMSModule/backOffice/default-twig/components/site/_request_form.html.twig', {
+                    testid: 'cms-site-component-request',
+                    label: 'What the component is for'|trans({}, 'theliacms'),
+                    placeholder: 'A table of two to four plans side by side, each with its name, its price per month, what it includes, and one plan put forward.'|trans({}, 'theliacms'),
+                    help: 'What it shows, what an editor fills in, how it looks. Its texts are written by pages, in every language of the site.'|trans({}, 'theliacms'),
+                    button: 'Make the component'|trans({}, 'theliacms'),
+                }) }}
+            {% else %}
+                <p class="mb-0 text-muted" data-testid="cms-site-component-not-allowed">{{ 'Making a component takes the settings and the custom code permissions.'|trans({}, 'theliacms') }}</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

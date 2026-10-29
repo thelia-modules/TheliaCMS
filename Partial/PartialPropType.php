@@ -30,4 +30,6 @@ enum PartialPropType: string
     case Choice = 'choice';
     /** The id of a record picked from an endpoint (a page, a menu, a block). */
     case Reference = 'reference';
+    /** Several records picked from the same endpoint, in the order they were picked. */
+    case References = 'references';
 }

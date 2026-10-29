@@ -7,62 +7,206 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
-## [1.6.2] - 2026-10-28
+### Added
+
+- **A component is prototyped from the content screen of a page.** **Add a
+  section > A new component** asks the generator of components in a few
+  words; the answer is drawn in the preview in place of the draft, changed by
+  asking again, discarded or kept. Kept, it is a prototype of the site:
+  status `draft` in `cms_component`, shown and edited on the pages that hold
+  it, offered to nobody else until **CMS > Components** keeps it for the
+  whole site (**Keep for the whole site**). The same rights as **CMS >
+  Components > New component** are needed.
+- **A brief may make a component of the site**, when the new generator
+  setting "Let a brief make a component of the site" is on (off by default)
+  and the editor may make components: the generator writing a page calls the
+  generator of components (`make_component`, twice per page at most, each
+  call a row of its own in the ledger) when none of the catalogue shows what
+  the brief asks, and names the prototype in the page.
+- **The dialogs of the content screen are drawers** over the left panel
+  (edit a section, rewrite, brief, add a section), the preview staying in
+  sight; full width on a phone. The form of a section puts two fields on a
+  line once the drawer is wide enough, a long text, a picture, a list of
+  rows or a folded part on a line of its own; the help of a field is a
+  tooltip on a "?" beside its label, so the labels and the fields of a line
+  are level whatever the wording.
+- **An export carries the status of every component of the site** (`draft`
+  or `ready`), and an import keeps it: a prototype stays a prototype on the
+  site it is imported into.
+- **A component of the site may move.** Its stylesheet may hold `@keyframes`,
+  named after the component when it is served (`cms-site--<code>--<name>`),
+  as is every `animation` of the stylesheet that uses it, so two components
+  may both call an animation `pan`. A rule that sets an animation sits in
+  `@media (prefers-reduced-motion: no-preference)`, or the component is
+  refused, and so is an animation set in a `style` attribute of the template.
+- **A skill on motion** (`skills/motion/SKILL.md`, the eighth shipped): how
+  a component moves or reacts with its stylesheet alone (a picture that
+  scrolls, folds, cards that slide, hover effects) and what it leaves to a
+  component of the theme. The generator of components reads it beside the
+  skill on accessibility, which now says that what moves on its own can be
+  paused and that nothing moves for a visitor who asks for less motion. A
+  test holds the recipe of the skill to the validator, and the elements the
+  prompt names as taken out to the filter of the page.
 
 ### Fixed
 
+- **The generator of components leaves out a skill the site switched off**
+  under CMS > Skills, as the generator of pages and `read_skill` do: it read
+  the skill on accessibility whether it was on or not. Its heading is no
+  longer written twice in the prompt.
+- **A component is refused when it draws what a page does not keep.** The
+  template was checked against a short list (`script`, `iframe`, `form`…)
+  while the page filters against the elements of HTML text and layout: an
+  `svg`, an `input`, a `data-` attribute passed, then went out without a word
+  when the component was drawn. A component asked to make a picture scroll
+  was kept with an animated `svg` and showed a still picture. The validator
+  now runs the markup of every branch of the template through the filter of
+  the page and names what it takes out, so the model draws it another way in
+  the same call.
+- **A document whose props carry a bare line break is read.** A model that
+  escapes the JSON string of the props once rather than twice (seen with
+  Mistral Large) left a line break of a text as a control character inside
+  the inner JSON, and every section came back "not valid JSON" until the
+  call failed. Such a break is read as a space; a props string that is no
+  JSON at all is still sent back, with the rule to follow, and the refused
+  answer now travels with the log entry.
+- **A PDF a brief cites is read again.** The text of the PDF is extracted on the
+  server (`smalot/pdfparser`) and goes the way the text of a page does; a PDF
+  that is damaged, protected or longer than the ceiling is reported as not read.
+- **The history of a generation says in words why a cited web page was not
+  read**, in French or English, instead of showing the code (`url_not_accessible`).
+- **The update to 2.0.0 keeps `cms_legacy_page_content` and
+  `cms_legacy_page_revision` only where the pages or revisions held something
+  written**, so a fresh install ends with no legacy table.
+- **The update from 1.x to 2.0.0 no longer destroys what the former editor
+  wrote.** It dropped the tables of the blocks and of the saved page templates
+  and cleared the HTML, the editor project and the stylesheets of every page
+  and revision, with no copy. The tables of the blocks and of the saved page
+  templates are now renamed `cms_legacy_block`, `cms_legacy_block_i18n`,
+  `cms_legacy_block_content`, `cms_legacy_item_block` and
+  `cms_legacy_page_template`, rows and keys included (a table with no row is
+  dropped, so a fresh install has none), and the content of the
+  pages and revisions (HTML, editor project, stylesheets) is copied to
+  `cms_legacy_page_content` and `cms_legacy_page_revision` before it is
+  cleared. 2.x never reads those tables: they are there to get the old markup
+  back by hand, and can be dropped once it is no longer needed. The update can
+  be played twice. A site that already went through the former 2.0.0 update
+  lost that content: restore it from an export or a backup taken before.
+- **A component of the theme keeps its Stimulus controller once published.**
+  The filter a page goes through before it goes online dropped
+  `data-controller`, `data-action` and the targets of a component: a carousel
+  went online with arrows that did nothing. A theme now names the controllers
+  its components use under `sections.controllers` of `config/theliacms.yaml`;
+  their attributes are kept, and a controller it does not name is dropped from
+  the markup. `hidden` and `aria-roledescription` are kept too.
+- **The `label` column of `cms_item_revision` reaches every site.** It was
+  shipped as the update to 2.3.1, a version the module already carried: a
+  site installed at 2.3.1 before that column existed never ran the update
+  and then queried a column it did not have. The update moves to 2.3.2 and
+  runs as a no-op where the column is already there.
 - **A publication no longer empties the shared cache of the whole site.**
   Every change to a page purged `cms` and `cms-menu`, which every page of the
   site carries, the shop included when the shared cache of Thelia is on. A
-  change now drops the page, the pages that show a list of pages, the pages
-  under it when its title, its address or whether it is online changed, and
-  the menus only when one of them links to it.
+  change now drops the page, the lists of pages, the pages under it when its
+  title, its address or whether it is online changed, and the menus only when
+  one of them links to it.
 - **Hiding, binning or restoring a page, or changing the home page, reaches
-  the caches.** Hiding a page dropped nothing: it stayed in the menus for up
-  to an hour and in a shared cache until its lifetime ran out. Binning a page
-  left the other pages linking to it; restoring a branch dropped its first
-  page only; a new home page left the root of the site on the former one.
-- **A page showing a form or a list of pages is dropped when they change.**
+  the caches.** Hiding a page left it in the menus for up to an hour and in a
+  shared cache until its lifetime ran out; binning a page left the other pages
+  linking to it; restoring a branch dropped its first page only; a new home
+  page left the root of the site on the former one. Moving a page among its
+  siblings now drops the lists of pages that follow the order of the tree.
+- **A page showing a list of pages or a form is dropped when they change.**
   The page is filed under a `cms-partial-<name>` tag for each dynamic block it
-  shows and under `cms-page-list` when its template reads a list of pages.
-- **A content or a folder a menu links to reaches the shared cache.** Their
-  events dropped the menus kept by the module, not the pages a shared cache
-  kept with the menu in them; they now drop `cms-menu` when a menu links to
-  the row they wrote, and only then.
-- **An import drops the whole site from the caches**, and renaming or deleting
-  a tag drops the pages that show a list of pages.
+  shows, read from its content or from its template, and the block purges it.
+- **A content, a folder, a category or a product a menu links to reaches the
+  shared cache.** Their events dropped the menus kept by the module, not the
+  pages a shared cache kept with the menu in them. They now drop `cms-menu`
+  when a menu links to the row they wrote, and only then: a catalogue import
+  writes thousands of products no menu names.
+- **An import drops the whole site from the caches.** It changed pages,
+  menus, forms and settings, and dropped only the menus kept by the module.
+- **Renaming or deleting a tag drops the lists of pages**, which show the tag
+  of each page and list the pages of a tag.
 - **No more `Vary: Accept-Language`.** The language of a page comes from its
   address, never from that header: it only multiplied the copies of a page.
 
-## [1.6.1] - 2026-10-28
+### Upgrading to 2.4.0
 
-### Fixed
+- The module requires Thelia 3.3.0, whose AI layer the generator goes through.
+- Set up the generator in the AI settings of Thelia: a connection to a
+  provider, then a range of models, a budget and a turn-on for each of the
+  three usages `theliacms.page_generation`, `theliacms.text` and
+  `theliacms.component`. Until then the generator says it is unavailable and
+  calls nothing.
+- `ANTHROPIC_API_KEY` is no longer read by the module. The key lives in the
+  connection of the AI settings.
+- The update to 2.4.0 adds `cms_page_generation.log_id` and the columns that
+  hold the mark of a generated content (`draft_provenance` and
+  `published_provenance` on `cms_page_content` and `cms_item_content`,
+  `provenance` on the revisions, `cms_component` and `cms_page_generation`).
+- A theme that overrides `cmspage.html.twig` calls
+  `ai_provenance_attributes(cms_page.provenance)` on the element that holds the
+  content, and prints `ai_provenance_label(cms_page.provenance, cms_page.locale)`
+  after it, or its pages lose the mark.
 
-- **The menus follow a content or a folder published on schedule.** The core
-  dispatches `CONTENT_UPDATE_PUBLICATION` and `FOLDER_UPDATE_PUBLICATION` when
-  a content or a folder is published, scheduled or taken offline, and the
-  menus did not listen to them: an entry pointing at such a content kept its
-  former state until the cache of the menus expired (one hour by default).
-- **A long page goes online whole.** The published content went through the
-  sanitizer of Symfony with its default limit of 20 000 bytes, and whatever
-  came after was dropped without a warning: terms of sale or a long FAQ went
-  online cut in the middle of a sentence. The limit is now 1 000 000 bytes
-  (`PublishedContentSanitizer::DEFAULT_MAX_LENGTH`), and a shop can pass its
-  own length to the service (`$maxLength`).
+### Added (2.4.0)
 
-### Security
+- **Generated content is marked** (article 50(2) of the AI Act). A page or the
+  document of a catalogue item written by the generator keeps the mark of the
+  core with its draft, its publication and its revisions, and through the
+  export and the import of the site. The public page prints it as
+  `data-ai-*` attributes on the content and as a sentence after it, in the
+  language of the page; `cms_item_content()` wraps a generated document the
+  same way. A text written beside a field carries no public mark: it stays in
+  the AI log of Thelia, which records the usage, the model and the cost of the
+  call.
+- The history of a page points at the row of the usage log of the core that
+  holds the cost of the call (`cms_page_generation.log_id`), and the requests of
+  one call share a correlation id there.
+- The prompts the ledger keeps are emptied by `maintenance:purge` when the core
+  empties its own, so the module adds no retention of its own.
+- When the AI layer refuses a call (budget spent, rate limit, jurisdiction,
+  usage turned off, key unreadable, provider down, safety check), the editor
+  reads one sentence, in French or English, that says what to change.
+
+### Changed (2.4.0)
+
+- The generator, the texts written beside a field and the components made in the
+  back office go through the AI gateway of Thelia: the provider, the key, the
+  model and the budget are set in its AI settings, the Generator card of
+  CMS > Settings keeps the effort, the length of an answer and the reading of
+  web pages. `effort` is passed to the model as its reasoning effort and has no
+  effect on a provider that does not read it.
+- **Reading the web pages a brief cites is off until the site turns it on.**
+  The page is fetched by the server of the shop, through the client of the core
+  that refuses private addresses, and its text is sent to the provider of the
+  range. The tool of the Claude API that read the pages from the provider side
+  is gone with the SDK.
+- The messages of a conversation that never answers (too many turns) are
+  translated.
+
+### Removed (2.4.0)
+
+- The Claude API SDK (`anthropic-ai/sdk`), `nyholm/psr7`, the price list and
+  `ClaudeClientProviderInterface`.
+- The settings `generator_model` and `generator_text_model`, and the model
+  fields of the Generator card: the range of the usage chooses the model. A file
+  written before 2.4.0 that carries them still imports, the keys are ignored.
+
+### Security (2.3.1)
 
 - **An import filters what it writes like a publication does.** The draft
-  and the published markup and stylesheets of the pages and of the blocks
-  were stored as the file gave them: an export edited to hold a `<script>`,
-  run through `thelia_cms:import`, went online, past the custom code right.
-  The markup now goes through the sanitizer of a publication, iframes
-  included unless the new `--allow-custom-code` option is given, and the
-  stylesheets through the filter of a save. A form of the file is left out
-  when its code is not one the form screen accepts, loses the recipients that
-  are not email addresses, and gets a retention the screen accepts: a
-  negative one kept the answers forever. The report names each of them.
-  Tests import a hostile file and check what was stored.
+  and the published markup of the pages and of the catalogue items were
+  stored as the file gave them: an export edited to hold a `<script>`, run
+  through `thelia_cms:import`, went online, past the custom code right. They
+  now go through the sanitizer of a publication, iframes included unless the
+  new `--allow-custom-code` option is given. Their documents are checked by
+  the validator of the content screen, and one it refuses is left out. A form
+  of the file is left out when its code is not one the form screen accepts,
+  loses the recipients that are not email addresses, and gets a retention the
+  screen accepts: a negative one kept the answers forever. The report names
+  each of them. Tests import a hostile file and check what was stored.
 - **The guard of the back office reads the path the way the router does.**
   It compared the prefix `/admin/cms` with the path as the client wrote it,
   while the router decodes the path before it matches a route: with one
@@ -72,21 +216,757 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   of the pages whatever its section. A proxy that normalises the path in front
   of the site hid it; one that passes the path as it came did not. The guard now
   compares the decoded path (`RequestPath::decoded()` of the core), and so
-  does the showcase mode for the paths it closes (`/cart`, `/order`,
-  `/checkout`). Tests send encoded
+  does the showcase mode for the paths it closes (`/cart`, `/order`, `/checkout`). Tests send encoded
   addresses anonymously, with a profile limited to the pages, and to a hidden
   screen.
+- **A `style` attribute is filtered like a stylesheet.** The published
+  content and every drawing of a component made for the site kept `style`
+  attributes as they were: a component whose template prints a text prop in
+  one, or a markup prop holding one, could load a picture from another host
+  (a tracker that bypasses the consent of the visitor), which a stylesheet
+  may not. What `css()` takes out of a stylesheet, a `url()` to another
+  host, `expression()` and `behavior`, is now taken out of every `style`
+  attribute as well. Tests cover what a template of a component can put
+  together when it runs: tags, event handlers and schemes named at run time
+  are all taken out of what it draws.
 
-## [1.6.0] - 2026-10-27
+### Added (2.3.1)
 
-### Added
+- **A store of the Dealer module carries a document.** Up to 1.6.0 a store
+  could carry a content block, which the update to 2.0.0 drops with the item
+  blocks. While Dealer is active, its store screen gets the *CMS content* tab
+  of the other catalogue items, the generator writes for the page of a store,
+  a deleted store takes its documents with it, and an export names a store by
+  the slug of its SEO record. The theme prints the document with
+  `cms_item_content('dealer', id)`. Dealer stays optional: its classes are
+  reached by name.
+
+- **Several images of the media list are answered at once.** A box on each
+  card and one for the page select images; a tag is given or taken off,
+  they are marked decorative or not, or the unused ones are deleted, asked
+  in a dialog first: an image a page or an item still shows is kept and
+  named.
+- **The image of a section is chosen in a picker of the media library.**
+  The section shows the image it holds (thumbnail, name, whether it is
+  described) with "Choose in the library" and "Remove"; the picker opens over
+  the section: a grid of thumbnails, searched, filtered by what is still to
+  describe or by a tag, by pages, and an image can be sent from it. It
+  replaces a list of every title, which could not be read past a few dozen
+  and lost an image older than the 200 newest. The image of a page, on its
+  settings, is picked the same way instead of a grid of radio cards. An id
+  sent for an image of a section or of a page is kept only when the CMS owns
+  that image.
+- **A choice with pictograms is chosen on buttons.** A choice prop may give a
+  pictogram per value (`Prop::choice(..., icons: [...])`): the width of the
+  Image section shows its three widths as shapes, and the room above and
+  below and the alignment of a section are buttons too.
+- **The sheet of an image says where its description stands in every
+  language**, each language a link to the sheet in it. Tags are chips
+  suggested from the tags of the library, written as the library has them; a
+  file chosen to replace the image is shown, with its size, before the sheet
+  is saved; deleting is asked in a dialog of the screen instead of the
+  browser's confirm(). The usage of an image says "pages or items": it
+  counts the catalogue items showing it too.
+- **Images are dropped on the media list and sent one by one.** The upload
+  form of the list takes files dropped on it; with JavaScript each file is
+  sent on its own, with its progress, then "added" or why it was refused
+  (format and size checked before sending, then by the server). Once every
+  file is answered, the describe queue opens on the images just added; when
+  one was refused, the screen stays and offers the queue. Without
+  JavaScript, several files sent at once lead to the same queue.
+- **The images still to describe can be described one by one.** "Describe
+  them one by one", above the media list, shows the first image of the list
+  that says nothing in the language edited, large, with its usage and one
+  field: Enter saves its alternative text and shows the next one, "It is
+  decorative" is an answer of its own, "Skip" leaves it for later. The queue
+  follows the search, the tag and the order of the list it was opened from,
+  and goes back to it once everything is described. The cards of the list are
+  denser (six a row on a wide screen), with the size and weight on hover, and
+  an image opened from a filtered list leads back to that list, from its
+  sheet and once deleted.
+- **The media list is paged, filtered and ordered.** 48 images a page, the
+  last page when the address asks for one past it. It shows what is still to
+  describe in the language edited, what no page and no item uses, the
+  decorative images, or one tag (offered with its count); newest, oldest, by
+  title or heaviest first. The list is an address: a filtered list can be
+  bookmarked and shared. The search reads the alternative text and the
+  caption as well as the title and the tags, and so does `search_media` for
+  the generator. It replaces the list of the 200 newest images, past which an
+  image could only be found by searching.
+- **The images of the catalogue can be copied into the media library.**
+  `thelia_cms:media:import-catalogue` copies the images of products,
+  categories, brands, folders and contents with their titles, alternative
+  texts and decorative flag in every language, tagged with their kind of item
+  and, for a product, its default category. Run again, it copies only the
+  files the library does not hold yet; `--type` narrows it, `--dry-run`
+  counts.
+- **The draft a generation replaces can be put back.** Before a brief, a
+  change, a section rewrite or a translation writes the draft of a page or of
+  a catalogue item, the draft as it was is kept as a revision labelled
+  "draft" (the last five, apart from the twenty publications). The content
+  screen lists them under *Previous drafts*, with the date and the number of
+  sections; *Put it back* makes one the draft again and keeps the one it
+  replaces in its place, so a restore is undone the same way. The update to
+  2.3.2 gives `cms_item_revision` the `label` column `cms_page_revision` had.
+
+- **Free text is edited where it stands.** A double click on a section of
+  free text in the preview mounts the editor of the back office on it, in
+  the page, with its toolbar; *Save* (or Ctrl+Enter) posts the section the
+  way its form does, appearance included, and *Cancel* (or Escape) puts the
+  text back. Without the Tiptap module the text is edited as it is, with no
+  toolbar. The other components keep their form.
+
+- **The edit screen of a page proposes its address.** Under the *URL slug*
+  field, the whole address the page would answer on, under its parent pages
+  and in the language being edited, follows what is typed in the title, the
+  slug and the parent. *Regenerate from the title* fills the slug from the
+  title. The screen says when the slug no longer follows the title, after a
+  rename, and when a number was added because another page or another
+  language already answers on the address. Nothing is written until the form
+  is saved: a published address moves only on purpose. The *Fixed address*
+  field says, as it is typed, whether the address is free. Both are answered
+  by `POST /admin/cms/pages/address-proposal` and
+  `POST /admin/cms/pages/fixed-address-check`, which write nothing and take the
+  token of the back office like any write of the module.
+
+- **A rich-text field is written from a brief.** Beside the summary and the
+  detailed description of a page, and beside the summary, the description
+  and the conclusion of a product, a category, a brand, a folder and a
+  content, *Write from a brief* asks the generator for the text of that field.
+  It reads the brief, the title, what the field holds, and may search the
+  products, categories and pages of the site. The text comes back as
+  formatted text only (paragraphs, emphasis, lists, links, subheadings,
+  quotes), is shown with its cost, then replaces the text of the field or is
+  inserted at the cursor. Nothing is saved before the form is. The button
+  takes the right to use the generator; each call is in the ledger of the
+  generations, kind `text`, and in the history of the content screen of a
+  page. CMS > Settings gives these texts a model, an effort and a length of
+  their own (by default the model of the pages, effort `low`, 2,000 tokens).
+  The button is drawn by a hook on `wysiwyg.js` and reaches the editor of the
+  Tiptap module through the element it draws: an update of that module that
+  stops leaving its instance there leaves the field without the text, and
+  says so.
+  A text is written to the end even when the connection is cut before the
+  answer arrives: the server keeps it ten minutes under an id the screen
+  gave the call, and the screen asks for it again by that id
+  (`POST /admin/cms/text/outcome`, for the administrator who asked only)
+  rather than having it written and billed a second time.
+
+### Changed (2.3.1)
+
+- **An image of the media library is drawn with the text it has in the
+  library.** The Image and Columns sections published the text they held
+  for the image, whatever the library said: an image described once in the
+  library was published without it, or with another text. An image of the
+  library is now drawn with its text in the language of the page, empty when
+  it is decorative; the text of the section answers for a picture kept
+  elsewhere, and for an image not described yet. In the form, the field of
+  the text shows only for a picture kept elsewhere; for an image of the
+  library, its text in the library is shown, or a link to describe it.
+- **The appearance of a section is laid out as one.** The two colours stand
+  side by side with their help under their field, a colour not set shows a
+  crossed swatch instead of black, and the room and the alignment are each a
+  row of buttons of one width.
+- **The props of the components of the theme read in the language of the
+  back office.** Their labels and help come from the comments of the theme,
+  in English and sometimes in the words of a developer. The form of a section
+  passes them through the translator, and the module ships the French and a
+  plainer English for the components of Flexy it offers. The sheet the
+  generator reads keeps the words of the theme: the prompt does not change.
+  A theme of its own gets the same by adding the keys to `I18n/`.
+
+- **The components to add a section from read better.** The dialog groups
+  them by what they are for (text and media, shop, reviews and reassurance,
+  content of the site, blocks of the site), gives each an icon, a name and
+  one line in the language of the back office, and no longer shows the name
+  a document refers to them by (it stays in the tooltip). The components of
+  the theme the module does not know keep their own label and description,
+  under the icon of their family. What the generator reads of a component
+  does not change.
+- **The form of a section reads better.** Its title names the section the
+  way the list does, with no component name. A prop of the theme with no
+  label of its own reads as words (`max_note` is "Highest score",
+  `product_ids` "Products"). The file and the address that can replace a
+  picture of the library fold under one line, the appearance of the section
+  under its heading; both open by themselves when they hold a value. The
+  rows of a list are numbered, number fields are narrow, "(optional)" is no
+  longer written on every field, and a product or a category is picked by
+  its name, the number field behind the picker showing again only when the
+  list cannot be read. The title, the close button and the save button stay
+  in view while the form scrolls, and Escape closes it, from the rich-text
+  editor too.
+- **Ask for a change comes before the sections of the draft** on the content
+  screen, right under the brief: the change of the whole page is offered
+  before the list that changes one section at a time.
+- **The generator gives the same page for the same brief more often.** Two
+  rules of the shipped skills, measured on the determinism corpus
+  (`docs/evaluation/determinism/results.md`): every section takes its id from
+  a fixed list (`intro`, `features`, `offer`, `practical`, `contact`,
+  `form`…), and a page carries a form, a contact text or a call to action
+  only when the brief asks for one. The same structure in four runs out of
+  five went from 7 briefs of 16 to 13, the quality of the evaluation
+  unchanged. A site that edited these skills keeps its own text.
+- **The skills say which component to take when two fit.** A testimonial
+  with no score goes in free text, since the review components draw a score
+  and an empty one reads as zero; points of the same kind side by side go in
+  columns when there are two to four short ones, in free text otherwise.
+- **The content screen names the template of the page.** Next to the status
+  of a page of a template, the bar shows the template and links to its
+  settings.
+- **Writing from a brief says it replaces the draft.** When the draft holds
+  sections, a warning above the brief counts them and says nothing of them
+  is kept, the button reads *Replace the draft*, and the screen asks once
+  more before sending.
+- **The preview of a CMS page shows the whole page or the content only**, as
+  it did for the catalogue: the content only draws the sections in the layout
+  of the theme, without the header, the footer, the title or the fields of
+  the page. Its signed link is the one of the whole page with `?content=1`;
+  a theme draws it its own way with `cms-page-content-preview.html.twig`.
+  The screen of a component made for the site, and of a candidate, offers
+  the same choice for its preview; both screens share the choice.
+- **A section is deleted from the preview.** Hovering a section shows
+  *Delete* next to *Edit*; it asks for the same confirmation as the bin of
+  the list.
+
+### Fixed (2.3.1)
+
+- **A draft the validator refuses no longer goes online.** A publication
+  rendered the draft as it was stored, without the check the editor and
+  `thelia_cms:render` run. A draft written outside the editor, by a script or
+  an import, holding props the catalogue refuses (`"product_ids": [27, 33]`
+  instead of a list of `{"id": 27}`) was announced by
+  `thelia_cms:publish --dry-run` and put online by a real run. It is now
+  validated before it is rendered, and what is rendered is the validated
+  document. The command reports the page under "Refused", and the editor
+  buttons name the problems. The CMS content of a product, a category, a
+  content or a folder is validated the same way before it goes online.
+- **The menus follow a content or a folder published on schedule.** The core
+  dispatches `CONTENT_UPDATE_PUBLICATION` and `FOLDER_UPDATE_PUBLICATION` when
+  a content or a folder is published, scheduled or taken offline, and the
+  menus did not listen to them: an entry pointing at such a content kept its
+  former state until the cache of the menus expired (one hour by default).
+- **A long page goes online whole.** The published content went through the
+  sanitizer of Symfony with its default limit of 20 000 bytes, and whatever
+  came after was dropped without a warning: terms of sale, a long FAQ, or a
+  recipe whose components are drawn with their classes went online cut in
+  the middle of a sentence. The limit is now 1 000 000 bytes
+  (`PublishedContentSanitizer::DEFAULT_MAX_LENGTH`), and a shop can pass its
+  own length to the service (`$maxLength`). The text the generator writes for
+  a field had the same limit and reads the same length now.
+- **The media list refuses a file on its own, and only the formats it
+  says.** A file the library could not decode stopped the whole sending with
+  an error, after storing the files before it; and a GIF or a BMP was stored
+  although the screen accepts JPEG, PNG and WebP only. Each refused file is
+  now named with why, and the others are stored.
+- **An image with no row in the language edited is counted as still to
+  describe.** It showed the "no alternative text" badge and was left out of
+  the count above the list: an image uploaded in one language was never
+  counted in the others.
+- **The number that keeps an address unique stays out of the slug.** A page
+  titled alike in two languages answers on `cookies` in one and `cookies-2` in
+  the other, and the `-2` was stored as the slug of the second: shown in the
+  field, and brought back by every rebuild of the addresses. The slug keeps the
+  segment asked for. A slug stored that way before keeps it: the edit screen
+  points it out, and *Regenerate from the title* then a save clear it.
+- **A page translated before its parent moves under it.** A child written in a
+  language its parent did not have yet answered at the root of that language,
+  and stayed there once the parent was translated. Giving a page its first
+  address in a language now puts the pages under it, the ones already written
+  in that language, under that address. Their former address redirects.
+- **The model of a page type stays off the front.** The front left the model
+  out only because the back office never publishes it. Set visible from its
+  edit screen and imported with a published version, from a file edited by
+  hand or written elsewhere, it was served on its address. The pages, the
+  menus, the breadcrumb, the lists of a tag, the search, the TntSearch index
+  and the sitemap now leave a model out on their own account, and an import
+  keeps the draft of a model and drops the published version the file gives
+  it. A model can no longer be set online nor moved to the bin: its edit
+  screen shows *Online* set to *No* and greyed out, saving it puts it offline,
+  an import brings it in offline, and posting to its bin or visibility action
+  is refused with a message. It still goes with its template when the
+  template is deleted.
+- **`cms_is_home()` answers false on a site with no home page.** Without a
+  home page set, it took the page of id 0, and an id the theme did not have
+  (a product page passes none), for the home page; it also refused a null id.
+  It takes a number, a string or null, and answers a boolean.
+- **A reserved slug is refused on its field.** Saving a page with the slug
+  `admin`, `api` or another reserved path answered an error 500; the form now
+  shows why under the field.
+- **A picture reaches a component of the theme as its address.** A prop
+  documented `image` was handed to the component as stored, the id of the
+  media library, which the component printed in a `src`: the picture did not
+  show. The section turns it into the address of the picture, as the
+  components made in the back office already did; an `https://` address is
+  kept, and an image gone from the library leaves the prop to the default of
+  the component.
+- **A prop of a component of the theme may be `html`.** Any type the reader
+  did not know read as a line of text of 500 characters at most, so a
+  component documenting a prop as `html` refused a text of a few paragraphs
+  and had it written as plain text. It is now markup, without a length
+  limit, filtered by the writer on the rendered page like the text of
+  `cms:richtext`.
+- **The right to generate reaches a site that updates the module.** The rows
+  of the rights were only written when the module was activated, so a site
+  that had it active before `admin.cms.generate` existed, and only ran
+  `module:refresh` since, never got the row: generating was refused to every
+  profile but the super administrator, and the profile screen could not grant
+  it. An update now seeds the missing rights, existing profiles without
+  access, like an activation; the right is labelled "CMS: page generation".
+
+### Added (2.3.0)
+
+- **The generate command writes items, translations and at an effort of its
+  own.** `thelia_cms:generate` takes `--item <type>:<id>` to write the
+  document of a product, a category, a content or a folder, `--translate-from
+  <locale>` to write a language from the draft of another, and `--effort` to
+  set the effort of one call without changing the settings. What the
+  evaluation of the generator runs without a browser.
+- **Menu entries pointing at a category or a product.** An entry of a menu
+  can point at a category or a product of the catalogue (`target_type`
+  `category` or `product`, `target_id` the id of the item). It links to the
+  address the shop serves the item on in the language being read and, with no
+  label of its own, shows the title of the item in that language. A hidden or
+  deleted item, or one with no title or address in that language, is left out
+  of the menu and reported on the menu screen with the reason. The entry form
+  lists the categories as their tree and the products grouped by their default
+  category. The cached menus are dropped when a category or a product is
+  created, changed, hidden, given a new address or deleted. The export keeps
+  the id of the item, and the import reports it, the way it does for contents
+  and folders.
+- **The import says when a menu entry points at an item this site does not
+  have.** An entry pointing at a content, a folder, a category or a product
+  whose id the importing site lacks is kept, and the report says so rather
+  than asking to check that the id is the right one. `cms_menu()` is unchanged; `source` says `category` or
+  `product`. No schema change.
+
+### Fixed (2.2.1)
+
+- **The column of the writing instructions reaches a site already on 2.2.0.**
+  `cms_page_type.instructions` was added by `update/2.2.0.sql`, which a site
+  already on 2.2.0 never plays again: reading a page template then failed.
+  The column moves to `update/2.2.1.sql`, replayable, so a site on 2.1.0 or on
+  2.2.0 gets it, and one that already has it is left alone.
+- **A new skill goes after the site's skills.** On a site that already has
+  skills, a newly shipped skill took its rank among the files, a position
+  another skill already held (two skills shown at the same position). It now
+  goes after the last position, in the order of the files when several
+  arrive; an empty table still takes the order of the files.
+- **The intro of a page template mentions its writing instructions.** The
+  sentence above the form says the pages follow the writing instructions of
+  the template, next to its brief and fields.
+
+### Added (2.2.0)
+
+- **Writing instructions for a page template.** A page template gains
+  **Writing instructions** next to its brief: how every page of it is
+  written (tone, length, expected sections, mandatory mentions). The
+  generator reads them as rules for every page of the template, after its
+  brief, whether it writes, revises, rewrites a section or translates; they
+  travel in the export. The update to 2.2.1 adds `cms_page_type.instructions`;
+  `PageTypeWriter::describe()` takes them as a last, optional argument.
+- **Claude Code and Chrome.** `docs/claude-code-and-chrome.md` tells how to
+  let Claude Code work in the back office through a Chrome window and check
+  the pages as a visitor; `docs/plans/deterministic-skills.md` plans how to
+  measure and tighten the skills so one brief gives one page.
+- **Comparing runs of the generator.** `thelia_cms:compare-runs <round>`
+  reads the outputs of `thelia_cms:generate --dry-run` kept per brief and says,
+  in Markdown, how much the runs of each brief agree: structure, shape,
+  length of each section, figures. It calls no API.
+- **Two skills: translation and the design system.** `translation`, always
+  read: a page written from another language keeps its meaning, its order,
+  its names and its figures as written, and follows the typography of its
+  language. `design-system`, always read: every page uses the components of
+  the catalogue rather than free text imitating them, with no style of its
+  own. Existing sites receive them on the next read of the skills.
+- **Reordering the skills from their list.** **CMS > Skills** shows arrows
+  that move a skill one slot up or down, and numbers the positions again from
+  1; the generator reads the skills in that order.
+- **Documentation in the back office.** **CMS > Documentation** tells an
+  editor, in French or in English after the language of the back office, what
+  the module lets them do: pages and their addresses, content and the
+  generator, page templates, tags, the content of catalogue items, components,
+  skills, menus, forms, media, settings and permissions. It takes the right to
+  see the pages. Every screen of the CMS links to the section explaining it.
+- **Fixed addresses.** A page can keep, in a language, a whole address that
+  does not follow the tree (`about-us.html`), typed in the new **Fixed
+  address** field of its edit screen: a site taken over keeps the addresses
+  search engines know. Rebuilds keep it, it travels in the export, and the
+  update to 2.2.0 adds `cms_page_i18n.fixed_url`.
+
+### Added (2.1.0)
+
+- **A document for each catalogue item.** A product, a category, a content
+  and a folder carry a document of sections in each language, written on the
+  content screen of a page (from a brief, by asking or by hand) and reached
+  from a **CMS content** tab of the edit screen of the item. A theme prints it
+  with `cms_item_content(type, id)`. The update to 2.1.0 adds the
+  `cms_item_content` and `cms_item_revision` tables (docs/adr/0011).
+- The documents of the catalogue items count as uses of their images and
+  components, travel in the export (section `catalogue_contents`) and go back
+  on import on the item with the same reference or address.
+- The preview of the document of an item shows the **whole page** of the item
+  with the draft in place, or the **content only**, without the header and the
+  footer of the theme. A list sets the width of the preview to a breakpoint of
+  the theme, as its toolkit does.
+
+### Changed (2.0.0)
+
+- A record or a picture the PHP class of a theme component takes
+  (`{# @prop productId product #}`, documented and not declared in
+  `{% props %}`) is required unless its type says `|null`: a product card
+  saved without its product rendered an empty card. Scalars the class takes
+  stay optional. A page holding such a section without the record keeps
+  rendering, and is refused at its next save until the record is picked.
+- **Blocks are gone.** The reusable blocks (**CMS > Blocks**) and the blocks
+  of catalogue items (the "Content block" card of a product, a category, a
+  brand or a store) are removed. Their tables are renamed by the update to
+  2.0.0, rows included: `cms_block`, `cms_block_i18n`, `cms_block_content` and
+  `cms_item_block` become `cms_legacy_block`, `cms_legacy_block_i18n`,
+  `cms_legacy_block_content` and `cms_legacy_item_block`, which the module
+  does not read. A theme that called `cms_item_block()` removes the call. An
+  export taken before the update keeps the blocks; a 2.0.0 module imports the
+  rest of the file and warns that the blocks were left out.
+- **Saved page templates are gone.** The **CMS > Templates** screen, the
+  `cms_page_template` table (renamed `cms_legacy_page_template` by the update
+  to 2.0.0, rows kept) and the code that
+  saved a page as a template and started a page from one. A page is started
+  from a brief, or duplicated from another page.
+- **The content of a 1.x site is not carried over.** The content of a page
+  is now a document — an ordered list of sections, each a component
+  of the catalogue with its props — rendered to HTML on save and on publish.
+  The markup the former editor stored has no document to be read back from, so
+  the update to 2.0.0 puts every page back to draft, without content,
+  and empties their revisions and search entries. Pages
+  keep their tree, addresses, SEO, tags and types. What the former editor
+  wrote is copied first to `cms_legacy_page_content` and
+  `cms_legacy_page_revision` (HTML, editor project, stylesheets), which the
+  module does not read. **Export the site before updating** all the same
+  (`php Thelia thelia_cms:export`): the file keeps the HTML, and a 2.0.0
+  module imports everything in it but the contents.
+- `cms_page_content` carries `draft_document` and
+  `published_document` and lose `draft_project_data`, `draft_css` and
+  `published_css`; `cms_page_revision` carries `document` and loses
+  `project_data` and `css`. A page has no stylesheet of its own any more: its
+  look comes from the components it is made of and from the stylesheets of the
+  site.
+- The export format is version 2: contents are `draft_document`, `draft_html`,
+  `published_document`, `published_html`. A version 1 file still imports its
+  pages, menus, forms, settings and media, with a warning that the contents
+  were left out.
+- `TheliaCMS\Page\PublishedPage` loses `css` and the `layout` deprecated in
+  1.2.0. A theme that printed `cms_page.css` removes the line.
+- The heading check (`heading_check_mode`) runs wherever a page goes online —
+  the editor, the settings screen, `thelia_cms:publish` — and no longer in the
+  editor alone. In `block` mode the writer refuses the page with
+  `HeadingStructureException`; in `warn` mode the editor still shows the
+  problems after publishing.
+- `CmsPageWriter::saveContent()` takes a
+  `TheliaCMS\Content\Document`; `BuilderContent` is gone. A document whose
+  sections name no component of the catalogue, or carry props a component
+  refuses, is rejected with `InvalidDocumentException` listing every problem.
+- Unpublishing a page drops its published snapshot along with the date.
+
+### Added (2.0.0)
+
+- **A page under Flexy is laid out like a content of the shop**
+  (docs/adr/0010): the module ships `templates/frontOffice/flexy/cmspage.html.twig`
+  with the heading band of the theme (title, summary, breadcrumb), the fields
+  of the page type, then the sections. Every template of a page draws its
+  title as the level 1 heading, the fallback of the module included: the
+  generator no longer writes an `<h1>` nor opens with a heading band, the
+  heading check reports a level 1 heading in the content of a page, and the
+  legal pages are seeded without one.
+- **A page type is a template of pages** (docs/adr/0009). Its screen under
+  **CMS > Page templates** (formerly **CMS > Settings > Page types**, the
+  same screen, now also in the menu) names it in each language, gives the brief
+  the generator reads before the brief of every page of the type, defines
+  the fields its pages carry (whole number, decimal, duration, short or long
+  text, yes or no, a word from a list, a date; with a unit, bounds, one value
+  per language for a text, required to publish) and creates its model page,
+  the demo content written like any page and never published. **Start a
+  page from a template** on the page list copies the model under the title
+  typed; the "Fields" tab of a page holds its values, which the generator
+  writes along with the content (a `fields` string in the envelope, checked
+  and sent back for correction like the props). A theme reads
+  `cms_page.fields.<code>`, `cms_page_fields(page)` and lists the pages of a
+  type with `cms_pages_of_type(type, {sort, direction, filter, limit})`; an
+  editor places the list with the **Pages of a type** section
+  (`Partial:cms-page-list`). The description of the types, the model flag
+  and the values travel with the site export. The update to 2.0.0 adds
+  `cms_page_type_i18n`, `cms_page_type.brief`, `brief_tone`,
+  `brief_audience` and `fields`, `cms_page.model` and `fields`, and
+  `cms_page_i18n.translated_fields`. A page of a type left without a
+  required value is refused at its publication, the model of a type always.
+- A section may carry an appearance besides its props: a background, a
+  colour of text (`#rrggbb`), room above and below (`small`, `medium`,
+  `large`) and an alignment. A brief or a change asks for it in words ("on a
+  pastel red background") and the generator writes the values; the
+  **Appearance** group of "Edit by hand" sets them too. Nothing else about
+  the look of a section can be set: the values are checked when the document
+  is read, a colour written otherwise is sent back to the model to be
+  corrected, and the module writes the style itself. A section with an
+  appearance is wrapped in a `div.cms-section-styled` of the whole width that
+  carries `data-cms-section` and the style; a section without one renders and
+  is stored as before. A heading a component colours itself (`text-black`)
+  keeps its colour. A translation keeps the appearance of each section of
+  the source, whatever the model writes back. In "Edit by hand", a colour
+  picker sits next to each colour field and writes into it.
+- "Edit by hand" and "Rewrite this section" open in a dialog rather than
+  under the section in the list.
+- **Components made in the back office.** **CMS > Components > New
+  component** asks the generator for a component in a prompt; the site checks
+  it, draws its sample in the theme at the width of a phone, a tablet or a
+  screen, and keeps it once the editor says so, after as many changes as
+  asked. A kept component is `Site:<Code>`, a component like any other:
+  offered to the generator of pages, edited by hand, on the toolkit page,
+  switched off on the list. It is props as data, a Twig template rendered in
+  a sandbox of its own and given the props alone, with no text of its own,
+  and a stylesheet scoped to the component and served at
+  `/cms/site-components.css`. A new version that would break the pages using
+  it is refused, the pages named; keeping one draws their drafts again. A
+  component in use cannot be deleted. Making one takes the settings and the
+  custom code permissions. Stored in `cms_component` (created by the update
+  to 2.0.0); the calls go in the ledger with the pages; the components
+  travel with the export of the site and are checked again on import.
+- A **Columns** section (`cms:columns`): two to four columns side by side,
+  each an image over an optional heading and a short text, as many columns as
+  items. The image is one of the media library or the `https` address of a
+  picture kept elsewhere; the text is written as text. The module draws it
+  with a grid of its own (`blocks.css`), one column on a narrow screen, so it
+  needs nothing from the theme. A brief asking for "three columns with a logo
+  and a short text" now has a section to write it in.
+- An **Image** section (`cms:image`): one picture on its own, of the media
+  library or the `https` address of a picture kept elsewhere, with an
+  optional caption and three widths (reading column by default, content,
+  whole screen).
+  Free text holds no image: a brief asking for "a photo of the tart out of
+  the oven" now has a section to put it in.
+- The generator says what a draft leaves out of the brief: an image the
+  media library does not hold and the brief gives no address of, a product
+  the search does not find, a page that could not be read. The answer
+  carries an optional `left_out` list, stored in a new column of
+  `cms_page_generation` (added by the update to 2.0.0), shown as a warning
+  that stays until it is closed when the draft comes back, in the history of
+  the page and by `thelia_cms:generate`. A brief asking for a photo the site
+  does not have used to give a page without it, and no word about it.
+- `thelia_cms:render` renders the drafts of pages again from their documents,
+  without publishing them (`--page`, `--all`, `--locale`): a change of the
+  module or of the theme reaches every draft at once instead of at its next
+  save. A draft whose custom code the new rendering would take out is left
+  alone and listed, the command holding nobody's right to it.
+- `thelia_cms:publish`, `thelia_cms:generate` and `thelia_cms:render` render a
+  page holding a component of the theme that reads its records through the
+  API (a product card): from the command line, it failed with "No current
+  request found", then "URL instance is not initialized". The commands run
+  the rendering as a visit to the address of the shop, `url_site` or `--url`;
+  without one, the page fails with a message naming them.
+- A theme names the classes it styles written text with,
+  `sections.richtext_class` in its `config/theliacms.yaml`, and free text
+  sections carry them next to `cms-richtext`: on Flexy, `wysiwyg
+  wysiwyg-theme` gives their lists and headings the look of the other texts
+  of the shop. A page saved before keeps its old rendering until its next
+  save or publication.
+- Once a page has a brief, the content screen recalls it in three lines,
+  with its tone and audience, and **Change the brief** opens the form in a
+  dialog: the room goes to the sections. A page without a brief keeps the
+  form in the screen.
+
+- A brief may cite web pages by their address: the generator offers the
+  `web_fetch` tool of the Claude API for that request, and the model reads
+  them before it writes (five pages at most, 20,000 tokens each). A brief
+  that cites none sends the request it always sent. The pages are read by
+  Anthropic, never by the server of the shop; the tool has to be allowed
+  for the organisation of the key, and **Read the web pages a brief cites**
+  in the Generator card of CMS > Settings turns it off (`generator_web_fetch`,
+  on by default). The history of the content screen lists the pages a call
+  read, with the tokens of each and what one reading costs; the ledger keeps
+  them in `cms_page_generation.web_pages`, which the update to 2.0.0 adds.
+- A theme gives a component the props it is shown with under
+  `sections.examples` of `config/theliacms.yaml`: the toolkit, the generator
+  and a section added by hand start from them. For a component whose defaults
+  render nothing, such as Flexy's `Organisms:VideoPlayer:Base`.
+- Hovering a section in the preview of the content screen shows **Edit**,
+  which opens the form of that section in the list.
+- **Add a section** in the preview of the content screen, after the last
+  section: a component the site offers is added at the end of the draft with its example props, then
+  edited by hand. A page with no content yet can be started that way, without
+  the generator.
+- The sections of a draft are **reordered by hand** on the content screen,
+  dragged by their handle or moved one place up or down with the arrows, with
+  the right to change pages. The move is
+  saved in the draft and written to the ledger like any change by hand.
+- **CMS > Components** lists the components of the catalogue, where each
+  comes from and how many pages use it, and switches one off for the
+  generator. A component switched off is left out of what the generator reads
+  and may write, except on a page that already uses it; pages keep rendering
+  it. `SectionCatalog::offered()` is the catalogue the site offers,
+  `SectionCatalog::all()` stays everything a page may name.
+- `TheliaCMS\Content`: `Document`, `Section`, `SectionDefinitionInterface`
+  (implementing it registers a component), `SectionProviderInterface`,
+  `SectionCatalog`, `Prop` and `PropSchema` (typed props, checked on the way
+  in, described as a JSON schema), `DocumentValidator`, `DocumentRenderer`,
+  and the one built-in component, `cms:richtext`, a piece of free markup held
+  at the width of the sections by `.cms-richtext`. See `docs/sections.md`.
+- Every partial of the site is a section, `Partial:<name>`, with the settings
+  of the partial as props and the placeholder the page serves through as
+  rendering.
+- A theme opens its Twig components to pages with `sections.components` in
+  `config/theliacms.yaml`; their props are read off the `{# @prop #}` comments
+  and the `{% props %}` tag of the template, and they render through the
+  component renderer of Symfony UX. Nothing is opened by default.
+- `cms_section(name, props)` renders a section from a template, with its
+  sample props when none are given. Every section of the catalogue is listed
+  on one page of the toolkit of the Flexy theme, under "CMS".
+- **The generator** (`TheliaCMS\Generation`): a page is written from a brief
+  by the Claude API, as a document constrained to the JSON schema of the
+  catalogue, validated and rendered by the site. The model reads the skills
+  and the catalogue (cached), may search the products, categories, pages and
+  images of the site, and sends an invalid document back once. Every call is
+  written to the ledger `cms_page_generation` with its tokens and an estimate
+  of its cost. The key is read from `ANTHROPIC_API_KEY`; the model, the effort
+  and the token limit are settings. Command `thelia_cms:generate`. See
+  `docs/generator.md`.
+- **The content screen** (`/admin/cms/pages/{id}/content`): the brief on the left, the draft on the right as the theme
+  shows it; a form to rewrite each section alone, one to ask a change on the
+  whole draft, the history of the calls with their cost, and the publish
+  button. The forms post in the background, the progress of the call is
+  streamed as server-sent events, and the screen is drawn again in place
+  when the call ends, without a reload; without the script, every action
+  still posts and comes back with a message. "Edit content" everywhere in
+  the back office now leads here rather than to the visual editor.
+- On the content screen, every section is also **edited by hand**: a form
+  read from the schema of its component, the `html` props in the editor of
+  the Tiptap module when it is there (`thelia/tiptap-module`, suggested),
+  lists as rows added and removed, images from the media library, references
+  from their picker. Stored through the writer like a generated document and
+  written to the ledger as a `manual` row, so the next request starts from
+  the corrected text. Costs nothing, takes the right to change pages. Saved
+  in the background, the screen drawn again in place with the panel open.
+- `GenerationTarget`: what the generator writes for, a page.
+  `GenerationObserverInterface` reports each turn to whoever listens.
+- **Skills**: the instructions the generator reads, shipped as
+  `skills/<code>/SKILL.md` by the module (five) and the theme, sown into
+  `cms_skill` at the first read and edited there by the site, under
+  **CMS > Skills** (the settings right): rewrite, switch off, reorder, put
+  the shipped text back.
+- The **Generator** card of CMS > Settings: the model, the effort and the
+  token limit.
+- The answer of the API is read as a stream: the screen shows how much of
+  the document is written as it comes (`GenerationObserverInterface::onText`,
+  event `delta`). Measured on 2026-10-20: an answer constrained to the schema
+  is delivered by the API in a burst at the end of the turn (first delta at
+  4.3 s, last at 5.3 s on a 5.3 s call), so the turns stay the progress a
+  reader sees; the stream pays off on the day the API sends constrained
+  answers as they are written.
+- The tool `search_forms`, so a contact page finds the form of the site
+  rather than guessing its id.
+- An `image` prop holds the id of a library image or the `https://` address
+  of a picture kept elsewhere; the hand-edit form previews the picture,
+  replaces it by a file that joins the media library, or takes an address.
+- **The components of the theme come first.** A `@prop` of a theme
+  component may name what the site holds — `image`, `product`, `category`,
+  `folder`, `form`, `menu`, or a list such as `product[]` — and the
+  parameters the PHP class of the component takes (`productIds`) are read
+  when they are documented; the component receives ids, as a template of the
+  theme would pass them. The theme puts the module's sections it replaces
+  away under `sections.hidden` of `config/theliacms.yaml`, and the
+  `catalogue` skill sends the model to a component of the theme before a
+  block of the module. With that, Flexy's `Layouts:CrossSelling`,
+  `Organisms:VideoPlayer`, `Organisms:CategoryCard` and the like are used on
+  a page as they are, without a theme template over a partial of the module.
+- The toolkit of the Flexy theme gets a page with every section of the
+  catalogue (`/toolkit/cms-all-sections`, `cms_catalogue()` in Twig), and
+  the content screen links to it in debug, so a brief names what it wants.
+  Every CMS story of the toolkit now loads the stylesheet of the sections.
+- On the content screen: the brief the page was last written from is back
+  in its form (the ledger keeps it, column `brief` of `cms_page_generation`);
+  every section has a number, a button that scrolls the preview to it and a
+  button that removes it; the preview and the list point at each other. A
+  page that holds a draft in another language and nothing in this one offers
+  to be written from that draft (`GenerationRequest::translation`, kind
+  `translation` in the ledger) rather than announcing an empty page. The
+  renderer marks the first element of every section with
+  `data-cms-section="<id>"`.
+- `docs/adr/`: the eight decisions behind the generation of pages;
+  `docs/evaluation/`: ten briefs, a rubric and the scores of the shipped
+  skills (7.1 / 8 on 2026-10-20).
+- The right `admin.cms.generate`, given to the seeded editor profile.
+- The module requires `anthropic-ai/sdk` and `nyholm/psr7`.
+
+### Removed (2.0.0)
+
+- **The visual page builder** (GrapesJS, `openstudio/page-builder-bundle`):
+  the screens `/admin/cms/pages/{id}/builder` and
+  `/admin/cms/blocks/{id}/builder`, their bundled editor, the routes
+  `openstudio_page_builder_image_*` the editor uploaded and listed images
+  with (the media screens of the module have their own), the "Blocks offered
+  in the editor" card of the settings with the `disabled_blocks` setting (the
+  catalogue a page is made of is the allowlist of the theme, see
+  `docs/sections.md`), the canvas stylesheet of the theme
+  (`config/theliacms.yaml` key `editor`, `builder_stylesheet`) and
+  `docs/editor-canvas.md`. The module needs no npm build any more.
+- `TheliaCMS\Builder`: `CmsBuilderConfig`, `ThemeCanvas`, `ActiveThemeCanvas`,
+  `CanvasStylesheetProviderInterface`, `BlockCatalog`, `CoreBlockCatalog`,
+  `CatalogBlock`, `CatalogBlockProviderInterface`, `EditorBaseBlocks`,
+  `Admin\CmsPageBuilderController`, `Admin\CmsPageContentType`;
+  `TheliaCMS\Block\Admin\CmsBlockBuilderController`;
+  `TheliaCMS\Media\LibraryImageUploader`, `LibraryImageCatalog`,
+  `Admin\CmsMediaController`; `TheliaCMS\Settings\DisabledBlocks` and
+  `CmsSettings::disabledBlocks()`; `PartialRegistry::toEditor()`;
+  `PageContentNormalizer::css()`. The export format no longer carries
+  `disabled_blocks`; a file that does is read without it.
+- The site styles screen (`/admin/cms/settings/styles`, closed since 1.4.0)
+  and the colour palette of the editor (`builder_palette`). The typography
+  of the site is still served (`SiteStyles::typography()`).
+- The webmaster guide (`docs/guide/`, PDF and screenshots): it described the
+  editor of 1.x. A guide for the content screen is to come.
+- **Blocks**: `TheliaCMS\Block` (screens, writers, repositories, the hook of
+  the "Content block" card, the purge on deletion of an item), the models
+  `CmsBlock*` and `CmsItemBlock*`, `Generation\Admin\CmsBlockContentController`,
+  `Preview\CmsBlockPreviewController` and `PreviewLink::urlForBlock()`, the
+  Twig function `cms_item_block()`, the source `admin.cms.partials.sources.blocks`
+  and the `block` type of a `@prop`, `GenerationTarget::block()` and the
+  components a target excludes, `CacheTags::block()` and `::item()`,
+  `PartialCache::invalidateBlocks()`, the blocks of the export format.
+- The partials a component of the theme replaces: `Partial:cms-block`,
+  `Partial:product-card`, `Partial:product-strip`, `Partial:category-card`,
+  `Partial:category-strip` and `Partial:video-facade`, with their templates,
+  their styles in `blocks.css`, `Partial\Catalogue\ProductSummary`,
+  `ProductCardPrice`, `CategorySummary`, `CatalogueImage` and the image
+  source `admin.cms.partials.sources.images`. A product, a category or a
+  video on a page is a component of the theme (`sections.components`).
+- **The page blocks of the module** (hero, text and image, call to action,
+  quote, testimonials, key figures, logos, gallery, questions and answers,
+  section) have no section of their own: a page is built from the
+  components the theme opens, free text (`cms:richtext`) and live content.
+  `blocks.css` keeps the styles of the free text, the partials and the forms.
+  A module adds a component by implementing `SectionDefinitionInterface`
+  (see `docs/creating-a-component.md`); there is no `AbstractTemplateSection`
+  and no `cms/sections/<slug>.html.twig` to take over.
+- The click-to-load embeds: `Partial:map-facade` and `Partial:social-facade`
+  (`MapFacadePartial`, `SocialFacadePartial`), the shared `_facade.html.twig`
+  and its script, and their styles. A map or a social post on a page is a
+  component of the theme. An iframe written in a page is still refused unless
+  the author may write custom code.
+- `Partial:latest-contents` and `Partial:cms-menu` (`LatestContentsPartial`,
+  `MenuPartial`), with their templates and their styles. The live content of
+  the module is a form; the latest news or a menu on a page is a component of
+  the theme. `cms_menu()`, the footer menu hook and the menus themselves are
+  untouched.
+- Saved page templates: `ImportExport\Admin\CmsTemplateAdminController`,
+  `PageTemplateWriter`, `SaveAsTemplateType`, `PageFromTemplateType`, the
+  models `CmsPageTemplate*`, `SiteExporter::exportPage()` and
+  `SiteImporter::importPageFrom()`. `Page\PageTemplateResolver`, which picks
+  the Twig template of a page by its type, is unrelated and stays.
+- The pipeline a page goes through before it is stored or published moves
+  from `TheliaCMS\Builder` to `TheliaCMS\Content\Pipeline`:
+  `HeadingChecker`, `EmptyContentChecker`, `PlaceholderContentChecker`,
+  `ImageRewriter`, `PublishedContentSanitizer`, `PageContentNormalizer`.
+
+### Added (1.6.0)
 
 - Twig function `cms_is_home(id)`: tells whether a page is the one the module
   shows as the home page.
-
-## [1.5.0] - 2026-10-20
-
-The versions 1.1 to 1.4 were developed on the way but not tagged: this release carries all of them.
 
 ### Added (1.5.0)
 
@@ -237,35 +1117,6 @@ The versions 1.1 to 1.4 were developed on the way but not tagged: this release c
   nothing else: a page that already holds the block keeps it, previewed and
   editable in the editor, rendered on the front. The list travels with the
   site export as `disabled_blocks`.
-
-### Changed
-
-- The constructor of `PublishedPage` takes `string $pageType` where it took
-  `PageLayout $layout`. The module is the only one meant to build that object;
-  a hook reading `$layout` keeps working.
-- Saving the settings of a page drops it from the shared cache. Its type, its
-  title and its SEO fields are live as soon as they are saved, and a cached copy
-  kept showing the previous ones until it expired.
-
-### Deprecated
-
-- `CmsPageRenderer::THEME_TEMPLATE` and `MODULE_TEMPLATE`: the template of a
-  page now depends on its type, which `PageTemplateResolver` resolves. Both go
-  in 2.0.0.
-- `PublishedPage::$layout` and the `PageLayout` enum, replaced by
-  `PublishedPage::$pageType`. `layout` is still filled for the hooks written
-  against 1.x, from the type: `full-width` and `landing` read as before, any
-  other type as `Default`. Both go in 2.0.0.
-
-### Fixed
-
-- The media screen counted a page once per language using an image, so an
-  image on a page in French and English read "Used in 2 page(s)".
-
-## [1.0.0] - 2026-10-02
-
-### Added
-
 - A theme declares the canvas of the editor in `config/theliacms.yaml`: the
   stylesheets it loads, written the way its templates pass them to `asset()`,
   and the classes of `<html>`, `<body>` and of the container around the page
@@ -340,6 +1191,12 @@ The versions 1.1 to 1.4 were developed on the way but not tagged: this release c
 
 ### Changed
 
+- The constructor of `PublishedPage` takes `string $pageType` where it took
+  `PageLayout $layout`. The module is the only one meant to build that object;
+  a hook reading `$layout` keeps working.
+- Saving the settings of a page drops it from the shared cache. Its type, its
+  title and its SEO fields are live as soon as they are saved, and a cached copy
+  kept showing the previous ones until it expired.
 - Every write of the back office under `/admin/cms` requires the back-office
   token, in the `_token` field of the body or in the `X-CSRF-Token` header. A
   script of your own that posts to these routes now gets a 403 until it sends
@@ -355,8 +1212,20 @@ The versions 1.1 to 1.4 were developed on the way but not tagged: this release c
 - A site of fewer than forty pages opens whole, so nothing changes for a site that
   never needed folding.
 
+### Deprecated
+
+- `CmsPageRenderer::THEME_TEMPLATE` and `MODULE_TEMPLATE`: the template of a
+  page now depends on its type, which `PageTemplateResolver` resolves. Both go
+  in 2.0.0.
+- `PublishedPage::$layout` and the `PageLayout` enum, replaced by
+  `PublishedPage::$pageType`. `layout` is still filled for the hooks written
+  against 1.x, from the type: `full-width` and `landing` read as before, any
+  other type as `Default`. Both go in 2.0.0.
+
 ### Fixed
 
+- The media screen counted a page once per language using an image, so an
+  image on a page in French and English read "Used in 2 page(s)".
 - The page form no longer raises a Symfony deprecation each time it is built.
   Its canonical URL field left the default scheme unset; a canonical address
   typed without its scheme is now read as `https://`, as in SEOne.
@@ -672,7 +1541,4 @@ the published pages.
 - The breadcrumb of a page filed under a draft one offered a link to that page,
   which answers 404, both to the reader and in the `BreadcrumbList`.
 
-[Unreleased]: https://github.com/thelia-modules/TheliaCMS/compare/1.5.0...HEAD
-[1.5.0]: https://github.com/thelia-modules/TheliaCMS/compare/1.0.0...1.5.0
-[1.0.0]: https://github.com/thelia-modules/TheliaCMS/compare/1.0.0-alpha.1...1.0.0
 [1.0.0-alpha.1]: https://github.com/thelia-modules/TheliaCMS/releases/tag/1.0.0-alpha.1

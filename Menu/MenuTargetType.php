@@ -25,6 +25,8 @@ enum MenuTargetType: string
     case Page = 'page';
     case Content = 'content';
     case Folder = 'folder';
+    case Category = 'category';
+    case Product = 'product';
     case Url = 'url';
     /** A heading in the menu: a label, no link. */
     case None = 'none';
@@ -40,7 +42,7 @@ enum MenuTargetType: string
      */
     public function needsTargetId(): bool
     {
-        return \in_array($this, [self::Page, self::Content, self::Folder], true);
+        return \in_array($this, [self::Page, self::Content, self::Folder, self::Category, self::Product], true);
     }
 
     /**
@@ -54,6 +56,8 @@ enum MenuTargetType: string
             self::Page => 'cms_page',
             self::Content => 'content',
             self::Folder => 'folder',
+            self::Category => 'category',
+            self::Product => 'product',
             self::Url => 'url',
             self::None => 'cms_menu_item',
         };
@@ -68,6 +72,8 @@ enum MenuTargetType: string
             self::Page => 'CMS page',
             self::Content => 'Content',
             self::Folder => 'Folder',
+            self::Category => 'Category',
+            self::Product => 'Product',
             self::Url => 'Web address',
             self::None => 'Label only',
         };

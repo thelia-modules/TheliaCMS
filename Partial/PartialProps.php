@@ -37,7 +37,7 @@ final readonly class PartialProps
     /**
      * @param array<string, mixed> $raw settings as they were stored in the page
      *
-     * @return array<string, string|int|bool|null>
+     * @return array<string, string|int|bool|list<int>|null>
      *
      * @throws MissingPartialPropException when a required setting has no usable value
      */
@@ -48,14 +48,10 @@ final readonly class PartialProps
         foreach ($definition->props() as $prop) {
             $value = $this->coerce($prop, $raw[$prop->name] ?? null);
 
-            if (null === $value && $prop->required) {
+            if ((null === $value || [] === $value) && $prop->required) {
                 // Read by an editor in the canvas, so it names the setting the
                 // way the settings panel does rather than by its key.
-                throw new MissingPartialPropException($this->translator->trans(
-                    'Choose a value for "%setting%" to show this block.',
-                    ['%setting%' => $prop->label],
-                    TheliaCMS::DOMAIN_NAME,
-                ));
+                throw new MissingPartialPropException($this->translator->trans('Choose a value for "%setting%" to show this block.', ['%setting%' => $prop->label], TheliaCMS::DOMAIN_NAME));
             }
 
             $values[$prop->name] = $value;
@@ -64,8 +60,15 @@ final readonly class PartialProps
         return $values;
     }
 
-    private function coerce(PartialProp $prop, mixed $value): string|int|bool|null
+    /**
+     * @return string|int|bool|list<int>|null
+     */
+    private function coerce(PartialProp $prop, mixed $value): string|int|bool|array|null
     {
+        if (PartialPropType::References === $prop->type) {
+            return $this->references($prop, $value);
+        }
+
         if (\is_array($value) || \is_object($value)) {
             return $this->fallback($prop);
         }
@@ -77,6 +80,38 @@ final readonly class PartialProps
             PartialPropType::Choice => $this->choice($prop, $value),
             PartialPropType::Reference => $this->reference($prop, $value),
         };
+    }
+
+    /**
+     * The ids of the records, in the order they were picked, each one once,
+     * cut at the most the partial takes. A row is `{<itemName>: id}` as the
+     * document stores it, or a bare id; anything that is no id is dropped.
+     *
+     * @return list<int>
+     */
+    private function references(PartialProp $prop, mixed $value): array
+    {
+        if (!\is_array($value)) {
+            return [];
+        }
+
+        $ids = [];
+
+        foreach ($value as $row) {
+            $candidate = \is_array($row) ? ($row[$prop->itemName ?? 'id'] ?? null) : $row;
+
+            if (!is_numeric($candidate) || (int) $candidate <= 0 || (float) $candidate !== (float) (int) $candidate) {
+                continue;
+            }
+
+            $id = (int) $candidate;
+
+            if (!\in_array($id, $ids, true)) {
+                $ids[] = $id;
+            }
+        }
+
+        return \array_slice($ids, 0, $prop->max ?? 12);
     }
 
     private function text(PartialProp $prop, mixed $value): ?string

@@ -15,13 +15,14 @@ declare(strict_types=1);
 namespace TheliaCMS\Partial;
 
 use Psr\Log\LoggerInterface;
+use TheliaCMS\Content\DocumentRenderer;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Http\ShownTags;
 
 /**
  * Replaces the placeholders a page stores with what the server renders for them.
  *
- * A page holds `<div data-cms-partial="latest-contents" data-props='{"count":3}'></div>`
+ * A page holds `<div data-cms-partial="cms-form" data-props='{"form":3}'></div>`
  * and nothing else — no markup, no template path. The name is resolved against
  * the registry, the props against the definition, and only then is a template
  * rendered: a page can therefore never name a file, and an unknown block
@@ -29,9 +30,9 @@ use TheliaCMS\Http\ShownTags;
  */
 final readonly class PartialRenderer
 {
-    private const string ATTRIBUTE = 'data-cms-partial';
+    public const string ATTRIBUTE = 'data-cms-partial';
 
-    private const string PROPS_ATTRIBUTE = 'data-props';
+    public const string PROPS_ATTRIBUTE = 'data-props';
 
     public function __construct(
         private PartialRegistry $registry,
@@ -163,8 +164,20 @@ final readonly class PartialRenderer
             return;
         }
 
+        $section = $placeholder->getAttribute(DocumentRenderer::SECTION_ATTRIBUTE);
+
         foreach (iterator_to_array($rendered->childNodes) as $child) {
-            $parent->insertBefore($document->importNode($child, true), $placeholder);
+            $imported = $document->importNode($child, true);
+
+            // The placeholder goes with the section it was marked as: the
+            // first element rendered carries the mark instead, so the content
+            // screen can still point at the section in the preview.
+            if ('' !== $section && $imported instanceof \DOMElement) {
+                $imported->setAttribute(DocumentRenderer::SECTION_ATTRIBUTE, $section);
+                $section = '';
+            }
+
+            $parent->insertBefore($imported, $placeholder);
         }
 
         $parent->removeChild($placeholder);

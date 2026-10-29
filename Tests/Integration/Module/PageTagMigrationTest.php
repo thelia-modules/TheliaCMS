@@ -25,6 +25,10 @@ use TheliaCMS\TheliaCMS;
  * Runs outside a transaction: an ALTER TABLE commits on its own, so a rollback
  * would undo nothing and the test would prove nothing. The schema is put back
  * the way 1.2.0 left it, the update is played, then checked.
+ *
+ * A column is dropped with ALGORITHM=COPY: MariaDB drops it instantly
+ * otherwise and keeps it in the rows, so about thirty runs leave the table
+ * refusing the column back ("Row size too large").
  */
 final class PageTagMigrationTest extends CmsIntegrationTestCase
 {
@@ -90,7 +94,7 @@ final class PageTagMigrationTest extends CmsIntegrationTestCase
     {
         $connection = $this->getPropelConnection();
         $connection->exec('ALTER TABLE cms_page DROP FOREIGN KEY fk_cms_page_tag');
-        $connection->exec('ALTER TABLE cms_page DROP COLUMN tag_id');
+        $connection->exec('ALTER TABLE cms_page DROP COLUMN tag_id, ALGORITHM=COPY');
         $connection->exec('DROP TABLE cms_tag');
     }
 

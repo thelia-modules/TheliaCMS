@@ -16,14 +16,16 @@ namespace TheliaCMS\Settings;
 
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Core\Hook\Theme\ThemeHookInterface;
+use TheliaCMS\Content\Site\SiteComponentStyles;
 use TheliaCMS\Front\BlockStyles;
 
 /**
  * Links the stylesheets of the CMS into the head of every page.
  *
- * Two of them, and the order is the whole point of writing them from one place
+ * Three of them, and the order is the whole point of writing them from one place
  * rather than from two hooks racing on priorities: the socle of the block
- * catalogue first, then the choices the site made in the back office, so a
+ * catalogue first, the components the site made in the back office next, then
+ * the choices the site made in the back office, so a
  * configured colour wins over the default of a block. The stylesheet of the
  * theme is linked before both by the theme itself, so a theme that restyles
  * the catalogue keeps the upper hand.
@@ -40,6 +42,7 @@ final readonly class SiteStylesThemeHook implements ThemeHookInterface
         private SiteStyles $styles,
         private BlockStyles $blocks,
         private UrlGeneratorInterface $urls,
+        private ?SiteComponentStyles $components = null,
     ) {
     }
 
@@ -57,6 +60,14 @@ final readonly class SiteStylesThemeHook implements ThemeHookInterface
         $links = [
             $this->urls->generate('cms.block_styles', ['v' => $this->blocks->version()]),
         ];
+
+        // The components the site made come after the blocks, before the
+        // choices of the site, and only when one of them has styles.
+        $componentStyles = $this->components?->css() ?? '';
+
+        if ('' !== $componentStyles) {
+            $links[] = $this->urls->generate('cms.site_component_styles', ['v' => SiteComponentStyles::versionOf($componentStyles)]);
+        }
 
         if (!$this->styles->typography()->isEmpty()) {
             $links[] = $this->urls->generate('cms.site_styles', ['v' => $this->styles->version()]);

@@ -20,6 +20,7 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\Forms;
 use Symfony\Component\Validator\Validation;
 use TheliaCMS\Page\Admin\CmsPageType;
+use TheliaCMS\Page\Field\FieldDefinitions;
 
 /**
  * The page form is built on every screen that edits a page: building it must not
@@ -115,6 +116,33 @@ final class CmsPageTypeTest extends TestCase
 
         self::assertFalse($form->isValid());
         self::assertArrayHasKey('imageUpload', $form->getExtraData());
+    }
+
+    public function testTheFieldsOfTheTypeAreWidgetsNamedByTheirCode(): void
+    {
+        $form = $this->createForm([
+            'field_locale' => 'fr_FR',
+            'field_definitions' => FieldDefinitions::fromArray([
+                ['code' => 'servings', 'kind' => 'integer', 'labels' => ['fr_FR' => 'Personnes'], 'required' => true],
+                ['code' => 'vegetarian', 'kind' => 'boolean'],
+                ['code' => 'difficulty', 'kind' => 'choice', 'choices' => ['facile', 'moyen']],
+                ['code' => 'day', 'kind' => 'date'],
+            ]),
+        ]);
+
+        self::assertSame(['servings', 'vegetarian', 'difficulty', 'day'], array_keys($form->get('fields')->all()));
+        self::assertSame('Personnes', $form->get('fields')->get('servings')->getConfig()->getOption('label'));
+        self::assertFalse($form->get('fields')->get('servings')->isRequired(), 'A draft is saved without its required values: publishing asks for them.');
+
+        $form->submit(['fields' => ['servings' => '4', 'vegetarian' => '1', 'difficulty' => 'moyen', 'day' => '2026-12-24']], false);
+
+        self::assertTrue($form->get('fields')->isValid());
+        self::assertSame(['servings' => 4, 'vegetarian' => true, 'difficulty' => 'moyen', 'day' => '2026-12-24'], $form->get('fields')->getData());
+    }
+
+    public function testAPageOfATypeWithoutFieldsHasNoneToFill(): void
+    {
+        self::assertSame([], $this->createForm()->get('fields')->all());
     }
 
     /**

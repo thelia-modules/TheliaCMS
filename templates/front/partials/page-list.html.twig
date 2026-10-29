@@ -1,0 +1,48 @@
+{#
+    The pages online of a type, as the module renders them when the theme
+    ships no `cms/partials/page-list.html.twig` of its own.
+
+    Plain markup with `cms-*` class names only: the theme owns the
+    appearance. A theme writing its own reads `pages`, each one a `card`
+    (TheliaCMS\Page\PageCard: title, url, chapo, image, fields) and the
+    `fields` of the card written for a visitor.
+#}
+<section class="cms-page-list cms-page-list--{{ type.code }}">
+    {% if title %}
+        <h2 class="cms-page-list__title">{{ title }}</h2>
+    {% endif %}
+
+    {% if pages is empty %}
+        <p class="cms-page-list__empty">{{ empty_message }}</p>
+    {% else %}
+        <ul class="cms-page-list__items">
+            {% for item in pages %}
+                {% set card = item.card %}
+                <li class="cms-page-list__item">
+                    <article class="cms-page-card">
+                        {% if card.image %}
+                            <img class="cms-page-card__image" src="{{ card.image.url }}" alt="{{ card.image.alt ?? '' }}"
+                                 {% if card.image.width %}width="{{ card.image.width }}"{% endif %}
+                                 {% if card.image.height %}height="{{ card.image.height }}"{% endif %}
+                                 loading="lazy" decoding="async">
+                        {% endif %}
+                        <h3 class="cms-page-card__title"><a class="cms-page-card__link" href="{{ card.url }}">{{ card.title }}</a></h3>
+                        {% if item.fields is not empty %}
+                            <dl class="cms-page-card__fields">
+                                {% for field in item.fields %}
+                                    <div class="cms-page-card__field cms-page-card__field--{{ field.code }}">
+                                        <dt>{{ field.label }}</dt>
+                                        <dd>{{ field.text }}</dd>
+                                    </div>
+                                {% endfor %}
+                            </dl>
+                        {% endif %}
+                        {% if card.chapo %}
+                            <div class="cms-page-card__summary">{{ card.chapo|raw }}</div>
+                        {% endif %}
+                    </article>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>

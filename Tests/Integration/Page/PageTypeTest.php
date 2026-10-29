@@ -18,7 +18,6 @@ use TheliaCMS\Http\CachePurgerInterface;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\ImportExport\ImportOptions;
 use TheliaCMS\ImportExport\SiteDocument;
-use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\ImportExport\SiteImporter;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
@@ -32,6 +31,7 @@ use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Page\PageTypeWriter;
 use TheliaCMS\Page\PublishedPage;
 use TheliaCMS\Page\PublishedPageRepository;
+use TheliaCMS\Partial\Definition\PageListPartial;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 
 /**
@@ -159,7 +159,7 @@ final class PageTypeTest extends CmsIntegrationTestCase
 
             $html = $this->getService(CmsPageRenderer::class)->render($this->published($page));
 
-            self::assertStringContainsString(\sprintf('<main data-type-template="%s"><p>Recette</p></main>', $code), $html);
+            self::assertStringContainsString(\sprintf('<main data-type-template="%s"><div class="cms-page-content"><div data-cms-section="content" class="%s"><p>Recette</p></div></div></main>', $code, $this->richTextClass()), $html);
         } finally {
             unlink($file);
         }
@@ -205,7 +205,7 @@ final class PageTypeTest extends CmsIntegrationTestCase
 
         // The page alone, and the lists of pages that may show its type: not
         // the tags every page of the site is filed under.
-        self::assertSame([CacheTags::PAGE_LISTS, CacheTags::page((int) $page->getId())], $purger->purged);
+        self::assertSame([CacheTags::partial(PageListPartial::NAME), CacheTags::page((int) $page->getId())], $purger->purged);
     }
 
     public function testAFileWrittenBeforePageTypesKeepsTheLayoutOfItsPages(): void
@@ -243,42 +243,17 @@ final class PageTypeTest extends CmsIntegrationTestCase
         self::assertCount(1, $report->warnings());
     }
 
-    /**
-     * Starting a page needs the right to write pages, not the right to change
-     * the settings: a template cannot bring back a type the site dropped.
-     */
-    public function testAPageStartedFromATemplateWhoseTypeIsGoneGetsTheDefaultType(): void
-    {
-        $page = $this->createPage('Modèle de recette');
-        $document = $this->exportedWithType($page, pageType: 'type-dropped-since');
-
-        $created = $this->getService(SiteImporter::class)->importPageFrom(SiteDocument::fromArray($document), 0, 'Nouvelle recette', $this->locale());
-
-        self::assertSame(PageTypeCode::DEFAULT, $created->getPageType());
-        self::assertFalse($this->types()->exists('type-dropped-since'));
-    }
-
     public function testAnImportedTypeThatIsNotAStringIsTheDefaultType(): void
     {
         $page = $this->createPage('Gratin de pâtes');
         $page->setPageType('landing')->save();
-        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        $document = $this->exportedPage($page);
         $document['pages'][0]['page_type'] = ['recipe'];
 
         $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
 
         self::assertSame(PageTypeCode::DEFAULT, $this->reloaded($page)->getPageType());
         self::assertCount(1, $report->warnings());
-    }
-
-    public function testAPageStartedFromATemplateSavedBeforePageTypesGetsItsLayout(): void
-    {
-        $page = $this->createPage('Modèle de recette');
-        $document = $this->exportedWithType($page, legacyLayout: 'full-width');
-
-        $created = $this->getService(SiteImporter::class)->importPageFrom(SiteDocument::fromArray($document), 0, 'Nouvelle recette', $this->locale());
-
-        self::assertSame('full-width', $created->getPageType());
     }
 
     /**
@@ -289,7 +264,7 @@ final class PageTypeTest extends CmsIntegrationTestCase
      */
     private function exportedWithType(CmsPage $page, ?string $pageType = null, ?string $legacyLayout = null): array
     {
-        $document = $this->getService(SiteExporter::class)->exportPage($page);
+        $document = $this->exportedPage($page);
 
         if (null !== $legacyLayout) {
             unset($document['pages'][0]['page_type']);

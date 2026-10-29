@@ -18,7 +18,6 @@ use TheliaCMS\Http\CachePurgerInterface;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\ImportExport\ImportOptions;
 use TheliaCMS\ImportExport\SiteDocument;
-use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\ImportExport\SiteImporter;
 use TheliaCMS\Menu\CmsMenuProvider;
 use TheliaCMS\Menu\MenuCache;
@@ -30,6 +29,7 @@ use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\PageDraft;
 use TheliaCMS\Partial\Definition\FormPartial;
+use TheliaCMS\Partial\Definition\PageListPartial;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\TheliaCMS;
 
@@ -77,7 +77,7 @@ final class PageInvalidationTest extends CmsIntegrationTestCase
 
         $this->writer->publish($page, $this->locale());
 
-        self::assertSame([CacheTags::PAGE_LISTS, CacheTags::page((int) $page->getId())], $this->purger->purged);
+        self::assertSame([CacheTags::partial(PageListPartial::NAME), CacheTags::page((int) $page->getId())], $this->purger->purged);
     }
 
     public function testPublishingAgainAPageAMenuLinksToLeavesTheMenus(): void
@@ -219,20 +219,21 @@ final class PageInvalidationTest extends CmsIntegrationTestCase
 
         $this->writer->move($page, -1);
 
-        self::assertSame([CacheTags::PAGE_LISTS], $this->purger->purged);
+        self::assertSame([CacheTags::partial(PageListPartial::NAME)], $this->purger->purged);
     }
 
     /**
-     * Pages, blocks, menus, forms and settings come from the file: any page of the
+     * Pages, menus, forms and settings come from the file: any page of the
      * site may have changed, and nothing says which.
      */
     public function testAnImportDropsTheWholeSite(): void
     {
-        $document = $this->getService(SiteExporter::class)->exportPage($this->createPage('Gratin de pâtes'));
+        $document = $this->exportedPage($this->createPage('Gratin de pâtes'));
 
         $this->purgingWith(SiteImporter::class, $this->purger)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
 
         self::assertContains(CacheTags::SITE, $this->purger->purged);
+        self::assertContains(CacheTags::partial(PageListPartial::NAME), $this->purger->purged);
         self::assertContains(CacheTags::partial(FormPartial::NAME), $this->purger->purged);
     }
 

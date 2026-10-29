@@ -131,11 +131,46 @@ final readonly class SiteDocument
     }
 
     /**
+     * The blocks a file written before they were removed carries, read only
+     * to say they were left out.
+     *
      * @return list<array<string, mixed>>
      */
     public function blocks(): array
     {
         return $this->rowsOf('blocks');
+    }
+
+    /**
+     * The page types the file describes as templates. Files written before
+     * 2.0.0 carry none.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function pageTypes(): array
+    {
+        return $this->rowsOf('page_types');
+    }
+
+    /**
+     * The components the site made in the back office.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function components(): array
+    {
+        return $this->rowsOf('components');
+    }
+
+    /**
+     * The documents of the catalogue items, each with the key its item is
+     * found by on this site. A file written before 2.1.0 has none.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function catalogueContents(): array
+    {
+        return $this->rowsOf('catalogue_contents');
     }
 
     /**
@@ -194,6 +229,24 @@ final readonly class SiteDocument
         $value = $this->document['module_version'] ?? null;
 
         return \is_string($value) ? $value : null;
+    }
+
+    /**
+     * The version of the file format, checked readable when the document was
+     * built.
+     */
+    public function formatVersion(): int
+    {
+        return (int) ($this->document['version'] ?? 0);
+    }
+
+    /**
+     * Whether the contents of pages in this file are documents this
+     * module can read, rather than the markup of the former editor.
+     */
+    public function carriesDocuments(): bool
+    {
+        return $this->formatVersion() >= ExportFormat::FIRST_VERSION_WITH_DOCUMENTS;
     }
 
     /**

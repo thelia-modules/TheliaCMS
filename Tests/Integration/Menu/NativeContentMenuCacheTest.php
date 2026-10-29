@@ -16,7 +16,7 @@ namespace TheliaCMS\Tests\Integration\Menu;
 
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Event\Content\ContentToggleVisibilityEvent;
-use Thelia\Core\Event\Folder\FolderUpdateEvent;
+use Thelia\Core\Event\Product\ProductUpdateEvent;
 use Thelia\Core\Event\TheliaEvents;
 use TheliaCMS\Http\CachePurgerInterface;
 use TheliaCMS\Http\CacheTags;
@@ -75,18 +75,18 @@ final class NativeContentMenuCacheTest extends CmsIntegrationTestCase
     }
 
     /**
-     * Dropping the menus drops every page of the site: a folder no menu links
-     * to leaves them. The event names the folder by its id alone, as the core
-     * builds it for an update.
+     * A catalogue import writes thousands of products: dropping the menus,
+     * and with them every page of the site, for each of them empties the
+     * shared cache for nothing.
      */
-    public function testAFolderNoMenuLinksToLeavesTheSharedCache(): void
+    public function testAProductNoMenuLinksToLeavesTheSharedCache(): void
     {
         $factory = $this->createFixtureFactory();
         $content = $factory->content($factory->folder(), ['locale' => $this->locale(), 'title' => 'Notre histoire']);
         $this->linkFromTheMainMenu('content', (int) $content->getId());
-        $event = new FolderUpdateEvent(999999);
+        $event = new ProductUpdateEvent(999999);
 
-        $this->listenerPurgingWith($purger = $this->recordingPurger())->onFolderChange($event);
+        $this->listenerPurgingWith($purger = $this->recordingPurger())->onProductChange($event);
 
         self::assertSame([], $purger->purged);
     }

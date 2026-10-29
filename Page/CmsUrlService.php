@@ -65,18 +65,56 @@ final class CmsUrlService
     {
         $page->setLocale($locale);
 
-        $segment = $this->normalizeSegment($requestedSlug ?? (string) $page->getTitle());
+        $fixed = $this->fixedAddressOf($page, $locale);
 
-        if ('' === $segment) {
-            $segment = 'page-'.$page->getId();
+        // A fixed address is the address, as it was typed: no ancestor prefix,
+        // no slugifying. The slug is still kept, for the day it is cleared.
+        if (null !== $fixed) {
+            $this->assertFree($fixed, (int) $page->getId(), $locale);
+
+            if (null !== $requestedSlug && '' !== ($segment = $this->normalizeSegment($requestedSlug))) {
+                $page->setSlug($segment)->save();
+            }
+
+            $page->setRewrittenUrl($locale, $fixed);
+
+            return $fixed;
         }
 
-        $url = $this->makeUnique($this->prefixWithAncestors($page, $locale, $segment), $page->getId(), $locale);
+        $proposal = $this->propose((int) $page->getId(), (int) $page->getParent(), $locale, (string) $page->getTitle(), $requestedSlug);
 
-        $page->setRewrittenUrl($locale, $url);
-        $this->remember($page, $locale, $url);
+        $page->setRewrittenUrl($locale, $proposal->address);
+        $this->remember($page, $locale, $proposal->segment);
 
-        return $url;
+        return $proposal->address;
+    }
+
+    /**
+     * The address a page would get in this locale, from a title and a slug
+     * that may not be saved yet, and without writing anything: what `refresh()`
+     * writes, and what the edit screen offers before the form is saved.
+     *
+     * `$pageId` is 0 for a page not created yet. The slug wins over the title
+     * when it is given; a page whose slug and title both come out empty is
+     * named after its id.
+     *
+     * @throws \InvalidArgumentException when the slug would shadow a reserved path
+     */
+    public function propose(int $pageId, int $parentId, string $locale, string $title, ?string $requestedSlug = null): AddressProposal
+    {
+        $segment = $this->normalizeSegment($requestedSlug ?? $title);
+
+        if ('' === $segment) {
+            $segment = 'page-'.$pageId;
+        }
+
+        $prefix = $this->ancestorPath($parentId, $locale);
+        $base = $this->slugSource->truncate('' === $prefix ? $segment : $prefix.'/'.$segment);
+        $address = $this->makeUnique($base, $pageId, $locale);
+
+        // The segment the address really ends on, cut down with it when the
+        // whole path was too long; the uniqueness suffix is left out of it.
+        return new AddressProposal($this->lastSegment($base) ?? $segment, $address, $address !== $base);
     }
 
     /**
@@ -126,6 +164,31 @@ final class CmsUrlService
 
         foreach ([$page, ...$this->descendantsOf($page)] as $node) {
             foreach ($this->addressedLocales($node) as $locale) {
+                $this->rebuild($node, $locale);
+                ++$rewritten;
+            }
+        }
+
+        return $rewritten;
+    }
+
+    /**
+     * Puts the pages under this one back under its address in one locale, the
+     * ones that already answer in it.
+     *
+     * What a page given its first address in a locale needs: a child translated
+     * before it had no parent address to sit under in that language, and answers
+     * at the root until this runs. The other locales are not touched, nothing in
+     * them moved.
+     *
+     * @return int the number of addresses rewritten
+     */
+    public function rebuildDescendants(CmsPage $page, string $locale): int
+    {
+        $rewritten = 0;
+
+        foreach ($this->descendantsOf($page) as $node) {
+            if (\in_array($locale, $this->addressedLocales($node), true)) {
                 $this->rebuild($node, $locale);
                 ++$rewritten;
             }
@@ -221,17 +284,18 @@ final class CmsUrlService
     }
 
     /**
-     * Stores the segment the address ends on, alongside the address itself.
+     * Stores the segment of the page alongside its address.
      *
      * The two are written together on purpose: `rewriting_url` is a core table
      * the module clears when it is deactivated, so it cannot be the only place
-     * an edited address exists.
+     * an edited address exists. The suffix that keeps the address unique is not
+     * part of the segment: the same title in two languages answers on `cookies`
+     * and `cookies-2`, and a slug that kept the `-2` would bring it back on every
+     * rebuild, after the address it dodged is gone.
      */
-    private function remember(CmsPage $page, string $locale, string $url): void
+    private function remember(CmsPage $page, string $locale, string $slug): void
     {
-        $slug = $this->lastSegment($url);
-
-        if (null === $slug || $slug === $page->setLocale($locale)->getSlug()) {
+        if ('' === $slug || $slug === $page->setLocale($locale)->getSlug()) {
             return;
         }
 
@@ -252,6 +316,88 @@ final class CmsUrlService
     }
 
     /**
+     * The address the page keeps in this locale whatever its place in the tree,
+     * or null when its address is built from its ancestors and its slug.
+     */
+    public function fixedAddressOf(CmsPage $page, string $locale): ?string
+    {
+        $fixed = trim((string) $page->setLocale($locale)->getFixedUrl(), '/');
+
+        return '' === $fixed ? null : $fixed;
+    }
+
+    /**
+     * A whole address as an author typed it, kept as it is but for the slashes
+     * around it: a site taken over keeps the addresses search engines know,
+     * `.html` suffix and accented letters included.
+     *
+     * @throws FixedAddressException when the address cannot be one
+     */
+    public function normalizeFixedAddress(?string $raw): ?string
+    {
+        $address = trim(trim((string) $raw), '/');
+
+        if ('' === $address) {
+            return null;
+        }
+
+        if (1 === preg_match('#[\s?\#\\\\]|//#u', $address)) {
+            throw new FixedAddressException(\sprintf('"%s" is not an address: no space, "?", "#", backslash or empty segment.', $address));
+        }
+
+        if (\strlen($address) > PageSlugSource::MAX_URL_BYTES) {
+            throw new FixedAddressException(\sprintf('"%s" is longer than %d bytes.', $address, PageSlugSource::MAX_URL_BYTES));
+        }
+
+        $first = strtolower(explode('/', $address)[0]);
+
+        if (\in_array($first, self::RESERVED_PREFIXES, true)) {
+            throw new FixedAddressException(\sprintf('"%s" is a reserved path and cannot start the address of a page.', $first));
+        }
+
+        return $address;
+    }
+
+    /**
+     * A fixed address as the edit screen checks it before the form is saved:
+     * normalized as on save, and refused when another object answers on it.
+     * Nothing is written.
+     *
+     * @throws FixedAddressException when the address cannot be the page's
+     */
+    public function checkFixedAddress(?string $raw, int $pageId, string $locale): ?string
+    {
+        $address = $this->normalizeFixedAddress($raw);
+
+        if (null !== $address) {
+            $this->assertFree($address, $pageId, $locale);
+        }
+
+        return $address;
+    }
+
+    /**
+     * An address another object answers on is refused; a redirection or the
+     * obsolete address of a deleted item is not an owner, and goes to the page.
+     *
+     * @throws FixedAddressException
+     */
+    private function assertFree(string $address, int $pageId, string $locale): void
+    {
+        $existing = RewritingUrlQuery::create()->findOneByUrl($address);
+
+        if (null === $existing || null !== $existing->getRedirected() || 'obsolete-rewritten-url' === $existing->getView()) {
+            return;
+        }
+
+        if (TheliaCMS::PAGE_VIEW === $existing->getView() && (string) $pageId === (string) $existing->getViewId() && $locale === $existing->getViewLocale()) {
+            return;
+        }
+
+        throw new FixedAddressException(\sprintf('"%s" is already the address of %s #%s.', $address, $existing->getView(), $existing->getViewId()));
+    }
+
+    /**
      * @throws \InvalidArgumentException when the slug would shadow a reserved path
      */
     public function normalizeSegment(string $raw): string
@@ -265,13 +411,6 @@ final class CmsUrlService
         }
 
         return $segment;
-    }
-
-    private function prefixWithAncestors(CmsPage $page, string $locale, string $segment): string
-    {
-        $prefix = $this->ancestorPath((int) $page->getParent(), $locale);
-
-        return $this->slugSource->truncate('' === $prefix ? $segment : $prefix.'/'.$segment);
     }
 
     /**
@@ -302,7 +441,9 @@ final class CmsUrlService
                 break;
             }
 
-            $url = trim((string) $parent->getRewrittenUrl($locale), '/');
+            // A fixed address is the parent's alone (`about-us.html`): its children
+            // are addressed from the path it would have, its slug under its ancestors.
+            $url = null === $this->fixedAddressOf($parent, $locale) ? trim((string) $parent->getRewrittenUrl($locale), '/') : '';
 
             if ('' !== $url) {
                 // That address already carries its own ancestors.

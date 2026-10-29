@@ -85,8 +85,8 @@ final readonly class LegalPageTemplates
      */
     public static function html(array $translation): string
     {
-        $html = '<h1>'.htmlspecialchars($translation['title'], \ENT_QUOTES).'</h1>';
-        $html .= '<p>'.htmlspecialchars($translation['intro'], \ENT_QUOTES).'</p>';
+        // No level 1 heading: the template draws the title of the page as one.
+        $html = '<p>'.htmlspecialchars($translation['intro'], \ENT_QUOTES).'</p>';
 
         foreach ($translation['sections'] as $section) {
             $html .= '<h2>'.htmlspecialchars($section, \ENT_QUOTES).'</h2><p></p>';

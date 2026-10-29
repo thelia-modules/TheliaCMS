@@ -292,6 +292,8 @@ final readonly class CmsMenuAdminController
             'pageId' => MenuTargetType::Page === $type ? $targetId : null,
             'contentId' => MenuTargetType::Content === $type ? $targetId : null,
             'folderId' => MenuTargetType::Folder === $type ? $targetId : null,
+            'categoryId' => MenuTargetType::Category === $type ? $targetId : null,
+            'productId' => MenuTargetType::Product === $type ? $targetId : null,
             'url' => $item?->getUrl(),
             'label' => null === $item ? null : $item->setLocale($locale)->getLabel(),
             'parent' => (int) $item?->getParent(),
@@ -300,6 +302,8 @@ final readonly class CmsMenuAdminController
             'page_choices' => $this->choices->pages($locale),
             'content_choices' => $this->choices->contents($locale),
             'folder_choices' => $this->choices->folders($locale),
+            'category_choices' => $this->choices->categories($locale),
+            'product_choices' => $this->choices->products($locale),
             'parent_choices' => $this->menus->parentChoices($menu, $locale, null === $item ? null : (int) $item->getId()),
             'action' => $this->urls->generate('admin.cms.menus.entry_save', [
                 'id' => $menu->getId(),
@@ -318,6 +322,8 @@ final readonly class CmsMenuAdminController
             MenuTargetType::Page => $data['pageId'],
             MenuTargetType::Content => $data['contentId'],
             MenuTargetType::Folder => $data['folderId'],
+            MenuTargetType::Category => $data['categoryId'],
+            MenuTargetType::Product => $data['productId'],
             default => null,
         };
 

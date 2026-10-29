@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Model;
 
 use TheliaCMS\Model\Base\CmsPageTypeDefinition as BaseCmsPageTypeDefinition;
+use TheliaCMS\Storage\EncodesSupplementaryCharacters;
 
 /**
  * Skeleton subclass for representing a row from the 'cms_page_type' table.
@@ -25,4 +26,5 @@ use TheliaCMS\Model\Base\CmsPageTypeDefinition as BaseCmsPageTypeDefinition;
  */
 class CmsPageTypeDefinition extends BaseCmsPageTypeDefinition
 {
+    use EncodesSupplementaryCharacters;
 }

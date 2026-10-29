@@ -27,6 +27,7 @@ final class CmsAdminResourcesCompiler extends AbstractAdminResourcesCompiler
             'MEDIA' => CmsResources::MEDIA,
             'SETTINGS' => CmsResources::SETTINGS,
             'CUSTOM_CODE' => CmsResources::CUSTOM_CODE,
+            'GENERATE' => CmsResources::GENERATE,
         ];
     }
 

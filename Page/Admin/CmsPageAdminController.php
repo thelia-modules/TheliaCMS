@@ -14,9 +14,11 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Page\Admin;
 
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,11 +31,15 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
+use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Media\Admin\CmsMediaWriter;
+use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsPage;
-use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Notice\NativeContentNotice;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\Field\InvalidFieldsException;
+use TheliaCMS\Page\Field\PageFields;
+use TheliaCMS\Page\FixedAddressException;
 use TheliaCMS\Page\PageTagRepository;
 use TheliaCMS\Page\PageTypeRepository;
 use TheliaCMS\Security\CmsResources;
@@ -66,10 +72,11 @@ final readonly class CmsPageAdminController
         private CmsUrlService $addresses,
         private PageListPresenter $listing,
         private NativeContentNotice $nativeContents,
-        private PageImageChoices $imageChoices,
+        private CmsMediaLibrary $library,
         private CmsMediaWriter $media,
         private PageTypeRepository $pageTypes,
         private PageTagRepository $tags,
+        private PageFields $fields,
     ) {
     }
 
@@ -82,12 +89,124 @@ final readonly class CmsPageAdminController
         ]));
     }
 
+    /**
+     * A blank page; `?page_type=recipe` starts it with that type, and the
+     * fields of the type.
+     */
     #[Route('/new', name: 'create', methods: ['GET', 'POST'])]
     public function create(Request $request): Response
     {
         $this->denyUnless(AccessManager::CREATE);
 
-        return $this->handleForm($request, new CmsPage());
+        $page = new CmsPage();
+        $type = (string) $request->query->get('page_type', '');
+
+        if ($this->pageTypes->exists($type)) {
+            $page->setPageType($type);
+        }
+
+        return $this->handleForm($request, $page);
+    }
+
+    /**
+     * A new page of a type, named as the editor asked: a copy of the model of
+     * the type when it has one, a blank page of the type otherwise.
+     */
+    #[Route('/from-type', name: 'from_type', methods: ['POST'], priority: 1)]
+    public function fromType(Request $request): Response
+    {
+        $this->denyUnless(AccessManager::CREATE);
+        $lang = $this->editLang($request);
+        $code = (string) $request->request->get('page_type', '');
+
+        if (!$this->pageTypes->exists($code)) {
+            throw new NotFoundHttpException();
+        }
+
+        $title = trim((string) $request->request->get('title', ''));
+
+        if ('' === $title) {
+            $this->flash($request, 'danger', $this->translate('Give the new page a title.'));
+
+            return $this->backToList($request);
+        }
+
+        $model = $this->pageTypes->modelOf($code);
+
+        if (null !== $model) {
+            $page = $this->writer->startFromModel($model, $lang->getLocale(), $title);
+        } else {
+            $page = (new CmsPage())->setParent(0)->setPosition(0)->setVisible(1)->setPageType($code);
+            $this->writer->saveDraft($page, $lang->getLocale(), new PageDraft(title: mb_substr($title, 0, 255)));
+        }
+
+        return $this->backToEdit((int) $page->getId(), $lang);
+    }
+
+    /**
+     * The address the edit screen offers for a title, a slug and a parent not
+     * saved yet, in the language being edited: from the slug when one is typed,
+     * from the title otherwise, and the segment the title alone would give, so
+     * the screen can say when the address no longer follows the title. Nothing
+     * is written: the address changes when the form is saved.
+     */
+    #[Route('/address-proposal', name: 'address_proposal', methods: ['POST'], priority: 1)]
+    public function addressProposal(Request $request): JsonResponse
+    {
+        $pageId = $request->request->getInt('page');
+        $this->denyUnless(0 === $pageId ? AccessManager::CREATE : AccessManager::UPDATE);
+
+        if (0 !== $pageId) {
+            $this->livePageOrFail($pageId);
+        }
+
+        $title = trim((string) $request->request->get('title', ''));
+        $slug = trim((string) $request->request->get('slug', ''));
+
+        if ('' === $title && '' === $slug) {
+            return new JsonResponse(['error' => $this->translate('Give the page a title first.')], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $locale = $this->editLang($request)->getLocale();
+        $parent = $request->request->getInt('parent');
+
+        try {
+            $proposal = $this->addresses->propose($pageId, $parent, $locale, $title, '' === $slug ? null : $slug);
+            $fromTitle = '' === $title ? null : $this->addresses->propose($pageId, $parent, $locale, $title);
+        } catch (\InvalidArgumentException $exception) {
+            return new JsonResponse(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return new JsonResponse([
+            'segment' => $proposal->segment,
+            'address' => $proposal->address,
+            'suffixed' => $proposal->suffixed,
+            'title_segment' => $fromTitle?->segment,
+        ]);
+    }
+
+    /**
+     * Whether a fixed address typed on the edit screen can be the page's, as
+     * the save would decide it, without saving: a fixed address is kept as
+     * typed, so it is checked, never regenerated.
+     */
+    #[Route('/fixed-address-check', name: 'fixed_address_check', methods: ['POST'], priority: 1)]
+    public function fixedAddressCheck(Request $request): JsonResponse
+    {
+        $pageId = $request->request->getInt('page');
+        $this->denyUnless(0 === $pageId ? AccessManager::CREATE : AccessManager::UPDATE);
+
+        if (0 !== $pageId) {
+            $this->livePageOrFail($pageId);
+        }
+
+        try {
+            $address = $this->addresses->checkFixedAddress((string) $request->request->get('address', ''), $pageId, $this->editLang($request)->getLocale());
+        } catch (FixedAddressException $exception) {
+            return new JsonResponse(['error' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return new JsonResponse(['address' => $address]);
     }
 
     #[Route('/{id}', name: 'edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
@@ -104,10 +223,26 @@ final readonly class CmsPageAdminController
 
         try {
             $this->writer->publish($this->livePageOrFail($id), $lang->getLocale());
+        } catch (HeadingStructureException $exception) {
+            foreach ($exception->problems as $problem) {
+                $this->flash($request, 'danger', $problem);
+            }
+
+            $this->flash($request, 'danger', $this->translate('The page was not published: fix the heading structure first.'));
+        } catch (InvalidDocumentException $exception) {
+            foreach ($exception->problems as $problem) {
+                $this->flash($request, 'danger', $problem);
+            }
+
+            $this->flash($request, 'danger', $this->translate('The page was not published: its content is no longer valid. Open it in the editor to see what to fix.'));
         } catch (EmptyPageContentException) {
             $this->flash($request, 'danger', $this->translate('This page has no content yet: add at least one block in the editor before publishing it.'));
         } catch (PlaceholderPageContentException) {
             $this->flash($request, 'danger', $this->translate('This page still holds the sample text it was created with: write your own before publishing it.'));
+        } catch (ModelPagePublicationException) {
+            $this->flash($request, 'danger', $this->translate('This page is the model of its type: it is never published. Start a new page from it instead.'));
+        } catch (MissingPageFieldsException $exception) {
+            $this->flash($request, 'danger', $this->translator->trans('Fill in the fields this type requires before publishing: %fields%.', ['%fields%' => implode(', ', $exception->labels)], TheliaCMS::DOMAIN_NAME));
         }
 
         return $this->backToEdit($id, $lang);
@@ -129,7 +264,11 @@ final readonly class CmsPageAdminController
     {
         $this->denyUnless(AccessManager::UPDATE);
 
-        $this->writer->toggleVisibility($this->livePageOrFail($id));
+        try {
+            $this->writer->toggleVisibility($this->livePageOrFail($id));
+        } catch (ModelPageSettingException) {
+            $this->flash($request, 'danger', $this->translate('This page is the model of its template: it is never online.'));
+        }
 
         return $this->backToList($request);
     }
@@ -174,7 +313,11 @@ final readonly class CmsPageAdminController
     {
         $this->denyUnless(AccessManager::DELETE);
 
-        $this->writer->moveToTrash($this->livePageOrFail($id));
+        try {
+            $this->writer->moveToTrash($this->livePageOrFail($id));
+        } catch (ModelPageSettingException) {
+            $this->flash($request, 'danger', $this->translate('This page is the model of its template: it is deleted with its template, under CMS > Page templates, never moved to the bin.'));
+        }
 
         return $this->backToList($request);
     }
@@ -222,41 +365,60 @@ final readonly class CmsPageAdminController
     {
         $lang = $this->editLang($request);
         $locale = $lang->getLocale();
-        $images = $this->imageChoices->for($page, $locale);
-        $form = $this->buildForm($page, $locale, array_keys($images));
+        $form = $this->buildForm($page, $lang);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->denyUnless($page->isNew() ? AccessManager::CREATE : AccessManager::UPDATE);
-            $this->applyTo($page, $locale, $form);
 
-            return $this->backToEdit((int) $page->getId(), $lang);
+            try {
+                $this->applyTo($page, $locale, $form);
+
+                return $this->backToEdit((int) $page->getId(), $lang);
+            } catch (InvalidFieldsException $exception) {
+                foreach ($exception->problems as $problem) {
+                    $form->addError(new FormError($problem));
+                }
+            } catch (FixedAddressException $exception) {
+                $form->get('fixedUrl')->addError(new FormError($exception->getMessage()));
+            } catch (\InvalidArgumentException $exception) {
+                // A slug that would shadow a reserved path (`admin`, `api`...).
+                $form->get('slug')->addError(new FormError($exception->getMessage()));
+            }
         }
 
+        $type = $this->pageTypes->details((string) $page->getPageType());
+
         return new Response($this->twig->render(self::EDIT_TEMPLATE, [
+            'is_model' => 1 === $page->getModel(),
+            'page_type_title' => $type->title($locale),
+            'has_fields' => !$type->fields()->isEmpty(),
             'form' => $form->createView(),
             'page' => $page,
-            'images' => $images,
             'status' => $page->isNew() ? PageStatus::Draft : $this->pages->statusOf($page, $locale),
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
             'is_home' => !$page->isNew() && (int) $page->getId() === (int) TheliaCMS::getConfigValue('home_page_id', 0),
             'preview_url' => $page->isNew() ? null : $page->getUrl($locale),
+            // The browser keeps the script until its version changes.
+            'assets_version' => substr(hash('xxh3', (string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/page-address.js').(string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/media-picker.js')), 0, 12),
         ]));
     }
 
-    /**
-     * @param list<int> $imageChoices
-     */
-    private function buildForm(CmsPage $page, string $locale, array $imageChoices): FormInterface
+    private function buildForm(CmsPage $page, Lang $lang): FormInterface
     {
-        $content = $page->isNew() ? null : CmsPageContentQuery::create()
-            ->filterByPageId($page->getId())
-            ->filterByLocale($locale)
-            ->findOne();
+        $locale = $lang->getLocale();
 
         if (!$page->isNew()) {
             $page->setLocale($locale);
+        }
+
+        $definitions = $this->fields->definitionsOf($page);
+        $typeLabels = [];
+
+        foreach ($this->pageTypes->allDetails() as $code => $details) {
+            $title = $details->title($locale);
+            $typeLabels[$code] = $title === $code ? $code : \sprintf('%s (%s)', $title, $code);
         }
 
         return $this->forms->create(CmsPageType::class, [
@@ -266,18 +428,18 @@ final readonly class CmsPageAdminController
             // would fold it into the segment on the next save and move the page
             // to `parent/parent-child`.
             'slug' => $page->isNew() ? null : $this->addresses->slugOf($page, $locale),
+            'fixedUrl' => $page->isNew() ? null : $this->addresses->fixedAddressOf($page, $locale),
             'chapo' => $page->isNew() ? null : $page->getChapo(),
             'description' => $page->isNew() ? null : $page->getDescription(),
             'parent' => (int) $page->getParent(),
             'pageType' => $page->getPageType(),
             'tag' => $page->getTagId(),
             'image' => $page->getImageId(),
-            'visible' => $page->isNew() ? 1 : $page->getVisible(),
+            // A model is never online, whatever an older version of the module
+            // or an import left in the row.
+            'visible' => $page->isNew() ? 1 : (1 === $page->getModel() ? 0 : $page->getVisible()),
             'publishAt' => $page->getPublishAt(),
             'unpublishAt' => $page->getUnpublishAt(),
-            'projectData' => $content?->getDraftProjectData(),
-            'html' => $content?->getDraftHtml(),
-            'css' => $content?->getDraftCss(),
             'metaTitle' => $page->isNew() ? null : $page->getMetaTitle(),
             'metaDescription' => $page->isNew() ? null : $page->getMetaDescription(),
             'ogTitle' => $page->isNew() ? null : $page->getOgTitle(),
@@ -286,12 +448,21 @@ final readonly class CmsPageAdminController
             'canonical' => $page->isNew() ? null : $page->getCanonical(),
             'noindex' => $page->isNew() ? 0 : $page->getNoindex(),
             'nofollow' => $page->isNew() ? 0 : $page->getNofollow(),
+            'fields' => $this->fields->valuesOf($page, $locale, $definitions),
         ], [
             'parent_choices' => $this->pages->parentChoices($locale, $page->isNew() ? null : (int) $page->getId()),
-            'image_choices' => $imageChoices,
-            'page_type_choices' => $this->pageTypes->codes(),
+            'image_picker_url' => $this->urls->generate('admin.cms.media.picker'),
+            'image_upload_url' => $this->urls->generate('admin.cms.media.add'),
+            'page_type_choices' => array_map(strval(...), array_keys($typeLabels)),
+            'page_type_labels' => $typeLabels,
+            'is_model' => 1 === $page->getModel(),
+            'field_definitions' => $definitions,
+            'field_locale' => $locale,
             'tag_choices' => $this->tags->namesById(),
             'allow_image_upload' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::MEDIA], [], [AccessManager::CREATE]),
+            'address_proposal_url' => $this->urls->generate('admin.cms.pages.address_proposal', [self::EDIT_LANGUAGE_PARAMETER => $lang->getId()]),
+            'fixed_address_check_url' => $this->urls->generate('admin.cms.pages.fixed_address_check', [self::EDIT_LANGUAGE_PARAMETER => $lang->getId()]),
+            'page_id' => $page->isNew() ? 0 : (int) $page->getId(),
         ]);
     }
 
@@ -300,16 +471,18 @@ final readonly class CmsPageAdminController
         $data = $form->getData();
 
         $page->setParent((int) $data['parent'])
-            ->setPageType($data['pageType'])
+            // A disabled field posts nothing: the model keeps its type.
+            ->setPageType($data['pageType'] ?? $page->getPageType())
             ->setTagId(null === $data['tag'] ? null : (int) $data['tag'])
             ->setImageId($this->chosenImage($data, $locale))
-            ->setVisible((int) $data['visible'])
+            ->setVisible(1 === $page->getModel() ? 0 : (int) $data['visible'])
             ->setPublishAt($data['publishAt'])
             ->setUnpublishAt($data['unpublishAt']);
 
         // The i18n columns are written on the localized object before the
         // writer saves it, so a single save() covers page + translation.
         $page->setLocale($locale)
+            ->setFixedUrl($this->addresses->normalizeFixedAddress($data['fixedUrl'] ?? null))
             ->setChapo($data['chapo'])
             ->setDescription($data['description'])
             ->setMetaTitle($data['metaTitle'])
@@ -324,6 +497,7 @@ final readonly class CmsPageAdminController
         $this->writer->saveDraft($page, $locale, new PageDraft(
             title: $data['title'],
             slug: $data['slug'],
+            fields: \is_array($data['fields'] ?? null) ? $data['fields'] : [],
         ));
     }
 
@@ -333,10 +507,17 @@ final readonly class CmsPageAdminController
     private function chosenImage(array $data, string $locale): ?int
     {
         if (($data['imageUpload'] ?? null) instanceof UploadedFile) {
-            return (int) $this->media->add([$data['imageUpload']], $locale)[0]->getId();
+            $stored = $this->media->add([$data['imageUpload']], $locale)->stored;
+
+            if (isset($stored[0])) {
+                return (int) $stored[0]->getId();
+            }
         }
 
-        return null === $data['image'] ? null : (int) $data['image'];
+        // An id the screen sent is an image of the library of the CMS, or none.
+        $id = (int) ($data['image'] ?? 0);
+
+        return $id > 0 && null !== $this->library->ownedImage($id) ? $id : null;
     }
 
     private function livePageOrFail(int $id): CmsPage

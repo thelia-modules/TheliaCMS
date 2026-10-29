@@ -41,6 +41,19 @@
         -->
         <column defaultValue="default" name="page_type" required="true" size="50" type="VARCHAR"/>
         <!--
+            The model of its type: the demo content new pages of the type are
+            copied from. Never published; at most one per type, which the
+            writer keeps.
+        -->
+        <column defaultValue="0" name="model" required="true" type="TINYINT" size="4"/>
+        <!--
+            The values of the fields the type defines that are the same in
+            every language, as a JSON object by field code; the translated
+            ones are in `cms_page_i18n.translated_fields`. Checked against the definition
+            of the type on every write (TheliaCMS\Page\Field).
+        -->
+        <column name="fields" type="CLOB"/>
+        <!--
             The image of the page, a TheliaLibrary image, the same in every
             language like the image of a core content. No foreign key, for the
             reason given on `og_image_id`: a stale id renders as "no image".
@@ -74,6 +87,13 @@
         -->
         <column name="slug" size="255" type="VARCHAR"/>
         <!--
+            The whole address of the page in this language when it must not
+            follow the tree: the address a site taken over had, `.html` suffix
+            included. Kept here for the same reason as the slug: the addresses
+            are rebuilt from this table on every activation.
+        -->
+        <column name="fixed_url" size="255" type="VARCHAR"/>
+        <!--
             The same pair as the core content and folder: a short summary and a
             longer description, HTML from the back-office editor. Neither is
             the body of the page, which the builder owns: they are what a list
@@ -96,6 +116,8 @@
         <column name="canonical" size="2048" type="VARCHAR"/>
         <column defaultValue="0" name="noindex" required="true" type="TINYINT" size="4"/>
         <column defaultValue="0" name="nofollow" required="true" type="TINYINT" size="4"/>
+        <!-- The values of the translated fields, the same JSON as `fields`. -->
+        <column name="translated_fields" type="CLOB"/>
 
         <index name="idx_cms_page_parent">
             <index-column name="parent"/>
@@ -110,6 +132,9 @@
         <index name="idx_cms_page_tag">
             <index-column name="tag_id"/>
         </index>
+        <index name="idx_cms_page_page_type">
+            <index-column name="page_type"/>
+        </index>
 
         <foreign-key foreignTable="cms_tag" name="fk_cms_page_tag" onDelete="SET NULL" onUpdate="RESTRICT">
             <reference foreign="id" local="tag_id"/>
@@ -117,27 +142,30 @@
 
         <behavior name="i18n">
             <parameter name="i18n_columns"
-                       value="title, slug, chapo, description, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow"/>
+                       value="title, slug, fixed_url, chapo, description, meta_title, meta_description, og_title, og_description, og_image_id, twitter_card, canonical, noindex, nofollow, translated_fields"/>
         </behavior>
         <behavior name="timestampable"/>
     </table>
 
     <!--
-        One GrapesJS project per page and per locale (decision D3): the layout
-        itself is translated, not only the strings, so a locale owns its own
-        canvas. Draft columns are never read on the front-office path.
+        One document per page and per locale: the layout itself is translated,
+        not only the strings, so a locale owns its own content. The document
+        (JSON, see TheliaCMS\Content\Document) is what is edited; the HTML next
+        to it is its rendering, kept so that serving a page reads one column.
+        Draft columns are never read on the front-office path.
     -->
     <table name="cms_page_content" namespace="TheliaCMS\Model">
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
         <column name="page_id" required="true" type="INTEGER"/>
         <column name="locale" required="true" size="5" type="VARCHAR"/>
-        <column name="draft_project_data" type="CLOB"/>
+        <column name="draft_document" type="CLOB"/>
         <column name="draft_html" type="CLOB"/>
-        <column name="draft_css" type="CLOB"/>
+        <column name="published_document" type="CLOB"/>
         <column name="published_html" type="CLOB"/>
-        <column name="published_css" type="CLOB"/>
         <column name="published_at" type="TIMESTAMP"/>
         <column name="draft_updated_by" type="INTEGER"/>
+        <column name="draft_provenance" type="CLOB"/>
+        <column name="published_provenance" type="CLOB"/>
 
         <foreign-key foreignTable="cms_page" name="fk_cms_page_content_page" onDelete="CASCADE" onUpdate="RESTRICT">
             <reference foreign="id" local="page_id"/>
@@ -155,9 +183,9 @@
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
         <column name="page_id" required="true" type="INTEGER"/>
         <column name="locale" required="true" size="5" type="VARCHAR"/>
-        <column name="project_data" type="CLOB"/>
+        <column name="document" type="CLOB"/>
         <column name="html" type="CLOB"/>
-        <column name="css" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
         <column name="label" size="60" type="VARCHAR"/>
         <column name="created_by" type="INTEGER"/>
 
@@ -192,6 +220,56 @@
             <unique-column name="page_id"/>
             <unique-column name="locale"/>
         </unique>
+    </table>
+
+    <!--
+        The document of a catalogue item: a product, a category, a content or a
+        folder, in one language. The same columns as the content of a page, the
+        item named by its type and its id rather than by a foreign key, since
+        four tables of the core can own one (docs/adr/0011). The theme prints it
+        on the page of the item with cms_item_content().
+    -->
+    <table name="cms_item_content" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="item_type" required="true" size="16" type="VARCHAR"/>
+        <column name="item_id" required="true" type="INTEGER"/>
+        <column name="locale" required="true" size="5" type="VARCHAR"/>
+        <column name="draft_document" type="CLOB"/>
+        <column name="draft_html" type="CLOB"/>
+        <column name="published_document" type="CLOB"/>
+        <column name="published_html" type="CLOB"/>
+        <column name="published_at" type="TIMESTAMP"/>
+        <column name="draft_updated_by" type="INTEGER"/>
+        <column name="draft_provenance" type="CLOB"/>
+        <column name="published_provenance" type="CLOB"/>
+
+        <unique name="unq_cms_item_content_item_locale">
+            <unique-column name="item_type"/>
+            <unique-column name="item_id"/>
+            <unique-column name="locale"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <table name="cms_item_revision" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="item_type" required="true" size="16" type="VARCHAR"/>
+        <column name="item_id" required="true" type="INTEGER"/>
+        <column name="locale" required="true" size="5" type="VARCHAR"/>
+        <column name="document" type="CLOB"/>
+        <column name="html" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
+        <column name="label" size="60" type="VARCHAR"/>
+        <column name="created_by" type="INTEGER"/>
+
+        <index name="idx_cms_item_revision_item_locale">
+            <index-column name="item_type"/>
+            <index-column name="item_id"/>
+            <index-column name="locale"/>
+        </index>
+
+        <behavior name="timestampable"/>
     </table>
 
     <!--
@@ -260,95 +338,7 @@
     </table>
 
     <!--
-        Reusable blocks: a piece of content edited once and dropped into any
-        number of pages. Same shape as a page — a record, its title per locale,
-        and one editor project per locale — because it is edited with the same
-        builder and goes online through the same publish pipeline.
-    -->
-    <table name="cms_block" namespace="TheliaCMS\Model">
-        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
-        <column name="code" required="true" size="50" type="VARCHAR"/>
-        <column name="deleted_at" type="TIMESTAMP"/>
-        <column name="created_by" type="INTEGER"/>
-        <column name="updated_by" type="INTEGER"/>
-
-        <column name="title" size="255" type="VARCHAR"/>
-
-        <unique name="unq_cms_block_code">
-            <unique-column name="code"/>
-        </unique>
-
-        <index name="idx_cms_block_deleted_at">
-            <index-column name="deleted_at"/>
-        </index>
-
-        <behavior name="i18n">
-            <parameter name="i18n_columns" value="title"/>
-        </behavior>
-        <behavior name="timestampable"/>
-    </table>
-
-    <table name="cms_block_content" namespace="TheliaCMS\Model">
-        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
-        <column name="block_id" required="true" type="INTEGER"/>
-        <column name="locale" required="true" size="5" type="VARCHAR"/>
-        <column name="draft_project_data" type="CLOB"/>
-        <column name="draft_html" type="CLOB"/>
-        <column name="draft_css" type="CLOB"/>
-        <column name="published_html" type="CLOB"/>
-        <column name="published_css" type="CLOB"/>
-        <column name="published_at" type="TIMESTAMP"/>
-        <column name="draft_updated_by" type="INTEGER"/>
-
-        <foreign-key foreignTable="cms_block" name="fk_cms_block_content_block" onDelete="CASCADE" onUpdate="RESTRICT">
-            <reference foreign="id" local="block_id"/>
-        </foreign-key>
-
-        <unique name="unq_cms_block_content_block_locale">
-            <unique-column name="block_id"/>
-            <unique-column name="locale"/>
-        </unique>
-
-        <behavior name="timestampable"/>
-    </table>
-
-    <!--
-        The one block of a catalogue item: a product, a category, a brand or a
-        store. The block itself is a `cms_block` row, edited with the same
-        builder and put online through the same publish pipeline as a reusable
-        block; this table only says which item it belongs to.
-
-        One block per item, and one item per block, both enforced here rather
-        than in PHP. `item_type` is a VARCHAR and a backed enum, see above.
-        `item_id` carries no foreign key: the item lives in one of several
-        tables, two of them in the core and one in another module, so a
-        constraint would have to be conditional. The row goes when the item is
-        deleted, through the deletion events of the core and of the Dealer
-        module.
-    -->
-    <table name="cms_item_block" namespace="TheliaCMS\Model">
-        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
-        <column name="item_type" required="true" size="20" type="VARCHAR"/>
-        <column name="item_id" required="true" type="INTEGER"/>
-        <column name="block_id" required="true" type="INTEGER"/>
-
-        <foreign-key foreignTable="cms_block" name="fk_cms_item_block_block" onDelete="CASCADE" onUpdate="RESTRICT">
-            <reference foreign="id" local="block_id"/>
-        </foreign-key>
-
-        <unique name="unq_cms_item_block_item">
-            <unique-column name="item_type"/>
-            <unique-column name="item_id"/>
-        </unique>
-        <unique name="unq_cms_item_block_block">
-            <unique-column name="block_id"/>
-        </unique>
-
-        <behavior name="timestampable"/>
-    </table>
-
-    <!--
-        Forms are addressed by code like menus and reusable blocks, so a page
+        Forms are addressed by code like menus, so a page
         keeps pointing at the right form after it has been renamed.
 
         `recipients` holds the addresses a submission is sent to. It is only
@@ -511,44 +501,46 @@
     </table>
 
     <!--
-        A page kept aside to start other pages from: the hero of a landing page,
-        the layout of a product sheet, the whole home page of a starter kit.
-
-        The template holds the very document the export command writes for a
-        page — same shape, same reader — rather than a copy of the page columns.
-        A template is therefore moved between two sites by exporting it, and the
-        code that reads one is the code that reads an import file.
-    -->
-    <table name="cms_page_template" namespace="TheliaCMS\Model">
-        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
-        <column name="code" required="true" size="50" type="VARCHAR"/>
-        <column name="title" required="true" size="255" type="VARCHAR"/>
-        <column name="description" size="500" type="VARCHAR"/>
-        <column name="payload" required="true" type="CLOB"/>
-        <column name="created_by" type="INTEGER"/>
-        <column name="updated_by" type="INTEGER"/>
-
-        <unique name="unq_cms_page_template_code">
-            <unique-column name="code"/>
-        </unique>
-
-        <behavior name="timestampable"/>
-    </table>
-
-    <!--
-        The types a page can have. A type is a code and nothing else: it picks
-        the `cmspage-{code}` template the page is rendered with. Named
-        CmsPageTypeDefinition in PHP because `CmsPageType` is the form of a
-        page.
+        The types a page can have, each one a template of pages (see
+        docs/adr/0009): the code picks the `cmspage-{code}` template the page
+        is rendered with, and identifies the type through an export; a name,
+        a brief and the definition of the fields its pages carry come with
+        it. Its model is the page of the type with `cms_page.model` set.
+        Named CmsPageTypeDefinition in PHP because `CmsPageType` is the form
+        of a page.
     -->
     <table name="cms_page_type" namespace="TheliaCMS\Model" phpName="CmsPageTypeDefinition">
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
         <column name="code" required="true" size="50" type="VARCHAR"/>
+        <!--
+            What every page of the type is about, read by the generator before
+            the brief of the page; the shape of TheliaCMS\Generation\Brief.
+        -->
+        <column name="brief" type="CLOB"/>
+        <column name="brief_tone" size="200" type="VARCHAR"/>
+        <column name="brief_audience" size="200" type="VARCHAR"/>
+        <!--
+            How every page of the type is written (tone, length, sections
+            expected, mandatory mentions), free markdown read by the generator
+            as rules that win over the brief: a skill read for this type only.
+        -->
+        <column name="instructions" type="CLOB"/>
+        <!--
+            The definition of the fields, a JSON list read by
+            TheliaCMS\Page\Field\FieldDefinitions. JSON rather than a table:
+            a definition is read whole, and travels whole through an export.
+        -->
+        <column name="fields" type="CLOB"/>
+        <column name="title" size="255" type="VARCHAR"/>
+        <column name="description" type="LONGVARCHAR"/>
 
         <unique name="unq_cms_page_type_code">
             <unique-column name="code"/>
         </unique>
 
+        <behavior name="i18n">
+            <parameter name="i18n_columns" value="title, description"/>
+        </behavior>
         <behavior name="timestampable"/>
     </table>
 
@@ -565,6 +557,109 @@
         <unique name="unq_cms_tag_name">
             <unique-column name="name"/>
         </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        The components the site made in the back office, from a prompt: the
+        props as data (the JSON form of TheliaCMS\Content\Prop), a sample, a
+        sandboxed Twig template and a stylesheet scoped to the component. Only
+        a `ready` one joins the catalogue; a `draft` is still being looked at.
+        The code is what documents name (`Site:<code>`) and never changes.
+    -->
+    <table name="cms_component" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="code" required="true" size="40" type="VARCHAR"/>
+        <column name="label" required="true" size="120" type="VARCHAR"/>
+        <column name="description" required="true" size="500" type="VARCHAR"/>
+        <column name="props" type="CLOB"/>
+        <column name="sample" type="CLOB"/>
+        <column name="template" type="CLOB"/>
+        <column name="css" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
+        <column defaultValue="draft" name="status" required="true" size="20" type="VARCHAR"/>
+        <column name="created_by" type="INTEGER"/>
+        <column name="updated_by" type="INTEGER"/>
+
+        <unique name="unq_cms_component_code">
+            <unique-column name="code"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        The skills the generator reads before writing a page: shipped as
+        files by the module and the theme (`skills/<code>/SKILL.md`), sown
+        here at the first read and edited here by the site. `shipped_body`
+        keeps the text of the file, so the site can put it back.
+    -->
+    <table name="cms_skill" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="code" required="true" size="50" type="VARCHAR"/>
+        <column name="name" required="true" size="120" type="VARCHAR"/>
+        <column name="description" size="500" type="VARCHAR"/>
+        <column name="body" type="CLOB"/>
+        <column name="shipped_body" type="CLOB"/>
+        <column defaultValue="module" name="origin" required="true" size="20" type="VARCHAR"/>
+        <column defaultValue="0" name="position" required="true" type="INTEGER"/>
+        <column defaultValue="1" name="enabled" required="true" type="TINYINT" size="4"/>
+        <column defaultValue="0" name="always" required="true" type="TINYINT" size="4"/>
+        <column name="updated_by" type="INTEGER"/>
+
+        <unique name="unq_cms_skill_code">
+            <unique-column name="code"/>
+        </unique>
+
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        One row per call to the generator: the brief, what came back, what it
+        cost. It is the history of a page an editor iterates on, and the
+        ledger the site reads its spend from. `target_type` and `target_id`
+        carry no foreign key: a generation for a page the site later deleted
+        is still a cost. `log_id` is the row of `ai_usage_log` of the core that
+        holds the last request of the call, and carries no foreign key either:
+        the core may purge its log.
+    -->
+    <table name="cms_page_generation" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column defaultValue="page" name="target_type" required="true" size="20" type="VARCHAR"/>
+        <column name="target_id" required="true" type="INTEGER"/>
+        <column name="locale" required="true" size="5" type="VARCHAR"/>
+        <column defaultValue="brief" name="kind" required="true" size="20" type="VARCHAR"/>
+        <column name="prompt" type="CLOB"/>
+        <column name="brief" type="CLOB"/>
+        <column name="model" size="60" type="VARCHAR"/>
+        <column name="request_id" size="80" type="VARCHAR"/>
+        <column name="log_id" type="INTEGER"/>
+        <column defaultValue="done" name="status" required="true" size="20" type="VARCHAR"/>
+        <column name="stop_reason" size="30" type="VARCHAR"/>
+        <column name="stop_category" size="60" type="VARCHAR"/>
+        <column defaultValue="0" name="input_tokens" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="output_tokens" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="cache_read_tokens" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="cache_write_tokens" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="turns" required="true" type="INTEGER"/>
+        <column name="cost_usd" scale="6" size="12" type="DECIMAL"/>
+        <column defaultValue="0" name="duration_ms" required="true" type="INTEGER"/>
+        <column name="error" type="LONGVARCHAR"/>
+        <column name="document" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
+        <column name="web_pages" type="CLOB"/>
+        <column name="left_out" type="CLOB"/>
+        <column name="created_by" type="INTEGER"/>
+
+        <index name="idx_cms_page_generation_target">
+            <index-column name="target_type"/>
+            <index-column name="target_id"/>
+            <index-column name="locale"/>
+        </index>
+        <index name="idx_cms_page_generation_log">
+            <index-column name="log_id"/>
+        </index>
 
         <behavior name="timestampable"/>
     </table>

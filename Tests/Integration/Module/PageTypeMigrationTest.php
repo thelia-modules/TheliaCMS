@@ -19,12 +19,18 @@ use TheliaCMS\TheliaCMS;
 
 /**
  * A site on 1.1.0 moving to page types: the `layout` of each page becomes its
- * type, and the update can be played twice.
+ * type, and the update can be played twice. Then a site on 2.1.0 moving to
+ * the instructions of a type, replayable as well, and a site already on 2.2.0,
+ * whose update to 2.2.0 did not carry them yet.
  *
  * Runs outside a transaction: an ALTER TABLE commits on its own, so a rollback
  * would undo nothing and the test would prove nothing. The schema is put back
  * the way 1.1.0 left it, the update is played, then the table and the column
  * are restored by hand to what the shop had before the test.
+ *
+ * A column is dropped with ALGORITHM=COPY: MariaDB drops it instantly
+ * otherwise and keeps it in the rows, so about thirty runs leave the table
+ * refusing the column back ("Row size too large").
  */
 final class PageTypeMigrationTest extends CmsIntegrationTestCase
 {
@@ -53,6 +59,18 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
         }
 
         $connection->exec('CREATE TABLE IF NOT EXISTS cms_page_type (id INTEGER NOT NULL AUTO_INCREMENT, code VARCHAR(50) NOT NULL, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL, PRIMARY KEY (id), UNIQUE INDEX unq_cms_page_type_code (code)) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC');
+        // The shape 2.0.0 gives the table, which the update to 1.2.0 knows
+        // nothing of.
+        if ([] === $this->rows("SHOW COLUMNS FROM cms_page_type LIKE 'brief'")) {
+            $connection->exec('ALTER TABLE cms_page_type ADD COLUMN brief LONGTEXT AFTER code, ADD COLUMN brief_tone VARCHAR(200) AFTER brief, ADD COLUMN brief_audience VARCHAR(200) AFTER brief_tone, ADD COLUMN fields LONGTEXT AFTER brief_audience');
+        }
+
+        // The shape 2.2.1 gives it.
+        if (!$this->typeColumnExists('instructions')) {
+            $connection->exec('ALTER TABLE cms_page_type ADD COLUMN instructions LONGTEXT DEFAULT NULL AFTER brief_audience');
+        }
+
+        $connection->exec("CREATE TABLE IF NOT EXISTS cms_page_type_i18n (id INTEGER NOT NULL, locale VARCHAR(5) DEFAULT 'en_US' NOT NULL, title VARCHAR(255), description TEXT, PRIMARY KEY (id, locale), CONSTRAINT cms_page_type_i18n_fk_7b1d2a FOREIGN KEY (id) REFERENCES cms_page_type (id) ON DELETE CASCADE) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC");
         $connection->exec('DELETE FROM cms_page_type');
 
         foreach ($this->codesBefore as $code) {
@@ -103,12 +121,156 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
         self::assertSame(['default', 'full-width', 'landing', 'recette'], $codes, 'Each type exists once, the former layouts included.');
     }
 
+    public function testTheUpdateTo221GivesTheTypesTheirInstructionsAndCanBePlayedTwice(): void
+    {
+        $this->withoutInstructions();
+
+        $module = new TheliaCMS();
+        $module->update('2.1.0', '2.2.1', $this->getPropelConnection());
+        $module->update('2.1.0', '2.2.1', $this->getPropelConnection());
+
+        $this->assertTheTypesHaveTheirInstructions();
+    }
+
+    public function testASiteAlreadyOn220GetsTheInstructionsOfItsTypesAndTheUpdateCanBePlayedTwice(): void
+    {
+        // A site that reached 2.2.0 before the column moved to 2.2.1 has none,
+        // and the update from 2.2.0 is the only one it plays.
+        $this->withoutInstructions();
+
+        $module = new TheliaCMS();
+        $module->update('2.2.0', '2.2.1', $this->getPropelConnection());
+        $module->update('2.2.0', '2.2.1', $this->getPropelConnection());
+
+        $this->assertTheTypesHaveTheirInstructions();
+    }
+
+    public function testTheUpdateTo232GivesTheRevisionsOfItemsTheirLabelAndCanBePlayedTwice(): void
+    {
+        // A test database prepared before 2.3.2 has no column to drop.
+        if ([] !== $this->rows("SHOW COLUMNS FROM cms_item_revision LIKE 'label'")) {
+            $this->getPropelConnection()->exec('ALTER TABLE cms_item_revision DROP COLUMN label, ALGORITHM=COPY');
+        }
+
+        self::assertSame([], $this->rows("SHOW COLUMNS FROM cms_item_revision LIKE 'label'"));
+
+        $module = new TheliaCMS();
+        $module->update('2.3.1', '2.3.2', $this->getPropelConnection());
+        $module->update('2.3.1', '2.3.2', $this->getPropelConnection());
+
+        $column = $this->rows("SHOW COLUMNS FROM cms_item_revision LIKE 'label'");
+        self::assertCount(1, $column);
+        self::assertSame('varchar(60)', strtolower((string) $column[0]['Type']));
+        self::assertSame('YES', $column[0]['Null']);
+    }
+
+    public function testTheUpdateTo240GivesTheLedgerTheRowOfTheLogOfTheCoreAndCanBePlayedTwice(): void
+    {
+        $connection = $this->getPropelConnection();
+
+        // A test database prepared before 2.4.0 has no column to drop.
+        if ([] !== $this->rows("SHOW COLUMNS FROM cms_page_generation LIKE 'log_id'")) {
+            $connection->exec('ALTER TABLE cms_page_generation DROP COLUMN log_id');
+        }
+
+        self::assertSame([], $this->rows("SHOW COLUMNS FROM cms_page_generation LIKE 'log_id'"));
+        $connection->exec("INSERT INTO cms_page_generation (target_type, target_id, locale, kind, status, cost_usd, created_at, updated_at) VALUES ('page', 1, 'en_US', 'brief', 'done', 0.123456, NOW(), NOW())");
+
+        $module = new TheliaCMS();
+        $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+        $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+
+        $column = $this->rows("SHOW COLUMNS FROM cms_page_generation LIKE 'log_id'");
+        self::assertCount(1, $column);
+        self::assertMatchesRegularExpression('/^int/', strtolower((string) $column[0]['Type']));
+        self::assertSame('YES', $column[0]['Null']);
+        self::assertCount(1, $this->rows("SHOW INDEX FROM cms_page_generation WHERE Key_name = 'idx_cms_page_generation_log'"));
+        self::assertNull($this->rows('SELECT log_id FROM cms_page_generation ORDER BY id DESC LIMIT 1')[0]['log_id'], 'A call written before 2.4.0 has no row in the log of the core.');
+        self::assertSame('0.123456', $this->rows('SELECT cost_usd FROM cms_page_generation ORDER BY id DESC LIMIT 1')[0]['cost_usd'], 'The update keeps what the ledger holds.');
+
+        $connection->exec('DELETE FROM cms_page_generation WHERE target_id = 1 AND cost_usd = 0.123456');
+    }
+
+    public function testTheUpdateTo240GivesTheContentsTheirMarkOfProvenanceAndKeepsWhatTheyHold(): void
+    {
+        $connection = $this->getPropelConnection();
+        $columns = [
+            'cms_page_content' => ['draft_provenance', 'published_provenance'],
+            'cms_item_content' => ['draft_provenance', 'published_provenance'],
+            'cms_page_revision' => ['provenance'],
+            'cms_item_revision' => ['provenance'],
+            'cms_component' => ['provenance'],
+            'cms_page_generation' => ['provenance'],
+        ];
+
+        // A site on 2.3.1 has none of them.
+        foreach ($columns as $table => $names) {
+            foreach ($names as $name) {
+                if ([] !== $this->rows(\sprintf("SHOW COLUMNS FROM %s LIKE '%s'", $table, $name))) {
+                    $connection->exec(\sprintf('ALTER TABLE %s DROP COLUMN %s', $table, $name));
+                }
+            }
+        }
+
+        $this->forgetTheRowsOf240();
+        $connection->exec("INSERT INTO cms_component (code, label, description, status, created_at, updated_at) VALUES ('MigratedMark', 'Marque', 'Un composant écrit avant 2.4.0.', 'ready', NOW(), NOW())");
+        $connection->exec("INSERT INTO cms_item_content (item_type, item_id, locale, published_html, created_at, updated_at) VALUES ('product', 987654, 'en_US', '<p>Avant 2.4.0</p>', NOW(), NOW())");
+
+        try {
+            $module = new TheliaCMS();
+            $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+            $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+
+            foreach ($columns as $table => $names) {
+                foreach ($names as $name) {
+                    $column = $this->rows(\sprintf("SHOW COLUMNS FROM %s LIKE '%s'", $table, $name));
+                    self::assertCount(1, $column, \sprintf('%s.%s is missing.', $table, $name));
+                    self::assertSame('longtext', strtolower((string) $column[0]['Type']));
+                    self::assertSame('YES', $column[0]['Null']);
+                }
+            }
+
+            $content = $this->rows('SELECT published_html, published_provenance FROM cms_item_content WHERE item_id = 987654')[0];
+            self::assertSame('<p>Avant 2.4.0</p>', $content['published_html'], 'The update keeps what the content holds.');
+            self::assertNull($content['published_provenance'], 'A content written before 2.4.0 is not marked.');
+            self::assertNull($this->rows("SELECT provenance FROM cms_component WHERE code = 'MigratedMark'")[0]['provenance']);
+        } finally {
+            // Outside a transaction: a failure must leave neither its rows nor
+            // a table without the columns the other tests read.
+            $this->forgetTheRowsOf240();
+            (new TheliaCMS())->update('2.3.1', '2.4.0', $this->getPropelConnection());
+        }
+    }
+
+    private function forgetTheRowsOf240(): void
+    {
+        $connection = $this->getPropelConnection();
+        $connection->exec("DELETE FROM cms_component WHERE code = 'MigratedMark'");
+        $connection->exec('DELETE FROM cms_item_content WHERE item_id = 987654');
+    }
+
+    private function withoutInstructions(): void
+    {
+        $this->getPropelConnection()->exec('ALTER TABLE cms_page_type DROP COLUMN instructions, ALGORITHM=COPY');
+        self::assertFalse($this->typeColumnExists('instructions'));
+    }
+
+    private function assertTheTypesHaveTheirInstructions(): void
+    {
+        $column = $this->rows("SHOW COLUMNS FROM cms_page_type LIKE 'instructions'");
+        self::assertCount(1, $column);
+        self::assertSame('longtext', strtolower((string) $column[0]['Type']));
+        self::assertSame('YES', $column[0]['Null']);
+    }
+
     /**
      * @param array<int, string> $layouts the layout of some pages, by id
      */
     private function backTo110(array $layouts): void
     {
         $connection = $this->getPropelConnection();
+        // A 1.1.0 site has neither the types nor their translations.
+        $connection->exec('DROP TABLE IF EXISTS cms_page_type_i18n');
         $connection->exec('DROP TABLE cms_page_type');
         $connection->exec("ALTER TABLE cms_page CHANGE COLUMN page_type layout VARCHAR(20) NOT NULL DEFAULT 'default'");
 
@@ -125,6 +287,11 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
     private function columnExists(string $column): bool
     {
         return [] !== $this->rows(\sprintf("SHOW COLUMNS FROM cms_page LIKE '%s'", $column));
+    }
+
+    private function typeColumnExists(string $column): bool
+    {
+        return [] !== $this->rows(\sprintf("SHOW COLUMNS FROM cms_page_type LIKE '%s'", $column));
     }
 
     /**

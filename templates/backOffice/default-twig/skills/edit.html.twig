@@ -1,0 +1,82 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% block title %}{{ skill.name }}{% endblock %}
+{% block body_testid %}cms-skill-edit{% endblock %}
+
+{% block content %}
+    {% form_theme form with bo_form_themes only %}
+
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: skill.name } %}
+        {% block actions %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin.cms.skills.list') }}">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'Back to skills'|trans({}, 'theliacms') }}
+            </a>
+        {% endblock %}
+    {% endembed %}
+
+    <p class="text-muted">
+        <code>{{ skill.code }}</code>
+        {% if skill.description is not empty %}&middot; {{ skill.description }}{% endif %}
+        {% if skill.always %}
+            &middot; {{ 'Read before every page.'|trans({}, 'theliacms') }}
+        {% else %}
+            &middot; {{ 'Read when the generator asks for it.'|trans({}, 'theliacms') }}
+        {% endif %}
+    </p>
+
+    <div class="row g-3">
+        <div class="col-lg-9">
+            <div class="card">
+                <div class="card-body">
+                    {{ form_start(form) }}
+                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                        {{ form_errors(form) }}
+                        {{ form_row(form.body) }}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                {{ form_row(form.enabled) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form_row(form.position) }}
+                            </div>
+                        </div>
+                        {% if may_update %}
+                            <button class="btn btn-primary" type="submit" data-testid="cms-skill-save">
+                                {{ 'Save'|trans({}, 'theliacms') }}
+                            </button>
+                        {% endif %}
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header">{{ 'Shipped text'|trans({}, 'theliacms') }}</div>
+                <div class="card-body">
+                    {% if skill.shippedBody is null %}
+                        <p class="text-muted small mb-0">{{ 'This skill was written on this site: nothing was shipped for it.'|trans({}, 'theliacms') }}</p>
+                    {% else %}
+                        {% if skill.isEdited %}
+                            <p class="text-muted small">{{ 'The text differs from the one the module or the theme ships. Putting it back drops what was changed here.'|trans({}, 'theliacms') }}</p>
+                        {% else %}
+                            <p class="text-muted small">
+                                <i class="bi bi-check2 me-1" aria-hidden="true"></i>{{ 'The text is the one the module or the theme ships.'|trans({}, 'theliacms') }}
+                            </p>
+                        {% endif %}
+                        {% if may_update %}
+                            <form method="post"
+                                  action="{{ path('admin.cms.skills.restore', { code: skill.code }) }}"
+                                  onsubmit="return confirm('{{ 'Put the shipped text back? What was written here is lost.'|trans({}, 'theliacms')|e('js') }}')">
+                                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                <button class="btn btn-sm btn-outline-danger" type="submit" data-testid="cms-skill-restore"{% if not skill.isEdited %} disabled{% endif %}>
+                                    <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>{{ 'Restore the shipped text'|trans({}, 'theliacms') }}
+                                </button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

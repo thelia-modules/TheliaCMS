@@ -1,0 +1,42 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{#
+    What the module lets an editor do. The text is one template per language
+    (`_fr_FR.html.twig`, `_en_US.html.twig`), each a list of `<section>` with an
+    id and an `<h2>`: the summary is read off them, so a section added to the
+    text is in the summary without anyone keeping a second list.
+#}
+
+{% block title %}{{ 'Documentation'|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-documentation{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: 'Documentation'|trans({}, 'theliacms') } %}{% endembed %}
+
+    {% set body %}{% include text %}{% endset %}
+
+    <div class="row g-4">
+        <nav class="col-lg-3" aria-labelledby="cms-documentation-summary">
+            <div class="card position-sticky" style="top: 1rem">
+                <div class="card-body">
+                    <h2 class="h6 text-uppercase text-muted" id="cms-documentation-summary">{{ 'On this page'|trans({}, 'theliacms') }}</h2>
+                    <ul class="nav flex-column small" data-testid="cms-documentation-summary">
+                        {% for match in body|split('<section id="')|slice(1) %}
+                            {% set id = match|split('"')|first %}
+                            {% set heading = (match|split('<h2>')[1] ?? '')|split('</h2>')|first|striptags %}
+                            <li class="nav-item"><a class="nav-link px-0 py-1" href="#{{ id }}">{{ heading }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="col-lg-9">
+            <div class="card">
+                <div class="card-body cms-documentation" data-testid="cms-documentation-text">
+                    {{ body }}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

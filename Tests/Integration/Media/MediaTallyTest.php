@@ -50,12 +50,11 @@ final class MediaTallyTest extends CmsIntegrationTestCase
             'Only the image with neither description nor decorative flag is still to describe.',
         );
 
-        // The grid is capped, so the tally must not be derived from it: asking
+        // The grid is paged, so the tally must not be derived from it: asking
         // for a single row must not change what the library is said to hold.
         $shown = \count($library->images(limit: 1));
         self::assertSame(1, $shown);
         self::assertSame($after->total, $catalog->tally($locale)->total);
-        self::assertFalse($after->isComplete($shown), 'One row shown out of several is not the whole library.');
 
         foreach ([$described, $undescribed, $decorative] as $image) {
             self::assertTrue($after->total > 0 && null !== $image->getId());
@@ -68,7 +67,6 @@ final class MediaTallyTest extends CmsIntegrationTestCase
 
         self::assertGreaterThanOrEqual(0, $tally->total);
         self::assertGreaterThanOrEqual(0, $tally->undescribed);
-        self::assertTrue($tally->isComplete($tally->total));
     }
 
     /**
