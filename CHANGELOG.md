@@ -9,6 +9,9 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- **A PDF a brief cites is read again.** The text of the PDF is extracted on the
+  server (`smalot/pdfparser`) and goes the way the text of a page does; a PDF
+  that is damaged, protected or longer than the ceiling is reported as not read.
 - **The history of a generation says in words why a cited web page was not
   read**, in French or English, instead of showing the code (`url_not_accessible`).
 - **The update to 2.0.0 keeps `cms_legacy_page_content` and

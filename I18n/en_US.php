@@ -879,6 +879,7 @@ return [
     'The page could not be reached' => 'The page could not be reached',
     'This type of file cannot be read' => 'This type of file cannot be read',
     'The page has no text' => 'The page has no text',
+    'The PDF could not be read (damaged, protected or too large)' => 'The PDF could not be read (damaged, protected or too large)',
     'Too many redirects' => 'Too many redirects',
     'not counted' => 'not counted',
     '%tokens% tokens a reading' => '%tokens% tokens a reading',

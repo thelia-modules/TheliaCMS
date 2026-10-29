@@ -879,6 +879,7 @@ return [
     'The page could not be reached' => 'Page inaccessible',
     'This type of file cannot be read' => 'Type de fichier non lisible',
     'The page has no text' => 'La page ne contient pas de texte',
+    'The PDF could not be read (damaged, protected or too large)' => 'PDF illisible (abîmé, protégé ou trop volumineux)',
     'Too many redirects' => 'Trop de redirections',
     'not counted' => 'non comptée',
     '%tokens% tokens a reading' => '%tokens% tokens par lecture',

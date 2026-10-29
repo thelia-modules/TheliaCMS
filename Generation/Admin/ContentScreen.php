@@ -325,6 +325,7 @@ final readonly class ContentScreen
             'unsupported_content_type' => 'This type of file cannot be read',
             'empty_page' => 'The page has no text',
             'too_many_redirects' => 'Too many redirects',
+            'unreadable_pdf' => 'The PDF could not be read (damaged, protected or too large)',
             default => $code,
         }, [], TheliaCMS::DOMAIN_NAME);
     }
