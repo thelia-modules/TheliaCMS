@@ -38,6 +38,7 @@ use TheliaCMS\Generation\Ai\GeneratorToolDefinitions;
 use TheliaCMS\Generation\Ai\ObservedStream;
 use TheliaCMS\Generation\Ai\SentBackAnswer;
 use TheliaCMS\Generation\Tool\GeneratorTools;
+use TheliaCMS\Generation\Tool\MakeComponentTool;
 use TheliaCMS\Generation\Tool\ReadUrlTool;
 use TheliaCMS\Page\Field\FieldDefinitions;
 use TheliaCMS\Page\Field\InvalidFieldsException;
@@ -89,6 +90,7 @@ final readonly class PageGenerator
         private GeneratorTools $tools,
         private GeneratorToolDefinitions $definitions,
         private ReadUrlTool $pageReader,
+        private MakeComponentTool $componentMaker,
         private DocumentSchema $schema,
         private DocumentValidator $validator,
         private GenerationLog $log,
@@ -115,6 +117,15 @@ final readonly class PageGenerator
         // that cites none stays the one it was.
         if ([] !== $addresses) {
             $tools[] = $this->pageReader->definition();
+        }
+
+        // Offered when the site allows a brief to make a component and the
+        // editor may make one. What it makes joins the enum of the schema.
+        $mayMakeComponents = $this->prompts->mayMakeComponents($request);
+        $this->componentMaker->reset();
+
+        if ($mayMakeComponents) {
+            $tools[] = $this->componentMaker->definition();
         }
 
         // The fields of the page travel in the envelope, as a string like the
@@ -193,8 +204,14 @@ final readonly class PageGenerator
 
                 if ($response->hasToolCalls()) {
                     $observer?->onTurn($turns, array_map(static fn (AiToolCall $call): string => $call->name, $response->toolCalls));
-                    $results = $this->toolResults($response->toolCalls, $request, [] !== $addresses, $addresses, $reads, $pages);
-                    $conversation = $this->withPages($conversation, $pages)->withMessages(AiMessage::fromResponse($response), ...$results);
+                    $madeBefore = \count($this->componentMaker->made());
+                    $results = $this->toolResults($response->toolCalls, $request, [] !== $addresses, $addresses, $reads, $pages, $mayMakeComponents, $observer);
+                    // A component made this turn is a name the schema did not
+                    // hold: the schema is written again with it.
+                    $schema = \count($this->componentMaker->made()) > $madeBefore
+                        ? new AiOutputSchema('cms_page', $this->schema->strict([...$request->keptComponents(), ...$this->componentMaker->made()], !$fieldsAsked->isEmpty()))
+                        : null;
+                    $conversation = $this->withPages($conversation, $pages, $schema)->withMessages(AiMessage::fromResponse($response), ...$results);
 
                     continue;
                 }
@@ -210,7 +227,9 @@ final readonly class PageGenerator
                         throw InvalidGenerationException::withProblems($exception->problems);
                     }
 
-                    $this->logger->info('TheliaCMS: the generated document was refused once and sent back: {problems}', ['problems' => implode(' ', $exception->problems)]);
+                    // The answer travels with the log: a document refused for
+                    // its shape is read there, the ledger keeping none of it.
+                    $this->logger->info('TheliaCMS: the generated document was refused once and sent back: {problems}', ['problems' => implode(' ', $exception->problems), 'answer' => mb_substr($response->text, 0, 4000)]);
                     $observer?->onCorrection($corrections, $exception->problems);
                     $conversation = $conversation->withMessages(SentBackAnswer::of($response), AiMessage::user(PromptBuilder::correction($exception->problems)));
 
@@ -264,14 +283,15 @@ final readonly class PageGenerator
      *
      * @return list<AiMessage>
      */
-    private function toolResults(array $calls, GenerationRequest $request, bool $mayRead, array $addresses, array &$reads, array &$pages): array
+    private function toolResults(array $calls, GenerationRequest $request, bool $mayRead, array $addresses, array &$reads, array &$pages, bool $mayMakeComponents, ?GenerationObserverInterface $observer): array
     {
         $results = [];
 
         foreach ($calls as $call) {
             $results[] = AiMessage::toolResult($call->id, match (true) {
                 ReadUrlTool::NAME === $call->name && $mayRead => $this->readPage((string) ($call->arguments['url'] ?? ''), $addresses, $reads, $pages),
-                ReadUrlTool::NAME !== $call->name => $this->tools->run($call->name, $call->arguments, $request),
+                MakeComponentTool::NAME === $call->name && $mayMakeComponents => $this->componentMaker->make($call->arguments, $request, $observer),
+                ReadUrlTool::NAME !== $call->name && MakeComponentTool::NAME !== $call->name => $this->tools->run($call->name, $call->arguments, $request),
                 default => \sprintf('There is no tool called "%s".', $call->name),
             });
         }
@@ -310,14 +330,15 @@ final readonly class PageGenerator
     }
 
     /**
-     * The same conversation with the pages read so far as untrusted content:
-     * the gateway wraps them and tells the model they are data.
+     * The same conversation with the pages read so far as untrusted content
+     * (the gateway wraps them and tells the model they are data), and with
+     * another output schema when a component made this turn widened it.
      *
      * @param list<UntrustedContent> $pages
      */
-    private function withPages(AiRequest $conversation, array $pages): AiRequest
+    private function withPages(AiRequest $conversation, array $pages, ?AiOutputSchema $schema = null): AiRequest
     {
-        if ([] === $pages) {
+        if ([] === $pages && null === $schema) {
             return $conversation;
         }
 
@@ -325,8 +346,8 @@ final readonly class PageGenerator
             $conversation->usageId,
             $conversation->messages,
             $conversation->system,
-            $pages,
-            $conversation->outputSchema,
+            [] === $pages ? $conversation->untrustedContents : $pages,
+            $schema ?? $conversation->outputSchema,
             $conversation->tools,
             $conversation->maxOutputTokens,
             $conversation->providerOptions,
@@ -373,10 +394,10 @@ final readonly class PageGenerator
                 continue;
             }
 
-            try {
-                $props = json_decode($section['props'], true, 32, \JSON_THROW_ON_ERROR);
-            } catch (\JsonException) {
-                $problems[] = \sprintf('Section %d: the props are not valid JSON.', $index + 1);
+            $props = self::propsFrom($section['props']);
+
+            if (null === $props) {
+                $problems[] = \sprintf('Section %d: the props are not valid JSON: write them as one JSON object in a string, its quotes and line breaks escaped.', $index + 1);
 
                 continue;
             }
@@ -389,6 +410,30 @@ final readonly class PageGenerator
         }
 
         return [Document::fromArray($decoded), $decoded['fields'] ?? null, self::leftOutFrom($decoded['left_out'] ?? null)];
+    }
+
+    /**
+     * The props of a section, written as a JSON string. A model that escapes
+     * the string once rather than twice leaves a line break of a text as a
+     * bare control character inside the inner JSON, which strict JSON
+     * refuses: those are read as spaces before giving up, as HTML would show
+     * them anyway.
+     *
+     * @return array<string, mixed>|null
+     */
+    private static function propsFrom(string $written): ?array
+    {
+        foreach ([$written, preg_replace('/[\x00-\x1F]+/', ' ', $written)] as $candidate) {
+            try {
+                $props = json_decode((string) $candidate, true, 32, \JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                continue;
+            }
+
+            return \is_array($props) ? $props : [];
+        }
+
+        return null;
     }
 
     /**

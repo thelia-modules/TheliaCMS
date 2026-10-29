@@ -41,6 +41,7 @@ use TheliaCMS\Generation\InvalidGenerationException;
 use TheliaCMS\Generation\PageGenerator;
 use TheliaCMS\Generation\PromptBuilder;
 use TheliaCMS\Generation\Tool\GeneratorTools;
+use TheliaCMS\Generation\Tool\MakeComponentTool;
 use TheliaCMS\Generation\Tool\ReadUrlTool;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
@@ -166,6 +167,32 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
         self::assertSame('<h1>Bonjour</h1>', $result->document->sections[0]->props['html']);
         self::assertStringContainsString('"Cms:Nope", which is not a component', $this->api->requests[1]->messages[2]->content, 'The problems are sent back for correction.');
         self::assertSame(2, $result->turns);
+    }
+
+    public function testPropsEscapedOnceAreReadWithTheirLineBreaksAsSpaces(): void
+    {
+        $page = $this->createPage('Nos services', published: false);
+        $locale = $this->locale();
+
+        // The model wrote the inner JSON with a real line break in a text
+        // rather than the `\\n` a string within a string takes.
+        $this->api->streamed([], FakeAiGateway::response(json_encode([
+            'version' => 1,
+            'sections' => [
+                ['id' => 'hero', 'component' => 'cms:richtext', 'props' => "{\"html\": \"<h1>Nos services</h1>\n<p>Ce que nous faisons.</p>\"}"],
+                ['id' => 'broken', 'component' => 'cms:richtext', 'props' => "{'html': '<p>Pas du JSON</p>'}"],
+            ],
+        ], \JSON_THROW_ON_ERROR)));
+        $this->api->streamed([], FakeAiGateway::response(self::document([
+            ['id' => 'hero', 'component' => 'cms:richtext', 'props' => ['html' => "<h1>Nos services</h1>\n<p>Ce que nous faisons.</p>"]],
+        ])));
+
+        $result = $this->generator()->generate(GenerationRequest::fromBrief(GenerationTarget::page($page, $locale), $locale, new Brief('Nos services.')));
+
+        self::assertSame(['hero'], array_map(static fn ($section) => $section->id, $result->document->sections), 'The first answer went back for its second section alone.');
+        $correction = $this->api->requests[1]->messages[\count($this->api->requests[1]->messages) - 1]->content;
+        self::assertStringNotContainsString('Section 1:', $correction, 'The section with a bare line break was read.');
+        self::assertStringContainsString('Section 2: the props are not valid JSON: write them as one JSON object in a string', $correction);
     }
 
     public function testADocumentRefusedAfterTwoCorrectionsIsAnError(): void
@@ -467,6 +494,7 @@ final class PageGeneratorTest extends CmsIntegrationTestCase
             $this->getService(GeneratorTools::class),
             $this->getService(GeneratorToolDefinitions::class),
             $reader ?? new ReadUrlTool(new MockHttpClient(static fn () => throw new \LogicException('No page may be read here.'))),
+            $this->getService(MakeComponentTool::class),
             $this->getService(DocumentSchema::class),
             $this->getService(DocumentValidator::class),
             $this->getService(GenerationLog::class),

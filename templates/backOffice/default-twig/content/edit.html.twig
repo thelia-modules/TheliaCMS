@@ -69,11 +69,17 @@
                    script switches the preview and the link below, and remembers
                    the choice. #}
                 {% set draft_page_url = subject.draftPagePreviewUrl %}
-                {% if draft_page_url %}
+                {# A component prototyped from this screen is drawn in the frame
+                   in place of the draft, with its sample, until it is kept or
+                   discarded: the same two readings, the whole page or alone. #}
+                {% set showing_prototype = prototype and prototype.preview_url %}
+                {% set frame_page_url = showing_prototype ? prototype.preview_url : draft_page_url %}
+                {% set frame_content_url = showing_prototype ? prototype.preview_content_url : subject.draftPreviewUrl %}
+                {% if frame_page_url %}
                     <div class="btn-group btn-group-sm" role="group" aria-label="{{ 'What the preview shows'|trans({}, 'theliacms') }}" data-cms-preview-modes data-testid="cms-content-preview-modes">
-                        <input type="radio" class="btn-check" name="cms-preview-mode" id="cms-preview-mode-page" value="page" data-url="{{ draft_page_url }}" checked>
+                        <input type="radio" class="btn-check" name="cms-preview-mode" id="cms-preview-mode-page" value="page" data-url="{{ frame_page_url }}" checked>
                         <label class="btn btn-outline-secondary" for="cms-preview-mode-page">{{ 'Whole page'|trans({}, 'theliacms') }}</label>
-                        <input type="radio" class="btn-check" name="cms-preview-mode" id="cms-preview-mode-content" value="content" data-url="{{ subject.draftPreviewUrl }}">
+                        <input type="radio" class="btn-check" name="cms-preview-mode" id="cms-preview-mode-content" value="content" data-url="{{ frame_content_url }}">
                         <label class="btn btn-outline-secondary" for="cms-preview-mode-content">{{ 'Content only'|trans({}, 'theliacms') }}</label>
                     </div>
                 {% endif %}
@@ -210,6 +216,10 @@
                                 </button>
                             {{ form_end(change_form) }}
                         </section>
+                    {% endif %}
+
+                    {% if prototype %}
+                        {{ include('@TheliaCMSModule/backOffice/default-twig/content/_prototype.html.twig') }}
                     {% endif %}
 
                     <section class="cms-content__section" data-testid="cms-content-sections">
@@ -407,7 +417,11 @@
             </aside>
 
             <div class="cms-content__preview">
-                {% if subject.hasContent %}
+                {% if showing_prototype %}
+                    <iframe class="cms-content__frame" src="{{ prototype.preview_url }}"
+                            title="{{ 'The component prototyped, as the theme shows it'|trans({}, 'theliacms') }}"
+                            data-testid="cms-content-frame" data-cms-frame data-cms-frame-prototype sandbox="allow-same-origin"></iframe>
+                {% elseif subject.hasContent %}
                     <iframe class="cms-content__frame" src="{{ draft_page_url ?: subject.draftPreviewUrl }}"
                             title="{{ 'The draft, as the theme shows it'|trans({}, 'theliacms') }}"
                             data-testid="cms-content-frame" data-cms-frame></iframe>
@@ -475,6 +489,22 @@
                                 {% endfor %}
                             </ul>
                         {% endfor %}
+                        {% if may_prototype %}
+                            {# A component none of the above draws: asked in a prompt, drawn
+                               in the preview, kept as a prototype of the site and added to
+                               the draft from the panel on the left. #}
+                            <h3 class="cms-content__add-family">{{ 'A new component'|trans({}, 'theliacms') }}</h3>
+                            <form method="post" action="{{ subject.url('component_generate') }}" class="cms-content__prototype-form" data-cms-generate novalidate data-testid="cms-content-prototype-request">
+                                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                <label class="form-label" for="cms-content-prototype-request">{{ 'Prototype a component'|trans({}, 'theliacms') }}</label>
+                                <textarea class="form-control" id="cms-content-prototype-request" name="request" rows="3" required
+                                          placeholder="{{ 'A table of two to four plans side by side, one put forward'|trans({}, 'theliacms') }}"></textarea>
+                                <div class="form-text">{{ 'The generator writes it (its props, its template, its styles) and the site checks it; you see it in the preview before anything is kept. It takes up to a minute.'|trans({}, 'theliacms') }}</div>
+                                <button type="submit" class="btn btn-sm btn-primary mt-2">
+                                    <i class="bi bi-stars" aria-hidden="true"></i> {{ 'Prototype it'|trans({}, 'theliacms') }}
+                                </button>
+                            </form>
+                        {% endif %}
                     </dialog>
                 {% endif %}
 

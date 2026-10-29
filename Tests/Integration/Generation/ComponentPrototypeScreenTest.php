@@ -1,0 +1,242 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Tests\Integration\Generation;
+
+use Thelia\Core\Security\AccessManager;
+use Thelia\Domain\Ai\AiGatewayInterface;
+use Thelia\Test\FixtureFactory;
+use TheliaCMS\Content\SectionCatalog;
+use TheliaCMS\Content\Site\SiteComponentRepository;
+use TheliaCMS\Generation\Component\ComponentPrompt;
+use TheliaCMS\Model\CmsComponentQuery;
+use TheliaCMS\Model\CmsPage;
+use TheliaCMS\Model\CmsPageContentQuery;
+use TheliaCMS\Model\CmsPageGenerationQuery;
+use TheliaCMS\Page\Admin\EditLanguage;
+use TheliaCMS\Security\CmsResources;
+use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
+use TheliaCMS\Tests\Unit\Content\Site\PriceTable;
+
+/**
+ * A component prototyped from the content screen of a page: asked in the
+ * drawer that adds a section, drawn in the preview in place of the draft,
+ * kept as a prototype and added to the draft; in the catalogue for that page,
+ * offered to nobody else until CMS > Components keeps it for the whole site.
+ */
+final class ComponentPrototypeScreenTest extends AdminScreenTestCase
+{
+    private FakeAiGateway $api;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->api = new FakeAiGateway();
+        static::getContainer()->set(AiGatewayInterface::class, $this->api);
+    }
+
+    public function testARequestFromTheScreenDrawsTheCandidateInThePreviewAndNothingIsKeptYet(): void
+    {
+        $page = $this->createPage('Nos formules', published: false);
+        $this->api->answer(FakeAiGateway::response(ComponentPrompt::json(PriceTable::component(css: '.plan { padding: 1rem; }'))));
+
+        $screen = $this->screen($this->url($page));
+        self::assertSame(1, $screen->filter('[data-testid="cms-content-add"] [data-testid="cms-content-prototype-request"]')->count(), 'The drawer that adds a section offers to prototype a component.');
+
+        $location = $this->ask($page, 'Un tableau de prix de deux à quatre formules.');
+        self::assertMatchesRegularExpression('#/content\?.*component=\d+$#', $location);
+
+        $screen = $this->screen($location);
+        $panel = $screen->filter('[data-testid="cms-content-prototype"]');
+        self::assertSame('done', $panel->attr('data-status'));
+        self::assertStringContainsString('Site:PriceTable', $panel->text());
+        self::assertSame(1, $panel->filter('[data-testid="cms-content-prototype-keep"]')->count());
+        self::assertSame(1, $panel->filter('[data-testid="cms-content-prototype-change"]')->count());
+        self::assertSame(3, $panel->filter('[data-testid="cms-content-prototype-props"] li')->count(), 'Every prop is listed.');
+
+        $frame = $screen->filter('[data-testid="cms-content-frame"]');
+        self::assertMatchesRegularExpression('#^/cms-component-preview/candidate-\d+/#', (string) $frame->attr('src'), 'The preview shows the candidate in place of the draft.');
+        self::assertSame((string) $frame->attr('src'), (string) $screen->filter('[data-testid="cms-content-preview-modes"] input[value="page"]')->attr('data-url'), 'The readings of the preview follow the candidate.');
+        self::assertStringEndsWith('?content=1', (string) $screen->filter('[data-testid="cms-content-preview-modes"] input[value="content"]')->attr('data-url'));
+
+        self::assertNull(CmsComponentQuery::create()->findOneByCode('PriceTable'), 'Nothing is kept before the editor says so.');
+        self::assertSame(1, CmsPageContentQuery::create()->filterByPageId($page->getId())->count(), 'The draft is as it was.');
+    }
+
+    public function testKeepingTheCandidateMakesAPrototypeAddedToTheDraftAndOfferedToNobodyElse(): void
+    {
+        $page = $this->createPage('Nos formules', published: false);
+        $other = $this->createPage('Une autre page', published: false);
+        $this->api->answer(FakeAiGateway::response(ComponentPrompt::json(PriceTable::component(css: '.plan { padding: 1rem; }'))));
+
+        $location = $this->ask($page, 'Un tableau de prix.');
+        $candidateId = self::idOf($location);
+        $keep = $this->screen($location)->filter('[data-testid="cms-content-prototype-keep"]')->form();
+
+        self::assertSame(302, $this->send('POST', $keep->getUri(), $keep->getPhpValues()));
+        self::assertStringNotContainsString('component=', (string) $this->client->getResponse()->headers->get('Location'), 'Back to the screen, the candidate kept.');
+
+        $repository = $this->getService(SiteComponentRepository::class);
+        self::assertSame(SiteComponentRepository::STATUS_DRAFT, $repository->status('PriceTable'), 'Kept as a prototype.');
+        $componentId = (int) CmsComponentQuery::create()->findOneByCode('PriceTable')?->getId();
+        self::assertSame($componentId, (int) CmsPageGenerationQuery::create()->findPk($candidateId)?->getTargetId(), 'The call it came from starts its history.');
+
+        $document = json_decode((string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftDocument(), true);
+        self::assertSame(['cms:richtext', 'Site:PriceTable'], array_column($document['sections'], 'component'), 'The component is added at the end of the draft.');
+        self::assertSame('Our plans', $document['sections'][1]['props']['title'], 'With its sample.');
+        self::assertStringContainsString('class="cms-site cms-site--price-table"', (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->findOne()?->getDraftHtml(), 'The draft is drawn with it.');
+
+        $screen = $this->screen($this->url($page));
+        $items = $screen->filter('[data-testid="cms-content-sections"] [data-cms-section-item]');
+        self::assertSame(2, $items->count());
+        self::assertSame('Site:PriceTable', $items->last()->attr('data-component'));
+        self::assertSame(1, $screen->filter(\sprintf('[data-testid="cms-section-edit-open-%s"]', $items->last()->attr('data-section')))->count(), 'The section is edited by hand like any other.');
+
+        $catalog = $this->getService(SectionCatalog::class);
+        $catalog->reset();
+        self::assertNotNull($catalog->find('Site:PriceTable'), 'In the catalogue: the page renders it.');
+        self::assertNotContains('Site:PriceTable', $catalog->offeredNames(), 'Offered to nobody else.');
+        self::assertSame(0, $this->screen($this->url($other))->filter('[data-testid="cms-content-add-Site:PriceTable"]')->count(), 'Another page is not offered it.');
+
+        $this->client->request('GET', '/cms/site-components.css');
+        self::assertStringContainsString('.cms-site--price-table .plan {padding: 1rem;}', (string) $this->client->getResponse()->getContent(), 'Its stylesheet is served: the page holds it.');
+
+        $list = $this->screen('/admin/cms/components');
+        self::assertStringContainsString('Prototype', $list->filter('[data-testid="cms-component-origin-Site:PriceTable"]')->text());
+        self::assertSame('0', $list->filter('[data-testid="cms-component-offered-Site:PriceTable"]')->attr('data-offered'));
+        self::assertSame(0, $list->filter('[data-testid="cms-component-toggle-Site:PriceTable"]')->count(), 'A prototype is not switched on or off.');
+
+        $promote = $list->filter('[data-testid="cms-component-promote-Site:PriceTable"]')->form();
+        self::assertSame(302, $this->send('POST', $promote->getUri(), $promote->getPhpValues()));
+        self::assertSame(SiteComponentRepository::STATUS_READY, $repository->status('PriceTable'), 'Kept for the whole site.');
+        $catalog->reset();
+        self::assertContains('Site:PriceTable', $catalog->offeredNames());
+        self::assertSame(1, $this->screen($this->url($other))->filter('[data-testid="cms-content-add-Site:PriceTable"]')->count(), 'Every page is offered it now.');
+        self::assertSame(0, $this->screen('/admin/cms/components/site/PriceTable')->filter('[data-testid="cms-site-component-promote"]')->count());
+    }
+
+    public function testAChangeStartsFromTheCandidateAndTheScriptFollowsTheCallAsAStream(): void
+    {
+        $page = $this->createPage('Nos formules', published: false);
+        $this->api
+            ->answer(FakeAiGateway::response(ComponentPrompt::json(PriceTable::component())))
+            ->answer(FakeAiGateway::response(ComponentPrompt::json(PriceTable::component(css: '.plan { padding: 2rem; }'))));
+
+        $first = $this->ask($page, 'Un tableau de prix.');
+        $change = $this->screen($first)->filter('[data-testid="cms-content-prototype-change"]')->form();
+        $change['request'] = 'Plus d’espace dans chaque formule.';
+
+        $this->client->request('POST', $change->getUri(), $change->getPhpValues(), [], [...self::XHR, 'HTTP_ACCEPT' => 'text/event-stream']);
+        $response = $this->client->getResponse();
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringStartsWith('text/event-stream', (string) $response->headers->get('Content-Type'));
+
+        $events = self::events((string) $this->client->getInternalResponse()->getContent());
+        self::assertSame(['start', 'turn', 'done'], array_values(array_filter(array_column($events, 'event'), static fn (string $name): bool => 'delta' !== $name)));
+        $last = $events[array_key_last($events)];
+        self::assertMatchesRegularExpression('#/content\?.*component=\d+$#', $last['data']['redirect']);
+        self::assertNotSame(self::idOf($first), self::idOf($last['data']['redirect']), 'The change is a candidate of its own.');
+        self::assertStringContainsString('"code": "PriceTable"', $this->api->requests[1]->messages[0]->content, 'The change starts from the candidate.');
+    }
+
+    public function testACallThatFailsIsShownOnTheScreenWithWhatWentWrong(): void
+    {
+        $page = $this->createPage('Nos formules', published: false);
+        $this->api->answer(FakeAiGateway::response(finishReason: \Thelia\Domain\Ai\AiFinishReason::ContentFilter));
+
+        $location = $this->ask($page, 'Quelque chose.');
+        $panel = $this->screen($location)->filter('[data-testid="cms-content-prototype"]');
+
+        self::assertNotSame('done', $panel->attr('data-status'));
+        self::assertSame(1, $panel->filter('[data-testid="cms-content-prototype-again"]')->count(), 'The request is offered again.');
+        self::assertSame(0, $panel->filter('[data-testid="cms-content-prototype-keep"]')->count());
+        self::assertDoesNotMatchRegularExpression('#cms-component-preview#', (string) $this->screen($location)->filter('[data-testid="cms-content-frame"]')->attr('src'), 'Nothing to draw: the preview shows the draft.');
+    }
+
+    public function testTheRightToGenerateIsNotTheRightToPrototypeAComponent(): void
+    {
+        $page = $this->createPage('Nos formules', published: false);
+        $token = $this->tokenOfTheForm($this->screen($this->url($page)), $this->generateUrl($page));
+
+        $this->logInAs((new FixtureFactory($this->getPropelConnection()))->restrictedAdmin([
+            CmsResources::PAGE => [AccessManager::VIEW, AccessManager::UPDATE],
+            CmsResources::GENERATE => [AccessManager::VIEW, AccessManager::UPDATE],
+        ]));
+
+        self::assertSame(0, $this->screen($this->url($page))->filter('[data-testid="cms-content-prototype-request"]')->count(), 'The drawer offers no prototype.');
+        self::assertSame(403, $this->send('POST', $this->generateUrl($page), ['_token' => $token, 'request' => 'Un tableau de prix.']));
+        self::assertSame([], $this->api->requests, 'The API is not called.');
+    }
+
+    /**
+     * Sends a request from the form of the screen and gives where it ended.
+     */
+    private function ask(CmsPage $page, string $text): string
+    {
+        $token = $this->tokenOfTheForm($this->screen($this->url($page)), $this->generateUrl($page));
+
+        self::assertSame(302, $this->send('POST', $this->generateUrl($page), ['_token' => $token, 'request' => $text]));
+
+        return (string) $this->client->getResponse()->headers->get('Location');
+    }
+
+    private function url(CmsPage $page): string
+    {
+        return \sprintf('/admin/cms/pages/%d/content?%s=%d', $page->getId(), EditLanguage::PARAMETER, $this->languageId());
+    }
+
+    private function generateUrl(CmsPage $page): string
+    {
+        return \sprintf('/admin/cms/pages/%d/content/component/generate', $page->getId());
+    }
+
+    private function languageId(): int
+    {
+        return (int) \Thelia\Model\LangQuery::create()->findOneByLocale($this->locale())?->getId();
+    }
+
+    private static function idOf(string $location): int
+    {
+        parse_str((string) parse_url($location, \PHP_URL_QUERY), $query);
+
+        return (int) ($query['component'] ?? 0);
+    }
+
+    /**
+     * @return list<array{event: string, data: array<string, mixed>}>
+     */
+    private static function events(string $stream): array
+    {
+        $events = [];
+
+        foreach (array_filter(array_map('trim', explode("\n\n", $stream))) as $chunk) {
+            $event = 'message';
+            $data = '';
+
+            foreach (explode("\n", $chunk) as $line) {
+                if (str_starts_with($line, 'event:')) {
+                    $event = trim(substr($line, 6));
+                } elseif (str_starts_with($line, 'data:')) {
+                    $data .= trim(substr($line, 5));
+                }
+            }
+
+            $events[] = ['event' => $event, 'data' => json_decode($data, true, 512, \JSON_THROW_ON_ERROR)];
+        }
+
+        return $events;
+    }
+}

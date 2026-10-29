@@ -31,6 +31,7 @@ use Thelia\Model\Lang;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\Pipeline\HeadingChecker;
+use TheliaCMS\Content\Site\SiteComponentPermission;
 use TheliaCMS\Generation\Brief;
 use TheliaCMS\Generation\GenerationRequest;
 use TheliaCMS\Generation\GenerationTarget;
@@ -78,6 +79,7 @@ final readonly class CmsPageContentController
         private TranslationSources $translationSources,
         private GenerationTargets $targets,
         private PageTypeRepository $pageTypes,
+        private SiteComponentPermission $componentPermission,
     ) {
     }
 
@@ -421,7 +423,9 @@ final readonly class CmsPageContentController
 
         return $this->runner->respond(
             $request,
-            $generation,
+            // The generator may make a component of the site for this page
+            // when whoever asks may make one; the settings have the last word.
+            $generation->withComponentMaking($this->componentPermission->mayMake()),
             function (Document $document, ?array $fields = null, ?AiProvenance $provenance = null) use ($page, $locale): void {
                 // The draft the answer replaces is kept first: it can be put back.
                 $this->writer->keepDraft($page, $locale);
@@ -466,6 +470,8 @@ final readonly class CmsPageContentController
                 'add' => $this->urls->generate('admin.cms.pages.content.add', $parameters),
                 'translate' => $this->urls->generate('admin.cms.pages.content.translate', $parameters),
                 'publish' => $this->urls->generate('admin.cms.pages.content.publish', $parameters),
+                'component_generate' => $this->urls->generate('admin.cms.pages.content.component.generate', $parameters),
+                'component_keep' => $this->urls->generate('admin.cms.pages.content.component.keep', $parameters),
             ],
             testId: 'cms-page-content',
             translationSources: $this->translationSources->forPage((int) $page->getId(), $locale),
