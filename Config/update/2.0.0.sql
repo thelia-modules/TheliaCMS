@@ -3,18 +3,22 @@
 -- columns of the former editor go: the project it reloaded from and the
 -- stylesheets it wrote.
 --
--- A site coming from 1.x keeps its pages — tree, addresses, SEO,
--- tags, types — and loses their content: the markup of the former editor has
--- no document to be read back from, and serving it without one would leave
--- pages nobody can edit. Those pages are put back to draft, their revisions
--- and search entries removed with them. The release notes say
--- so; an export taken before the update keeps the HTML.
+-- A site coming from 1.x keeps its pages (tree, addresses, SEO, tags, types)
+-- but not their content: the markup of the former editor has no document to
+-- be read back from, and serving it without one would leave pages nobody can
+-- edit. Those pages are put back to draft, their revisions and search entries
+-- emptied. Nothing the former editor wrote is destroyed, though: its columns
+-- are copied to `cms_legacy_page_content` and `cms_legacy_page_revision`
+-- before the purge, and the tables of the blocks and of the saved page
+-- templates, which the module no longer reads, are renamed `cms_legacy_*`
+-- instead of dropped. The module never reads those tables; they are for the
+-- people who want the old markup back, and can be dropped by hand.
 --
 -- Written to be replayable: the same file is applied by a fresh install (after
 -- TheliaMain.sql, which already declares the new shape) and by an update of an
--- existing site. Every statement tolerates being run twice, and the purge only
--- runs where a column of the former editor still exists, which is a 1.x site
--- and never a fresh one.
+-- existing site. Every statement tolerates being run twice, and the copy and
+-- the purge only run where a column of the former editor still exists, which
+-- is a 1.x site and never a fresh one.
 
 -- cms_page_content ---------------------------------------------------------
 
@@ -22,6 +26,26 @@ SET @cms_page_content_from_1x := (
     SELECT COUNT(*) FROM information_schema.columns
     WHERE table_schema = DATABASE() AND table_name = 'cms_page_content' AND column_name = 'draft_project_data'
 );
+
+-- What the former editor wrote is copied before the purge. IF NOT EXISTS: an
+-- update that stopped half way and is played again finds the copy it made.
+SET @cms_statement := IF(
+    0 < @cms_page_content_from_1x,
+    'CREATE TABLE IF NOT EXISTS `cms_legacy_page_content` AS SELECT `id`, `page_id`, `locale`, `draft_project_data`, `draft_html`, `draft_css`, `published_html`, `published_css`, `published_at`, `draft_updated_by`, `created_at`, `updated_at` FROM `cms_page_content`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < @cms_page_content_from_1x,
+    'CREATE TABLE IF NOT EXISTS `cms_legacy_page_revision` AS SELECT `id`, `page_id`, `locale`, `project_data`, `html`, `css`, `label`, `created_by`, `created_at`, `updated_at` FROM `cms_page_revision`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
 
 SET @cms_statement := IF(
     0 < @cms_page_content_from_1x,
@@ -124,21 +148,64 @@ PREPARE cms_prepared FROM @cms_statement;
 EXECUTE cms_prepared;
 DEALLOCATE PREPARE cms_prepared;
 
--- cms_block, cms_block_i18n, cms_block_content, cms_item_block -------------
--- Blocks are no longer part of the module: the reusable ones and the one of
--- a catalogue item go with their tables. An export taken before the update
--- keeps them; a 2.0.0 module imports the rest of that file and says it left
--- the blocks out.
-
-DROP TABLE IF EXISTS `cms_item_block`;
-DROP TABLE IF EXISTS `cms_block_content`;
-DROP TABLE IF EXISTS `cms_block_i18n`;
-DROP TABLE IF EXISTS `cms_block`;
-
+-- cms_block, cms_block_i18n, cms_block_content, cms_item_block,
 -- cms_page_template ---------------------------------------------------------
--- Saved page templates are no longer part of the module: the table goes.
+-- Blocks (the reusable ones and the one of a catalogue item) and saved page
+-- templates are no longer part of the module, and nothing in 2.x holds their
+-- content: a block is markup of the former editor, which no document can be
+-- read back from. The tables are kept under a `cms_legacy_` name, with their
+-- rows and their keys. A table is only renamed where the new name is free, so
+-- a second play leaves them alone.
 
-DROP TABLE IF EXISTS `cms_page_template`;
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_item_block')
+    AND 0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_item_block'),
+    'RENAME TABLE `cms_item_block` TO `cms_legacy_item_block`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block_content')
+    AND 0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block_content'),
+    'RENAME TABLE `cms_block_content` TO `cms_legacy_block_content`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block_i18n')
+    AND 0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block_i18n'),
+    'RENAME TABLE `cms_block_i18n` TO `cms_legacy_block_i18n`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_block')
+    AND 0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_block'),
+    'RENAME TABLE `cms_block` TO `cms_legacy_block`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_page_template')
+    AND 0 = (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'cms_legacy_page_template'),
+    'RENAME TABLE `cms_page_template` TO `cms_legacy_page_template`',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
 
 -- cms_skill and cms_page_generation ----------------------------------------
 -- The skills the generator reads, and its ledger. Created here for a site
