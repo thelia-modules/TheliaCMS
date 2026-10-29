@@ -232,10 +232,10 @@ final readonly class ContentScreen
             'duration' => number_format(((int) $row->getDurationMs()) / 1000, 1, '.', ''),
             'turns' => (int) $row->getTurns(),
             'error' => $row->getError(),
-            'pages' => array_map(static fn (WebPageRead $page): array => [
+            'pages' => array_map(fn (WebPageRead $page): array => [
                 'url' => $page->url,
                 'read' => $page->wasRead(),
-                'error' => $page->errorCode,
+                'error' => null === $page->errorCode ? null : $this->readFailureLabel($page->errorCode),
                 'tokens' => $page->tokens,
             ], GenerationLog::webPagesOf($row)),
             'left_out' => GenerationLog::leftOutOf($row),
@@ -309,6 +309,23 @@ final readonly class ContentScreen
             GenerationRequest::KIND_TEXT => 'Text of a field',
             GenerationLog::KIND_MANUAL => 'By hand',
             default => $kind,
+        }, [], TheliaCMS::DOMAIN_NAME);
+    }
+
+    /**
+     * Why a web page was not read, in words: the code is for the ledger and the model.
+     */
+    private function readFailureLabel(string $code): string
+    {
+        return $this->translator->trans(match ($code) {
+            'invalid_url' => 'The address is not valid',
+            'url_not_allowed' => 'The address is not allowed',
+            'blocked_address' => 'The address points to a private network',
+            'url_not_accessible' => 'The page could not be reached',
+            'unsupported_content_type' => 'This type of file cannot be read',
+            'empty_page' => 'The page has no text',
+            'too_many_redirects' => 'Too many redirects',
+            default => $code,
         }, [], TheliaCMS::DOMAIN_NAME);
     }
 

@@ -191,7 +191,7 @@ final class ContentScreenTest extends AdminScreenTestCase
         self::assertSame(2, $pages->filter('li')->count());
         self::assertStringContainsString('https://example.com/a-propos', $pages->filter('li')->eq(0)->text());
         self::assertStringContainsString('not counted', $pages->filter('li')->eq(0)->text(), 'The tokens of a page are in the log of the core, not counted here.');
-        self::assertStringContainsString('not read (url_not_accessible)', $pages->filter('li')->eq(1)->text());
+        self::assertStringContainsString('not read (The page could not be reached)', $pages->filter('li')->eq(1)->text());
     }
 
     public function testALanguageWithoutContentIsWrittenFromAnotherOne(): void
