@@ -30,3 +30,17 @@ longer part of the module. An export taken before the update keeps them; a
 
 It drops `cms_page_template` as well: saved page templates are no longer
 part of the module, rather than emptied as the decision above says.
+
+## Amendment of 2026-10-29
+
+The update no longer destroys anything. The content of the pages and of the
+revisions is still emptied for the new editor, but the columns of the former
+editor are copied first to `cms_legacy_page_content` and
+`cms_legacy_page_revision`, and the five tables above are renamed
+`cms_legacy_block`, `cms_legacy_block_i18n`, `cms_legacy_block_content`,
+`cms_legacy_item_block` and `cms_legacy_page_template` instead of dropped.
+The module never reads them. The reason: a site that updates in production
+lost its blocks and its saved templates with no way back, and 2.x has no
+model that holds them (a block is markup of the former editor, which no
+document can be read back from), so a rename costs nothing and keeps the data
+for whoever needs it. The replay of the update leaves those tables alone.

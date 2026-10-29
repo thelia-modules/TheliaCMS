@@ -21,8 +21,10 @@ use TheliaCMS\TheliaCMS;
 /**
  * A site on 1.5.0 moving to documents: the columns of the former editor go,
  * the document columns come, the pages stay and their content does not, the
- * tables of the blocks and of the saved templates go, and the update can be
- * played twice.
+ * tables of the blocks and of the saved templates are renamed `cms_legacy_*`
+ * with their rows, what the former editor wrote is copied to
+ * `cms_legacy_page_content` and `cms_legacy_page_revision`, and the update can
+ * be played twice.
  *
  * Runs outside a transaction: an ALTER TABLE commits on its own, so a rollback
  * would undo nothing and the test would prove nothing. The tables are put back
@@ -37,11 +39,22 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
 {
     protected bool $useTransaction = false;
 
+    private const LEGACY_TABLES = [
+        'cms_legacy_item_block',
+        'cms_legacy_block_content',
+        'cms_legacy_block_i18n',
+        'cms_legacy_block',
+        'cms_legacy_page_template',
+        'cms_legacy_page_content',
+        'cms_legacy_page_revision',
+    ];
+
     protected function tearDown(): void
     {
         // Whatever the test did, leave the tables in the 2.0.0 shape: playing
         // the update once more is exactly what does that.
         (new TheliaCMS())->update('1.5.0', '2.0.0', $this->getPropelConnection());
+        $this->dropLegacyTables();
 
         parent::tearDown();
     }
@@ -70,8 +83,25 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
         self::assertFalse($this->columnExists('cms_page_content', 'published_css'));
 
         foreach (['cms_block', 'cms_block_i18n', 'cms_block_content', 'cms_item_block', 'cms_page_template'] as $table) {
-            self::assertFalse($this->tableExists($table), $table.' goes with the blocks.');
+            self::assertFalse($this->tableExists($table), $table.' is no longer a table of the module.');
+            self::assertTrue($this->tableExists(str_replace('cms_', 'cms_legacy_', $table)), $table.' is kept under its legacy name.');
         }
+
+        self::assertSame(['product-1'], array_column($this->rows('SELECT code FROM cms_legacy_block'), 'code'));
+        self::assertSame(['<p>Bloc</p>'], array_column($this->rows('SELECT draft_html FROM cms_legacy_block_content'), 'draft_html'));
+        self::assertSame([['item_type' => 'product', 'item_id' => 1]], $this->rows('SELECT item_type, item_id FROM cms_legacy_item_block'));
+        self::assertSame(1, $this->rowCount('cms_legacy_page_template'));
+
+        $legacyContent = $this->rows(\sprintf("SELECT draft_html, draft_project_data, draft_css, published_css FROM cms_legacy_page_content WHERE page_id = %d AND locale = '%s'", $pageId, $locale));
+        self::assertCount(1, $legacyContent);
+        self::assertStringContainsString('<h1>Avant</h1><p>Un texte de 1.5.0.</p>', (string) $legacyContent[0]['draft_html']);
+        self::assertSame('{"pages":[{"frames":[]}]}', $legacyContent[0]['draft_project_data']);
+        self::assertSame('body{color:red}', $legacyContent[0]['draft_css']);
+        self::assertSame('.cms-page-content{color:red}', $legacyContent[0]['published_css']);
+
+        $legacyRevision = $this->rows(\sprintf('SELECT html, project_data, css FROM cms_legacy_page_revision WHERE page_id = %d AND label = \'v1\'', $pageId));
+        self::assertCount(1, $legacyRevision);
+        self::assertSame('<p>Révision de 1.5.0</p>', $legacyRevision[0]['html']);
 
         self::assertTrue($this->columnExists('cms_page_revision', 'document'));
         self::assertFalse($this->columnExists('cms_page_revision', 'project_data'));
@@ -110,6 +140,8 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
     {
         $connection = $this->getPropelConnection();
 
+        $this->dropLegacyTables();
+
         $connection->exec('ALTER TABLE cms_page_content DROP COLUMN draft_document, DROP COLUMN published_document, ADD COLUMN draft_project_data LONGTEXT AFTER locale, ADD COLUMN draft_css LONGTEXT AFTER draft_html, ADD COLUMN published_css LONGTEXT AFTER published_html, ALGORITHM=COPY');
 
         // The tables of the blocks and of the saved templates as 1.5.0 had
@@ -122,11 +154,25 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
 
         $connection->exec('ALTER TABLE cms_page_revision DROP COLUMN document, ADD COLUMN project_data LONGTEXT AFTER locale, ADD COLUMN css LONGTEXT AFTER html, ALGORITHM=COPY');
 
+        $connection->prepare('INSERT INTO cms_page_revision (page_id, locale, project_data, html, css, label, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())')
+            ->execute([$pageId, $locale, '{"revision":1}', '<p>Révision de 1.5.0</p>', '.old{}', 'v1']);
+
         $connection->prepare('UPDATE cms_page_content SET draft_project_data = ?, draft_css = ?, published_css = ? WHERE page_id = ? AND locale = ?')
             ->execute(['{"pages":[{"frames":[]}]}', 'body{color:red}', '.cms-page-content{color:red}', $pageId, $locale]);
 
         $connection->prepare('INSERT INTO cms_page_template (code, title, payload, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())')
             ->execute(['test-'.bin2hex(random_bytes(4)), 'Modèle de 1.5.0', '{"format":"thelia-cms","version":1,"pages":[]}']);
+    }
+
+    private function dropLegacyTables(): void
+    {
+        $connection = $this->getPropelConnection();
+
+        $connection->exec('SET FOREIGN_KEY_CHECKS = 0');
+        foreach (self::LEGACY_TABLES as $table) {
+            $connection->exec('DROP TABLE IF EXISTS '.$table);
+        }
+        $connection->exec('SET FOREIGN_KEY_CHECKS = 1');
     }
 
     private function tableExists(string $table): bool

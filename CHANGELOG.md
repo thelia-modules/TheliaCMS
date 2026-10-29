@@ -9,6 +9,19 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- **The update from 1.x to 2.0.0 no longer destroys what the former editor
+  wrote.** It dropped the tables of the blocks and of the saved page templates
+  and cleared the HTML, the editor project and the stylesheets of every page
+  and revision, with no copy. The tables of the blocks and of the saved page
+  templates are now renamed `cms_legacy_block`, `cms_legacy_block_i18n`,
+  `cms_legacy_block_content`, `cms_legacy_item_block` and
+  `cms_legacy_page_template`, rows and keys included, and the content of the
+  pages and revisions (HTML, editor project, stylesheets) is copied to
+  `cms_legacy_page_content` and `cms_legacy_page_revision` before it is
+  cleared. 2.x never reads those tables: they are there to get the old markup
+  back by hand, and can be dropped once it is no longer needed. The update can
+  be played twice. A site that already went through the former 2.0.0 update
+  lost that content: restore it from an export or a backup taken before.
 - **A component of the theme keeps its Stimulus controller once published.**
   The filter a page goes through before it goes online dropped
   `data-controller`, `data-action` and the targets of a component: a carousel
@@ -468,13 +481,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   rendering, and is refused at its next save until the record is picked.
 - **Blocks are gone.** The reusable blocks (**CMS > Blocks**) and the blocks
   of catalogue items (the "Content block" card of a product, a category, a
-  brand or a store) are removed, with their tables: the update to 2.0.0 drops
-  `cms_block`, `cms_block_i18n`, `cms_block_content` and `cms_item_block`.
-  A theme that called `cms_item_block()` removes the call. An export taken
-  before the update keeps the blocks; a 2.0.0 module imports the rest of the
-  file and warns that the blocks were left out.
+  brand or a store) are removed. Their tables are renamed by the update to
+  2.0.0, rows included: `cms_block`, `cms_block_i18n`, `cms_block_content` and
+  `cms_item_block` become `cms_legacy_block`, `cms_legacy_block_i18n`,
+  `cms_legacy_block_content` and `cms_legacy_item_block`, which the module
+  does not read. A theme that called `cms_item_block()` removes the call. An
+  export taken before the update keeps the blocks; a 2.0.0 module imports the
+  rest of the file and warns that the blocks were left out.
 - **Saved page templates are gone.** The **CMS > Templates** screen, the
-  `cms_page_template` table (dropped by the update to 2.0.0) and the code that
+  `cms_page_template` table (renamed `cms_legacy_page_template` by the update
+  to 2.0.0, rows kept) and the code that
   saved a page as a template and started a page from one. A page is started
   from a brief, or duplicated from another page.
 - **The content of a 1.x site is not carried over.** The content of a page
@@ -482,10 +498,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   of the catalogue with its props — rendered to HTML on save and on publish.
   The markup the former editor stored has no document to be read back from, so
   the update to 2.0.0 puts every page back to draft, without content,
-  and removes their revisions and search entries. Pages
-  keep their tree, addresses, SEO, tags and types. **Export the site before
-  updating** (`php Thelia thelia_cms:export`): the file keeps the HTML, and a
-  2.0.0 module imports everything in it but the contents.
+  and empties their revisions and search entries. Pages
+  keep their tree, addresses, SEO, tags and types. What the former editor
+  wrote is copied first to `cms_legacy_page_content` and
+  `cms_legacy_page_revision` (HTML, editor project, stylesheets), which the
+  module does not read. **Export the site before updating** all the same
+  (`php Thelia thelia_cms:export`): the file keeps the HTML, and a 2.0.0
+  module imports everything in it but the contents.
 - `cms_page_content` carries `draft_document` and
   `published_document` and lose `draft_project_data`, `draft_css` and
   `published_css`; `cms_page_revision` carries `document` and loses
