@@ -164,6 +164,8 @@
         <column name="published_html" type="CLOB"/>
         <column name="published_at" type="TIMESTAMP"/>
         <column name="draft_updated_by" type="INTEGER"/>
+        <column name="draft_provenance" type="CLOB"/>
+        <column name="published_provenance" type="CLOB"/>
 
         <foreign-key foreignTable="cms_page" name="fk_cms_page_content_page" onDelete="CASCADE" onUpdate="RESTRICT">
             <reference foreign="id" local="page_id"/>
@@ -183,6 +185,7 @@
         <column name="locale" required="true" size="5" type="VARCHAR"/>
         <column name="document" type="CLOB"/>
         <column name="html" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
         <column name="label" size="60" type="VARCHAR"/>
         <column name="created_by" type="INTEGER"/>
 
@@ -237,6 +240,8 @@
         <column name="published_html" type="CLOB"/>
         <column name="published_at" type="TIMESTAMP"/>
         <column name="draft_updated_by" type="INTEGER"/>
+        <column name="draft_provenance" type="CLOB"/>
+        <column name="published_provenance" type="CLOB"/>
 
         <unique name="unq_cms_item_content_item_locale">
             <unique-column name="item_type"/>
@@ -254,6 +259,7 @@
         <column name="locale" required="true" size="5" type="VARCHAR"/>
         <column name="document" type="CLOB"/>
         <column name="html" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
         <column name="label" size="60" type="VARCHAR"/>
         <column name="created_by" type="INTEGER"/>
 
@@ -571,6 +577,7 @@
         <column name="sample" type="CLOB"/>
         <column name="template" type="CLOB"/>
         <column name="css" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
         <column defaultValue="draft" name="status" required="true" size="20" type="VARCHAR"/>
         <column name="created_by" type="INTEGER"/>
         <column name="updated_by" type="INTEGER"/>
@@ -613,7 +620,9 @@
         cost. It is the history of a page an editor iterates on, and the
         ledger the site reads its spend from. `target_type` and `target_id`
         carry no foreign key: a generation for a page the site later deleted
-        is still a cost.
+        is still a cost. `log_id` is the row of `ai_usage_log` of the core that
+        holds the last request of the call, and carries no foreign key either:
+        the core may purge its log.
     -->
     <table name="cms_page_generation" namespace="TheliaCMS\Model">
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
@@ -625,6 +634,7 @@
         <column name="brief" type="CLOB"/>
         <column name="model" size="60" type="VARCHAR"/>
         <column name="request_id" size="80" type="VARCHAR"/>
+        <column name="log_id" type="INTEGER"/>
         <column defaultValue="done" name="status" required="true" size="20" type="VARCHAR"/>
         <column name="stop_reason" size="30" type="VARCHAR"/>
         <column name="stop_category" size="60" type="VARCHAR"/>
@@ -637,6 +647,7 @@
         <column defaultValue="0" name="duration_ms" required="true" type="INTEGER"/>
         <column name="error" type="LONGVARCHAR"/>
         <column name="document" type="CLOB"/>
+        <column name="provenance" type="CLOB"/>
         <column name="web_pages" type="CLOB"/>
         <column name="left_out" type="CLOB"/>
         <column name="created_by" type="INTEGER"/>
@@ -645,6 +656,9 @@
             <index-column name="target_type"/>
             <index-column name="target_id"/>
             <index-column name="locale"/>
+        </index>
+        <index name="idx_cms_page_generation_log">
+            <index-column name="log_id"/>
         </index>
 
         <behavior name="timestampable"/>

@@ -16,12 +16,18 @@ namespace TheliaCMS\Generation;
 
 use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Domain\Ai\AiProvenance;
+use TheliaCMS\Content\ProvenanceMark;
 use TheliaCMS\Model\CmsPageGeneration;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 
 /**
  * The ledger: one row per call, whatever its outcome. The history an editor
  * iterates from, and the spend the site reads.
+ *
+ * The cost of a call is the sum of what the usage log of the core says its
+ * requests cost; the row keeps the sum and the id of the last request in that
+ * log. The site has no price list of its own.
  */
 final readonly class GenerationLog
 {
@@ -35,11 +41,12 @@ final readonly class GenerationLog
 
     public function __construct(
         private SecurityContext $securityContext,
-        private Pricing $pricing,
     ) {
     }
 
     /**
+     * @param float             $costUsd  what the requests of the call cost, as the core logged them
+     * @param int|null          $logId    the row of the usage log of the core written for the last request of the call, null when none was
      * @param list<WebPageRead> $webPages the pages the call read, counted
      * @param list<string>      $leftOut  what the answer says the page leaves out of the brief
      */
@@ -51,6 +58,8 @@ final readonly class GenerationLog
         Usage $usage,
         int $turns,
         int $durationMs,
+        float $costUsd,
+        ?int $logId,
         ?string $requestId = null,
         ?string $stopReason = null,
         ?string $stopCategory = null,
@@ -58,6 +67,7 @@ final readonly class GenerationLog
         ?string $document = null,
         array $webPages = [],
         array $leftOut = [],
+        ?AiProvenance $provenance = null,
     ): int {
         $row = (new CmsPageGeneration())
             ->setTargetType($request->target->type)
@@ -76,10 +86,12 @@ final readonly class GenerationLog
             ->setCacheReadTokens($usage->cacheReadTokens)
             ->setCacheWriteTokens($usage->cacheWriteTokens)
             ->setTurns($turns)
-            ->setCostUsd(number_format($this->pricing->cost($model, $usage), 6, '.', ''))
+            ->setCostUsd(number_format($costUsd, 6, '.', ''))
+            ->setLogId($logId)
             ->setDurationMs($durationMs)
             ->setError(null !== $error ? mb_substr($error, 0, 60000) : null)
             ->setDocument($document)
+            ->setProvenance(ProvenanceMark::encode($provenance))
             ->setWebPages([] === $webPages ? null : json_encode(array_map(static fn (WebPageRead $page): array => $page->toArray(), $webPages), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE))
             ->setLeftOut([] === $leftOut ? null : json_encode($leftOut, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE))
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
@@ -104,11 +116,14 @@ final readonly class GenerationLog
         Usage $usage,
         int $turns,
         int $durationMs,
+        float $costUsd,
+        ?int $logId,
         ?string $requestId = null,
         ?string $stopReason = null,
         ?string $stopCategory = null,
         ?string $error = null,
         ?string $component = null,
+        ?AiProvenance $provenance = null,
     ): int {
         $row = (new CmsPageGeneration())
             ->setTargetType(GenerationTarget::TYPE_COMPONENT)
@@ -127,10 +142,12 @@ final readonly class GenerationLog
             ->setCacheReadTokens($usage->cacheReadTokens)
             ->setCacheWriteTokens($usage->cacheWriteTokens)
             ->setTurns($turns)
-            ->setCostUsd(number_format($this->pricing->cost($model, $usage), 6, '.', ''))
+            ->setCostUsd(number_format($costUsd, 6, '.', ''))
+            ->setLogId($logId)
             ->setDurationMs($durationMs)
             ->setError(null !== $error ? mb_substr($error, 0, 60000) : null)
             ->setDocument($component)
+            ->setProvenance(ProvenanceMark::encode($provenance))
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
         $row->save();
 

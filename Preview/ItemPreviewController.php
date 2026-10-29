@@ -62,7 +62,8 @@ final readonly class ItemPreviewController
         }
 
         $item = $this->items->find($itemType, $id, $locale);
-        $html = $this->contents->find($itemType, $id, $locale)?->getDraftHtml();
+        $content = $this->contents->find($itemType, $id, $locale);
+        $html = $content?->getDraftHtml();
 
         if (!$item instanceof CatalogueItem || null === $html) {
             throw new NotFoundHttpException();
@@ -71,6 +72,7 @@ final readonly class ItemPreviewController
         $response = new Response($this->templates->render(self::THEME_TEMPLATE, self::MODULE_TEMPLATE, [
             'cms_item' => $item,
             'cms_item_html' => (string) $this->partials->substitute($html, $locale),
+            'cms_item_provenance' => $content?->getDraftProvenance(),
         ]));
 
         $response->headers->set('X-Robots-Tag', 'noindex, nofollow');

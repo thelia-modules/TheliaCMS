@@ -8,21 +8,46 @@ usual pipeline.
 
 ## What it needs
 
-- A key for the Claude API in the environment of the site, `ANTHROPIC_API_KEY`.
-  Never in a setting: a setting travels with an export, a key must not. Without
-  it the generator says so (`GenerationUnavailableException`) and nothing is
-  called.
+- Thelia 3.3.0 or later, whose AI layer the generator goes through. The
+  module holds no key, no provider and no model.
+- A connection and a range in the **AI settings** of Thelia: declare the
+  connection to a provider once, then give each of the three usages below a
+  range of models, turn it on and set its budget. Without that, the generator
+  says so (`GenerationUnavailableException`, in the language of the back
+  office) and nothing is called. The budget, the rate limit, the
+  jurisdiction (providers inside the European Union only) and the guardrails
+  of the AI settings apply to every call: when one refuses, the editor reads
+  which and what to change there.
 - Four settings, in the **Generator** card of CMS > Settings, each with a
-  default: `generator_model` (`claude-opus-5-5`), `generator_effort` (`high`;
-  `low`, `medium`, `xhigh` and `max` exist), `generator_max_tokens` (16000),
-  `generator_web_fetch` (on: read the web pages a brief cites, below).
+  default: `generator_effort` (`high`; `low`, `medium`, `xhigh` and `max`
+  exist; passed to the model as its reasoning effort, read by Anthropic models
+  and without effect on the others), `generator_max_tokens` (16000),
+  `generator_web_fetch` (off: read the web pages a brief cites, below), and
+  for the texts beside a field `generator_text_effort` (`low`) and
+  `generator_text_max_tokens` (2000). The card links to the AI settings.
 - The right `admin.cms.generate`, given to the editor profile the module
   seeds: asking the generator to write costs money.
+
+### The three usages
+
+The module declares three usages to the AI layer. Each is set up on its own in
+the AI settings, so a site can give the pages a stronger range than the texts:
+
+| Usage | What it writes |
+|---|---|
+| `theliacms.page_generation` | the document of a page or of a catalogue item: a brief, a change, a section, a translation |
+| `theliacms.text` | a text for a rich-text field (a product description, a chapo), from a brief |
+| `theliacms.component` | a component made in the back office |
+
+The layer picks the model from the range of the usage, records every request
+in its usage log, and the ledger of the module points at the row of the last
+request of a call (`cms_page_generation.log_id`); the requests of one call
+share a correlation id in that log.
 
 ## What the model is told
 
 The system prompt is the same for every call of the site, written in a stable
-order so the API caches it for an hour: the role, the **skills** (below), then
+order so a provider that caches prompts can reuse it: the role, the **skills** (below), then
 the **catalogue** — every section with its description, its props and one
 example. The user message carries what changes: the name of the shop and what
 it says about itself, the language of the page, the currency, the title and
@@ -39,8 +64,8 @@ otherwise, these rules win." They are read for every request on a page of
 the type (brief, change, section, translation), like a skill only that type
 loads; a type without instructions leaves the message as it was.
 
-The answer is constrained by a structured output to the envelope of a
-document: a list of sections, each naming a component of the catalogue
+The answer is constrained by a structured output (a schema handed to the AI
+layer, which checks the answer against it) to the envelope of a document: a list of sections, each naming a component of the catalogue
 (an enum) and carrying its props as a JSON object written as a string. The
 grammar the API compiles a schema into cannot hold the whole catalogue — it
 caps optional properties, union types and its own size — so the props are
@@ -65,23 +90,28 @@ implementing it is what offers it.
 
 A brief, a change or a section asked again may cite web pages by their
 address (`http://…` or `https://…`): "take our story from
-https://example.com/about, shorter". The user message then lists them and asks
-the model to read each before it writes, and the request offers `web_fetch`,
-the tool the Claude API runs itself (`web_fetch_20260209`): the page is read
-from the infrastructure of Anthropic, never from the server of the shop. Five
-pages at most per request, the ones cited and the links followed from them,
-each cut at 20,000 tokens. What a page says counts as given by the brief; a
-page that cannot be read (private, behind a login, an error) is left out.
-The address of a picture (a path ending in `.jpg`, `.png`, `.webp`, `.gif`,
-`.svg` or `.avif`) is not a page: it is not offered for reading, and goes as
-it is into an image prop.
+https://example.com/about, shorter". **Reading them is off by default**, and
+the site turns it on with **Read the web pages a brief cites** in the
+Generator card. The reason: a page read is fetched by the server of the shop,
+and its text is sent to the provider of the range, which may be outside the
+European Union. A site that has to keep what it sends inside a perimeter, or
+whose server sits on a private network, should leave it off. The addresses then
+stay in the brief as text, and the generator is not offered the tool.
 
-A brief that cites no address sends the request it always sent, without the
-tool, and so does every brief once **Read the web pages a brief cites** is
-turned off: the addresses then stay in the brief as text. The tool has to be
-allowed for the organisation of the API key (Claude Console, privacy
-settings); the pages read are billed as input tokens. A translation cites
-none: its source is the document of the other language.
+When it is on and a brief cites an address, the user message lists them and
+asks the model to read each before it writes, and the request offers
+`read_url`. The tool runs on the server, through the HTTP client of the core
+that refuses private, loopback and link-local addresses when the name is
+resolved (a page of the internal network cannot be reached through a brief),
+checks every redirect the same way, and is bounded in size, in time and in the
+number of redirects. Five pages at most per request, only the ones the brief
+cites (a redirect may not leave the host of an address cited); each is cut at 40,000 characters. What a
+page says is handed to the model as untrusted content: a given of the brief,
+never an instruction. A page that cannot be read (private, behind a login, an
+error) is left out and said so in the history. The address of a picture (a path
+ending in `.jpg`, `.png`, `.webp`, `.gif`, `.svg` or `.avif`) is not a page: it
+is not offered for reading, and goes as it is into an image prop. A translation
+cites none: its source is the document of the other language.
 
 ## Skills
 
@@ -165,8 +195,9 @@ and the progress of the call is shown as it runs: the answer is a stream of
 server-sent events (`start`, `turn`, `delta`, `correction`, `done`, `error`),
 written by `Generation\Admin\GenerationStream` as the generator reports each
 turn, and every few hundred characters of the answer, to its
-`GenerationObserverInterface`: the generator reads the answer of the API as a
-stream (`Generation\StreamedMessage` puts the message back together). When
+`GenerationObserverInterface`: the generator reads the answer of the AI layer as a
+stream (`Generation\Ai\ObservedStream` tells the observer how much has arrived
+and hands back the final response). When
 the call ends, the script fetches the screen at `?done=<id>` and puts it in
 place of the one on show, so the address bar, the scroll and the open panels
 stay as they were; without the script, the browser is sent to that address.
@@ -202,16 +233,17 @@ Opening the screen takes the page right; asking the generator takes
 
 Every call writes a row of `cms_page_generation`, whatever its outcome: the
 page and the language, the kind of request (brief, revision, section), the
-prompt, the model, the tokens read and written, the cache hits, the turns, an
-estimate of the cost in US dollars from a price list shipped with the module,
-the duration, the stop reason and, for a refusal, its category, the
-document produced, and the web pages the call read (`web_pages`): each
-address, the error code of a page that could not be read, and the tokens of
-the text read. Those tokens are counted after the call by the token counting
-endpoint of the API, which is not billed, and priced in the history of the
-screen as one uncached reading: the cost of the call already includes them,
-and a page the model reads again at a later turn is billed again, at the cache
-price after the first. A count that fails leaves the page uncounted. What the
+prompt, the model, the tokens read, written and cached, the turns, the cost in
+US dollars as the usage log of the
+core recorded it (the module has no price list: it adds up what the core says
+the requests of the call cost, and keeps the id of the last request in
+`log_id`), the duration, the stop reason and, for a refusal, its category, the
+document produced, the mark of a generated content (`provenance`, see the
+README) and the web pages the call read (`web_pages`): each address, the error
+code of a page that could not be read, and the size of the text read. A row
+written before 2.4.0 has no `log_id`. The prompt is emptied by
+`maintenance:purge` once the core has emptied its own (README, *Prompts and
+their retention*). What the
 answer said the page leaves out is kept as a JSON list of sentences
 (`left_out`), at most ten of 300 characters. `GenerationLog::history()` is what a page screen reads;
 `spentSince()` what a budget alert reads.
@@ -220,7 +252,8 @@ answer said the page leaves out is kept as a JSON list of sentences
 
 `Generation/Component/ComponentGenerator.php` makes a component of the site
 from a request (see [creating-a-component.md](creating-a-component.md#a-component-made-in-the-back-office)).
-Same client, model, effort and price list as the pages; no tool. The system
+Same gateway, effort and log as the pages, under its own usage
+(`theliacms.component`); no tool. The system
 prompt (`ComponentPrompt`), cached, gives the JSON form of the props, the rules
 of the sandbox and of the stylesheet, the colour tokens read from
 `assets/blocks.css`, the accessibility skill and an example; the user message
@@ -260,8 +293,9 @@ a page online.
 
 ## Tests
 
-Nothing in the test suites reaches the API: the generator takes its client
-from `ClaudeClientProviderInterface`, and the integration tests hand it a
-transport that answers from recorded responses (`Tests/Integration/Generation/FakeClaudeTransport.php`).
+Nothing in the test suites reaches a provider: the generators take the
+gateway of the core (`AiGatewayInterface`), and the tests hand them
+`Tests/Support/FakeAiGateway`, which answers from a queue and keeps every
+request for the assertions.
 The quality of what the real model writes is measured by hand, against a
 rubric: `docs/evaluation/`.

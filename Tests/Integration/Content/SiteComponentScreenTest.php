@@ -16,20 +16,21 @@ namespace TheliaCMS\Tests\Integration\Content;
 
 use Symfony\Component\DomCrawler\Crawler;
 use Thelia\Core\Security\AccessManager;
+use Thelia\Domain\Ai\AiFinishReason;
+use Thelia\Domain\Ai\AiGatewayInterface;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\Section;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentRepository;
-use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Generation\Component\ComponentPrompt;
 use TheliaCMS\Model\CmsComponentQuery;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Security\CmsResources;
-use TheliaCMS\Tests\Integration\Generation\FakeClaudeTransport;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 use TheliaCMS\Tests\Unit\Content\Site\PriceTable;
 
 /**
@@ -42,24 +43,14 @@ final class SiteComponentScreenTest extends AdminScreenTestCase
 
     private const string GENERATE = '/admin/cms/components/site/generate';
 
-    private FakeClaudeTransport $api;
+    private FakeAiGateway $api;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->api = new FakeClaudeTransport();
-        $api = $this->api;
-        static::getContainer()->set(ClaudeClientProviderInterface::class, new class($api) implements ClaudeClientProviderInterface {
-            public function __construct(private FakeClaudeTransport $api)
-            {
-            }
-
-            public function client(): \Anthropic\Client
-            {
-                return $this->api->client();
-            }
-        });
+        $this->api = new FakeAiGateway();
+        static::getContainer()->set(AiGatewayInterface::class, $this->api);
     }
 
     public function testARequestEndsOnACandidateDrawnInTheThemeAndNothingIsKeptYet(): void
@@ -106,7 +97,7 @@ final class SiteComponentScreenTest extends AdminScreenTestCase
         $first = $this->ask('Un tableau de prix.');
         $second = $this->ask('Ajoute de l’espace dans chaque formule.', ['candidate' => self::idOf($first)], $first);
 
-        self::assertStringContainsString('"code": "PriceTable"', $this->api->requests[1]['messages'][0]['content'], 'The change starts from the candidate.');
+        self::assertStringContainsString('"code": "PriceTable"', $this->api->requests[1]->messages[0]->content, 'The change starts from the candidate.');
 
         $keep = $this->screen($second)->filter('[data-testid="cms-site-component-keep"]')->form();
         self::assertSame(302, $this->send('POST', $keep->getUri(), $keep->getPhpValues()));
@@ -199,8 +190,8 @@ final class SiteComponentScreenTest extends AdminScreenTestCase
     public function testTheScriptOfTheScreenFollowsTheCallAsItRunsThenGoesToTheCandidate(): void
     {
         $this->api
-            ->answer(self::answer(PriceTable::component('<section><h2>Nos formules</h2>{{ props.title }}</section>')))
-            ->answer(self::answer(PriceTable::component()));
+            ->streamed([str_repeat('x', 400)], self::answer(PriceTable::component('<section><h2>Nos formules</h2>{{ props.title }}</section>')))
+            ->streamed([str_repeat('x', 10)], self::answer(PriceTable::component()));
         $screen = $this->screen(self::NEW);
         self::assertStringContainsString('component-generator.js', $screen->html(), 'The screen loads the script that follows the call.');
         $token = $this->tokenOfTheForm($screen, self::GENERATE);
@@ -218,7 +209,7 @@ final class SiteComponentScreenTest extends AdminScreenTestCase
 
     public function testACallThatFailsIsShownWithWhatWentWrong(): void
     {
-        $this->api->answer(FakeClaudeTransport::message([], 'refusal', [], ['type' => 'refusal', 'category' => 'general_harms', 'explanation' => 'Not this.']));
+        $this->api->answer(FakeAiGateway::response(finishReason: AiFinishReason::ContentFilter));
 
         $screen = $this->screen($this->ask('Something the model declines.'));
 
@@ -286,11 +277,8 @@ final class SiteComponentScreenTest extends AdminScreenTestCase
         return (int) substr($candidateUrl, (int) strrpos($candidateUrl, '/') + 1);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private static function answer(SiteComponent $component): array
+    private static function answer(SiteComponent $component): \Thelia\Domain\Ai\AiResponse
     {
-        return FakeClaudeTransport::message([FakeClaudeTransport::text(ComponentPrompt::json($component))]);
+        return FakeAiGateway::response(ComponentPrompt::json($component));
     }
 }

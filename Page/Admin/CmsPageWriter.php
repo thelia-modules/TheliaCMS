@@ -19,6 +19,7 @@ use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Domain\Ai\AiProvenance;
 use Thelia\Model\LangQuery;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Content\Document;
@@ -31,6 +32,7 @@ use TheliaCMS\Content\Pipeline\ImageRewriter;
 use TheliaCMS\Content\Pipeline\PageContentNormalizer;
 use TheliaCMS\Content\Pipeline\PlaceholderContentChecker;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
+use TheliaCMS\Content\ProvenanceMark;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContent;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -175,9 +177,14 @@ final readonly class CmsPageWriter
      * Stores the document and its rendering, without touching the published
      * snapshot: saving never changes what visitors see.
      *
+     * A generation hands in its provenance, which replaces the mark of the
+     * draft. A person editing the draft hands in none, and the mark stays:
+     * a section rewritten by hand is still part of a page the model wrote,
+     * and nothing here can tell when that stops being true.
+     *
      * @throws InvalidDocumentException when the document cannot be stored
      */
-    public function saveContent(CmsPage $page, string $locale, Document $document): void
+    public function saveContent(CmsPage $page, string $locale, Document $document, ?AiProvenance $provenance = null): void
     {
         $adminId = $this->securityContext->getAdminUser()?->getId();
         $document = $this->validator->validate($document);
@@ -187,11 +194,16 @@ final readonly class CmsPageWriter
         // opens the page next, so a script left in it would run there.
         $html = $this->sanitizer->html($this->normalizer->html($this->renderer->render($document, $locale)), $this->mayPublishCustomCode());
 
-        $this->contentFor($page, $locale)
+        $content = $this->contentFor($page, $locale)
             ->setDraftDocument($document->toJson())
             ->setDraftHtml($html)
-            ->setDraftUpdatedBy($adminId)
-            ->save();
+            ->setDraftUpdatedBy($adminId);
+
+        if (null !== $provenance) {
+            $content->setDraftProvenance(ProvenanceMark::encode($provenance));
+        }
+
+        $content->save();
 
         $this->activityLog->record('UPDATE', (int) $page->getId(), \sprintf('CMS page #%d content edited in %s', $page->getId(), $locale));
     }
@@ -215,6 +227,7 @@ final readonly class CmsPageWriter
             ->setLocale($locale)
             ->setDocument($content->getDraftDocument())
             ->setHtml($content->getDraftHtml())
+            ->setProvenance($content->getDraftProvenance())
             ->setLabel(self::DRAFT_LABEL)
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
             ->save();
@@ -257,6 +270,8 @@ final readonly class CmsPageWriter
 
         $this->keepDraft($page, $locale);
         $this->saveContent($page, $locale, $document);
+        // The draft put back brings its own mark, or none.
+        $this->contentFor($page, $locale)->setDraftProvenance($revision->getProvenance())->save();
     }
 
     private function draftRevisions(CmsPage $page, string $locale): CmsPageRevisionQuery
@@ -378,6 +393,7 @@ final readonly class CmsPageWriter
 
             $content->setPublishedDocument($content->getDraftDocument())
                 ->setPublishedHtml($html)
+                ->setPublishedProvenance($content->getDraftProvenance())
                 ->setPublishedAt(new \DateTimeImmutable())
                 ->save($connection);
 
@@ -515,6 +531,7 @@ final readonly class CmsPageWriter
         $content?->setPublishedAt(null)
             ->setPublishedDocument(null)
             ->setPublishedHtml(null)
+            ->setPublishedProvenance(null)
             ->save();
 
         if ($wasOnline) {
@@ -733,6 +750,7 @@ final readonly class CmsPageWriter
                     ->setLocale($content->getLocale())
                     ->setDraftDocument($content->getDraftDocument() ?? $content->getPublishedDocument())
                     ->setDraftHtml($content->getDraftHtml() ?? $content->getPublishedHtml())
+                    ->setDraftProvenance(null !== $content->getDraftDocument() ? $content->getDraftProvenance() : $content->getPublishedProvenance())
                     ->setDraftUpdatedBy($this->securityContext->getAdminUser()?->getId())
                     ->save($connection);
 
@@ -973,6 +991,7 @@ final readonly class CmsPageWriter
             ->setLocale($locale)
             ->setDocument($content->getPublishedDocument())
             ->setHtml($content->getPublishedHtml())
+            ->setProvenance($content->getPublishedProvenance())
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId())
             ->save($connection);
 

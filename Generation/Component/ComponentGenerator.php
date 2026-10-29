@@ -14,26 +14,33 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation\Component;
 
-use Anthropic\Core\Exceptions\APIConnectionException;
-use Anthropic\Core\Exceptions\APIStatusException;
-use Anthropic\Messages\Message;
-use Anthropic\Messages\TextBlock;
 use Psr\Log\LoggerInterface;
+use Thelia\Domain\Ai\AiAudience;
+use Thelia\Domain\Ai\AiCapability;
+use Thelia\Domain\Ai\AiGatewayInterface;
+use Thelia\Domain\Ai\AiMessage;
+use Thelia\Domain\Ai\AiOutputSchema;
+use Thelia\Domain\Ai\AiRequest;
+use Thelia\Domain\Ai\AiTier;
+use Thelia\Domain\Ai\AiTransparency;
+use Thelia\Domain\Ai\AsAiUsage;
+use Thelia\Domain\Ai\Exception\AiExceptionInterface;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentUsage;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Content\Site\SitePropReader;
-use TheliaCMS\Generation\ClaudeClientProviderInterface;
+use TheliaCMS\Generation\Ai\CorrelationId;
+use TheliaCMS\Generation\Ai\GatewayFailures;
+use TheliaCMS\Generation\Ai\ObservedStream;
+use TheliaCMS\Generation\Ai\SentBackAnswer;
 use TheliaCMS\Generation\GenerationException;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationObserverInterface;
 use TheliaCMS\Generation\GenerationRefusedException;
 use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\InvalidGenerationException;
-use TheliaCMS\Generation\Pricing;
-use TheliaCMS\Generation\StreamedMessage;
 use TheliaCMS\Generation\Usage;
 
 /**
@@ -47,22 +54,33 @@ use TheliaCMS\Generation\Usage;
  * every problem listed, twice at most. Every outcome is written to the
  * ledger, beside the calls that write pages, before it is returned or thrown.
  */
+#[AsAiUsage(
+    id: 'theliacms.component',
+    purpose: 'Write a component of the site (its template, its styles and its props) from a request typed in the back office.',
+    audience: AiAudience::Admin,
+    tier: AiTier::Advanced,
+    capabilities: [AiCapability::StructuredOutput, AiCapability::Streaming],
+    transparency: AiTransparency::Generative,
+)]
 final readonly class ComponentGenerator
 {
+    public const string USAGE = 'theliacms.component';
+
     /** How many times a refused component is sent back for correction. */
     private const int CORRECTIONS = 2;
 
     public function __construct(
-        private ClaudeClientProviderInterface $clients,
+        private AiGatewayInterface $gateway,
         private GeneratorSettings $settings,
         private ComponentPrompt $prompts,
         private SiteComponentValidator $validator,
         private SiteComponentRepository $components,
         private GenerationLog $log,
-        private Pricing $pricing,
         private LoggerInterface $logger,
+        private GatewayFailures $failures,
         private SiteComponentUsage $usage,
         private SitePropReader $props = new SitePropReader(),
+        private ObservedStream $streams = new ObservedStream(),
     ) {
     }
 
@@ -72,17 +90,24 @@ final readonly class ComponentGenerator
     public function generate(ComponentRequest $request, ?GenerationObserverInterface $observer = null): ComponentResult
     {
         $started = hrtime(true);
-        $client = $this->clients->client();
-        $model = $this->settings->model();
-        $system = $this->prompts->system();
-        $messages = [['role' => 'user', 'content' => $this->prompts->userMessage($request)]];
-        $format = ['type' => 'json_schema', 'schema' => ComponentPrompt::schema()];
+        $model = '';
+        $conversation = new AiRequest(
+            self::USAGE,
+            [AiMessage::user($this->prompts->userMessage($request))],
+            implode("\n\n", array_column($this->prompts->system(), 'text')),
+            outputSchema: new AiOutputSchema('site_component', ComponentPrompt::schema()),
+            maxOutputTokens: $this->settings->maxTokens(),
+            providerOptions: ['anthropic' => ['effort' => $this->settings->effort()]],
+            correlationId: CorrelationId::new('theliacms', 'component', $request->componentId ?? 0),
+        );
         $usage = new Usage();
+        $costUsd = 0.0;
+        $coreLogId = null;
+        $provenance = null;
         $turns = 0;
-        $requestId = null;
-        $message = null;
+        $finishReason = null;
 
-        $record = function (string $status, ?string $error = null, ?string $component = null) use ($request, $model, $started, &$usage, &$turns, &$requestId, &$message): int {
+        $record = function (string $status, ?string $error = null, ?string $component = null) use ($request, &$model, $started, &$usage, &$costUsd, &$coreLogId, &$provenance, &$turns, &$finishReason): int {
             return $this->log->recordComponent(
                 $request->componentId ?? 0,
                 $request->locale,
@@ -93,53 +118,40 @@ final readonly class ComponentGenerator
                 $usage,
                 $turns,
                 (int) ((hrtime(true) - $started) / 1_000_000),
-                $requestId,
-                $message?->stopReason,
-                $message?->stopDetails?->category,
+                $costUsd,
+                $coreLogId,
+                null,
+                $finishReason,
+                null,
                 $error,
                 $component,
+                GenerationLog::STATUS_DONE === $status ? $provenance : null,
             );
         };
 
         try {
             while (true) {
                 ++$turns;
-                $streamed = new StreamedMessage(null === $observer ? null : static fn (int $characters) => $observer->onText($characters));
 
                 try {
-                    $stream = $client->messages->createStream(
-                        maxTokens: $this->settings->maxTokens(),
-                        messages: $messages,
-                        model: $model,
-                        outputConfig: ['effort' => $this->settings->effort(), 'format' => $format],
-                        system: $system,
-                    );
+                    $response = $this->streams->read($this->gateway->stream($conversation), $observer);
+                } catch (AiExceptionInterface $exception) {
+                    $coreLogId = $this->failures->logIdOf($exception) ?? $coreLogId;
 
-                    foreach ($stream as $event) {
-                        $streamed->absorb($event);
-                    }
-
-                    $message = $streamed->message();
-                } catch (APIStatusException $exception) {
-                    throw GenerationException::because(\sprintf('The Claude API answered %s: %s', $exception->type?->value ?? 'an error', $exception->getMessage()), $exception);
-                } catch (APIConnectionException $exception) {
-                    throw GenerationException::because('The Claude API could not be reached: '.$exception->getMessage(), $exception);
+                    throw $this->failures->exceptionFor($exception);
                 }
 
-                $usage = $usage->plus($message->usage);
-                $requestId = $message->id;
+                $model = $response->model;
+                $finishReason = $response->finishReason->value;
+                $usage = $usage->plusTokens($response->tokenUsage);
+                $costUsd += (float) $response->cost;
+                $coreLogId = $response->logId;
+                $provenance = $response->provenance;
                 $observer?->onTurn($turns, []);
-
-                if ('refusal' === $message->stopReason) {
-                    throw GenerationRefusedException::withCategory($message->stopDetails?->category, $message->stopDetails?->explanation);
-                }
-
-                if ('max_tokens' === $message->stopReason) {
-                    throw GenerationException::because(\sprintf('The answer was cut at %d tokens: raise the limit of the generator or ask for a simpler component.', $this->settings->maxTokens()));
-                }
+                $this->failures->assertUsable($response, $this->settings->maxTokens(), 'raise the limit of the generator or ask for a simpler component.');
 
                 try {
-                    $component = $this->validator->validate($this->componentFrom(self::textOf($message), $request));
+                    $component = $this->validator->validate($this->componentFrom(trim($response->text), $request));
 
                     // A change of a kept component must still take what the
                     // pages hold: one that breaks them is corrected like any
@@ -154,8 +166,7 @@ final readonly class ComponentGenerator
 
                     $this->logger->info('TheliaCMS: the generated component was refused and sent back: {problems}', ['problems' => implode(' ', $exception->problems)]);
                     $observer?->onCorrection($turns, $exception->problems);
-                    $messages[] = ['role' => 'assistant', 'content' => $message->content];
-                    $messages[] = ['role' => 'user', 'content' => ComponentPrompt::correction($exception->problems)];
+                    $conversation = $conversation->withMessages(SentBackAnswer::of($response), AiMessage::user(ComponentPrompt::correction($exception->problems)));
 
                     continue;
                 }
@@ -163,7 +174,7 @@ final readonly class ComponentGenerator
                 $durationMs = (int) ((hrtime(true) - $started) / 1_000_000);
                 $logId = $record(GenerationLog::STATUS_DONE, null, ComponentPrompt::json($component));
 
-                return new ComponentResult($component, $model, $requestId, $usage, $this->pricing->cost($model, $usage), $durationMs, $turns, $logId);
+                return new ComponentResult($component, $model, null, $usage, round($costUsd, 6), $durationMs, $turns, $logId, $provenance);
             }
         } catch (GenerationRefusedException $exception) {
             $exception->logId = $record(GenerationLog::STATUS_REFUSED, $exception->getMessage());
@@ -177,6 +188,13 @@ final readonly class ComponentGenerator
             $exception->logId = $record(GenerationLog::STATUS_FAILED, $exception->getMessage());
 
             throw $exception;
+        } catch (AiExceptionInterface $exception) {
+            // What the core refuses outside the call itself, a message it
+            // cannot take among them: the same ledger row, the same words.
+            $failure = $this->failures->exceptionFor($exception);
+            $failure->logId = $record(GenerationLog::STATUS_FAILED, $failure->getMessage());
+
+            throw $failure;
         }
     }
 
@@ -260,18 +278,5 @@ final readonly class ComponentGenerator
         }
 
         return $decoded;
-    }
-
-    private static function textOf(Message $message): string
-    {
-        $text = '';
-
-        foreach ($message->content as $block) {
-            if ($block instanceof TextBlock) {
-                $text .= $block->text;
-            }
-        }
-
-        return trim($text);
     }
 }

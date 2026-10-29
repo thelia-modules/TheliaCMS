@@ -15,13 +15,10 @@ declare(strict_types=1);
 namespace TheliaCMS\Generation;
 
 /**
- * The generator cannot be called at all on this site: no key, or the API
- * cannot be reached.
+ * The generator cannot be called on this site now: the AI layer of the core
+ * turned the usage off, has no connection or no model for it, or the budget,
+ * the rate or the provider stops it. Nothing the editor can fix in the brief.
  */
 final class GenerationUnavailableException extends GenerationException
 {
-    public static function noKey(): self
-    {
-        return self::because(\sprintf('The site has no key for the Claude API: set %s in the environment.', EnvironmentClaudeClientProvider::VARIABLE));
-    }
 }

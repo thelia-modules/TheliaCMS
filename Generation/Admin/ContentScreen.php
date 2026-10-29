@@ -23,12 +23,8 @@ use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionCatalog;
-use TheliaCMS\Generation\ClaudeClientProviderInterface;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationRequest;
-use TheliaCMS\Generation\GenerationUnavailableException;
-use TheliaCMS\Generation\GeneratorSettings;
-use TheliaCMS\Generation\Pricing;
 use TheliaCMS\Generation\WebPageRead;
 use TheliaCMS\Model\CmsPageGeneration;
 use TheliaCMS\Security\CmsResources;
@@ -54,11 +50,8 @@ final readonly class ContentScreen
         private SecurityContext $securityContext,
         private SectionCatalog $catalog,
         private GenerationLog $log,
-        private GeneratorSettings $settings,
-        private ClaudeClientProviderInterface $clients,
         private SectionFormBuilder $sectionForms,
         private ToolkitLink $toolkit,
-        private Pricing $pricing,
         private PreviewWidths $previewWidths,
         private SectionChoices $sectionChoices,
     ) {
@@ -82,8 +75,6 @@ final readonly class ContentScreen
             'outcome' => $this->outcome($request, $subject),
             'may_generate' => $mayGenerate,
             'may_publish' => $mayPublish,
-            'generator_notice' => $mayGenerate ? $this->notice() : null,
-            'model' => $this->settings->model(),
             'toolkit_url' => $this->toolkit->url(),
             'preview_widths' => $this->previewWidths->widths(),
             'addable' => $mayPublish ? $this->sectionChoices->groups() : [],
@@ -223,7 +214,7 @@ final readonly class ContentScreen
     }
 
     /**
-     * @return array{id: int, date: \DateTimeInterface|null, kind: string, status: string, status_class: string, cost: string, duration: string, turns: int, error: string|null, pages: list<array{url: string, read: bool, error: string|null, tokens: int|null, cost: string|null}>, left_out: list<string>}
+     * @return array{id: int, date: \DateTimeInterface|null, kind: string, status: string, status_class: string, cost: string, duration: string, turns: int, error: string|null, pages: list<array{url: string, read: bool, error: string|null, tokens: int|null}>, left_out: list<string>}
      */
     private function row(CmsPageGeneration $row): array
     {
@@ -241,12 +232,11 @@ final readonly class ContentScreen
             'duration' => number_format(((int) $row->getDurationMs()) / 1000, 1, '.', ''),
             'turns' => (int) $row->getTurns(),
             'error' => $row->getError(),
-            'pages' => array_map(fn (WebPageRead $page): array => [
+            'pages' => array_map(static fn (WebPageRead $page): array => [
                 'url' => $page->url,
                 'read' => $page->wasRead(),
                 'error' => $page->errorCode,
                 'tokens' => $page->tokens,
-                'cost' => null === $page->tokens ? null : number_format($this->pricing->inputCost((string) $row->getModel(), $page->tokens), 3, '.', ''),
             ], GenerationLog::webPagesOf($row)),
             'left_out' => GenerationLog::leftOutOf($row),
         ];
@@ -307,17 +297,6 @@ final readonly class ContentScreen
                 'details' => [(string) $row->getError()],
             ],
         };
-    }
-
-    private function notice(): ?string
-    {
-        try {
-            $this->clients->client();
-        } catch (GenerationUnavailableException $exception) {
-            return $exception->getMessage();
-        }
-
-        return null;
     }
 
     private function kindLabel(string $kind): string

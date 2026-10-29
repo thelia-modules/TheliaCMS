@@ -95,6 +95,9 @@ final readonly class SiteComponentRepository
             ->setTemplate($component->template)
             ->setCss($component->css)
             ->setStatus($status)
+            // A component without a mark leaves the mark it has: nothing a
+            // person does to it here takes the mark of a generated one away.
+            ->setProvenance($component->provenance ?? $model->getProvenance())
             ->setUpdatedBy($adminId)
             ->save();
     }
@@ -114,6 +117,7 @@ final readonly class SiteComponentRepository
             self::object($model->getSample()),
             (string) $model->getTemplate(),
             (string) $model->getCss(),
+            $model->getProvenance(),
         );
     }
 

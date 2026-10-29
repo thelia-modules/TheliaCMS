@@ -25,6 +25,7 @@ use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\ImportExport\SiteImporter;
 use TheliaCMS\Model\CmsComponentQuery;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 use TheliaCMS\Tests\Unit\Content\Site\PriceTable;
 
 /**
@@ -59,6 +60,22 @@ final class SiteComponentImportTest extends CmsIntegrationTestCase
         $again = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($json), new ImportOptions());
         self::assertSame(1, $again->skippedCounts()['components'] ?? 0, 'The same component is left alone.');
         self::assertSame([], $again->warnings());
+    }
+
+    public function testTheMarkOfAGeneratedComponentTravelsWithIt(): void
+    {
+        $repository = $this->getService(SiteComponentRepository::class);
+        $mark = json_encode(FakeAiGateway::provenance('theliacms.component')->toArray(), \JSON_THROW_ON_ERROR);
+        $repository->save((new SiteComponentValidator())->validate(PriceTable::component())->withProvenance($mark), SiteComponentRepository::STATUS_READY);
+
+        $export = $this->getService(SiteExporter::class)->export();
+        self::assertSame($mark, $export['components'][0]['provenance']);
+
+        $json = json_decode(json_encode($export, \JSON_THROW_ON_ERROR), true);
+        CmsComponentQuery::create()->filterByCode('PriceTable')->delete();
+        $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($json), new ImportOptions());
+
+        self::assertSame($mark, $repository->find('PriceTable')?->provenance);
     }
 
     public function testAComponentTheSiteHasDifferentlyIsKeptUnlessTheImportReplaces(): void

@@ -48,12 +48,12 @@ php Thelia cache:clear
 
 `dev-main` works too, and is what to use to follow the branch.
 
-Composer pulls in TheliaLibrary, the Claude API SDK and a PSR-7
-implementation. Nothing has to be built: the module ships no compiled asset
-beyond its stylesheet. The generator reads its key from `ANTHROPIC_API_KEY`
-in the environment of the site, never from a setting (see
-[docs/generator.md](docs/generator.md)); without it, the rest of the module
-works and the generator says it is unavailable.
+The module needs Thelia 3.3.0 or later. Composer pulls in TheliaLibrary.
+Nothing has to be built: the module ships no compiled asset beyond its
+stylesheet. The generator goes through the AI layer of Thelia: the provider,
+the key, the model and the budget are set in the AI settings of Thelia, never
+in this module (see [docs/generator.md](docs/generator.md)); until they are,
+the rest of the module works and the generator says it is unavailable.
 
 Activation creates the tables, seeds the ACL resources and generates the page
 URLs. It also seeds four unpublished legal pages (legal notice, privacy policy,
@@ -229,8 +229,12 @@ the pages and the images of the site, reads the web pages the brief cites by
 their address ([docs/generator.md](docs/generator.md)), and every call it makes is written to a
 ledger the screen shows as its history, with its outcome, its turns, its
 duration and its cost. Asking it takes the right `admin.cms.generate`; the
-model, the effort and the length of an answer are settings. How it is
-prompted, what it may read and what it costs: [docs/generator.md](docs/generator.md).
+effort and the length of an answer are settings of this module, the model is
+chosen in the AI settings of Thelia. How it is prompted, what it may read and
+what it costs: [docs/generator.md](docs/generator.md).
+
+A page written by the generator is marked as such, for the visitor and for
+machines: see [Generated content and the mark of the AI Act](#generated-content-and-the-mark-of-the-ai-act).
 
 Every generation that writes the draft keeps the draft it replaces as a
 revision labelled `draft`, the last five apart from the twenty publications
@@ -800,12 +804,62 @@ Most of them are edited under **CMS > Settings**.
 | `footer_menu_hook` | off | Renders the `footer` menu into the `layout.footer.top` hook of the theme. For a theme that does not call `cms_menu('footer')` itself: without it, a CMS page is reachable only by its address. Leave it off on a theme that already renders the menu, or it appears twice. |
 | `heading_check_mode` | `warn` | `warn` reports heading problems and publishes anyway; `block` refuses to publish. Checked wherever a page goes online: the content screen, the settings screen, `thelia_cms:publish`. |
 | `native_content_notice_dismissed` | `0` | `1` once the notice about existing contents has been closed on the Pages screen. |
-| `generator_model` | `claude-opus-5-5` | The model the generator calls, edited in the **Generator** card. An empty value falls back to the default. |
-| `generator_effort` | `high` | How hard the model thinks: `low`, `medium`, `high`, `xhigh` or `max`. Anything else falls back to the default. |
+| `generator_effort` | `high` | How hard the model thinks: `low`, `medium`, `high`, `xhigh` or `max`. Anything else falls back to the default. It is passed to the model as its reasoning effort, which only Anthropic models read: on another provider it has no effect. |
 | `generator_max_tokens` | `16000` | The longest answer the generator accepts, in tokens. Below 1024 no page fits, so a smaller value falls back to the default. |
+| `generator_web_fetch` | `0` | `1` lets the generator read the web pages a brief cites (see [docs/generator.md](docs/generator.md#web-pages-the-brief-cites)). Off until the site turns it on. |
+| `generator_text_effort`, `generator_text_max_tokens` | `low`, `2000` | The same two settings for the texts written beside a field, which need less than a page. |
 
-The key of the Claude API is not a setting: a setting travels with a site
-export, a key must not. It is read from `ANTHROPIC_API_KEY` in the environment.
+The provider, the key, the model and the budget are not settings of this
+module: they live in the AI settings of Thelia, where a connection is
+declared once and each usage is given a range of models. A setting of this
+module travels with a site export, a key must not. The files written before
+2.4.0 may still carry the model of the generator: it is ignored on import.
+
+### Generated content and the mark of the AI Act
+
+Thelia marks what the AI writes (article 50(2) of the AI Act: a machine-readable
+mark on the content, and a notice a person can read). The module keeps the mark
+with the content it describes and prints it where the theme renders it:
+
+- a page, or the document of a catalogue item, written by the generator carries
+  the mark in `cms_page_content` and `cms_item_content` (`draft_provenance`,
+  `published_provenance`), copied from the draft to the publication, to a
+  revision and through the export and import of the site. A page written by
+  hand carries none. Editing a generated draft by hand keeps the mark: nothing
+  can tell when a page stops being the model's.
+- the public page prints `data-ai-generated`, `data-ai-usage`, `data-ai-model`
+  and `data-ai-generated-at` on the element that holds the content, and a
+  sentence a visitor can read after the article ("Content generated by an AI
+  (model) on date."), in the language of the page. `cms_item_content()` wraps
+  the document of a product, a category, a content or a folder the same way
+  when it was generated.
+- the mark is stored in a column and not in the HTML: the sanitizer of the
+  published HTML removes every `data-*` attribute it does not know.
+
+A theme that overrides `cmspage.html.twig` has to keep the two calls, or its
+pages lose the mark. On the element that holds the content, add
+`{{ ai_provenance_attributes(cms_page.provenance) }}`; after it,
+`{% set label = ai_provenance_label(cms_page.provenance, cms_page.locale) %}`
+and print `label` when it is not empty. Both come from Thelia and print nothing
+for a page written by hand. The Flexy theme of the module does it (see
+`templates/frontOffice/flexy/cmspage.html.twig`).
+
+The text a person asks for beside a field (a product description, for instance)
+carries no public mark: the person reads it, edits it and saves it as their
+own. What stays is the trace in the AI log of Thelia, which records the usage
+`theliacms.text`, the model, the cost and the date of every call.
+
+### Prompts and their retention
+
+The ledger of a page keeps the prompt of each call (the brief and what the
+generator read of the site) so an editor can start again from it. The AI
+settings of Thelia decide how long a prompt lives, usage by usage, and may
+decide to keep none: the ledger follows. `php Thelia maintenance:purge`, which a
+Thelia site is already told to schedule, empties the prompt of a row once the
+log of the core has emptied its own (30 days after the call for a row with no
+pointer to the log, such as a row written before 2.4.0). The brief the editor
+wrote, the document, the cost and the dates stay: they are the history of the
+page.
 
 ## Skills
 
@@ -1185,6 +1239,7 @@ the editable 404, the ACL, and the activity log.
 
 Working on the module inside a Thelia host, with the caches and the test
 pitfalls met on the way: [docs/developing.md](docs/developing.md).
+For the people who write the pages: [docs/using-the-ai.md](docs/using-the-ai.md).
 Letting Claude Code work in the back office through a Chrome window, and
 checking pages as a visitor: [docs/claude-code-and-chrome.md](docs/claude-code-and-chrome.md).
 Making the generator give the same page for the same brief:

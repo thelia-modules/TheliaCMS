@@ -23,6 +23,7 @@ use TheliaCMS\Content\Document;
 use TheliaCMS\Preview\ItemDraftRequest;
 use TheliaCMS\Preview\ItemPreviewLink;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 use TheliaCMS\Twig\ItemContentExtension;
 use Twig\Environment;
 
@@ -50,6 +51,29 @@ final class ItemContentExtensionTest extends CmsIntegrationTestCase
         self::assertStringContainsString('<p>En ligne.</p>', $printed, 'Printed as markup, not escaped.');
         self::assertStringContainsString('cms-page-content', $printed, 'In the container the styles of the site are scoped to.');
         self::assertStringNotContainsString('Pas encore.', $printed, 'The draft saved since stays in the back office.');
+    }
+
+    public function testAGeneratedDocumentIsWrappedInAnElementThatCarriesTheMarkAndAHandWrittenOneIsNot(): void
+    {
+        $writer = $this->getService(ItemContentWriter::class);
+        $writer->saveContent(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale(), Document::richText('<h2>Questions</h2><p>Écrit à la main.</p>'));
+        $writer->publish(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale());
+
+        self::assertStringNotContainsString('data-ai-generated', $this->render("{{ cms_item_content('product', id) }}"), 'A document a person wrote is printed as it always was.');
+
+        $writer->saveContent(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale(), Document::richText('<h2>Questions</h2><p>Écrit par le modèle.</p>'), FakeAiGateway::provenance('theliacms.page_generation'));
+
+        self::assertStringNotContainsString('data-ai-generated', $this->render("{{ cms_item_content('product', id) }}"), 'The mark of a draft is not the one of what is online.');
+
+        $writer->publish(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale());
+        $printed = $this->render("{{ cms_item_content('product', id) }}");
+
+        self::assertStringStartsWith('<div class="cms-item-content" data-ai-generated="true" data-ai-usage="theliacms.page_generation" data-ai-model="fake-model" data-ai-generated-at="2026-10-28T10:00:00+00:00">', $printed);
+        self::assertStringEndsWith('</div>', $printed);
+        self::assertStringContainsString('<p>Écrit par le modèle.</p>', $printed);
+
+        $writer->unpublish(CatalogueItemType::Product, self::PRODUCT_ID, $this->locale());
+        self::assertSame('', $this->render("{{ cms_item_content('product', id) }}"));
     }
 
     public function testAnythingElsePrintsNothing(): void

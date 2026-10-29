@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation;
 
+use Thelia\Domain\Ai\AiTokenUsage;
+
 /**
  * The tokens a call consumed, summed over its turns: what the price is
  * computed from, and what the ledger keeps.
@@ -28,13 +30,13 @@ final readonly class Usage
     ) {
     }
 
-    public function plus(\Anthropic\Messages\Usage $usage): self
+    public function plusTokens(AiTokenUsage $tokens): self
     {
         return new self(
-            $this->inputTokens + $usage->inputTokens,
-            $this->outputTokens + $usage->outputTokens,
-            $this->cacheReadTokens + ($usage->cacheReadInputTokens ?? 0),
-            $this->cacheWriteTokens + ($usage->cacheCreationInputTokens ?? 0),
+            $this->inputTokens + $tokens->inputTokens,
+            $this->outputTokens + $tokens->outputTokens,
+            $this->cacheReadTokens + $tokens->cacheReadTokens,
+            $this->cacheWriteTokens + $tokens->cacheWriteTokens,
         );
     }
 }

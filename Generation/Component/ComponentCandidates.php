@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Generation\Component;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use TheliaCMS\Content\ProvenanceMark;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationTarget;
@@ -106,7 +107,7 @@ final readonly class ComponentCandidates
             (string) $row->getPrompt(),
             (int) $row->getTargetId(),
             (string) $row->getLocale(),
-            GenerationLog::STATUS_DONE === $row->getStatus() ? self::componentOf($row->getDocument()) : null,
+            GenerationLog::STATUS_DONE === $row->getStatus() ? self::componentOf($row->getDocument())?->withProvenance(ProvenanceMark::normalize($row->getProvenance())) : null,
             $row->getError(),
             (float) $row->getCostUsd(),
             (int) $row->getTurns(),

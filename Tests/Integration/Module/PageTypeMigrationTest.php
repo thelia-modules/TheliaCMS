@@ -164,6 +164,91 @@ final class PageTypeMigrationTest extends CmsIntegrationTestCase
         self::assertSame('YES', $column[0]['Null']);
     }
 
+    public function testTheUpdateTo240GivesTheLedgerTheRowOfTheLogOfTheCoreAndCanBePlayedTwice(): void
+    {
+        $connection = $this->getPropelConnection();
+
+        // A test database prepared before 2.4.0 has no column to drop.
+        if ([] !== $this->rows("SHOW COLUMNS FROM cms_page_generation LIKE 'log_id'")) {
+            $connection->exec('ALTER TABLE cms_page_generation DROP COLUMN log_id');
+        }
+
+        self::assertSame([], $this->rows("SHOW COLUMNS FROM cms_page_generation LIKE 'log_id'"));
+        $connection->exec("INSERT INTO cms_page_generation (target_type, target_id, locale, kind, status, cost_usd, created_at, updated_at) VALUES ('page', 1, 'en_US', 'brief', 'done', 0.123456, NOW(), NOW())");
+
+        $module = new TheliaCMS();
+        $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+        $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+
+        $column = $this->rows("SHOW COLUMNS FROM cms_page_generation LIKE 'log_id'");
+        self::assertCount(1, $column);
+        self::assertMatchesRegularExpression('/^int/', strtolower((string) $column[0]['Type']));
+        self::assertSame('YES', $column[0]['Null']);
+        self::assertCount(1, $this->rows("SHOW INDEX FROM cms_page_generation WHERE Key_name = 'idx_cms_page_generation_log'"));
+        self::assertNull($this->rows('SELECT log_id FROM cms_page_generation ORDER BY id DESC LIMIT 1')[0]['log_id'], 'A call written before 2.4.0 has no row in the log of the core.');
+        self::assertSame('0.123456', $this->rows('SELECT cost_usd FROM cms_page_generation ORDER BY id DESC LIMIT 1')[0]['cost_usd'], 'The update keeps what the ledger holds.');
+
+        $connection->exec('DELETE FROM cms_page_generation WHERE target_id = 1 AND cost_usd = 0.123456');
+    }
+
+    public function testTheUpdateTo240GivesTheContentsTheirMarkOfProvenanceAndKeepsWhatTheyHold(): void
+    {
+        $connection = $this->getPropelConnection();
+        $columns = [
+            'cms_page_content' => ['draft_provenance', 'published_provenance'],
+            'cms_item_content' => ['draft_provenance', 'published_provenance'],
+            'cms_page_revision' => ['provenance'],
+            'cms_item_revision' => ['provenance'],
+            'cms_component' => ['provenance'],
+            'cms_page_generation' => ['provenance'],
+        ];
+
+        // A site on 2.3.1 has none of them.
+        foreach ($columns as $table => $names) {
+            foreach ($names as $name) {
+                if ([] !== $this->rows(\sprintf("SHOW COLUMNS FROM %s LIKE '%s'", $table, $name))) {
+                    $connection->exec(\sprintf('ALTER TABLE %s DROP COLUMN %s', $table, $name));
+                }
+            }
+        }
+
+        $this->forgetTheRowsOf240();
+        $connection->exec("INSERT INTO cms_component (code, label, description, status, created_at, updated_at) VALUES ('MigratedMark', 'Marque', 'Un composant écrit avant 2.4.0.', 'ready', NOW(), NOW())");
+        $connection->exec("INSERT INTO cms_item_content (item_type, item_id, locale, published_html, created_at, updated_at) VALUES ('product', 987654, 'en_US', '<p>Avant 2.4.0</p>', NOW(), NOW())");
+
+        try {
+            $module = new TheliaCMS();
+            $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+            $module->update('2.3.1', '2.4.0', $this->getPropelConnection());
+
+            foreach ($columns as $table => $names) {
+                foreach ($names as $name) {
+                    $column = $this->rows(\sprintf("SHOW COLUMNS FROM %s LIKE '%s'", $table, $name));
+                    self::assertCount(1, $column, \sprintf('%s.%s is missing.', $table, $name));
+                    self::assertSame('longtext', strtolower((string) $column[0]['Type']));
+                    self::assertSame('YES', $column[0]['Null']);
+                }
+            }
+
+            $content = $this->rows('SELECT published_html, published_provenance FROM cms_item_content WHERE item_id = 987654')[0];
+            self::assertSame('<p>Avant 2.4.0</p>', $content['published_html'], 'The update keeps what the content holds.');
+            self::assertNull($content['published_provenance'], 'A content written before 2.4.0 is not marked.');
+            self::assertNull($this->rows("SELECT provenance FROM cms_component WHERE code = 'MigratedMark'")[0]['provenance']);
+        } finally {
+            // Outside a transaction: a failure must leave neither its rows nor
+            // a table without the columns the other tests read.
+            $this->forgetTheRowsOf240();
+            (new TheliaCMS())->update('2.3.1', '2.4.0', $this->getPropelConnection());
+        }
+    }
+
+    private function forgetTheRowsOf240(): void
+    {
+        $connection = $this->getPropelConnection();
+        $connection->exec("DELETE FROM cms_component WHERE code = 'MigratedMark'");
+        $connection->exec('DELETE FROM cms_item_content WHERE item_id = 987654');
+    }
+
     private function withoutInstructions(): void
     {
         $this->getPropelConnection()->exec('ALTER TABLE cms_page_type DROP COLUMN instructions, ALGORITHM=COPY');

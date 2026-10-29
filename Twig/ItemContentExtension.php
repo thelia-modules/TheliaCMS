@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Twig;
 
+use Thelia\Domain\Ai\Twig\AiTransparencyExtension;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\Lang;
 use TheliaCMS\Catalogue\CatalogueItemType;
@@ -38,6 +39,7 @@ final class ItemContentExtension extends AbstractExtension
         private readonly PartialRenderer $partials,
         private readonly LangService $langService,
         private readonly ItemDraftRequest $draftRequest,
+        private readonly AiTransparencyExtension $transparency,
     ) {
     }
 
@@ -68,10 +70,23 @@ final class ItemContentExtension extends AbstractExtension
         }
 
         $locale ??= $this->langService->getLang()?->getLocale() ?? Lang::getDefaultLanguage()->getLocale();
-        $html = $this->draftRequest->opensDraftOf($itemType, $itemId, $locale)
-            ? $this->contents->find($itemType, $itemId, $locale)?->getDraftHtml()
-            : $this->contents->publishedHtml($itemType, $itemId, $locale);
+        $draft = $this->draftRequest->opensDraftOf($itemType, $itemId, $locale);
+        $content = $this->contents->find($itemType, $itemId, $locale);
+        $html = $draft ? $content?->getDraftHtml() : $this->contents->publishedHtml($itemType, $itemId, $locale);
 
-        return null === $html ? '' : (string) $this->partials->substitute($html, $locale);
+        if (null === $html) {
+            return '';
+        }
+
+        $html = (string) $this->partials->substitute($html, $locale);
+
+        // A document the model wrote carries the mark of the core (AI Act,
+        // article 50(2)) on an element of its own: the theme prints markup
+        // it does not know, so the element is added here, and only for a
+        // marked document. The mark is stored apart from the HTML, whose
+        // sanitizer removes every `data-*` attribute it does not know.
+        $attributes = $this->transparency->provenanceAttributes($draft ? $content?->getDraftProvenance() : $content?->getPublishedProvenance());
+
+        return '' === $attributes ? $html : '<div class="cms-item-content" '.$attributes.'>'.$html.'</div>';
     }
 }

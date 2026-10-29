@@ -91,14 +91,14 @@ final readonly class DocumentSchema
 
         $schema = [
             'type' => 'object',
-            'properties' => (object) [
+            'properties' => [
                 'version' => ['type' => 'integer', 'const' => Document::VERSION],
                 'sections' => [
                     'type' => 'array',
                     'description' => 'The sections of the page, in order.',
                     'items' => [
                         'type' => 'object',
-                        'properties' => (object) [
+                        'properties' => [
                             'id' => ['type' => 'string', 'description' => 'Unique in the page: lowercase letters, digits, hyphens and underscores, saying what the section is.'],
                             'component' => ['type' => 'string', 'enum' => $names, 'description' => 'The name of a component of the catalogue.'],
                             'props' => ['type' => 'string', 'description' => 'The props of the component, as a JSON object written as a string, with the keys and the values the catalogue describes for this component.'],
@@ -115,14 +115,14 @@ final readonly class DocumentSchema
 
         // Optional: the editor is told what the page could not hold, rather
         // than finding out by reading it.
-        $schema['properties']->left_out = [
+        $schema['properties']['left_out'] = [
             'type' => 'array',
             'items' => ['type' => 'string'],
             'description' => 'Only when the page leaves out something the brief asked for: one short sentence each, in the language of the page, saying what is missing and why — an image the media library does not hold and the brief gives no https address of, a product the search does not find, a page that could not be read.',
         ];
 
         if ($withFields) {
-            $schema['properties']->fields = [
+            $schema['properties']['fields'] = [
                 'type' => 'string',
                 'description' => 'The values of the fields of the page, as a JSON object written as a string, by field code, with the values the fields of the page type take.',
             ];
@@ -145,7 +145,7 @@ final readonly class DocumentSchema
         return [
             'type' => 'object',
             'description' => 'Only when the brief asks for it: how the section stands out from the page.',
-            'properties' => (object) [
+            'properties' => [
                 'background' => ['type' => 'string', 'description' => 'Background colour of the whole width of the section, written #rrggbb.'],
                 'text' => ['type' => 'string', 'description' => 'Colour of the text, written #rrggbb, readable on the background.'],
                 'padding' => ['type' => 'string', 'enum' => array_keys(SectionAppearance::PADDINGS), 'description' => 'Room added above and below the section.'],

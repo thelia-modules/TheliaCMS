@@ -139,7 +139,7 @@ final readonly class PromptBuilder
             $lines[] = '';
             $lines[] = '# The pages the brief cites';
             $lines[] = '';
-            $lines[] = 'Read each of them with the `web_fetch` tool before you write: what they say counts as given by the brief. A page that cannot be read is left out, and the document says nothing it would have said.';
+            $lines[] = 'Read each of them with the `read_url` tool before you write: what they say counts as given by the brief. A page that cannot be read is left out, and the document says nothing it would have said.';
             $lines[] = '';
 
             foreach ($addresses as $address) {

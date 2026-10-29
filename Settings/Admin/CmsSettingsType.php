@@ -19,7 +19,6 @@ use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormEvent;
@@ -87,11 +86,6 @@ final class CmsSettingsType extends AbstractType
                 'attr' => ['rows' => 4, 'placeholder' => "203.0.113.42\n2001:db8::/32"],
                 'help' => 'One IP address or range per line. Yours is shown below.',
             ])
-            ->add('generatorModel', TextType::class, [
-                'label' => 'Model',
-                'attr' => ['placeholder' => GeneratorSettings::DEFAULT_MODEL],
-                'help' => 'The name of the model, as the API knows it.',
-            ])
             ->add('generatorEffort', ChoiceType::class, [
                 'label' => 'Reasoning effort',
                 'choices' => [
@@ -107,11 +101,6 @@ final class CmsSettingsType extends AbstractType
                 'label' => 'Longest answer, in tokens',
                 'attr' => ['min' => GeneratorSettings::MIN_MAX_TOKENS],
                 'help' => 'An answer cut at this length loses the end of the page. A long page needs about four tokens a word.',
-            ])
-            ->add('textModel', TextType::class, [
-                'label' => 'Model',
-                'required' => false,
-                'help' => 'Left empty, the model of the pages.',
             ])
             ->add('textEffort', ChoiceType::class, [
                 'label' => 'Reasoning effort',
@@ -131,7 +120,7 @@ final class CmsSettingsType extends AbstractType
             ->add('generatorWebFetch', CheckboxType::class, [
                 'label' => 'Read the web pages a brief cites',
                 'required' => false,
-                'help' => 'The model reads the public pages whose address the brief gives, through the web fetch tool of the Claude API: Anthropic reads them, not this server. The text read is billed as input tokens. Turn it off if the organisation of the key does not allow the tool.',
+                'help' => 'Off by default. When on, the model can read the public pages whose address the brief gives: this server fetches them (private and internal addresses are refused) and sends their text to the AI provider assigned to the range, which may be outside the European Union. A page is read as data, never as instructions.',
             ]);
 
         $builder->addEventListener(FormEvents::POST_SUBMIT, $this->validateAllowlist(...));

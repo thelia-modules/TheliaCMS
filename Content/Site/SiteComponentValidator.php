@@ -114,7 +114,7 @@ final readonly class SiteComponentValidator
             throw InvalidSiteComponentException::because($problems);
         }
 
-        $kept = new SiteComponent($component->code, trim($component->label), trim($component->description), $component->props, $sample, $component->template, $css);
+        $kept = new SiteComponent($component->code, trim($component->label), trim($component->description), $component->props, $sample, $component->template, $css, $component->provenance);
         \assert(null !== $schema);
 
         if ('' === (new SiteComponentSection($kept, $schema, $this->renderer))->render($sample, 'en_US')) {

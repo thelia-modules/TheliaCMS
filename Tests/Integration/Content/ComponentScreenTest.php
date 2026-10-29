@@ -175,9 +175,9 @@ final class ComponentScreenTest extends AdminScreenTestCase
         $schema = $this->getService(DocumentSchema::class);
         \assert($schema instanceof DocumentSchema);
 
-        $properties = $schema->strict($kept)['properties']->sections['items']['properties'];
+        $properties = $schema->strict($kept)['properties']['sections']['items']['properties'];
 
-        return $properties->component['enum'];
+        return $properties['component']['enum'];
     }
 
     private function catalog(): SectionCatalog

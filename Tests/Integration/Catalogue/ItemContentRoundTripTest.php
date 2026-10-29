@@ -28,6 +28,7 @@ use TheliaCMS\ImportExport\SiteExporter;
 use TheliaCMS\ImportExport\SiteImporter;
 use TheliaCMS\Model\CmsItemContentQuery;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 
 /**
  * The documents of the catalogue items travel in the export file and come
@@ -50,7 +51,10 @@ final class ItemContentRoundTripTest extends CmsIntegrationTestCase
         $product = $this->product('ROUND-TRIP-REF');
         $this->itemWriter()->saveContent(CatalogueItemType::Product, (int) $product->getId(), $this->locale(), Document::richText('<h2>Questions</h2><p>Une réponse reconnaissable.</p>'));
         $this->itemWriter()->publish(CatalogueItemType::Product, (int) $product->getId(), $this->locale());
+        $this->itemWriter()->saveContent(CatalogueItemType::Product, (int) $product->getId(), $this->locale(), Document::richText('<h2>Questions</h2><p>Une réponse du modèle.</p>'), FakeAiGateway::provenance());
+        $this->itemWriter()->publish(CatalogueItemType::Product, (int) $product->getId(), $this->locale());
         $before = $this->contents()->find(CatalogueItemType::Product, (int) $product->getId(), $this->locale());
+        self::assertNotNull($before?->getPublishedProvenance());
 
         $document = $this->getService(SiteExporter::class)->export();
 
@@ -64,6 +68,8 @@ final class ItemContentRoundTripTest extends CmsIntegrationTestCase
         self::assertNotNull($after);
         self::assertSame($before?->getPublishedHtml(), $after->getPublishedHtml());
         self::assertSame($before?->getDraftDocument(), $after->getDraftDocument());
+        self::assertSame($before?->getDraftProvenance(), $after->getDraftProvenance(), 'The mark of a generated document travels with it.');
+        self::assertSame($before?->getPublishedProvenance(), $after->getPublishedProvenance());
         self::assertEquals($before?->getPublishedAt(), $after->getPublishedAt());
         self::assertEquals($before?->getUpdatedAt(), $after->getUpdatedAt(), 'Imported, the document would otherwise read "modified since publication".');
     }

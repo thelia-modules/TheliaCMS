@@ -32,8 +32,6 @@ use Thelia\Model\ResourceQuery;
 use Thelia\Model\RewritingUrlQuery;
 use Thelia\Module\BaseModule;
 use TheliaCMS\Content\Section\SectionStories;
-use TheliaCMS\Generation\ClaudeClientProviderInterface;
-use TheliaCMS\Generation\EnvironmentClaudeClientProvider;
 use TheliaCMS\Http\SharedCache\CmsSharedCacheContributor;
 use TheliaCMS\Http\SharedCache\CoreSharedCache;
 use TheliaCMS\Install\LegalPagesSeeder;
@@ -369,7 +367,6 @@ class TheliaCMS extends BaseModule
                 __DIR__.'/Generation/GenerationRequest.php',
                 __DIR__.'/Generation/GenerationResult.php',
                 __DIR__.'/Generation/GenerationTarget.php',
-                __DIR__.'/Generation/StreamedMessage.php',
                 __DIR__.'/Generation/Admin/ContentSubject.php',
                 __DIR__.'/Generation/Admin/GenerationOutcome.php',
                 __DIR__.'/Generation/Usage.php',
@@ -402,12 +399,6 @@ class TheliaCMS extends BaseModule
         // Dynamic blocks are rendered through an interface so the substitution
         // of a page can be unit-tested without a theme behind it.
         $servicesConfigurator->alias(PartialFragmentRendererInterface::class, PartialFragmentRenderer::class);
-
-        // The generator talks to the Claude API through a provider, so the
-        // tests hand it one that answers from recorded responses. Public: a
-        // private service with one consumer is inlined into it, and the
-        // screen tests could not put their fake in its place.
-        $servicesConfigurator->alias(ClaudeClientProviderInterface::class, EnvironmentClaudeClientProvider::class)->public();
 
         // SEOne is a soft dependency. Autodiscovering CmsPageSeoElement would
         // reflect a class implementing an interface that does not exist on a
