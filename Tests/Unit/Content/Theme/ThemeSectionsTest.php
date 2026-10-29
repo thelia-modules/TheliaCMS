@@ -87,4 +87,26 @@ final class ThemeSectionsTest extends TestCase
             @rmdir($directory);
         }
     }
+
+    public function testATHemeNamesTheStimulusControllersItsComponentsUse(): void
+    {
+        $directory = sys_get_temp_dir().'/theliacms-theme-'.bin2hex(random_bytes(4));
+        mkdir($directory.'/config', 0o777, true);
+
+        try {
+            file_put_contents($directory.'/config/theliacms.yaml', "sections:\n    components: []\n");
+            self::assertSame([], ThemeSections::declaredIn([$directory])->controllers, 'A theme that names none keeps none.');
+
+            file_put_contents($directory.'/config/theliacms.yaml', "sections:\n    components: []\n    controllers:\n        - Organisms--Carousel--base\n        - tabs\n");
+            self::assertSame(['Organisms--Carousel--base', 'tabs'], ThemeSections::declaredIn([$directory])->controllers);
+
+            file_put_contents($directory.'/config/theliacms.yaml', "sections:\n    components: []\n    controllers:\n        - 'tabs\" onclick=\"x'\n");
+            $this->expectException(\InvalidArgumentException::class);
+            ThemeSections::declaredIn([$directory]);
+        } finally {
+            @unlink($directory.'/config/theliacms.yaml');
+            @rmdir($directory.'/config');
+            @rmdir($directory);
+        }
+    }
 }

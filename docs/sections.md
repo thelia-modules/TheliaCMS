@@ -197,6 +197,28 @@ when a page is rendered, at its save: a page saved before the theme named it
 keeps its old rendering until it is saved or published again, or until
 `thelia_cms:render` renders its draft again.
 
+A component that wires its behaviour with Stimulus (a carousel, tabs) keeps
+it once published only if the theme names its controllers:
+
+```yaml
+sections:
+    components:
+        - Organisms:Carousel:Base
+    controllers:
+        - Organisms--Carousel--base
+```
+
+The filter a page goes through before it goes online drops every
+`data-` attribute it does not know. For the controllers named here it keeps
+`data-controller`, `data-action` and the `data-<identifier>-target`,
+`-value`, `-param`, `-class` and `-outlet` attributes; in `data-controller`
+and `data-action`, a controller the theme does not name is dropped, so that
+written text cannot wire one the theme never opened to pages. Free text can
+still use a controller named here, with values of its own: name only the
+controllers that treat their values as data, never as markup or an address
+to load. A page published before the theme named a controller is rendered
+again by `thelia_cms:render`, then published.
+
 ## From a template
 
 `cms_section(name, props)` renders a section anywhere in a theme, with its

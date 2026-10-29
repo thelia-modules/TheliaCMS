@@ -348,6 +348,7 @@ class TheliaCMS extends BaseModule
                 __DIR__.'/Evaluation/BriefReport.php',
                 __DIR__.'/Content/Document.php',
                 __DIR__.'/Content/Section.php',
+                __DIR__.'/Content/Pipeline/StimulusAttributeSanitizer.php',
                 __DIR__.'/Content/Prop.php',
                 __DIR__.'/Content/PropSchema.php',
                 __DIR__.'/Content/PropType.php',
