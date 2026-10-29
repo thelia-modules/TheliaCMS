@@ -1,0 +1,33 @@
+{#
+    The rows of a section form, on top of the back-office theme. The theme
+    writes the help of a field inside its label, so two fields side by side
+    have their inputs at different heights when one help is longer. Here a
+    row is label, field, then errors under the field, and the help is a
+    tooltip on a "?" beside the label: shown on hover and on focus by the
+    stylesheet, held open by a click by the script. The stylesheet lines the
+    parts of every field of a line up (`.cms-content__field`, a subgrid).
+#}
+{% use '@BackOfficeDefaultTwigForm/bo_form_theme.html.twig' %}
+
+{%- block form_label -%}
+    {%- set help = null -%}
+    {{- parent() -}}
+{%- endblock form_label -%}
+
+{%- block form_row -%}
+    {%- set help_text = help is empty ? '' : (translation_domain is same as(false) ? help : help|trans(help_translation_parameters, translation_domain)) -%}
+    <div{% with { attr: row_attr|merge({class: (row_attr.class|default('') ~ ' mb-3 cms-content__field')|trim}) } %}{{ block('attributes', 'form_div_layout.html.twig') }}{% endwith %}>
+        <div class="cms-content__field-head">
+            {{- form_label(form) -}}
+            {%- if help_text is not empty -%}
+                <button type="button" class="cms-content__help-toggle" data-cms-help-toggle aria-expanded="false" aria-describedby="{{ id }}_help"
+                        aria-label="{{ 'About this field'|trans({}, 'theliacms') }}">?</button>
+                <span class="cms-content__help" role="tooltip" id="{{ id }}_help">{{ help_text }}</span>
+            {%- endif -%}
+        </div>
+        {{- form_widget(form) -}}
+        <div class="cms-content__field-foot">
+            {{- form_errors(form) -}}
+        </div>
+    </div>
+{%- endblock form_row -%}

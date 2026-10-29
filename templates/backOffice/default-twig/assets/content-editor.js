@@ -69,6 +69,23 @@
         }
     });
 
+    // The help of a field is a tooltip on the "?" beside its label, shown
+    // by the stylesheet while the pointer or the focus is on it; a click
+    // holds it open, for a touch screen. Rows a list adds later follow, the
+    // handler being on the document.
+    document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("[data-cms-help-toggle]");
+
+        if (!toggle) {
+            return;
+        }
+
+        var field = toggle.closest(".cms-content__field");
+        var open = !field.hasAttribute("data-cms-help-open");
+        field.toggleAttribute("data-cms-help-open", open);
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
     function notify(type, message) {
         var root = document.querySelector("[data-cms-content]");
         var container = root.querySelector(".cms-toasts");
@@ -873,7 +890,9 @@
             }
         }
 
-        if (frame) {
+        // A component prototyped from this screen is drawn in the frame in
+        // place of the draft: it has no section to mark or to add after.
+        if (frame && !frame.hasAttribute("data-cms-frame-prototype")) {
             frame.addEventListener("load", markPreview);
             frame.addEventListener("load", addSlot);
             frame.addEventListener("load", revealLastSection);
@@ -1014,7 +1033,7 @@
         // A section saved by hand comes back with the screen the server
         // redirects to, drawn in place like the end of a generation. When
         // the answer cannot be read, the form is sent the plain way.
-        root.querySelectorAll("form[data-cms-section-form], form[data-cms-remove], form[data-cms-restore], form[data-cms-move], form[data-cms-add]").forEach(function (form) {
+        root.querySelectorAll("form[data-cms-section-form], form[data-cms-remove], form[data-cms-restore], form[data-cms-move], form[data-cms-add], form[data-cms-keep]").forEach(function (form) {
             form.addEventListener("submit", function (event) {
                 if (form.hasAttribute("data-cms-remove") && !window.confirm(labels.remove)) {
                     event.preventDefault();

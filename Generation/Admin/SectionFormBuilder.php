@@ -59,6 +59,9 @@ final readonly class SectionFormBuilder
 {
     public const string PREFIX = 'cms_section_';
 
+    /** The longest text drawn on half a line of the form: the default length of a text prop, a title. */
+    private const int SHORT_TEXT = 255;
+
     /** The file and the address fields that go with an image prop. */
     public const string FILE_SUFFIX = '__file';
     public const string ADDRESS_SUFFIX = '__url';
@@ -270,8 +273,10 @@ final readonly class SectionFormBuilder
             PropType::Html => $builder->add($prop->name, TextareaType::class, $common + [
                 'attr' => ['rows' => 8, 'class' => 'wysiwyg', 'data-cms-html' => ''],
             ]),
+            // A text of a sentence or more takes the whole line of the form;
+            // a short one shares it with its neighbour.
             PropType::Text => $builder->add($prop->name, TextType::class, $common + [
-                'attr' => ['maxlength' => $prop->max ?? 255],
+                'attr' => ['maxlength' => $prop->max ?? 255] + (($prop->max ?? 255) > self::SHORT_TEXT ? ['data-cms-long' => ''] : []),
             ]),
             PropType::Url => $builder->add($prop->name, TextType::class, $common + [
                 'attr' => ['maxlength' => $prop->max ?? 2048, 'placeholder' => '/contact'],
