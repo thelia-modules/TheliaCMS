@@ -225,7 +225,6 @@ renders the sample, and keeps it only when the editor says so.
 
 ## Not done
 
-- The `draft` status of `cms_component` is unused.
 - The stylesheet served is the one of the version kept, at once, including
   under published pages still holding the markup of the version before.
 
@@ -260,8 +259,8 @@ What the code settled that the plan did not say:
 - A candidate is a row of the ledger (its `document` holds the component):
   nothing else stores it until it is kept. A change asked on a candidate
   starts from it; keeping a new one files its call under the new row
-  (`ComponentCandidates::attach()`). The `draft` status of `cms_component` is
-  therefore unused so far.
+  (`ComponentCandidates::attach()`). The `draft` status of `cms_component`
+  is the prototype made from a page ([component-prototype.md](component-prototype.md)).
 - The call is a plain POST that waits for the answer (up to a minute), the
   button saying so: the progress stream of the content screen lives in its
   own script, not reused here.
@@ -284,7 +283,10 @@ What the code settled that the plan did not say:
 ## Decisions taken
 
 - A page uses a component made in the back office; it never makes one. No
-  entry on the content screen, no tool of the page generator.
+  entry on the content screen, no tool of the page generator. *Reversed by
+  [component-prototype.md](component-prototype.md): a page prototypes one,
+  and a brief may make one when a setting allows it; the prototype is
+  offered to nobody else until it is kept for the whole site.*
 - A component made in the back office goes through the catalogue like the
   others: no screen or generator reads its table directly.
 - A template holds no wording: every text is a prop.
