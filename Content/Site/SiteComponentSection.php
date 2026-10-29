@@ -34,12 +34,16 @@ use Twig\Markup;
  */
 final readonly class SiteComponentSection implements SectionDefinitionInterface
 {
+    /**
+     * @param bool $prototype a component made from a page and not kept for the whole site yet: in the catalogue, offered to nobody else
+     */
     public function __construct(
         public SiteComponent $component,
         private PropSchema $schema,
         private SiteTemplateRenderer $renderer,
         private ?LoggerInterface $logger = null,
         private PublishedContentSanitizer $sanitizer = new PublishedContentSanitizer(),
+        public bool $prototype = false,
     ) {
     }
 

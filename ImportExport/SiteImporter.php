@@ -378,10 +378,13 @@ final readonly class SiteImporter
                 continue;
             }
 
+            // A file written before prototypes existed says nothing: what it
+            // holds was kept for the whole site.
+            $status = SiteComponentRepository::STATUS_DRAFT === ($row['status'] ?? null) ? SiteComponentRepository::STATUS_DRAFT : SiteComponentRepository::STATUS_READY;
             $existing = $this->components->find($component->code);
 
             if (null === $existing) {
-                $this->components->save($component, SiteComponentRepository::STATUS_READY);
+                $this->components->save($component, $status);
                 $report->created('components');
 
                 continue;
@@ -397,7 +400,7 @@ final readonly class SiteImporter
                 continue;
             }
 
-            $this->components->save($component, SiteComponentRepository::STATUS_READY, $component->code);
+            $this->components->save($component, $status, $component->code);
             $report->replaced('components');
         }
     }

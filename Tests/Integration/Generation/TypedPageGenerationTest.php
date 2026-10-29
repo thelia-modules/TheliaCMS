@@ -29,6 +29,7 @@ use TheliaCMS\Generation\GeneratorSettings;
 use TheliaCMS\Generation\PageGenerator;
 use TheliaCMS\Generation\PromptBuilder;
 use TheliaCMS\Generation\Tool\GeneratorTools;
+use TheliaCMS\Generation\Tool\MakeComponentTool;
 use TheliaCMS\Generation\Tool\ReadUrlTool;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Page\Admin\PageDraft;
@@ -181,6 +182,7 @@ final class TypedPageGenerationTest extends CmsIntegrationTestCase
             $this->getService(GeneratorTools::class),
             $this->getService(GeneratorToolDefinitions::class),
             new ReadUrlTool(),
+            $this->getService(MakeComponentTool::class),
             $this->getService(DocumentSchema::class),
             $this->getService(DocumentValidator::class),
             $this->getService(GenerationLog::class),

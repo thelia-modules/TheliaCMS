@@ -252,6 +252,36 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         );
     }
 
+    public function testALongTextTakesTheWholeLineOfTheFormAndAShortOneHalf(): void
+    {
+        $column = ['image' => null, 'image_alt' => '', 'title' => 'Un titre', 'text' => 'Une phrase.'];
+        $page = $this->pageWith([new Section('cols', 'cms:columns', ['title' => '', 'columns' => [$column, $column]])]);
+
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-cols"] form[data-cms-section-form]');
+
+        self::assertSame(1, $form->filter('input[name="cms_section_cols[columns][0][text]"][data-cms-long]')->count(), 'A text of up to 500 characters is marked long: the stylesheet gives it the line.');
+        self::assertSame(0, $form->filter('input[name="cms_section_cols[columns][0][title]"][data-cms-long]')->count(), 'A title of the default length shares its line.');
+        self::assertSame(0, $form->filter('input[name="cms_section_cols[title]"][data-cms-long]')->count());
+    }
+
+    public function testTheHelpOfAFieldIsATooltipOnAQuestionMarkBesideItsLabel(): void
+    {
+        $column = ['image' => null, 'image_alt' => '', 'title' => 'Un titre', 'text' => 'Une phrase.'];
+        $page = $this->pageWith([new Section('cols', 'cms:columns', ['title' => '', 'columns' => [$column, $column]])]);
+
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-cols"] form[data-cms-section-form]');
+        $fieldOf = static fn (string $name): Crawler => $form->filter('.cms-content__field')->reduce(static fn (Crawler $field): bool => 0 < $field->filter(\sprintf('input[name="%s"]', $name))->count());
+
+        $alt = $fieldOf('cms_section_cols[columns][0][image_alt]');
+        self::assertSame(1, $alt->count());
+        self::assertSame(1, $alt->filter('.cms-content__field-head > label + button[data-cms-help-toggle][aria-expanded="false"]')->count(), 'A "?" beside the label carries the help.');
+        self::assertSame($alt->filter('[data-cms-help-toggle]')->attr('aria-describedby'), $alt->filter('.cms-content__help[role="tooltip"]')->attr('id'), 'The button names the tooltip that describes it.');
+        self::assertSame(0, $alt->filter('label .bo-form-label__help')->count(), 'The label holds no help: the fields of a line stay level.');
+
+        $title = $fieldOf('cms_section_cols[columns][0][title]');
+        self::assertSame(0, $title->filter('[data-cms-help-toggle], .cms-content__help')->count(), 'A prop without help has no "?".');
+    }
+
     public function testTheFormOfASectionFoldsWhatIsSeldomChangedAndKeepsItsSaveButtonInView(): void
     {
         $page = $this->pageWith([new Section('picture', 'cms:image', ['image' => null, 'alt' => '', 'caption' => 'Une légende', 'width' => 'narrow'])]);
@@ -326,7 +356,7 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         $themeWords = "HTML tag for the heading. Defaults to 'h1'";
 
         $dialog = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-bandeau"]');
-        $help = $dialog->filter('.bo-form-label__help')->each(static fn (Crawler $node): string => trim($node->text()));
+        $help = $dialog->filter('.cms-content__help')->each(static fn (Crawler $node): string => trim($node->text()));
 
         self::assertNotSame($themeWords, $translator->trans($themeWords, [], TheliaCMS::DOMAIN_NAME), 'The module says it in its own words, in every language.');
         self::assertContains($translator->trans($themeWords, [], TheliaCMS::DOMAIN_NAME), $help, 'The help of a prop of the theme goes through the translator.');

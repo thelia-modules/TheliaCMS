@@ -29,6 +29,7 @@ use TheliaCMS\Content\Partial\PartialSection;
 use TheliaCMS\Content\SectionAvailability;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\SectionDefinitionInterface;
+use TheliaCMS\Content\Site\SiteComponentPermission;
 use TheliaCMS\Content\Site\SiteComponentSection;
 use TheliaCMS\Content\Theme\ThemeComponentSection;
 use TheliaCMS\Generation\Admin\ToolkitLink;
@@ -58,6 +59,7 @@ final readonly class CmsComponentAdminController
         private SectionAvailability $availability,
         private SectionUsageFinder $usage,
         private ToolkitLink $toolkit,
+        private SiteComponentPermission $permission,
     ) {
     }
 
@@ -69,23 +71,29 @@ final readonly class CmsComponentAdminController
         $components = [];
 
         foreach ($this->catalog->all() as $name => $definition) {
+            // A prototype is offered to nobody until it is kept for the whole
+            // site: switching it on or off has no meaning yet.
+            $prototype = $definition instanceof SiteComponentSection && $definition->prototype;
+
             $components[] = [
                 'name' => $name,
                 'label' => $definition->label(),
                 'description' => $definition->description(),
                 'origin' => self::origin($definition),
+                'prototype' => $prototype,
                 'pages' => $pageCounts[$name] ?? 0,
-                'offered' => $this->availability->isOffered($name) || !$this->availability->canBeDisabled($name),
-                'may_disable' => $this->availability->canBeDisabled($name),
+                'offered' => !$prototype && ($this->availability->isOffered($name) || !$this->availability->canBeDisabled($name)),
+                'may_disable' => !$prototype && $this->availability->canBeDisabled($name),
                 'toolkit_url' => null === $toolkitUrl ? null : $toolkitUrl.'#'.self::toolkitAnchor($name),
                 'site_url' => $definition instanceof SiteComponentSection ? $this->urls->generate('admin.cms.components.site.show', ['component' => $definition->component->code]) : null,
+                'promote_url' => $prototype ? $this->urls->generate('admin.cms.components.site.promote', ['component' => $definition->component->code]) : null,
             ];
         }
 
         return new Response($this->twig->render(self::LIST_TEMPLATE, [
             'components' => $components,
             'may_update' => $this->isGranted(AccessManager::UPDATE),
-            'may_make' => $this->isGranted(AccessManager::UPDATE) && $this->securityContext->isGranted(['ADMIN'], [CmsResources::CUSTOM_CODE], [], [AccessManager::UPDATE]),
+            'may_make' => $this->permission->mayMake(),
             'toolkit_url' => $toolkitUrl,
         ]));
     }

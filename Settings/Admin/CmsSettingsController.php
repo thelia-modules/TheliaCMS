@@ -78,6 +78,7 @@ final readonly class CmsSettingsController
             'generatorEffort' => $this->generator->effort(),
             'generatorMaxTokens' => $this->generator->maxTokens(),
             'generatorWebFetch' => $this->generator->webFetch(),
+            'generatorComponentMaking' => $this->generator->componentMaking(),
             'textEffort' => $this->generator->textEffort(),
             'textMaxTokens' => $this->generator->textMaxTokens(),
         ], [
@@ -125,6 +126,7 @@ final readonly class CmsSettingsController
             effort: (string) $data['generatorEffort'],
             maxTokens: (int) $data['generatorMaxTokens'],
             webFetch: (bool) $data['generatorWebFetch'],
+            componentMaking: (bool) $data['generatorComponentMaking'],
         );
         $this->generator->saveText(
             effort: (string) $data['textEffort'],

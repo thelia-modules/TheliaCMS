@@ -17,7 +17,13 @@ For the people who run the shop and write its pages. The technical side is in
   is shown first: you choose to replace the field, insert it at the cursor or
   cancel. Nothing is saved before you save the form.
 - Makes a component (a price table, a timeline) from a request, which you
-  check before the site keeps it.
+  check before the site keeps it: from **CMS > Components**, for the whole
+  site, or from the content screen of a page, as a prototype that only the
+  pages holding it show until **CMS > Components** keeps it for the whole
+  site. If you allow it in the settings ("Let a brief make a component of
+  the site", off by default), the AI writing a page may make one itself when
+  no component of the site shows what the brief asks; each one is a call of
+  its own, counted in the history.
 - Reads a web page you cite, if you allowed it (see below).
 
 Each use is recorded in the history of the page, with its date, its outcome and

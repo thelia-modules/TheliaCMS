@@ -19,8 +19,22 @@
     <p class="text-muted">
         <code>Site:{{ component.code }}</code> &middot; {{ component.description }}
         &middot; {% if pages > 0 %}{{ '%count% page(s)'|trans({ '%count%': pages }, 'theliacms') }}{% else %}{{ 'Unused'|trans({}, 'theliacms') }}{% endif %}
-        &middot; {{ offered ? 'Offered to the generator'|trans({}, 'theliacms') : 'Not offered to the generator'|trans({}, 'theliacms') }}
+        &middot; {% if prototype %}{{ 'Prototype: shown on the pages that hold it, offered to nobody else'|trans({}, 'theliacms') }}{% else %}{{ offered ? 'Offered to the generator'|trans({}, 'theliacms') : 'Not offered to the generator'|trans({}, 'theliacms') }}{% endif %}
     </p>
+
+    {% if prototype and may_make %}
+        <div class="alert alert-warning d-flex align-items-center gap-3" data-testid="cms-site-component-prototype">
+            <div class="me-auto">
+                {{ 'This component was prototyped from a page. Keep it for the whole site to offer it to the generator and on the content screen of every page.'|trans({}, 'theliacms') }}
+            </div>
+            <form method="post" action="{{ path('admin.cms.components.site.promote', { component: component.code }) }}" data-testid="cms-site-component-promote">
+                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                <button class="btn btn-sm btn-primary text-nowrap" type="submit">
+                    <i class="bi bi-check2-all me-1" aria-hidden="true"></i>{{ 'Keep for the whole site'|trans({}, 'theliacms') }}
+                </button>
+            </form>
+        </div>
+    {% endif %}
 
     <div class="row g-3">
         <div class="col-xl-8">

@@ -31,11 +31,12 @@ use TheliaCMS\Tests\Unit\Content\Site\PriceTable;
 /**
  * A component the site made and kept is a section like any other: in the
  * catalogue, checked in a document, drawn on the page and kept by the
- * publication.
+ * publication. One still a draft is a prototype: in the catalogue, offered
+ * to nobody.
  */
 final class SiteComponentTest extends CmsIntegrationTestCase
 {
-    public function testAKeptComponentIsInTheCatalogueAndADraftIsNot(): void
+    public function testAKeptComponentIsOfferedAndADraftIsInTheCatalogueAlone(): void
     {
         $repository = $this->getService(SiteComponentRepository::class);
         $repository->save((new SiteComponentValidator())->validate(PriceTable::component()), SiteComponentRepository::STATUS_READY);
@@ -46,7 +47,10 @@ final class SiteComponentTest extends CmsIntegrationTestCase
 
         self::assertInstanceOf(SiteComponentSection::class, $catalog->find('Site:PriceTable'));
         self::assertArrayHasKey('Site:PriceTable', $catalog->offered(), 'Offered to the generator like any other component.');
-        self::assertNull($catalog->find('Site:PriceGrid'), 'A draft is still being looked at.');
+        $prototype = $catalog->find('Site:PriceGrid');
+        self::assertInstanceOf(SiteComponentSection::class, $prototype, 'A draft is a prototype: the pages holding it render it.');
+        self::assertTrue($prototype->prototype);
+        self::assertArrayNotHasKey('Site:PriceGrid', $catalog->offered(), 'A prototype is offered to nobody until it is kept for the whole site.');
     }
 
     public function testAPageHoldingTheComponentIsCheckedDrawnAndPublished(): void

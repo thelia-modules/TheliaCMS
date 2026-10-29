@@ -55,6 +55,8 @@
                                     {{ 'Theme'|trans({}, 'theliacms') }}
                                 {% elseif component.origin == 'partial' %}
                                     {{ 'Partial'|trans({}, 'theliacms') }}
+                                {% elseif component.origin == 'site' and component.prototype %}
+                                    {{ 'Prototype made on this site'|trans({}, 'theliacms') }}
                                 {% elseif component.origin == 'site' %}
                                     {{ 'Made on this site'|trans({}, 'theliacms') }}
                                 {% else %}
@@ -69,12 +71,17 @@
                                 {% endif %}
                             </td>
                             <td data-testid="cms-component-offered-{{ component.name }}" data-offered="{{ component.offered ? '1' : '0' }}">
-                                {% if component.offered %}
+                                {% if component.prototype %}
+                                    {# A prototype renders on the pages that hold it and nowhere
+                                       else until someone keeps it for the whole site. #}
+                                    <span class="badge text-bg-warning">{{ 'Prototype'|trans({}, 'theliacms') }}</span>
+                                    <div class="text-muted small">{{ 'Offered once kept for the whole site'|trans({}, 'theliacms') }}</div>
+                                {% elseif component.offered %}
                                     <span class="badge text-bg-success">{{ 'Enabled'|trans({}, 'theliacms') }}</span>
                                 {% else %}
                                     <span class="badge text-bg-secondary">{{ 'Disabled'|trans({}, 'theliacms') }}</span>
                                 {% endif %}
-                                {% if not component.may_disable %}
+                                {% if not component.may_disable and not component.prototype %}
                                     <div class="text-muted small">{{ 'Always offered'|trans({}, 'theliacms') }}</div>
                                 {% endif %}
                             </td>
@@ -89,6 +96,14 @@
                                     <a class="btn btn-sm btn-outline-secondary" href="{{ component.toolkit_url }}" target="_blank" rel="noopener" data-testid="cms-component-see-{{ component.name }}">
                                         <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>{{ 'See'|trans({}, 'theliacms') }}
                                     </a>
+                                {% endif %}
+                                {% if may_make and component.promote_url %}
+                                    <form method="post" action="{{ component.promote_url }}" class="d-inline" data-testid="cms-component-promote-{{ component.name }}">
+                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                        <button class="btn btn-sm btn-outline-primary" type="submit">
+                                            <i class="bi bi-check2-all me-1" aria-hidden="true"></i>{{ 'Keep for the whole site'|trans({}, 'theliacms') }}
+                                        </button>
+                                    </form>
                                 {% endif %}
                                 {% if may_update and component.may_disable %}
                                     <form method="post" action="{{ path('admin.cms.components.availability') }}" class="d-inline">

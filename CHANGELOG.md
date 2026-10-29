@@ -7,8 +7,42 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added
+
+- **A component is prototyped from the content screen of a page.** **Add a
+  section > A new component** asks the generator of components in a few
+  words; the answer is drawn in the preview in place of the draft, changed by
+  asking again, discarded or kept. Kept, it is a prototype of the site:
+  status `draft` in `cms_component`, shown and edited on the pages that hold
+  it, offered to nobody else until **CMS > Components** keeps it for the
+  whole site (**Keep for the whole site**). The same rights as **CMS >
+  Components > New component** are needed.
+- **A brief may make a component of the site**, when the new generator
+  setting "Let a brief make a component of the site" is on (off by default)
+  and the editor may make components: the generator writing a page calls the
+  generator of components (`make_component`, twice per page at most, each
+  call a row of its own in the ledger) when none of the catalogue shows what
+  the brief asks, and names the prototype in the page.
+- **The dialogs of the content screen are drawers** over the left panel
+  (edit a section, rewrite, brief, add a section), the preview staying in
+  sight; full width on a phone. The form of a section puts two fields on a
+  line once the drawer is wide enough, a long text, a picture, a list of
+  rows or a folded part on a line of its own; the help of a field is a
+  tooltip on a "?" beside its label, so the labels and the fields of a line
+  are level whatever the wording.
+- **An export carries the status of every component of the site** (`draft`
+  or `ready`), and an import keeps it: a prototype stays a prototype on the
+  site it is imported into.
+
 ### Fixed
 
+- **A document whose props carry a bare line break is read.** A model that
+  escapes the JSON string of the props once rather than twice (seen with
+  Mistral Large) left a line break of a text as a control character inside
+  the inner JSON, and every section came back "not valid JSON" until the
+  call failed. Such a break is read as a space; a props string that is no
+  JSON at all is still sent back, with the rule to follow, and the refused
+  answer now travels with the log entry.
 - **A PDF a brief cites is read again.** The text of the PDF is extracted on the
   server (`smalot/pdfparser`) and goes the way the text of a page does; a PDF
   that is damaged, protected or longer than the ceiling is reported as not read.

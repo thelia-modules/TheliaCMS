@@ -135,6 +135,13 @@ final readonly class PromptBuilder
             default => $request->brief->text,
         };
 
+        if ($this->mayMakeComponents($request)) {
+            $lines[] = '';
+            $lines[] = '# A component the catalogue lacks';
+            $lines[] = '';
+            $lines[] = \sprintf('When a part of the brief has no component of the catalogue to show it, you may make one with the `make_component` tool: say what it shows and what varies from one use to the next. Each one is a call of its own; make at most %d for this page, prefer a component of the catalogue whenever one is close, and read it in full with `read_section` before deciding it is not.', Tool\MakeComponentTool::USES);
+        }
+
         if ([] !== $addresses = $this->readableAddresses($request)) {
             $lines[] = '';
             $lines[] = '# The pages the brief cites';
@@ -278,6 +285,18 @@ final readonly class PromptBuilder
         $line = \sprintf('- `%s`: %s (%s)', $field->code, $field->label($locale), implode(', ', $notes));
 
         return null === $value ? $line : $line.'. The page holds: '.json_encode($value, \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * Whether the model may make a component of the site for this request:
+     * the site allows it, whoever asks may make components, and the request
+     * writes or changes a page (a translation keeps its components).
+     */
+    public function mayMakeComponents(GenerationRequest $request): bool
+    {
+        return $request->mayMakeComponents
+            && $this->settings->componentMaking()
+            && GenerationRequest::KIND_TRANSLATION !== $request->kind;
     }
 
     /**

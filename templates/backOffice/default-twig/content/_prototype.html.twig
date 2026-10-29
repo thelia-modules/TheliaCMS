@@ -1,0 +1,60 @@
+{#
+    The component prototyped from this screen: the candidate the address of
+    the screen names, read back from the ledger. Drawn in the preview in place
+    of the draft; kept as a prototype of the site and added to the draft from
+    here, changed by asking again, or discarded (nothing was stored but the
+    call). A candidate that failed shows what went wrong and asks again.
+#}
+<section class="cms-content__section cms-content__prototype" data-testid="cms-content-prototype" data-status="{{ prototype.candidate.status }}">
+    <div class="cms-content__add-head">
+        <h2 class="cms-content__heading mb-0">{{ 'Component prototyped'|trans({}, 'theliacms') }}</h2>
+        <a class="btn-close" href="{{ subject.url('screen') }}" aria-label="{{ 'Discard'|trans({}, 'theliacms') }}" title="{{ 'Discard'|trans({}, 'theliacms') }}" data-testid="cms-content-prototype-discard"></a>
+    </div>
+    <p class="cms-content__prototype-asked"><strong>{{ 'Asked:'|trans({}, 'theliacms') }}</strong> {{ prototype.candidate.request }}</p>
+    <p class="cms-content__brief-meta">{{ prototype.figures }}</p>
+
+    {% if prototype.failed %}
+        <div class="alert alert-warning small" role="status">
+            {{ 'The generator could not make a component the site can keep:'|trans({}, 'theliacms') }} {{ prototype.candidate.error }}
+        </div>
+        <form method="post" action="{{ subject.url('component_generate') }}" data-cms-generate novalidate data-testid="cms-content-prototype-again">
+            <input type="hidden" name="_token" value="{{ assignToken() }}">
+            <label class="form-label" for="cms-content-prototype-again">{{ 'Ask again'|trans({}, 'theliacms') }}</label>
+            <textarea class="form-control" id="cms-content-prototype-again" name="request" rows="3" required>{{ prototype.candidate.request }}</textarea>
+            <div class="form-text">{{ 'Reword the request, or say more about what the component shows.'|trans({}, 'theliacms') }}</div>
+            <button type="submit" class="btn btn-sm btn-primary mt-2"><i class="bi bi-stars" aria-hidden="true"></i> {{ 'Prototype it'|trans({}, 'theliacms') }}</button>
+        </form>
+    {% else %}
+        <p class="mb-1"><strong>{{ prototype.component.label }}</strong> <code class="small">{{ prototype.component.name }}</code></p>
+        <p class="cms-content__item-excerpt">{{ prototype.component.description }}</p>
+        {% if prototype.props is not empty %}
+            <details class="cms-content__more" data-testid="cms-content-prototype-props">
+                <summary>{{ '%count% prop(s)'|trans({ '%count%': prototype.props|length }, 'theliacms') }}</summary>
+                <ul class="small mb-0">
+                    {% for prop in prototype.props %}
+                        <li><code>{{ prop.name }}</code> ({{ prop.type }}){% if prop.required %} *{% endif %}{% if prop.label %} — {{ prop.label }}{% endif %}{% if prop.items is not empty %}: {{ prop.items|join(', ') }}{% endif %}</li>
+                    {% endfor %}
+                </ul>
+            </details>
+        {% endif %}
+        <div class="cms-content__prototype-actions">
+            <form method="post" action="{{ subject.url('component_keep') }}" data-cms-keep data-testid="cms-content-prototype-keep">
+                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                <input type="hidden" name="candidate" value="{{ prototype.candidate.logId }}">
+                <button type="submit" class="btn btn-sm btn-success">
+                    <i class="bi bi-check2" aria-hidden="true"></i> {{ 'Keep it and add it to the page'|trans({}, 'theliacms') }}
+                </button>
+            </form>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ subject.url('screen') }}">{{ 'Discard'|trans({}, 'theliacms') }}</a>
+        </div>
+        <p class="form-text">{{ 'Kept, it is a prototype of this site: shown on the pages that hold it, offered to nobody else until CMS > Components keeps it for the whole site.'|trans({}, 'theliacms') }}</p>
+        <form method="post" action="{{ subject.url('component_generate') }}" class="mt-2" data-cms-generate novalidate data-testid="cms-content-prototype-change">
+            <input type="hidden" name="_token" value="{{ assignToken() }}">
+            <input type="hidden" name="candidate" value="{{ prototype.candidate.logId }}">
+            <label class="form-label" for="cms-content-prototype-change">{{ 'Ask a change'|trans({}, 'theliacms') }}</label>
+            <textarea class="form-control" id="cms-content-prototype-change" name="request" rows="2" required
+                      placeholder="{{ 'Put the price in bigger type, one plan per line on a phone'|trans({}, 'theliacms') }}"></textarea>
+            <button type="submit" class="btn btn-sm btn-outline-primary mt-2"><i class="bi bi-stars" aria-hidden="true"></i> {{ 'Change it'|trans({}, 'theliacms') }}</button>
+        </form>
+    {% endif %}
+</section>

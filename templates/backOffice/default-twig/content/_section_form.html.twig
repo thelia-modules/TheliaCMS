@@ -152,7 +152,9 @@
     </li>
 {% endmacro %}
 
-{% form_theme form with bo_form_themes only %}
+{# The last theme of the list wins: the rows of this form come from the
+   module's theme, the widgets from the back-office theme. #}
+{% form_theme form with bo_form_themes|merge(['@TheliaCMSModule/backOffice/default-twig/content/_section_form_theme.html.twig']) only %}
 {{ form_start(form, { attr: { 'data-cms-section-form': '', novalidate: 'novalidate' } }) }}
     <input type="hidden" name="_token" value="{{ assignToken() }}">
     {{ _self.fields(form) }}

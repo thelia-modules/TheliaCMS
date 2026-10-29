@@ -34,7 +34,7 @@ component refuses, is rejected on the way in, every problem listed at once
 | Image | `cms:image` | The module. One picture (of the media library or an `https` address) with an optional caption, at the width of the reading column (by default), of the content or of the whole screen; nothing is drawn while no image is chosen. |
 | Live content | `Partial:<name>` | Every partial of the site (`PartialDefinitionInterface`), the ones of the module and the ones other modules register. The section renders the placeholder the partial renderer substitutes when the page is served. |
 | Components of the theme | As the theme names them, `Molecules:Reinsurance:Base` | The components the active theme opens to pages in `config/theliacms.yaml` (below). |
-| Components of the site | `Site:<Code>`, `Site:PricingPlans` | Made in the back office from a prompt and kept (**CMS > Components > New component**): props as data, a sandboxed Twig template and a scoped stylesheet, stored in `cms_component` ([creating-a-component.md](creating-a-component.md#a-component-made-in-the-back-office)). |
+| Components of the site | `Site:<Code>`, `Site:PricingPlans` | Made in the back office from a prompt and kept (**CMS > Components > New component**, or prototyped from the content screen of a page and kept for the whole site later): props as data, a sandboxed Twig template and a scoped stylesheet, stored in `cms_component` ([creating-a-component.md](creating-a-component.md#a-component-made-in-the-back-office)). |
 
 A component of another module joins the catalogue by implementing
 `TheliaCMS\Content\SectionDefinitionInterface`; implementing it is what
@@ -43,8 +43,10 @@ registers it. Several at once, decided at runtime, go through
 
 Two readings of it. `all()` is every component a stored document may name:
 what renders and validates a page. `offered()` leaves out the components the
-site switched off under **CMS > Components** (`SectionAvailability`): what the
-generator reads and may write, and what the toolkit shows. A generation that
+site switched off under **CMS > Components** (`SectionAvailability`) and the
+prototypes (a component of the site made from a page and not kept for the
+whole site yet, `SiteComponentSection::$prototype`): what the generator reads
+and may write, and what the toolkit shows. A generation that
 revises or translates a page is also allowed the components that page already
 uses (`GenerationRequest::keptComponents()`), so a component switched off
 never forces a page to change.

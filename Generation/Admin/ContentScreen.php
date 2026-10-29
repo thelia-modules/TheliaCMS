@@ -23,10 +23,15 @@ use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Content\Document;
 use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionCatalog;
+use TheliaCMS\Content\Site\SiteComponentPermission;
+use TheliaCMS\Content\Site\SitePropRows;
+use TheliaCMS\Generation\Component\ComponentCandidates;
 use TheliaCMS\Generation\GenerationLog;
 use TheliaCMS\Generation\GenerationRequest;
 use TheliaCMS\Generation\WebPageRead;
 use TheliaCMS\Model\CmsPageGeneration;
+use TheliaCMS\Preview\ComponentPreviewLink;
+use TheliaCMS\Preview\PreviewLink;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
 use Twig\Environment;
@@ -54,6 +59,10 @@ final readonly class ContentScreen
         private ToolkitLink $toolkit,
         private PreviewWidths $previewWidths,
         private SectionChoices $sectionChoices,
+        private ComponentCandidates $candidates,
+        private ComponentPreviewLink $componentPreviews,
+        private SiteComponentPermission $componentPermission,
+        private SitePropRows $propRows,
     ) {
     }
 
@@ -78,8 +87,53 @@ final readonly class ContentScreen
             'toolkit_url' => $this->toolkit->url(),
             'preview_widths' => $this->previewWidths->widths(),
             'addable' => $mayPublish ? $this->sectionChoices->groups() : [],
+            // Prototyping a component from the page: the right to generate
+            // and the rights a component of the site takes, on a screen that
+            // has the routes for it (a catalogue item has none).
+            'may_prototype' => $mayGenerate && isset($subject->routes['component_generate']) && $this->componentPermission->mayMake(),
+            'prototype' => $this->prototype($request, $subject),
             'assets_version' => self::assetsVersion(),
         ]);
+    }
+
+    /**
+     * The component prototyped from this screen, when its address names a
+     * candidate: what was asked, what it cost, the component with its props,
+     * and the addresses of its preview, in the whole page of the theme or
+     * alone, as the draft is shown. A candidate that is a change of a kept
+     * component belongs to the components screen, not here.
+     *
+     * @return array{candidate: \TheliaCMS\Generation\Component\ComponentCandidate, component: \TheliaCMS\Content\Site\SiteComponent|null, props: list<array<string, mixed>>, preview_url: string|null, preview_content_url: string|null, failed: bool, figures: string}|null
+     */
+    private function prototype(Request $request, ContentSubject $subject): ?array
+    {
+        $id = $request->query->getInt(CmsPageComponentController::PARAMETER);
+
+        if ($id <= 0 || !isset($subject->routes['component_keep'])) {
+            return null;
+        }
+
+        $candidate = $this->candidates->find($id);
+
+        if (null === $candidate || $candidate->componentId > 0) {
+            return null;
+        }
+
+        $previewUrl = null === $candidate->component ? null : $this->componentPreviews->candidate($candidate->logId, $subject->locale);
+
+        return [
+            'candidate' => $candidate,
+            'component' => $candidate->component,
+            'props' => null === $candidate->component ? [] : $this->propRows->of($candidate->component),
+            'preview_url' => $previewUrl,
+            'preview_content_url' => null === $previewUrl ? null : $previewUrl.'?'.PreviewLink::CONTENT_ONLY.'=1',
+            'failed' => GenerationLog::STATUS_DONE !== $candidate->status,
+            'figures' => $this->translator->trans('%turns% turn(s), %duration% s, %cost% USD', [
+                '%turns%' => $candidate->turns,
+                '%duration%' => number_format($candidate->durationMs / 1000, 1, '.', ''),
+                '%cost%' => number_format($candidate->costUsd, 3, '.', ''),
+            ], TheliaCMS::DOMAIN_NAME),
+        ];
     }
 
     /**

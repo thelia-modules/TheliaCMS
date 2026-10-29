@@ -60,6 +60,7 @@ use TheliaCMS\Generation\Text\TextPrompt;
 use TheliaCMS\Generation\Text\TextRequest;
 use TheliaCMS\Generation\Text\TextSanitizer;
 use TheliaCMS\Generation\Tool\GeneratorTools;
+use TheliaCMS\Generation\Tool\MakeComponentTool;
 use TheliaCMS\Generation\Tool\ReadUrlTool;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 use TheliaCMS\Skill\SkillRepository;
@@ -252,6 +253,7 @@ final class GatewayRefusalsTest extends CmsIntegrationTestCase
             $this->getService(GeneratorTools::class),
             $this->getService(GeneratorToolDefinitions::class),
             new ReadUrlTool(),
+            $this->getService(MakeComponentTool::class),
             $this->getService(DocumentSchema::class),
             $this->getService(DocumentValidator::class),
             $this->getService(GenerationLog::class),

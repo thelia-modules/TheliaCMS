@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Generation\Tool;
 
 use TheliaCMS\Content\SectionCatalog;
+use TheliaCMS\Content\Site\SiteComponentSection;
 use TheliaCMS\Generation\CatalogSheet;
 use TheliaCMS\Generation\GenerationRequest;
 
@@ -56,8 +57,9 @@ final readonly class ReadSectionTool implements GeneratorToolInterface
         $definition = $this->catalog->offered()[$name] ?? null;
 
         // A component the site put away is still described when the document
-        // being revised uses it: the model has to write it back as it is.
-        if (null === $definition && \in_array($name, $request->keptComponents(), true)) {
+        // being revised uses it: the model has to write it back as it is. A
+        // prototype of the site too: the one the model just made is such a one.
+        if (null === $definition && (\in_array($name, $request->keptComponents(), true) || $this->catalog->find($name) instanceof SiteComponentSection)) {
             $definition = $this->catalog->find($name);
         }
 

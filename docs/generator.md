@@ -18,12 +18,13 @@ usual pipeline.
   jurisdiction (providers inside the European Union only) and the guardrails
   of the AI settings apply to every call: when one refuses, the editor reads
   which and what to change there.
-- Four settings, in the **Generator** card of CMS > Settings, each with a
+- Six settings, in the **Generator** card of CMS > Settings, each with a
   default: `generator_effort` (`high`; `low`, `medium`, `xhigh` and `max`
   exist; passed to the model as its reasoning effort, read by Anthropic models
   and without effect on the others), `generator_max_tokens` (16000),
-  `generator_web_fetch` (off: read the web pages a brief cites, below), and
-  for the texts beside a field `generator_text_effort` (`low`) and
+  `generator_web_fetch` (off: read the web pages a brief cites, below),
+  `generator_component_making` (off: let a brief make a component of the
+  site, below), and for the texts beside a field `generator_text_effort` (`low`) and
   `generator_text_max_tokens` (2000). The card links to the AI settings.
 - The right `admin.cms.generate`, given to the editor profile the module
   seeds: asking the generator to write costs money.
@@ -82,9 +83,21 @@ While it writes, the model may ask the site:
 | `search_media` | the images of the media library, by title or tag: the only source of an image id |
 | `read_section` | the full sheet of one component |
 | `read_skill` | a skill listed as available on demand |
+| `make_component` | makes a component of the site when none of the catalogue shows what the brief asks (below) |
 
 A tool is a class implementing `TheliaCMS\Generation\Tool\GeneratorToolInterface`;
-implementing it is what offers it.
+implementing it is what offers it. `make_component` is the exception: a class
+of its own (`Generation/Tool/MakeComponentTool.php`), offered only when the
+setting `generator_component_making` is on, the editor may make components
+(settings and custom code resources, `Content/Site/SiteComponentPermission.php`)
+and the request is not a translation, twice per generation at most. It hands
+the request to the generator of components (a nested call, up to a minute,
+filed in the ledger as a row of its own under `target_type` `component`),
+keeps the answer as a prototype of the site (status `draft`), resets the
+catalogue and answers with the sheet of the component; the schema of the
+answer is then built again so the model may name it. A prototype is shown on
+the pages that hold it and offered to nobody else until **CMS > Components**
+keeps it for the whole site.
 
 ### Web pages the brief cites
 
@@ -178,6 +191,17 @@ the signed preview link of the draft.
   `data-cms-section="<id>"` on the first element of every section for that
   (`Content\DocumentRenderer::SECTION_ATTRIBUTE`, kept by the sanitizer).
 - **Ask for a change**: a change on the whole draft, same rule.
+- **Add a section > A new component**, for an editor who may make components
+  (settings and custom code resources): **Prototype a component** asks the
+  generator of components in a few words. The answer is drawn in the preview
+  in place of the draft, as the theme shows it, with its props listed; the
+  editor asks a change, discards it, or keeps it: the component is stored as
+  a prototype of the site (status `draft`), a section of it is added at the
+  end of the draft with its sample text, and the ledger holds a `manual` row
+  for the addition. The candidate lives in the ledger
+  (`Generation\Component\ComponentCandidates`) and is named on the screen by
+  `?component=<id>`, so the preview and the forms work without the script
+  (`Generation/Admin/CmsPageComponentController.php`).
 - **Written from another language**: when the page holds nothing in the
   language on screen and a draft in another, the stage offers to write this
   language from it (`GenerationRequest::translation`): the same sections,
@@ -224,7 +248,17 @@ next request starts from the corrected text. A word corrected by hand costs
 no generation, and takes the right to change pages, not the generate right.
 With the script, the form posts in the background and the screen it comes
 back with is put in place, the panel still open, as at the end of a
-generation.
+generation. The form opens in a drawer over the left panel, the preview
+staying in sight, its fields on two columns once the drawer is wide enough
+(a container query on the drawer): a text of several lines, a text longer
+than the default 255 characters (`data-cms-long`), a picture, a list of rows
+and a folded part take the line. The rows come from the module's form theme
+(`content/_section_form_theme.html.twig`, last in the list so it wins over
+the back-office theme): the label with a "?" beside it, the field, then the
+errors under the field, the three parts of every field of a line in the same
+three rows of a subgrid, so the fields of a line are level. The help is a
+tooltip on the "?" (`role="tooltip"`), shown on hover and on focus by the
+stylesheet and held open by a click by the script.
 
 Opening the screen takes the page right; asking the generator takes
 `admin.cms.generate`; publishing takes the right to change pages.
@@ -253,7 +287,8 @@ answer said the page leaves out is kept as a JSON list of sentences
 `Generation/Component/ComponentGenerator.php` makes a component of the site
 from a request (see [creating-a-component.md](creating-a-component.md#a-component-made-in-the-back-office)).
 Same gateway, effort and log as the pages, under its own usage
-(`theliacms.component`); no tool. The system
+(`theliacms.component`); no tool of its own, though the generator of pages
+may call it through `make_component` (above). The system
 prompt (`ComponentPrompt`), cached, gives the JSON form of the props, the rules
 of the sandbox and of the stylesheet, the colour tokens read from
 `assets/blocks.css`, the accessibility skill and an example; the user message
@@ -269,6 +304,15 @@ Its calls are in the ledger with the pages, under `target_type` `component`:
 call a new component came from is filed under it once it is kept. A
 candidate is such a row, its `document` holding the component; nothing else
 stores it until it is kept.
+
+A component kept from the content screen, by the editor or by the tool, is a
+**prototype**: status `draft` in `cms_component`. `SectionCatalog::all()`
+holds it, so the pages using it render, validate, edit and export it;
+`offered()` leaves it out, so no other page is offered it. **CMS > Components**
+lists it with a **Prototype** badge and **Keep for the whole site** (route
+`admin.cms.components.site.promote`, `SiteComponentRepository::promote()`),
+which sets it `ready`: from then on it is a component of the site like the
+others. An export writes the status of every component and an import keeps it.
 
 ## From the command line
 

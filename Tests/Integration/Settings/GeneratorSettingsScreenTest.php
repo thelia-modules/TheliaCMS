@@ -38,6 +38,8 @@ final class GeneratorSettingsScreenTest extends AdminScreenTestCase
         self::assertSame(1, $card->filter('input[name="cms_settings[generatorMaxTokens]"]')->count());
         self::assertSame(1, $card->filter('input[type="checkbox"][name="cms_settings[generatorWebFetch]"]')->count());
         self::assertStringContainsString('Off by default', $card->filter('[data-testid="cms-settings-web-fetch-help"]')->text(''), 'The box says where a page read goes, which the theme of the back office leaves out of a checkbox.');
+        self::assertSame(1, $card->filter('input[type="checkbox"][name="cms_settings[generatorComponentMaking]"]')->count());
+        self::assertStringContainsString('Off by default', $card->filter('[data-testid="cms-settings-component-making-help"]')->text(''), 'The box says what a component made by a brief costs and where it goes.');
         self::assertSame(0, $card->filter('input[type="password"], input[name*="Key"], input[name*="key"]')->count(), 'No field takes the API key.');
         self::assertStringNotContainsString('ANTHROPIC', $card->text(''));
         self::assertStringContainsString('AI settings of Thelia', $card->text(''), 'The card says where the provider, the key, the model and the budget are set.');
@@ -55,6 +57,21 @@ final class GeneratorSettingsScreenTest extends AdminScreenTestCase
         $settings = $this->settings();
         self::assertSame('low', $settings->effort());
         self::assertSame(4096, $settings->maxTokens());
+    }
+
+    public function testLettingABriefMakeAComponentIsOffUntilTheSiteTurnsItOn(): void
+    {
+        self::assertFalse($this->settings()->componentMaking(), 'Off by default: a component made by a brief is a call the editor did not ask for in so many words.');
+
+        $form = $this->settingsForm();
+        self::assertFalse($form['cms_settings[generatorComponentMaking]']->hasValue());
+        $form['cms_settings[generatorComponentMaking]']->tick();
+
+        self::assertSame(302, $this->send('POST', $form->getUri(), $form->getPhpValues()));
+
+        ModuleConfigQuery::resetConfigCache();
+        self::assertTrue($this->settings()->componentMaking());
+        self::assertTrue($this->settingsForm()['cms_settings[generatorComponentMaking]']->hasValue(), 'The box shows the setting as saved.');
     }
 
     public function testReadingTheWebPagesABriefCitesIsOffUntilTheSiteTurnsItOn(): void

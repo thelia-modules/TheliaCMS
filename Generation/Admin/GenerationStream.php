@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Generation\Admin;
 
 use TheliaCMS\Generation\GenerationObserverInterface;
+use TheliaCMS\Generation\Tool\MakeComponentTool;
 
 /**
  * The progress of a generation, written to the browser as it happens, as
@@ -49,9 +50,11 @@ final class GenerationStream implements GenerationObserverInterface
         $this->emit('turn', [
             'turn' => $turn,
             'tools' => $tools,
-            'message' => [] === $tools
-                ? ($this->translate)($this->messages['answered'] ?? 'The model answered: the site is checking the document.', [])
-                : ($this->translate)('The model is looking through the site (%tools%).', ['%tools%' => implode(', ', $tools)]),
+            'message' => match (true) {
+                [] === $tools => ($this->translate)($this->messages['answered'] ?? 'The model answered: the site is checking the document.', []),
+                \in_array(MakeComponentTool::NAME, $tools, true) => ($this->translate)('The model is making a component of the site: it takes up to a minute.', []),
+                default => ($this->translate)('The model is looking through the site (%tools%).', ['%tools%' => implode(', ', $tools)]),
+            },
         ]);
     }
 

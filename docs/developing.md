@@ -59,11 +59,19 @@ shows how to test an update, outside a transaction.
   `cacheTtl()` says (a day for a map). A theme template added or changed
   for a partial shows up when that fragment expires, or after
   `php Thelia cache:pool:clear cache.app`.
+- **The Twig cache of the test environment does not reload**: a template
+  edited after a test compiled it is still rendered from the compiled copy
+  in `var/cache/test/twig`, and a test asserting on the new markup can pass
+  on the old one (or miss a Twig error the browser shows). After a change to
+  a template, move `var/cache/test/twig` aside before the tests.
 - **Module assets** served by `module_asset()` are copied once into
   `public/assets/backOffice/default-twig/TheliaCMS/`. After a change to a
   script or a stylesheet of `templates/backOffice/default-twig/assets/`, copy
   the file there again (or remove the published directory), and give the
-  template an `assets_version` so the browser drops its copy too.
+  template an `assets_version` so the browser drops its copy too. The
+  version is read from the file of the module, not from the copy: a page
+  loaded between the edit and the copy caches the old stylesheet under the
+  new version, and the browser keeps it until a hard reload.
 
 ## Writing tests
 

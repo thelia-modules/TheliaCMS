@@ -28,6 +28,9 @@ final readonly class GeneratorSettings
     public const string MAX_TOKENS = 'generator_max_tokens';
     public const string WEB_FETCH = 'generator_web_fetch';
 
+    /** Whether the generator writing a page may make a component of the site when the catalogue lacks one. */
+    public const string COMPONENT_MAKING = 'generator_component_making';
+
     // A text written from a brief in a rich-text field: a paragraph does not
     // need the effort, nor the length, of a whole page.
     public const string TEXT_EFFORT = 'generator_text_effort';
@@ -74,6 +77,16 @@ final readonly class GeneratorSettings
         return '1' === (string) TheliaCMS::getConfigValue(self::WEB_FETCH, '0');
     }
 
+    /**
+     * Off by default: a component made while a page is written is a call of
+     * its own, up to a minute and a few cents, that the brief asked for in
+     * no explicit way.
+     */
+    public function componentMaking(): bool
+    {
+        return '1' === (string) TheliaCMS::getConfigValue(self::COMPONENT_MAKING, '0');
+    }
+
     public function textEffort(): string
     {
         $effort = (string) TheliaCMS::getConfigValue(self::TEXT_EFFORT, self::DEFAULT_TEXT_EFFORT);
@@ -99,10 +112,11 @@ final readonly class GeneratorSettings
      * arrives makes no sense: an effort the range does not know, a length too
      * short for a page.
      */
-    public function save(string $effort, int $maxTokens, bool $webFetch = false): void
+    public function save(string $effort, int $maxTokens, bool $webFetch = false, bool $componentMaking = false): void
     {
         TheliaCMS::setConfigValue(self::EFFORT, \in_array($effort, self::EFFORTS, true) ? $effort : self::DEFAULT_EFFORT);
         TheliaCMS::setConfigValue(self::MAX_TOKENS, (string) ($maxTokens >= self::MIN_MAX_TOKENS ? $maxTokens : self::DEFAULT_MAX_TOKENS));
         TheliaCMS::setConfigValue(self::WEB_FETCH, $webFetch ? '1' : '0');
+        TheliaCMS::setConfigValue(self::COMPONENT_MAKING, $componentMaking ? '1' : '0');
     }
 }

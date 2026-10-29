@@ -85,19 +85,27 @@ final class SectionCatalog implements ResetInterface
 
     /**
      * Read again at every call, unlike the catalogue itself: a component
-     * put away in the back office is left out from the next request on.
+     * put away in the back office is left out from the next request on. A
+     * prototype (a component of the site made from a page and not kept for
+     * the whole site yet) is left out too: the pages that hold it render and
+     * edit it, nobody else is offered it.
      *
      * @return array<string, SectionDefinitionInterface>
      */
     public function offered(): array
     {
+        $offered = array_filter(
+            $this->all(),
+            static fn (SectionDefinitionInterface $definition): bool => !($definition instanceof Site\SiteComponentSection && $definition->prototype),
+        );
+
         if (null === $this->availability) {
-            return $this->all();
+            return $offered;
         }
 
         $disabled = array_filter($this->availability->disabled(), $this->availability->canBeDisabled(...));
 
-        return array_diff_key($this->all(), array_flip($disabled));
+        return array_diff_key($offered, array_flip($disabled));
     }
 
     /**

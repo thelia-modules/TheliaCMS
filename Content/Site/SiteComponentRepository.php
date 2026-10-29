@@ -37,7 +37,7 @@ final readonly class SiteComponentRepository
     }
 
     /**
-     * @return list<SiteComponent> the components of the catalogue, by code
+     * @return list<SiteComponent> the components kept for the whole site, by code
      */
     public function ready(): array
     {
@@ -45,6 +45,53 @@ final readonly class SiteComponentRepository
             CmsComponentQuery::create()->filterByStatus(self::STATUS_READY)->orderByCode()->find(),
             false,
         ));
+    }
+
+    /**
+     * Every component of the site, the prototypes included: what a stored
+     * document may name, what renders and what is styled.
+     *
+     * @return list<SiteComponent> by code
+     */
+    public function all(): array
+    {
+        return array_map(self::fromModel(...), iterator_to_array(
+            CmsComponentQuery::create()->orderByCode()->find(),
+            false,
+        ));
+    }
+
+    /**
+     * The codes of the prototypes: components made from a page or by the
+     * generator writing one, kept in `draft` until someone keeps them for
+     * the whole site. A prototype renders on the pages that hold it and is
+     * edited by hand there; it is offered to nobody else.
+     *
+     * @return list<string>
+     */
+    public function prototypes(): array
+    {
+        return array_map(
+            static fn (CmsComponent $model): string => (string) $model->getCode(),
+            iterator_to_array(CmsComponentQuery::create()->filterByStatus(self::STATUS_DRAFT)->orderByCode()->find(), false),
+        );
+    }
+
+    /**
+     * A prototype kept for the whole site: from then on it is offered to the
+     * generator and on the content screen of every page.
+     */
+    public function promote(string $code): void
+    {
+        $model = CmsComponentQuery::create()->findOneByCode($code);
+
+        if (null === $model) {
+            throw new \InvalidArgumentException(\sprintf('The site has no component "%s".', $code));
+        }
+
+        $model->setStatus(self::STATUS_READY)
+            ->setUpdatedBy($this->securityContext?->getAdminUser()?->getId())
+            ->save();
     }
 
     public function find(string $code): ?SiteComponent

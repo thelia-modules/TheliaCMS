@@ -18,8 +18,10 @@ use Psr\Log\LoggerInterface;
 use TheliaCMS\Content\SectionProviderInterface;
 
 /**
- * The components the site made in the back office and kept, as sections of
- * the catalogue, under `Site:<code>`.
+ * The components the site made in the back office, as sections of the
+ * catalogue, under `Site:<code>`: the ones kept for the whole site and the
+ * prototypes, which the catalogue holds (the pages that hold one render it)
+ * but does not offer.
  *
  * A row whose props no longer read is logged and skipped rather than fatal,
  * the way a component the theme no longer ships is.
@@ -36,7 +38,9 @@ final readonly class SiteComponentSections implements SectionProviderInterface
 
     public function sections(): iterable
     {
-        foreach ($this->components->ready() as $component) {
+        $prototypes = $this->components->prototypes();
+
+        foreach ($this->components->all() as $component) {
             try {
                 $schema = $this->props->read($component->props);
             } catch (InvalidSiteComponentException $exception) {
@@ -45,7 +49,7 @@ final readonly class SiteComponentSections implements SectionProviderInterface
                 continue;
             }
 
-            yield new SiteComponentSection($component, $schema, $this->renderer, $this->logger);
+            yield new SiteComponentSection($component, $schema, $this->renderer, $this->logger, prototype: \in_array($component->code, $prototypes, true));
         }
     }
 }

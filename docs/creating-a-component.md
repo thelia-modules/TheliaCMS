@@ -6,7 +6,8 @@ catalogue is built from every class implementing
 `TheliaCMS\Content\SectionDefinitionInterface` and from the providers that
 bring several at once. There are three ways to add to it: open a Twig
 component the theme already has, write a class in a module, or have the
-generator make one in the back office.
+generator make one in the back office, from **CMS > Components** or from the
+content screen of a page.
 
 ## A component of the theme
 
@@ -243,8 +244,23 @@ answer is checked, drawn with its sample in the active theme, at the width of
 a phone, a tablet or a screen, and changed by asking again until the editor
 keeps it. Kept, it is `Site:<Code>` in the catalogue, like any other
 component: offered to the generator of pages, added and edited by hand on the
-content screen, on the toolkit page, switched off on the list. A page uses
-such a component; a page never makes one.
+content screen, on the toolkit page, switched off on the list.
+
+A component is also **prototyped from a page**. On the content screen,
+**Add a section > A new component** asks for one in the same words; the
+answer is drawn in the preview in place of the draft, changed by asking
+again, and kept with a section of it added at the end of the draft with its
+sample text. When the generator setting "Let a brief make a component of
+the site" is on (off by default), the generator writing a page may make one
+itself, through the tool `make_component`, when none of the catalogue shows
+what the brief asks. Either way the component is a **prototype**: status
+`draft` in `cms_component`, in the catalogue (the pages holding it render,
+edit and export it), offered to nobody else, neither to the generator nor
+on the content screen of another page, until **CMS > Components** keeps it
+for the whole site (**Keep for the whole site**, status `ready`). Prototyping
+takes the same rights as **CMS > Components > New component**: the settings
+and the custom code resources. An export carries the status of every
+component, and an import keeps it.
 
 What the generator writes, and what the site checks
 (`Content/Site/SiteComponentValidator.php`) before showing it:

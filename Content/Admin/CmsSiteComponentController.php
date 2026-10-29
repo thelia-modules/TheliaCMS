@@ -23,15 +23,14 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use Thelia\Core\Security\AccessManager;
-use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Content\SectionAvailability;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
-use TheliaCMS\Content\Site\SiteComponent;
+use TheliaCMS\Content\Site\SiteComponentPermission;
 use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentUsage;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Content\Site\SitePropReader;
+use TheliaCMS\Content\Site\SitePropRows;
 use TheliaCMS\Generation\Admin\GenerationStream;
 use TheliaCMS\Generation\Component\ComponentCandidates;
 use TheliaCMS\Generation\Component\ComponentGenerator;
@@ -43,7 +42,6 @@ use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\Admin\DraftRendering;
 use TheliaCMS\Preview\ComponentPreviewLink;
-use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
 use Twig\Environment;
 
@@ -68,7 +66,6 @@ final readonly class CmsSiteComponentController
     public function __construct(
         private Environment $twig,
         private UrlGeneratorInterface $urls,
-        private SecurityContext $securityContext,
         private TranslatorInterface $translator,
         private ComponentGenerator $generator,
         private ComponentCandidates $candidates,
@@ -80,6 +77,8 @@ final readonly class CmsSiteComponentController
         private ComponentPreviewLink $previews,
         private SiteComponentUsage $pagesUsing,
         private CmsPageWriter $writer,
+        private SiteComponentPermission $permission,
+        private SitePropRows $propRows,
     ) {
     }
 
@@ -183,7 +182,7 @@ final readonly class CmsSiteComponentController
         return $this->render('candidate.html.twig', [
             'candidate' => $candidate,
             'component' => $candidate->component,
-            'props' => null === $candidate->component ? [] : $this->propRows($candidate->component),
+            'props' => null === $candidate->component ? [] : $this->propRows->of($candidate->component),
             'preview_url' => null === $candidate->component ? null : $this->previews->candidate($candidate->logId, $request->getLocale()),
             'kept_code' => $kept,
             'pages' => null === $kept ? 0 : ($this->usage->pageCounts()['Site:'.$kept] ?? 0),
@@ -252,15 +251,38 @@ final readonly class CmsSiteComponentController
         $kept = $this->components->find($component) ?? throw new NotFoundHttpException();
         $id = (int) CmsComponentQuery::create()->findOneByCode($component)?->getId();
 
+        $prototype = SiteComponentRepository::STATUS_DRAFT === $this->components->status($component);
+
         return $this->render('component.html.twig', [
             'component' => $kept,
-            'props' => $this->propRows($kept),
+            'props' => $this->propRows->of($kept),
             'preview_url' => $this->previews->component($component, $request->getLocale()),
             'history' => $this->candidates->history($id),
             'pages' => $this->usage->pageCounts()[$kept->name()] ?? 0,
-            'offered' => $this->availability->isOffered($kept->name()),
+            'prototype' => $prototype,
+            'offered' => !$prototype && $this->availability->isOffered($kept->name()),
             'may_make' => $this->mayMake(),
         ]);
+    }
+
+    /**
+     * A prototype kept for the whole site: made from a page (by its editor
+     * or by the generator writing it), it was in the catalogue for the pages
+     * that hold it alone. From here on it is offered like any component.
+     */
+    #[Route('/{component}/promote', name: 'promote', requirements: ['component' => self::CODE], methods: ['POST'])]
+    public function promote(string $component, Request $request): Response
+    {
+        $this->denyUnlessMayMake();
+
+        $kept = $this->components->find($component) ?? throw new NotFoundHttpException();
+
+        if (SiteComponentRepository::STATUS_DRAFT === $this->components->status($component)) {
+            $this->components->promote($component);
+            $this->flash($request, 'success', $this->translator->trans('"%label%" is a component of the site: pages may use it, and the generator is offered it.', ['%label%' => $kept->label], TheliaCMS::DOMAIN_NAME));
+        }
+
+        return new RedirectResponse($this->urls->generate('admin.cms.components.site.show', ['component' => $component]));
     }
 
     /**
@@ -370,35 +392,6 @@ final readonly class CmsSiteComponentController
     }
 
     /**
-     * The props as a table of the screen: name, type, label, help, required.
-     *
-     * @return list<array{name: string, type: string, label: string, help: string|null, required: bool, items: list<string>}>
-     */
-    private function propRows(SiteComponent $component): array
-    {
-        try {
-            $schema = $this->props->read($component->props);
-        } catch (InvalidSiteComponentException) {
-            return [];
-        }
-
-        $rows = [];
-
-        foreach ($schema->props as $prop) {
-            $rows[] = [
-                'name' => $prop->name,
-                'type' => $prop->type->value,
-                'label' => $prop->label,
-                'help' => $prop->help,
-                'required' => $prop->required,
-                'items' => array_map(static fn ($item): string => $item->name.' ('.$item->type->value.')', $prop->items),
-            ];
-        }
-
-        return $rows;
-    }
-
-    /**
      * @param array<string, mixed> $parameters
      */
     private function render(string $template, array $parameters): Response
@@ -412,8 +405,7 @@ final readonly class CmsSiteComponentController
 
     private function mayMake(): bool
     {
-        return $this->securityContext->isGranted(['ADMIN'], [CmsResources::SETTINGS], [], [AccessManager::UPDATE])
-            && $this->securityContext->isGranted(['ADMIN'], [CmsResources::CUSTOM_CODE], [], [AccessManager::UPDATE]);
+        return $this->permission->mayMake();
     }
 
     private function denyUnlessMayMake(): void

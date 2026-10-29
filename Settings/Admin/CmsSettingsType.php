@@ -121,6 +121,11 @@ final class CmsSettingsType extends AbstractType
                 'label' => 'Read the web pages a brief cites',
                 'required' => false,
                 'help' => 'Off by default. When on, the model can read the public pages whose address the brief gives: this server fetches them (private and internal addresses are refused) and sends their text to the AI provider assigned to the range, which may be outside the European Union. A page is read as data, never as instructions.',
+            ])
+            ->add('generatorComponentMaking', CheckboxType::class, [
+                'label' => 'Let a brief make a component of the site',
+                'required' => false,
+                'help' => 'Off by default. When on, the generator writing a page may make a new component (its props, its template, its styles) when none of the catalogue shows what the brief asks, at most twice per page: each one is a call of its own, up to a minute and a few cents. The component is kept as a prototype of the site, shown on the pages that hold it and offered to nobody else until CMS > Components keeps it for the whole site. Only an editor who may make components from CMS > Components is offered it.',
             ]);
 
         $builder->addEventListener(FormEvents::POST_SUBMIT, $this->validateAllowlist(...));

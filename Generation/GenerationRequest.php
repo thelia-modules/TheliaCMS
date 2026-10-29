@@ -44,12 +44,21 @@ final readonly class GenerationRequest
         // Over the effort of the settings, for one call: what an evaluation
         // compares, with the site left as it is.
         public ?string $effort = null,
+        // Whether whoever asks may make a component of the site: the
+        // generator is then offered to make one when the catalogue lacks
+        // it, if the site allows it (GeneratorSettings::componentMaking()).
+        public bool $mayMakeComponents = false,
     ) {
     }
 
     public function withEffort(string $effort): self
     {
-        return new self($this->target, $this->locale, $this->kind, $this->brief, $this->current, $this->sectionId, $this->sourceLocale, $effort);
+        return new self($this->target, $this->locale, $this->kind, $this->brief, $this->current, $this->sectionId, $this->sourceLocale, $effort, $this->mayMakeComponents);
+    }
+
+    public function withComponentMaking(bool $mayMakeComponents): self
+    {
+        return new self($this->target, $this->locale, $this->kind, $this->brief, $this->current, $this->sectionId, $this->sourceLocale, $this->effort, $mayMakeComponents);
     }
 
     public static function fromBrief(GenerationTarget $target, string $locale, Brief $brief): self
