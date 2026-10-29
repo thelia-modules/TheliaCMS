@@ -278,14 +278,22 @@ What the generator writes, and what the site checks
   component serves every language of the site, and no `script`, `style`,
   `iframe`, `form`, `on…` attribute or `javascript:`. What it draws is
   filtered like a page that goes online, wherever it is drawn: a draft, the
-  preview, the toolkit.
+  preview, the toolkit. An element or an attribute that filter takes out
+  (`svg`, `input`, a `data-` attribute no controller of the theme reads) is
+  refused when the component is made, in every branch of the template
+  (`SiteComponentValidator::dropped()`): taken out silently, it left a
+  component that showed and did nothing.
 - **A stylesheet**, plain CSS, scoped to the component when it is served
   (`Content/Site/SiteCssScoper.php`): every selector goes under
   `.cms-site--<code>`, the class of the element the component is drawn in;
   `:scope` or `&` is that element, and only starts a selector (`:not(:scope)`
   or `& ~ p` would reach what is around it). Rules may sit in `@media`,
-  `@supports`, `@container`; nothing else, `@import` and `@keyframes`
-  included. Nothing is loaded: no `url()`, no `image-set()`, no backslash
+  `@supports`, `@container`; a `@keyframes` is named after the component
+  (`cms-site--<code>--<name>`), and so is every `animation` of the stylesheet
+  that uses it. A rule that sets an animation sits in
+  `@media (prefers-reduced-motion: no-preference)`; the template sets none in
+  a `style` attribute. Nothing else, `@import`
+  and `@property` included. Nothing is loaded: no `url()`, no `image-set()`, no backslash
   escape; the pictures of a component are props. Colours come from the tokens of `blocks.css`
   (`--cms-color-*`), so a component follows the theme. The stylesheets of the
   kept components are served together at `/cms/site-components.css`, linked

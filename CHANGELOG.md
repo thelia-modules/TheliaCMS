@@ -33,9 +33,32 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - **An export carries the status of every component of the site** (`draft`
   or `ready`), and an import keeps it: a prototype stays a prototype on the
   site it is imported into.
+- **A component of the site may move.** Its stylesheet may hold `@keyframes`,
+  named after the component when it is served (`cms-site--<code>--<name>`),
+  as is every `animation` of the stylesheet that uses it, so two components
+  may both call an animation `pan`. A rule that sets an animation sits in
+  `@media (prefers-reduced-motion: no-preference)`, or the component is
+  refused, and so is an animation set in a `style` attribute of the template.
+- **A skill on motion** (`skills/motion/SKILL.md`, the eighth shipped): how
+  a component moves or reacts with its stylesheet alone (a picture that
+  scrolls, folds, cards that slide, hover effects) and what it leaves to a
+  component of the theme. The generator of components reads it beside the
+  skill on accessibility, which now says that what moves on its own can be
+  paused and that nothing moves for a visitor who asks for less motion. A
+  test holds the recipe of the skill to the validator, and the elements the
+  prompt names as taken out to the filter of the page.
 
 ### Fixed
 
+- **A component is refused when it draws what a page does not keep.** The
+  template was checked against a short list (`script`, `iframe`, `form`…)
+  while the page filters against the elements of HTML text and layout: an
+  `svg`, an `input`, a `data-` attribute passed, then went out without a word
+  when the component was drawn. A component asked to make a picture scroll
+  was kept with an animated `svg` and showed a still picture. The validator
+  now runs the markup of every branch of the template through the filter of
+  the page and names what it takes out, so the model draws it another way in
+  the same call.
 - **A document whose props carry a bare line break is read.** A model that
   escapes the JSON string of the props once rather than twice (seen with
   Mistral Large) left a line break of a text as a control character inside

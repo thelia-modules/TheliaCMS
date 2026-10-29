@@ -25,13 +25,22 @@ use TheliaCMS\Skill\SkillRepository;
  * What the model is told to make a component of the site.
  *
  * The system prompt is the same at every call — the rules of the sandbox, the
- * JSON form of the props, the tokens of the stylesheet, the accessibility
- * skill, an example — and asks the API to cache it. What changes comes after,
- * in the user message: the language of the site, the components it already
- * has, the request, and the component to change when there is one.
+ * JSON form of the props, the tokens of the stylesheet, the skills on
+ * accessibility and on motion, an example — and asks the API to cache it.
+ * What changes comes after, in the user message: the language of the site,
+ * the components it already has, the request, and the component to change
+ * when there is one.
  */
 final readonly class ComponentPrompt
 {
+    /**
+     * Elements the filter of a page takes out, named to the model so it
+     * draws a movement or a control another way.
+     *
+     * @var list<string>
+     */
+    public const array ELEMENTS_TAKEN_OUT = ['svg', 'input', 'select', 'textarea', 'noscript'];
+
     public function __construct(
         private SkillRepository $skills,
         private SectionCatalog $catalog,
@@ -158,6 +167,7 @@ final readonly class ComponentPrompt
     private function rules(): string
     {
         $accessibility = $this->skills->find('accessibility')?->body;
+        $motion = $this->skills->find('motion')?->body;
 
         return implode("\n", [
             '# Props',
@@ -187,6 +197,7 @@ final readonly class ComponentPrompt
             '- Text is escaped when printed; an `html` prop is printed as it is.',
             '- No text of its own outside what it prints: the template writes markup and props, nothing else.',
             '- No `script`, `style`, `iframe`, `object`, `embed`, `form`, `link`, `meta`, no `on…` attribute, no `javascript:`.',
+            '- What it draws is filtered like a page that goes online, which keeps the elements of HTML text and layout and their attributes, and takes out the rest without a word: '.implode(', ', array_map(static fn (string $element): string => 'no `'.$element.'`', self::ELEMENTS_TAKEN_OUT)).', no `data-` attribute. The template is refused when it holds one.',
             '- One root element, a `section` or a `div`. Headings start at `h2`: the page has its own `h1`.',
             '- Test what may be empty before drawing it: `{% if props.image %}`, `{% if props.title is not empty %}`. An image is drawn with its `alt` from a prop.',
             '- Class names describe the parts (`plan`, `plan__price`); the site puts the component inside an element of its own class, which the stylesheet is scoped to.',
@@ -194,7 +205,8 @@ final readonly class ComponentPrompt
             '# Stylesheet',
             '',
             '- Plain CSS, each rule on its own: no nesting. Selectors are written as if the component were alone: the site puts each of them under the class of the component. `:scope` (or a selector starting with `&`) is that element itself.',
-            '- Rules may be grouped in `@media`, `@supports`, `@container`; no other at-rule (`@import`, `@font-face`, `@keyframes`).',
+            '- Rules may be grouped in `@media`, `@supports`, `@container`; no other at-rule (`@import`, `@font-face`, `@property`) but `@keyframes`.',
+            '- A movement is a `@keyframes` of a plain name with its steps (`from`, `to`, percentages), used by `animation` or `animation-name`; the site names it after the component. A rule that sets an animation sits in `@media (prefers-reduced-motion: no-preference)`, so a visitor who asks for less motion sees the component still; never in a `style` attribute of the template (a prop picks a speed or a direction through a class or a custom property). A movement that lasts more than five seconds stops under the pointer and on focus (`animation-play-state: paused` on `:hover` and `:focus-within`).',
             '- Nothing loaded: no `url()`, no `image-set()`, no backslash escape, no font of its own. Pictures are `image` props drawn with `<img>`; the component uses the fonts of the theme.',
             '- `:scope` and `&` only start a selector, followed by a space or `>`: the stylesheet styles the component and what is inside it, never what is around it.',
             '- Colours come from the tokens of the site, so the component follows its theme: '.implode(', ', array_map(static fn (string $token): string => '`var('.$token.')`', $this->tokens())).'.',
@@ -207,6 +219,8 @@ final readonly class ComponentPrompt
             '# Accessibility',
             '',
             null !== $accessibility ? trim($accessibility) : '',
+            '',
+            null !== $motion ? trim($motion) : '',
             '',
             '# Example',
             '',

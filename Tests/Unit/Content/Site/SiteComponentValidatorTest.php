@@ -147,6 +147,45 @@ final class SiteComponentValidatorTest extends TestCase
         (new SiteComponentValidator())->validate(PriceTable::component('{% if props.title == "never" %}<p>{{ props.title }}</p>{% endif %}'));
     }
 
+    /**
+     * The page filters what a component draws without a word: an element or
+     * an attribute it does not keep is named while the model can still draw
+     * it another way, in every branch of the template, whatever the sample
+     * shows.
+     */
+    public function testWhatThePageDoesNotKeepIsRefusedInEveryBranch(): void
+    {
+        $template = '<div class="scroller">{% if props.title == "never" %}<label class="scroller__control"><input class="scroller__toggle" type="checkbox"> {{ props.title }}</label><svg class="scroller__motion"><image href="{{ props.title }}"><animate attributeName="x" dur="20s"></animate></image></svg>{% endif %}<p data-state="idle">{{ props.title }}</p></div>';
+
+        try {
+            (new SiteComponentValidator())->validate(PriceTable::component($template));
+            self::fail('A component the page would draw without its moving part is refused.');
+        } catch (InvalidSiteComponentException $exception) {
+            $problems = implode("\n", $exception->problems);
+
+            self::assertStringContainsString('<svg>', $problems);
+            self::assertStringContainsString('<input>', $problems);
+            self::assertStringContainsString('"data-state" of <p>', $problems);
+            self::assertStringNotContainsString('<label>', $problems, 'What the page keeps is not named.');
+            self::assertStringNotContainsString('"class" of <svg>', $problems, 'An element taken out is named once, not with each of its attributes.');
+        }
+    }
+
+    public function testAnAnimationWrittenInTheTemplateIsRefused(): void
+    {
+        $this->expectException(InvalidSiteComponentException::class);
+        $this->expectExceptionMessage('stylesheet');
+
+        (new SiteComponentValidator())->validate(PriceTable::component('<section class="price-table" style="--speed: 20s; animation: pan var(--speed) linear infinite">{{ props.title }}</section>', '@keyframes pan { to { transform: translateX(-50%); } }'));
+    }
+
+    public function testATemplateThePageKeepsWholeIsKept(): void
+    {
+        $template = '<section class="faq">{% if props.title is not empty %}<h2 id="faq-{{ props.tone }}">{{ props.title }}</h2>{% endif %}{% for plan in props.plans %}<details class="faq__item"{{ plan.featured ? " open" }}><summary aria-label="{{ plan.name }}">{{ plan.name }}</summary><img src="{{ plan.price }}" alt="{{ plan.name }}" loading="lazy" width="80" height="80"><a href="{{ plan.price }}" target="_blank" rel="noopener">{{ plan.price }}</a>{{ plan.details }}</details>{% endfor %}</section>';
+
+        self::assertSame($template, (new SiteComponentValidator())->validate(PriceTable::component($template))->template);
+    }
+
     public function testTheSectionDrawsTheComponentInsideItsClassAndAFailingTemplateDrawsNothing(): void
     {
         $component = PriceTable::component();

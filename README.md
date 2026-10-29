@@ -866,9 +866,9 @@ page.
 A skill is a piece of instructions the generator reads before it writes: how a
 page is structured here, how text is written, what accessibility asks, what
 search engines read, how a page is translated, how it stays within the design
-system. The module ships seven under `skills/<code>/SKILL.md` (`catalogue`,
+system. The module ships eight under `skills/<code>/SKILL.md` (`catalogue`,
 `page-structure`, `copywriting`, `accessibility`, `seo`, `translation`,
-`design-system`), and a
+`design-system`, `motion`), and a
 theme ships its own under `skills/` with the same layout; a theme skill with
 the code of a module skill replaces it.
 

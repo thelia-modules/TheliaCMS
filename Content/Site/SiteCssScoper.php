@@ -25,15 +25,34 @@ namespace TheliaCMS\Content\Site;
  * `:scope` and `&` only start a selector: anywhere else, or before `~` or
  * `+`, they would name what is around the component, and are refused.
  *
- * Rules may sit in `@media`, `@supports` and `@container`. Any other at-rule
- * is refused: `@import` and `@font-face` load from elsewhere, `@keyframes`
- * and `@property` are names of the whole page, which two components would
- * fight over.
+ * Rules may sit in `@media`, `@supports` and `@container`. A `@keyframes`
+ * is a name of the whole page, which two components would fight over: it is
+ * named after the component, and so is every `animation` of the stylesheet
+ * that uses it.
+ *
+ *     @keyframes pan { … }    →  @keyframes cms-site--price-table--pan { … }
+ *     animation: pan 40s;     →  animation: cms-site--price-table--pan 40s;
+ *
+ * An animation only moves for the visitors who did not ask for less motion:
+ * a rule that sets one sits in `@media (prefers-reduced-motion:
+ * no-preference)`. Any other at-rule is refused: `@import` and `@font-face`
+ * load from elsewhere, `@property` is a name of the whole page too.
  */
 final readonly class SiteCssScoper
 {
     /** @var list<string> */
     private const array GROUPING_RULES = ['media', 'supports', 'container'];
+
+    /**
+     * The words of the `animation` property, which an animation of the same
+     * name would be read as.
+     *
+     * @var list<string>
+     */
+    private const array ANIMATION_WORDS = ['none', 'initial', 'inherit', 'unset', 'revert', 'revert-layer', 'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'step-start', 'step-end', 'infinite', 'normal', 'reverse', 'alternate', 'alternate-reverse', 'forwards', 'backwards', 'both', 'running', 'paused', 'auto'];
+
+    /** The group an animation may run in. */
+    private const string MOTION_ALLOWED = '/prefers-reduced-motion\s*:\s*no-preference/i';
 
     public const int MAX_LENGTH = 20000;
 
@@ -49,7 +68,7 @@ final readonly class SiteCssScoper
         $css = (string) preg_replace('#/\*.*?\*/#s', '', $css);
         $problems = [];
         $offset = 0;
-        $scoped = $this->rules($css, $offset, '.'.$class, $problems, false);
+        $scoped = $this->rules($css, $offset, '.'.$class, $problems, false, $this->animations($css, $class), false);
 
         if ($offset < \strlen($css) && [] === $problems) {
             $problems[] = 'The stylesheet closes a brace it never opened.';
@@ -66,9 +85,11 @@ final readonly class SiteCssScoper
      * Reads rules from `$offset` until the end of the stylesheet or the brace
      * that closes the group they are in.
      *
-     * @param list<string> $problems
+     * @param list<string>          $problems
+     * @param array<string, string> $animations the name each `@keyframes` of the stylesheet is given
+     * @param bool                  $moving     whether the rules sit in a group that only applies when the visitor did not ask for less motion
      */
-    private function rules(string $css, int &$offset, string $scope, array &$problems, bool $nested): string
+    private function rules(string $css, int &$offset, string $scope, array &$problems, bool $nested, array $animations, bool $moving): string
     {
         $out = '';
         $length = \strlen($css);
@@ -114,14 +135,20 @@ final readonly class SiteCssScoper
             if (str_starts_with($prelude, '@')) {
                 $rule = strtolower((string) preg_replace('/^@([a-z-]+).*$/s', '$1', $prelude));
 
+                if ('keyframes' === $rule) {
+                    $out .= $this->keyframes(trim(substr($prelude, \strlen('@keyframes'))), $css, $offset, $animations, $problems);
+
+                    continue;
+                }
+
                 if (!\in_array($rule, self::GROUPING_RULES, true)) {
-                    $problems[] = \sprintf('The stylesheet uses @%s; a component may only group its rules in @media, @supports and @container.', $rule);
+                    $problems[] = \sprintf('The stylesheet uses @%s; a component may only group its rules in @media, @supports and @container, and name its animations in @keyframes.', $rule);
                     $this->skipBlock($css, $offset);
 
                     continue;
                 }
 
-                $inner = $this->rules($css, $offset, $scope, $problems, true);
+                $inner = $this->rules($css, $offset, $scope, $problems, true, $animations, $moving || 1 === preg_match(self::MOTION_ALLOWED, $prelude));
                 $out .= $prelude.' {'.$inner."}\n";
 
                 continue;
@@ -151,6 +178,22 @@ final readonly class SiteCssScoper
                 continue;
             }
 
+            $body = trim($body);
+
+            if (!$moving && 1 === preg_match('/(?:^|;)\s*animation(?:-name)?\s*:(?!\s*none\s*(?:;|$))/i', $body)) {
+                $problems[] = \sprintf('The rule "%s" sets an animation outside of @media (prefers-reduced-motion: no-preference): a visitor whose system asks for less motion would still see it move.', $prelude);
+            }
+
+            $body = (string) preg_replace_callback(
+                '/((?:^|;)\s*animation(?:-name)?\s*:)([^;]*)/i',
+                static fn (array $declaration): string => $declaration[1].preg_replace_callback(
+                    '/(?<![\w-])[a-z_][\w-]*/i',
+                    static fn (array $word): string => $animations[$word[0]] ?? $word[0],
+                    $declaration[2],
+                ),
+                $body,
+            );
+
             $selectors = [];
 
             foreach ($this->selectors($prelude) as $selector) {
@@ -165,7 +208,7 @@ final readonly class SiteCssScoper
                 $selectors[] = $scoped;
             }
 
-            $out .= implode(', ', $selectors).' {'.trim($body)."}\n";
+            $out .= implode(', ', $selectors).' {'.$body."}\n";
         }
 
         if ($nested) {
@@ -173,6 +216,78 @@ final readonly class SiteCssScoper
         }
 
         return $out;
+    }
+
+    /**
+     * The name each `@keyframes` of the stylesheet is given: its own, after
+     * the class of the component. A name that is not a plain one is left out,
+     * and named as such where its block is read.
+     *
+     * @return array<string, string>
+     */
+    private function animations(string $css, string $class): array
+    {
+        preg_match_all('/@keyframes\s+([^\s{]+)/i', $css, $matches);
+        $animations = [];
+
+        foreach ($matches[1] as $name) {
+            if (1 === preg_match('/^[a-z][a-z0-9-]{0,39}$/i', $name) && !\in_array(strtolower($name), self::ANIMATION_WORDS, true)) {
+                $animations[$name] = $class.'--'.$name;
+            }
+        }
+
+        return $animations;
+    }
+
+    /**
+     * A `@keyframes` block from just after its brace, under the name the
+     * component gives it: steps (`from`, `to`, a percentage), each with its
+     * declarations, and nothing else.
+     *
+     * @param array<string, string> $animations
+     * @param list<string>          $problems
+     */
+    private function keyframes(string $name, string $css, int &$offset, array $animations, array &$problems): string
+    {
+        if (!isset($animations[$name])) {
+            $problems[] = \sprintf('The animation name "%s" is not a plain name: letters, digits and hyphens, starting with a letter, and none of the words of the `animation` property ("infinite", "linear"…).', $name);
+            $this->skipBlock($css, $offset);
+
+            return '';
+        }
+
+        $steps = '';
+
+        while (true) {
+            if (1 === preg_match('/\G\s*\}/', $css, $match, 0, $offset)) {
+                $offset += \strlen($match[0]);
+
+                return '@keyframes '.$animations[$name].' {'.$steps."}\n";
+            }
+
+            if (1 !== preg_match('/\G\s*([^{}]+)\{([^{}]*)\}/', $css, $match, 0, $offset)) {
+                if ('' === trim(substr($css, $offset)) || !str_contains(substr($css, $offset), '}')) {
+                    $problems[] = 'The stylesheet leaves a group open.';
+                    $offset = \strlen($css);
+
+                    return '';
+                }
+
+                $problems[] = \sprintf('The @keyframes "%s" holds something other than steps (`from`, `to`, a percentage), each with its declarations.', $name);
+                $this->skipBlock($css, $offset);
+
+                return '';
+            }
+
+            foreach (explode(',', $match[1]) as $step) {
+                if (1 !== preg_match('/^\s*(?:from|to|(?:100|\d{1,2})(?:\.\d+)?%)\s*$/i', $step)) {
+                    $problems[] = \sprintf('The @keyframes "%s" has the step "%s": a step is `from`, `to` or a percentage.', $name, trim($step));
+                }
+            }
+
+            $steps .= trim($match[1]).' {'.trim($match[2])."}\n";
+            $offset += \strlen($match[0]);
+        }
     }
 
     /**

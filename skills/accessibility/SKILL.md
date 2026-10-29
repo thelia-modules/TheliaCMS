@@ -23,3 +23,7 @@ always: true
 - Plain language: common words, one idea per sentence, the point first.
 - Never put text in an image. Never ask the visitor to do something only a
   mouse can do.
+- Anything that moves on its own for more than five seconds can be paused,
+  under the pointer and from the keyboard.
+- Nothing moves for a visitor who asks for less motion, and nothing flashes
+  more than three times a second.

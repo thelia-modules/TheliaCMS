@@ -27,6 +27,12 @@ use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
  */
 final readonly class SiteComponentValidator
 {
+    /** An opening tag: its name, then its attributes. */
+    private const string TAG = '/<([a-z][a-z0-9-]*)((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>/i';
+
+    /** What stands for a print of the template while its markup is read. */
+    private const string PRINTED = 'cmsprinted';
+
     public function __construct(
         private SitePropReader $props = new SitePropReader(),
         private SiteTemplateRenderer $renderer = new SiteTemplateRenderer(),
@@ -69,6 +75,16 @@ final readonly class SiteComponentValidator
         // the back office before it: what runs code is refused here already.
         if (1 === preg_match('/<\s*(script|style|iframe|object|embed|form|base|meta|link)\b|\son[a-z]+\s*=|javascript:/i', $component->template, $match)) {
             $problems[] = \sprintf('The template holds "%s": a component draws markup and nothing that runs, loads or submits; its styles go in its stylesheet.', $match[0]);
+        }
+
+        // The stylesheet names an animation after the component and runs it
+        // only for who did not ask for less motion; an attribute does neither.
+        if (1 === preg_match('/\sstyle\s*=\s*(?:"[^"]*|\'[^\']*)\banimation(?:-name)?\s*:/i', $component->template)) {
+            $problems[] = 'The template sets an animation in a `style` attribute: an animation goes in the stylesheet, which names it after the component and runs it only for the visitors who did not ask for less motion; a prop may still choose it through a class or a custom property.';
+        }
+
+        if ([] === $templateProblems && [] !== $dropped = $this->dropped($component->template)) {
+            $problems[] = \sprintf('The template draws %s, which a page does not keep: what a component draws is filtered like a page that goes online, and this would be taken out without a word. Draw it with the elements and attributes of HTML text and layout; a movement goes in the stylesheet.', implode(', ', $dropped));
         }
 
         if ([] === $templateProblems && null !== $wording = self::wording($component->template)) {
@@ -122,6 +138,74 @@ final readonly class SiteComponentValidator
         }
 
         return $kept;
+    }
+
+    /**
+     * What the filter of a page takes out of the template: its elements and
+     * the names of their attributes, read in every branch at once, the tags
+     * and the prints taken off. Values are made plain, so an attribute is
+     * named for what it is, not for what a prop may put in it (the filter
+     * still sees to that when it is drawn); a Stimulus attribute keeps its
+     * value, which says whether the theme opens its controller. An element
+     * the template names when it runs cannot be read here: it stands as a
+     * `div`, so what it holds is still read, and is left to that filter too.
+     *
+     * @return list<string>
+     */
+    private function dropped(string $template): array
+    {
+        $markup = (string) preg_replace(['/\{#.*?#\}/s', '/\{%.*?%\}/s', '/\{\{.*?\}\}/s', '#</[^>]*'.self::PRINTED.'[^>]*>#i'], ['', '', self::PRINTED, '</div>'], $template);
+        $plain = (string) preg_replace_callback(
+            self::TAG,
+            static fn (array $tag): string => str_contains(strtolower($tag[1]), self::PRINTED) ? '<div>' : '<'.$tag[1].implode('', array_map(
+                static fn (array $attribute): string => ' '.$attribute[0].'="'.(str_starts_with(strtolower($attribute[0]), 'data-') ? htmlspecialchars($attribute[1], \ENT_QUOTES) : 'x').'"',
+                self::attributes($tag[2]),
+            )).'>',
+            $markup,
+        );
+
+        $dropped = array_diff(self::parts($plain), self::parts((string) $this->sanitizer->html($plain)));
+
+        // An element taken out is named once, not with each of its attributes.
+        return array_values(array_filter(
+            $dropped,
+            static fn (string $part): bool => 1 !== preg_match('/^".*" of (<.*>)$/', $part, $match) || !\in_array($match[1], $dropped, true),
+        ));
+    }
+
+    /**
+     * The elements of the markup as `<name>`, their attributes as
+     * `"name" of <element>`, leaving out the names a print made.
+     *
+     * @return list<string>
+     */
+    private static function parts(string $markup): array
+    {
+        preg_match_all(self::TAG, $markup, $tags, \PREG_SET_ORDER);
+        $parts = [];
+
+        foreach ($tags as $tag) {
+            $element = strtolower($tag[1]);
+            $parts[] = '<'.$element.'>';
+
+            foreach (self::attributes($tag[2]) as [$name]) {
+                if (!str_contains(strtolower($name), self::PRINTED)) {
+                    $parts[] = \sprintf('"%s" of <%s>', strtolower($name), $element);
+                }
+            }
+        }
+
+        return array_values(array_unique($parts));
+    }
+
+    /**
+     * @return list<array{string, string}> the name and the value of each attribute
+     */
+    private static function attributes(string $attributes): array
+    {
+        preg_match_all('/([^\s"\'=\/>]+)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+)))?/', $attributes, $matches, \PREG_SET_ORDER);
+
+        return array_map(static fn (array $match): array => [$match[1], ($match[2] ?? '').($match[3] ?? '').($match[4] ?? '')], $matches);
     }
 
     /**
