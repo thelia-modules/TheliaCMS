@@ -247,13 +247,16 @@ final readonly class SiteExporter
     }
 
     /**
-     * The components the site made and kept, as written: a candidate never
-     * kept is a call of the ledger, not a component.
+     * The components the site made, as written, the prototypes marked as
+     * such: a page of the export may hold one. A candidate never kept is a
+     * call of the ledger, not a component.
      *
      * @return list<array<string, mixed>>
      */
     private function siteComponents(): array
     {
+        $prototypes = $this->components?->prototypes() ?? [];
+
         return array_map(static fn ($component): array => [
             'code' => $component->code,
             'label' => $component->label,
@@ -263,7 +266,8 @@ final readonly class SiteExporter
             'template' => $component->template,
             'css' => $component->css,
             'provenance' => $component->provenance,
-        ], $this->components?->ready() ?? []);
+            'status' => \in_array($component->code, $prototypes, true) ? SiteComponentRepository::STATUS_DRAFT : SiteComponentRepository::STATUS_READY,
+        ], $this->components?->all() ?? []);
     }
 
     public static function pageUid(int $id): string

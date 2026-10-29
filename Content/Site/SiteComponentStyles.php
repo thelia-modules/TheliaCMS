@@ -37,7 +37,8 @@ final readonly class SiteComponentStyles
     {
         $rules = [];
 
-        foreach ($this->components->ready() as $component) {
+        // The prototypes too: a page that holds one is drawn with its styles.
+        foreach ($this->components->all() as $component) {
             if ('' !== $scoped = $this->scoped($component)) {
                 $rules[] = '/* '.$component->name().' */'."\n".$scoped;
             }

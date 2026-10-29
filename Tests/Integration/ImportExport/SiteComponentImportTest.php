@@ -38,27 +38,32 @@ final class SiteComponentImportTest extends CmsIntegrationTestCase
     {
         $repository = $this->getService(SiteComponentRepository::class);
         $repository->save((new SiteComponentValidator())->validate(PriceTable::component(css: '.plan { padding: 1rem; }')), SiteComponentRepository::STATUS_READY);
-        $repository->save(new SiteComponent('NeverKept', 'Draft', 'A draft.', [], [], ''), SiteComponentRepository::STATUS_DRAFT);
+        // A prototype, made from a page: it leaves too, marked as such, since
+        // a page of the export may hold it.
+        $prototype = PriceTable::component();
+        $repository->save((new SiteComponentValidator())->validate(new SiteComponent('Prototyped', $prototype->label, $prototype->description, $prototype->props, $prototype->sample, $prototype->template)), SiteComponentRepository::STATUS_DRAFT);
         $page = $this->createPage('Nos tarifs', published: false);
         $this->writer()->saveContent($page, $this->locale(), new Document([new Section('plans', 'Site:PriceTable', ['plans' => [['name' => 'Studio', 'price' => '40 €']]])]));
 
         $export = $this->getService(SiteExporter::class)->export();
 
-        self::assertSame(['PriceTable'], array_column($export['components'], 'code'), 'What is kept leaves; a draft does not.');
+        self::assertSame(['PriceTable', 'Prototyped'], array_column($export['components'], 'code'), 'What is kept leaves, the prototypes too.');
+        self::assertSame(['ready', 'draft'], array_column($export['components'], 'status'), 'A prototype is marked as such.');
         self::assertLessThan(array_search('pages', array_keys($export), true), array_search('components', array_keys($export), true), 'The components come before the pages made of them.');
 
         $json = json_decode(json_encode($export, \JSON_THROW_ON_ERROR), true);
-        CmsComponentQuery::create()->filterByCode('PriceTable')->delete();
+        CmsComponentQuery::create()->filterByCode(['PriceTable', 'Prototyped'], \Propel\Runtime\ActiveQuery\Criteria::IN)->delete();
 
         $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($json), new ImportOptions());
 
-        self::assertSame(1, $report->createdCounts()['components'] ?? 0);
+        self::assertSame(2, $report->createdCounts()['components'] ?? 0);
         self::assertSame([], $report->warnings());
         self::assertSame('.plan { padding: 1rem; }', $repository->find('PriceTable')?->css);
         self::assertSame(SiteComponentRepository::STATUS_READY, $repository->status('PriceTable'));
+        self::assertSame(SiteComponentRepository::STATUS_DRAFT, $repository->status('Prototyped'), 'A prototype comes back as a prototype.');
 
         $again = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($json), new ImportOptions());
-        self::assertSame(1, $again->skippedCounts()['components'] ?? 0, 'The same component is left alone.');
+        self::assertSame(2, $again->skippedCounts()['components'] ?? 0, 'The same components are left alone.');
         self::assertSame([], $again->warnings());
     }
 
