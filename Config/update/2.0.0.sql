@@ -28,10 +28,33 @@ SET @cms_page_content_from_1x := (
     WHERE table_schema = DATABASE() AND table_name = 'cms_page_content' AND column_name = 'draft_project_data'
 );
 
--- What the former editor wrote is copied before the purge. IF NOT EXISTS: an
--- update that stopped half way and is played again finds the copy it made.
+-- What the former editor wrote is copied before the purge, where there is
+-- something written: a table of pages without any HTML, project or stylesheet
+-- has nothing to keep, and a fresh install replays the updates of 1.x, which
+-- create these tables empty. IF NOT EXISTS: an update that stopped half way
+-- and is played again finds the copy it made.
+SET @cms_page_content_held := 0;
 SET @cms_statement := IF(
     0 < @cms_page_content_from_1x,
+    'SELECT COUNT(*) INTO @cms_page_content_held FROM `cms_page_content` WHERE `draft_project_data` <> \'\' OR `draft_html` <> \'\' OR `published_html` <> \'\' OR `draft_css` <> \'\' OR `published_css` <> \'\'',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_page_revision_held := 0;
+SET @cms_statement := IF(
+    0 < @cms_page_content_from_1x,
+    'SELECT COUNT(*) INTO @cms_page_revision_held FROM `cms_page_revision` WHERE `project_data` <> \'\' OR `html` <> \'\' OR `css` <> \'\'',
+    'DO 0'
+);
+PREPARE cms_prepared FROM @cms_statement;
+EXECUTE cms_prepared;
+DEALLOCATE PREPARE cms_prepared;
+
+SET @cms_statement := IF(
+    0 < @cms_page_content_held,
     'CREATE TABLE IF NOT EXISTS `cms_legacy_page_content` AS SELECT `id`, `page_id`, `locale`, `draft_project_data`, `draft_html`, `draft_css`, `published_html`, `published_css`, `published_at`, `draft_updated_by`, `created_at`, `updated_at` FROM `cms_page_content`',
     'DO 0'
 );
@@ -40,7 +63,7 @@ EXECUTE cms_prepared;
 DEALLOCATE PREPARE cms_prepared;
 
 SET @cms_statement := IF(
-    0 < @cms_page_content_from_1x,
+    0 < @cms_page_revision_held,
     'CREATE TABLE IF NOT EXISTS `cms_legacy_page_revision` AS SELECT `id`, `page_id`, `locale`, `project_data`, `html`, `css`, `label`, `created_by`, `created_at`, `updated_at` FROM `cms_page_revision`',
     'DO 0'
 );

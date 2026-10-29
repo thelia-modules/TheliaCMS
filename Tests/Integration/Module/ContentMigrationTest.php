@@ -155,6 +155,30 @@ final class ContentMigrationTest extends CmsIntegrationTestCase
         self::assertTrue($this->tableExists('cms_legacy_page_content'), 'The content of the pages is kept whether or not there are blocks.');
     }
 
+    public function testAPageTableOfNothingLeavesNoLegacyCopyAndOneWithContentKeepsIt(): void
+    {
+        $page = $this->createPage('Page sans contenu');
+        $pageId = (int) $page->getId();
+        $connection = $this->getPropelConnection();
+
+        $this->backTo150($pageId, $this->locale());
+        $connection->exec('DELETE FROM cms_page_revision');
+        $connection->exec('UPDATE cms_page_content SET draft_project_data = NULL, draft_html = NULL, draft_css = NULL, published_html = NULL, published_css = NULL');
+
+        (new TheliaCMS())->update('1.5.0', '2.0.0', $connection);
+
+        self::assertFalse($this->tableExists('cms_legacy_page_content'), 'No page held anything written: nothing to keep.');
+        self::assertFalse($this->tableExists('cms_legacy_page_revision'), 'No revision: nothing to keep.');
+
+        $this->backTo150($pageId, $this->locale());
+        $connection->exec('UPDATE cms_page_content SET draft_project_data = NULL, draft_html = NULL, draft_css = NULL, published_html = NULL, published_css = NULL');
+
+        (new TheliaCMS())->update('1.5.0', '2.0.0', $connection);
+
+        self::assertFalse($this->tableExists('cms_legacy_page_content'), 'Empty pages: nothing to keep, whatever the revisions hold.');
+        self::assertTrue($this->tableExists('cms_legacy_page_revision'), 'A revision with markup is kept.');
+    }
+
     public function testAFreshInstallIsLeftAlone(): void
     {
         $page = $this->createPage('Page écrite en 2.0.0', html: '<h1>Après</h1><p>Un texte de 2.0.0.</p>');
