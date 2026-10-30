@@ -210,6 +210,11 @@ sections:
         - Organisms--Carousel--base
 ```
 
+The filter keeps the inline svg icons a component draws (`ux_icon()`): their
+shapes, geometry and paint, without `use`, `image`, `foreignObject`, `a`,
+`animate*`, handlers or a `url(…)` paint. The sanitizer writes `viewBox` as
+`viewbox`, which a browser reads back inside an `svg`.
+
 The filter a page goes through before it goes online drops every
 `data-` attribute it does not know. For the controllers named here it keeps
 `data-controller`, `data-action` and the `data-<identifier>-target`,

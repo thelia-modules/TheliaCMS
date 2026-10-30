@@ -155,7 +155,7 @@ final class SiteComponentValidatorTest extends TestCase
      */
     public function testWhatThePageDoesNotKeepIsRefusedInEveryBranch(): void
     {
-        $template = '<div class="scroller">{% if props.title == "never" %}<label class="scroller__control"><input class="scroller__toggle" type="checkbox"> {{ props.title }}</label><svg class="scroller__motion"><image href="{{ props.title }}"><animate attributeName="x" dur="20s"></animate></image></svg>{% endif %}<p data-state="idle">{{ props.title }}</p></div>';
+        $template = '<div class="scroller">{% if props.title == "never" %}<label class="scroller__control"><input class="scroller__toggle" type="checkbox"> {{ props.title }}</label><select class="scroller__motion"><option>{{ props.title }}</option></select>{% endif %}<p data-state="idle">{{ props.title }}</p></div>';
 
         try {
             (new SiteComponentValidator())->validate(PriceTable::component($template));
@@ -163,11 +163,11 @@ final class SiteComponentValidatorTest extends TestCase
         } catch (InvalidSiteComponentException $exception) {
             $problems = implode("\n", $exception->problems);
 
-            self::assertStringContainsString('<svg>', $problems);
+            self::assertStringContainsString('<select>', $problems);
             self::assertStringContainsString('<input>', $problems);
             self::assertStringContainsString('"data-state" of <p>', $problems);
             self::assertStringNotContainsString('<label>', $problems, 'What the page keeps is not named.');
-            self::assertStringNotContainsString('"class" of <svg>', $problems, 'An element taken out is named once, not with each of its attributes.');
+            self::assertStringNotContainsString('"class" of <select>', $problems, 'An element taken out is named once, not with each of its attributes.');
         }
     }
 

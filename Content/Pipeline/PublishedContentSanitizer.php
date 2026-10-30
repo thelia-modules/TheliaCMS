@@ -61,6 +61,27 @@ final readonly class PublishedContentSanitizer
     ];
 
     /**
+     * The icons a component of the theme draws inline (`ux_icon()`): shapes
+     * and the attributes that place and colour them, nothing that loads,
+     * links or runs. No `use`, `image`, `a`, `foreignObject`, `style`,
+     * `script` or `animate*`, and no event handler or `href`.
+     *
+     * The sanitizer writes attribute names in lowercase (`viewbox`); the HTML
+     * parser of a browser puts the case of `viewBox` back inside an `svg`.
+     */
+    private const array SVG_ELEMENTS = [
+        'svg' => ['xmlns', 'viewbox', 'width', 'height', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'fill-opacity', 'fill-rule', 'clip-rule', 'opacity'],
+        'g' => ['fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-opacity', 'fill-opacity', 'fill-rule', 'clip-rule', 'opacity', 'transform'],
+        'path' => ['d', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'fill-opacity', 'fill-rule', 'clip-rule', 'opacity', 'transform'],
+        'circle' => ['cx', 'cy', 'r', 'fill', 'stroke', 'stroke-width', 'stroke-opacity', 'fill-opacity', 'opacity', 'transform'],
+        'ellipse' => ['cx', 'cy', 'rx', 'ry', 'fill', 'stroke', 'stroke-width', 'stroke-opacity', 'fill-opacity', 'opacity', 'transform'],
+        'rect' => ['x', 'y', 'width', 'height', 'rx', 'ry', 'fill', 'stroke', 'stroke-width', 'stroke-linejoin', 'stroke-opacity', 'fill-opacity', 'opacity', 'transform'],
+        'line' => ['x1', 'y1', 'x2', 'y2', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-dasharray', 'stroke-opacity', 'opacity', 'transform'],
+        'polyline' => ['points', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-opacity', 'fill-opacity', 'opacity', 'transform'],
+        'polygon' => ['points', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-opacity', 'fill-opacity', 'fill-rule', 'opacity', 'transform'],
+    ];
+
+    /**
      * The longest markup read, in bytes. The sanitizer of Symfony stops at
      * 20 000 by default and drops the rest without a word: a page of terms of
      * sale, or a recipe whose components are drawn with their classes, went
@@ -236,6 +257,18 @@ final readonly class PublishedContentSanitizer
         if ([] !== $controllers) {
             $config = $config->withAttributeSanitizer(new StimulusAttributeSanitizer($controllers));
         }
+
+        foreach (self::SVG_ELEMENTS as $element => $attributes) {
+            // An element with a list of its own loses the attributes allowed
+            // on every element: the common ones are named again.
+            $config = $config->allowElement($element, [...$attributes, 'class', 'id', 'style', ...self::ACCESSIBILITY_ATTRIBUTES]);
+        }
+
+        // `<image>` is read as `<img>` by the sanitizer and would load a
+        // picture from wherever it is told to.
+        $config = $config->dropElement('image');
+
+        $config = $config->withAttributeSanitizer(new SvgAttributeSanitizer());
 
         foreach (self::EMBED_ELEMENTS as $element) {
             $config = $allowCustomCode

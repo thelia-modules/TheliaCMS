@@ -6,7 +6,7 @@ description: How a component moves or reacts with its stylesheet alone, and what
 # Movement and interaction without script
 
 A component of the site runs no script: what moves, moves in its stylesheet.
-The page filters out what is not HTML text and layout (`svg`, `input`), so a
+The page filters out what is not HTML text and layout (`input`, `animate`, a `<svg>` that moves), so a
 movement is never drawn in markup.
 
 - A picture that scrolls on its own: a frame (`overflow: hidden`,

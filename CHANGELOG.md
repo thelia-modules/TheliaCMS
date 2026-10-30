@@ -147,6 +147,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- **The svg icons of the theme components survive the publication filter.**
+  A page filter took out every `<svg>`: the arrow of a button, the arrows of a
+  carousel, the chevrons of an accordion came out empty on a published page.
+  Shapes (`svg`, `g`, `path`, `circle`, `ellipse`, `rect`, `line`, `polyline`,
+  `polygon`) and the attributes that place and colour them are kept; `use`,
+  `image`, `foreignObject`, `a`, `style`, `animate*`, event handlers, `href`
+  and a `url(…)` in `fill` or `stroke` are not. The markup of a page is stored
+  when it is saved or published, so a page gets its icons back when it is
+  rendered and published again (`thelia_cms:render --all`, then publish).
 - **`ToolkitLinkTest` is skipped when the theme has no toolkit**, instead of
   failing on section stories that cannot load.
 - **The generator of components leaves out a skill the site switched off**
