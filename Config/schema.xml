@@ -664,5 +664,44 @@
         <behavior name="timestampable"/>
     </table>
 
+    <!--
+        The files a page offers to download (a brochure, a price list), the
+        same in every language: only what is said of them is translated. One
+        row owns one file under `local/media/documents/cms-page/`: a copied
+        page gets copies of the files, never the same ones, so deleting a row
+        may delete its file. `file` is the stored name, unique; `original_name`
+        is the name it was sent under, what a visitor gets back.
+    -->
+    <table name="cms_page_document" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="page_id" required="true" type="INTEGER"/>
+        <column name="file" required="true" size="255" type="VARCHAR"/>
+        <column name="original_name" required="true" size="255" type="VARCHAR"/>
+        <column name="mime_type" required="true" size="127" type="VARCHAR"/>
+        <column name="size" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="position" required="true" type="INTEGER"/>
+
+        <column name="title" size="255" type="VARCHAR"/>
+        <column name="description" type="LONGVARCHAR"/>
+
+        <foreign-key foreignTable="cms_page" name="fk_cms_page_document_page" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="page_id"/>
+        </foreign-key>
+
+        <unique name="unq_cms_page_document_file">
+            <unique-column name="file"/>
+        </unique>
+
+        <index name="idx_cms_page_document_page_position">
+            <index-column name="page_id"/>
+            <index-column name="position"/>
+        </index>
+
+        <behavior name="i18n">
+            <parameter name="i18n_columns" value="title, description"/>
+        </behavior>
+        <behavior name="timestampable"/>
+    </table>
+
     <external-schema filename="local/config/schema.xml" referenceOnly="true"/>
 </database>

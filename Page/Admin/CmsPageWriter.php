@@ -44,6 +44,7 @@ use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Model\Map\CmsPageI18nTableMap;
 use TheliaCMS\Model\Map\CmsPageTableMap;
 use TheliaCMS\Page\CmsUrlService;
+use TheliaCMS\Page\Document\PageDocumentWriter;
 use TheliaCMS\Page\Field\PageFields;
 use TheliaCMS\Page\PageInvalidator;
 use TheliaCMS\Page\PageTypeRepository;
@@ -87,6 +88,7 @@ final readonly class CmsPageWriter
         private PageInvalidator $invalidator,
         private PageFields $fields,
         private PageTypeRepository $types,
+        private PageDocumentWriter $documents,
     ) {
     }
 
@@ -756,6 +758,10 @@ final readonly class CmsPageWriter
 
                 $this->urls->refresh($copy, (string) $content->getLocale());
             }
+
+            // Last before the commit: the files it copies are not undone by a
+            // rollback, so nothing that may still fail comes after it.
+            $this->documents->copyAll((int) $page->getId(), (int) $copy->getId(), $connection);
 
             $connection->commit();
 

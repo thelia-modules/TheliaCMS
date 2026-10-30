@@ -19,6 +19,7 @@ use Propel\Runtime\Propel;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
+use TheliaCMS\Page\Document\PageDocumentWriter;
 use TheliaCMS\Settings\CmsSettings;
 
 /**
@@ -32,6 +33,7 @@ final readonly class TrashPurger
 {
     public function __construct(
         private CmsSettings $settings,
+        private PageDocumentWriter $documents,
     ) {
     }
 
@@ -70,8 +72,11 @@ final readonly class TrashPurger
                     ->filterByViewId((string) $page->getId())
                     ->delete($connection);
 
-                // Contents, revisions, search payload and translations go with
-                // the page: the foreign keys cascade.
+                // The rows of its documents cascade, their files do not.
+                $this->documents->deleteFilesOf((int) $page->getId(), $connection);
+
+                // Contents, revisions, search payload, documents and
+                // translations go with the page: the foreign keys cascade.
                 $page->delete($connection);
             }
 
