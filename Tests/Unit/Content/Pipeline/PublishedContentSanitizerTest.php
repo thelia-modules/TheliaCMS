@@ -52,7 +52,17 @@ final class PublishedContentSanitizerTest extends TestCase
         yield 'javascript scheme with mixed case' => ['<a href="JaVaScRiPt:alert(1)">x</a>', 'avascript'];
         yield 'data url document in a link' => ['<a href="data:text/html;base64,PHNjcmlwdD4=">x</a>', 'text/html'];
         yield 'form posting elsewhere' => ['<form action="https://evil.test"><input name="p"></form>', 'evil.test'];
-        yield 'inline svg' => ['<svg><script>alert(1)</script></svg>', '<svg'];
+        yield 'script in an svg' => ['<svg><script>alert(1)</script></svg>', 'alert(1)'];
+        yield 'event handler on an svg' => ['<svg onload="alert(1)"><path d="M0 0"/></svg>', 'onload'];
+        yield 'use of an svg of another host' => ['<svg><use href="https://evil.test/x.svg#a"/></svg>', 'evil.test'];
+        yield 'use with the legacy link attribute' => ['<svg><use xlink:href="https://evil.test/x.svg#a"/></svg>', 'evil.test'];
+        yield 'foreignObject in an svg' => ['<svg><foreignObject><p>x</p></foreignObject></svg>', 'foreignobject'];
+        yield 'image in an svg' => ['<svg><image href="https://evil.test/x.png"/></svg>', 'evil.test'];
+        yield 'link in an svg' => ['<svg><a href="javascript:alert(1)"><path d="M0 0"/></a></svg>', 'javascript:'];
+        yield 'animation setting a link in an svg' => ['<svg><a href="/"><animate attributeName="href" values="javascript:alert(1)"/></a></svg>', 'javascript:'];
+        yield 'paint loaded from another host' => ['<svg><path d="M0 0" fill="url(https://evil.test/p.svg#a)"/></svg>', 'evil.test'];
+        yield 'stroke loaded from another host' => ['<svg><path d="M0 0" stroke="url(//evil.test/p.svg#a)"/></svg>', 'evil.test'];
+        yield 'style attribute of an svg loading from another host' => ['<svg><path d="M0 0" style="fill:url(https://evil.test/p.svg#a)"/></svg>', 'evil.test'];
         yield 'object element' => ['<object data="https://evil.test/x.swf"></object>', '<object'];
         yield 'embed element' => ['<embed src="https://evil.test/x">', '<embed'];
         yield 'base tag rewriting every link' => ['<base href="https://evil.test/">', '<base'];
@@ -72,6 +82,26 @@ final class PublishedContentSanitizerTest extends TestCase
             $forbidden,
             (string) $this->sanitizer->html($html),
         );
+    }
+
+    /**
+     * The icons of the components of the theme are inline svg (`ux_icon()`),
+     * which the filter once removed: a button arrow came out empty. The
+     * sanitizer writes `viewBox` in lowercase, which a browser reads back as
+     * `viewBox` inside an svg. The `xmlns` declaration is kept by the native
+     * parser of PHP 8.4 and dropped by the one used on 8.3: an inline svg takes
+     * its namespace from the HTML parser either way, so it is left out of the
+     * comparison.
+     */
+    public function testKeepsTheSvgIconsOfTheComponents(): void
+    {
+        $arrow = '<svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M27.6792 13.2258L14.5 1.5" fill="currentColor"></path></svg>';
+        $stroked = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1 1)"><path d="M5 12h14" fill-rule="evenodd" clip-rule="evenodd"></path><circle cx="12" cy="12" r="3"></circle><rect x="1" y="1" width="2" height="2" rx="1"></rect><polyline points="1,2 3,4"></polyline></g></svg>';
+
+        self::assertSame('<span class="button-icon">'.str_replace('viewBox', 'viewbox', $arrow).'</span>', $this->sanitizer->html('<span class="button-icon">'.$arrow.'</span>'));
+        $withoutNamespace = static fn (?string $html): string => str_replace(' xmlns="http://www.w3.org/2000/svg"', '', (string) $html);
+
+        self::assertSame($withoutNamespace(str_replace('viewBox', 'viewbox', $stroked)), $withoutNamespace($this->sanitizer->html($stroked)));
     }
 
     public function testKeepsTheMarkupAPageIsMadeOf(): void

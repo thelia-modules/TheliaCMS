@@ -39,7 +39,7 @@ final readonly class ComponentPrompt
      *
      * @var list<string>
      */
-    public const array ELEMENTS_TAKEN_OUT = ['svg', 'input', 'select', 'textarea', 'noscript'];
+    public const array ELEMENTS_TAKEN_OUT = ['input', 'select', 'textarea', 'noscript'];
 
     public function __construct(
         private SkillRepository $skills,

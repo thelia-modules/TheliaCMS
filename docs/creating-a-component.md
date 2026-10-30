@@ -279,7 +279,7 @@ What the generator writes, and what the site checks
   `iframe`, `form`, `on…` attribute or `javascript:`. What it draws is
   filtered like a page that goes online, wherever it is drawn: a draft, the
   preview, the toolkit. An element or an attribute that filter takes out
-  (`svg`, `input`, a `data-` attribute no controller of the theme reads) is
+  (`input`, `select`, a `data- attribute no controller of the theme reads) is
   refused when the component is made, in every branch of the template
   (`SiteComponentValidator::dropped()`): taken out silently, it left a
   component that showed and did nothing.
