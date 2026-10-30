@@ -1,6 +1,6 @@
 {% extends '@BackOfficeDefaultTwig/base.html.twig' %}
 
-{% block title %}{{ 'Rename the tag'|trans({}, 'theliacms') }}{% endblock %}
+{% block title %}{{ 'Edit the tag'|trans({}, 'theliacms') }}{% endblock %}
 {% block body_testid %}cms-tag-edit{% endblock %}
 
 {% block content %}
@@ -14,13 +14,14 @@
         {% endblock %}
     {% endembed %}
 
-    <p class="text-muted">{{ 'Carried by %count% page(s), the bin included. Renaming it changes the label on each of them.'|trans({ '%count%': tag.pages }, 'theliacms') }}</p>
+    <p class="text-muted">{{ 'Carried by %count% page(s), the bin included. Renaming or recoloring it changes the label on each of them.'|trans({ '%count%': tag.pages }, 'theliacms') }}</p>
 
     <div class="card">
         <div class="card-body">
             {{ form_start(form) }}
                 <input type="hidden" name="_token" value="{{ assignToken() }}">
                 {{ form_row(form.name) }}
+                {{ form_row(form.color) }}
                 <button class="btn btn-primary" type="submit" data-testid="cms-tag-rename">
                     {{ 'Save'|trans({}, 'theliacms') }}
                 </button>

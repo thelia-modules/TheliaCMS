@@ -24,6 +24,7 @@ final readonly class PublishedPage
     /**
      * @param string                                    $pageType   the code of the type of the page, always a valid one
      * @param string|null                               $tag        the name of the tag of the page, when it has one
+     * @param string|null                               $tagColor   the name of the color of that tag in the palette (PageTagColor), when it has one
      * @param array<string, int|float|string|bool|null> $fields     the value of every field its type defines, by code, in this language
      * @param string|null                               $provenance the JSON of the mark of the core when the document was generated (AI Act, article 50(2)); the template prints it, the sanitizer would remove it from the HTML
      */
@@ -42,6 +43,7 @@ final readonly class PublishedPage
         public bool $nofollow = false,
         public ?\DateTimeInterface $publishedAt = null,
         public ?string $tag = null,
+        public ?string $tagColor = null,
         public array $fields = [],
         public ?string $provenance = null,
     ) {
@@ -68,6 +70,7 @@ final readonly class PublishedPage
             nofollow: $this->nofollow,
             publishedAt: $this->publishedAt,
             tag: $this->tag,
+            tagColor: $this->tagColor,
             fields: $this->fields,
             provenance: $this->provenance,
         );
