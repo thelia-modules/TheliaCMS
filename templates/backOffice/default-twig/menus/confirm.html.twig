@@ -1,0 +1,45 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% set is_realign = 'realign' == action %}
+
+{% block title %}{{ (is_realign ? 'Realign a menu' : 'Go back to the shared menu')|trans({}, 'theliacms') }}{% endblock %}
+{% block body_testid %}cms-menu-{{ action }}{% endblock %}
+
+{% block content %}
+    {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: block('title') } %}
+        {% block title %}{{ (is_realign ? 'Realign a menu' : 'Go back to the shared menu')|trans({}, 'theliacms') }}{% endblock %}
+    {% endembed %}
+
+    <div class="card" style="max-width: 40rem">
+        <div class="card-body">
+            <p class="mb-3">
+                {% if is_realign %}
+                    {{ 'The %target% entry(ies) of this menu are replaced by the %source% entry(ies) of the menu it is copied from. Nothing is merged and this cannot be undone.'|trans({ '%target%': target_entries, '%source%': source_entries }, 'theliacms') }}
+                {% else %}
+                    {{ 'The menu of this language and its %target% entry(ies) are deleted. The language reads the shared menu again, and this cannot be undone.'|trans({ '%target%': target_entries }, 'theliacms') }}
+                {% endif %}
+            </p>
+
+            <dl class="row mb-4" data-testid="cms-menu-confirm-summary">
+                <dt class="col-sm-5">{{ (is_realign ? 'Menu replaced' : 'Menu deleted')|trans({}, 'theliacms') }}</dt>
+                <dd class="col-sm-7"><span data-testid="cms-menu-confirm-target">{{ target_name }}</span> ({{ target_entries }})</dd>
+                {% if is_realign %}
+                    <dt class="col-sm-5">{{ 'Copied from'|trans({}, 'theliacms') }}</dt>
+                    <dd class="col-sm-7"><span data-testid="cms-menu-confirm-source">{{ source_name }}</span> ({{ source_entries }})</dd>
+                {% endif %}
+            </dl>
+
+            <form method="post" class="d-flex gap-2"
+                  action="{{ path('admin.cms.menus.' ~ action, { id: menu.id, edit_language_id: edit_language_id }) }}">
+                <input type="hidden" name="_token" value="{{ assignToken() }}">
+                {% if is_realign %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
+                <button type="submit" class="btn btn-danger" data-testid="cms-menu-confirm">
+                    {{ (is_realign ? 'Replace the entries' : 'Delete this menu and go back')|trans({}, 'theliacms') }}
+                </button>
+                <a class="btn btn-outline-secondary" href="{{ path('admin.cms.menus.edit', { id: menu.id, edit_language_id: edit_language_id }) }}">
+                    {{ 'Cancel'|trans({}, 'theliacms') }}
+                </a>
+            </form>
+        </div>
+    </div>
+{% endblock %}

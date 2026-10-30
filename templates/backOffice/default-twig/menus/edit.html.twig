@@ -58,6 +58,66 @@
                         {{ component('BoLanguageSwitcher', { currentLanguageId: edit_language_id }) }}
                     </div>
 
+                    {% set own_language = languages[edit_locale]|default(null) %}
+                    {% set language_name = own_language ? own_language.title : edit_locale %}
+                    <div class="card-body border-bottom" data-testid="cms-menu-locale-status" data-menu-locale="{{ menu.menuLocale }}">
+                        <p class="mb-2">
+                            {% if is_detached %}
+                                <span class="badge text-bg-primary me-1" data-testid="cms-menu-status-detached">{{ 'Own menu'|trans({}, 'theliacms') }}</span>
+                                <strong>{{ 'This language has a menu of its own'|trans({}, 'theliacms') }}</strong>
+                                ({{ language_name }}).
+                                {{ 'What you change here applies to this language only.'|trans({}, 'theliacms') }}
+                            {% else %}
+                                <span class="badge text-bg-secondary me-1" data-testid="cms-menu-status-shared">{{ 'Shared menu'|trans({}, 'theliacms') }}</span>
+                                <strong>{{ 'This language follows the shared menu'|trans({}, 'theliacms') }}</strong>
+                                ({{ language_name }}).
+                                {{ 'What you change here applies to every language that follows it.'|trans({}, 'theliacms') }}
+                            {% endif %}
+                        </p>
+
+                        {% if may_write %}
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                {% if not is_detached %}
+                                    <form method="post" action="{{ path('admin.cms.menus.detach', { id: menu.id, edit_language_id: edit_language_id }) }}">
+                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                        <button class="btn btn-sm btn-outline-primary" type="submit" data-testid="cms-menu-detach">
+                                            {{ 'Give this language a menu of its own'|trans({}, 'theliacms') }}
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                {% if realign_sources is not empty %}
+                                    <form method="get" class="d-inline-flex gap-1" action="{{ path('admin.cms.menus.realign', { id: menu.id }) }}">
+                                        <input type="hidden" name="edit_language_id" value="{{ edit_language_id }}">
+                                        <label class="visually-hidden" for="cms-menu-realign-source">{{ 'Realign on…'|trans({}, 'theliacms') }}</label>
+                                        <select class="form-select form-select-sm w-auto" id="cms-menu-realign-source" name="source" data-testid="cms-menu-realign-source">
+                                            {% for source in realign_sources %}
+                                                <option value="{{ source.locale ?: 'shared' }}">
+                                                    {{ source.locale ? (languages[source.locale]|default(null) ? languages[source.locale].title : source.locale) : 'Shared menu'|trans({}, 'theliacms') }}
+                                                    ({{ source.entries }})
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        <button class="btn btn-sm btn-outline-secondary" type="submit" data-testid="cms-menu-realign">
+                                            {{ 'Realign on…'|trans({}, 'theliacms') }}
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                {% if is_detached and shared_menu %}
+                                    <a class="btn btn-sm btn-outline-secondary" data-testid="cms-menu-realign-shared"
+                                       href="{{ path('admin.cms.menus.realign', { id: shared_menu.id, source: edit_locale, edit_language_id: edit_language_id }) }}">
+                                        {{ 'Make the shared menu a copy of this one'|trans({}, 'theliacms') }}
+                                    </a>
+                                    <a class="btn btn-sm btn-outline-danger" data-testid="cms-menu-reattach"
+                                       href="{{ path('admin.cms.menus.reattach', { id: menu.id, edit_language_id: edit_language_id }) }}">
+                                        {{ 'Go back to the shared menu'|trans({}, 'theliacms') }}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+
                     {% if rows is empty %}
                         <div class="card-body text-center py-5 text-muted">
                             {{ 'This menu has no entry yet. Add the first one with the form beside.'|trans({}, 'theliacms') }}

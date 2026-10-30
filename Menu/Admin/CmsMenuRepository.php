@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace TheliaCMS\Menu\Admin;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use Thelia\Model\Lang;
+use Thelia\Model\LangQuery;
 use TheliaCMS\Menu\MenuPlacement;
 use TheliaCMS\Menu\MenuTargetResolver;
 use TheliaCMS\Menu\MenuTargetType;
@@ -114,6 +116,43 @@ final readonly class CmsMenuRepository
                 ->find()
                 ->toArray(),
         ));
+    }
+
+    /**
+     * The active languages by locale, to name them and show their flag.
+     *
+     * @return array<string, Lang>
+     */
+    public function languages(): array
+    {
+        $languages = [];
+
+        foreach (LangQuery::create()->filterByActive(1)->orderByPosition()->find() as $lang) {
+            $languages[(string) $lang->getLocale()] = $lang;
+        }
+
+        return $languages;
+    }
+
+    /**
+     * The menus of a code a menu can be realigned on: every one but itself, the
+     * shared menu first ('' as locale).
+     *
+     * @return list<array{locale: string, entries: int}>
+     */
+    public function realignSources(string $code, string $targetLocale): array
+    {
+        $sources = [];
+
+        foreach ([CmsMenuQuery::SHARED, ...$this->detachedLocales($code)] as $locale) {
+            $menu = CmsMenuQuery::findForLocale($code, $locale);
+
+            if ($locale !== $targetLocale && null !== $menu) {
+                $sources[] = ['locale' => $locale, 'entries' => $this->entryCount($menu)];
+            }
+        }
+
+        return $sources;
     }
 
     public function entryCount(CmsMenu $menu): int
