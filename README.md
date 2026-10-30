@@ -469,6 +469,65 @@ switched off. The screen takes the settings right; the choice is stored in
 mode, Flexy theme), a button opens it on the page that renders every
 component offered.
 
+## Documents of a page
+
+The **Documents** tab of the edit screen of a page lists the files the page
+offers to download. It takes several files per page: pdf, doc, docx, xls,
+xlsx, ppt, pptx, odt, zip and txt. The extension and the detected type must
+agree, and html, svg and php are refused. The size is bounded by PHP
+(`upload_max_filesize`, `post_max_size`, `max_file_uploads`). Adding,
+describing, ordering and deleting a file are saved at once, whether the page
+is a draft or not. The tab is inactive until the page is saved. It needs the
+Pages right (UPDATE to add, describe and order, DELETE to remove), not the
+Media right.
+
+The file is shared by every language, while the title and the description are
+per language. A document without a title in a language shows its original
+name without the extension; it does not fall back on another language. Files
+are stored under `local/media/documents/cms-page/` (back them up with the
+media), named by the slug of the original name, eight random hexadecimal
+characters and the extension.
+
+`GET /cms/documents/{id}/{file}` (route `cms.page_document`) serves a file.
+It answers 404 when the name does not match the pattern, the row is unknown,
+the id and the name disagree, the page is in the bin or the file is missing. A
+page offline or never published serves its files: the address is only known
+to whoever was given it. The content type comes from the extension, with
+`X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox`. A
+pdf or a txt opens in the browser, the rest downloads under its original name.
+The response is `Cache-Control: public, max-age=300, must-revalidate`, with
+`ETag` and `Last-Modified`, so a deleted document can stay five minutes in a
+cache.
+
+A template lists them with `cms_page_documents(page, locale)`, `page` being a
+`PublishedPage` or an id and the locale defaulting to the one being served.
+The list is read when the page is served, so adding or removing a file needs
+no new publication. It holds data only, objects with `id`, `title`,
+`description`, `url`, `extension`, `size` (in bytes) and `originalName`, and
+is empty for an unknown page or one in the bin. The call declares the cache
+tag of the page.
+
+```twig
+{% set documents = cms_page_documents(cms_page) %}
+{% if documents %}
+    <ul>
+        {% for document in documents %}
+            <li>
+                <a href="{{ document.url }}">{{ document.title }}</a>
+                ({{ document.extension|upper }}, {{ (document.size / 1024)|round }} KB)
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+```
+
+Duplicating a page or creating one from a model copies its documents,
+including the files. Emptying the bin and deleting a page type (and so its
+model page) remove the files once the database change is committed; a file
+that cannot be removed is logged, without an error. The export and the import
+of the site do not carry documents. The update to 2.5.0 adds
+`cms_page_document` and `cms_page_document_i18n`.
+
 ## Media
 
 **CMS > Media** stores images in [TheliaLibrary][library]. Alternative text is
@@ -1129,6 +1188,7 @@ to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
 | `cms_page_type(type, locale)` | the `code`, `title` and `description` of a type, for the heading of a list. |
 | `cms_page_fields(page)` | the fields of a page or a card holding a value, each with its `code`, `label`, raw `value` and `text` written for a visitor ("1 h 30 min"). |
 | `cms_item_content(type, id, locale)` | the published document of a product, a category, a content, a folder or a store (`dealer`), as markup, or an empty string. The locale defaults to the one being served. |
+| `cms_page_documents(page, locale)` | the files a page offers to download, each with `id`, `title`, `description`, `url`, `extension`, `size` and `originalName`: see [Documents of a page](#documents-of-a-page). |
 | `cms_is_home(id)` | whether the page of this id is the one the module shows as the home page (setting `home_page_id`). |
 
 Except for `cms_item_content()`, whose document is markup by nature, they

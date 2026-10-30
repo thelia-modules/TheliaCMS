@@ -47,9 +47,44 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   paused and that nothing moves for a visitor who asks for less motion. A
   test holds the recipe of the skill to the validator, and the elements the
   prompt names as taken out to the filter of the page.
+- **A page offers files to download.** The **Documents** tab of the edit
+  screen of a page takes several files per page (pdf, doc, docx, xls, xlsx,
+  ppt, pptx, odt, zip, txt; the extension and the detected type must agree,
+  html, svg and php are refused), up to what PHP allows (`upload_max_filesize`,
+  `post_max_size`, `max_file_uploads`). Adding, describing, ordering and
+  deleting are saved at once, draft or not; the tab waits until the page is
+  saved. The Pages right is enough (UPDATE to add, describe and order, DELETE
+  to remove), not the Media right. The file is shared by every language; the
+  title and the description are per language, and a document without a title
+  in a language shows its original name without the extension. There is no
+  fallback to another language. Files are stored under
+  `local/media/documents/cms-page/`, to back up with the media.
+- **`GET /cms/documents/{id}/{file}` serves them** (route `cms.page_document`),
+  also for a page offline or never published. It answers 404 for a name that
+  does not match the pattern, an unknown row, an id and a name that disagree, a
+  page in the bin or a missing file. The type comes from the extension, with
+  `nosniff` and `Content-Security-Policy: sandbox`; pdf and txt open in the
+  browser, the rest downloads under its original name. `Cache-Control: public,
+  max-age=300, must-revalidate`, with `ETag` and `Last-Modified`: a deleted
+  document can stay five minutes in a cache.
+- **`cms_page_documents(page, locale)` lists them in a template.** `page` is
+  a `PublishedPage` or an id. It is read when the page is served, so no new
+  publication is needed, and returns data only: `id`, `title`,
+  `description`, `url`, `extension`, `size` (bytes) and `originalName`. An
+  unknown page or one in the bin gives an empty list. It declares the cache
+  tag of the page.
+- **Documents follow their page.** Duplicating a page or creating one from a
+  model copies the documents and their files. Emptying the bin and deleting a
+  page type (and so its model page) remove the files once the database change
+  is committed; a file that cannot be removed is logged, without an error.
+  The export and the import of the site do not carry documents.
+- **The update to 2.5.0 adds `cms_page_document` and
+  `cms_page_document_i18n`** (`Config/update/2.5.0.sql`).
 
 ### Fixed
 
+- **`ToolkitLinkTest` is skipped when the theme has no toolkit**, instead of
+  failing on section stories that cannot load.
 - **The generator of components leaves out a skill the site switched off**
   under CMS > Skills, as the generator of pages and `read_skill` do: it read
   the skill on accessibility whether it was on or not. Its heading is no
