@@ -41,8 +41,22 @@
                                         {{ menu.title|default('#' ~ menu.id) }}
                                     </a>
                                 </td>
-                                <td><code>{{ menu.code }}</code></td>
                                 <td>
+                                    <code>{{ menu.code }}</code>
+                                    {% for locale in row.locales %}
+                                        {% set own_language = languages[locale]|default(null) %}
+                                        <span class="badge text-bg-light border ms-1 d-inline-flex align-items-center" data-testid="cms-menu-locale-{{ menu.id }}-{{ locale }}"
+                                              title="{{ 'This language has a menu of its own'|trans({}, 'theliacms') }}">
+                                            {% if own_language %}
+                                                <img src="{{ asset('backoffice/img/svgFlags/' ~ own_language.code ~ '.svg') }}" alt="" width="16" height="11" class="me-1">
+                                                {{ own_language.code|upper }}
+                                            {% else %}
+                                                {{ locale }}
+                                            {% endif %}
+                                        </span>
+                                    {% endfor %}
+                                </td>
+                                <td data-testid="cms-menu-entries-{{ menu.id }}">
                                     {{ row.entries }}
                                     {% if row.issues > 0 %}
                                         <span class="badge bg-warning-subtle text-warning-emphasis ms-2"
@@ -58,7 +72,7 @@
                                             {{ 'Edit'|trans({}, 'theliacms') }}
                                         </a>
                                         <form method="post" action="{{ path('admin.cms.menus.delete', { id: menu.id, edit_language_id: edit_language_id }) }}"
-                                              onsubmit="return confirm('{{ 'Delete this menu and all of its entries?'|trans({}, 'theliacms')|e('js') }}')">
+                                              onsubmit="return confirm('{{ (row.locales is empty ? 'Delete this menu and all of its entries?' : 'Delete this menu, all of its entries and the menus of its languages?')|trans({}, 'theliacms')|e('js') }}')">
                                             <input type="hidden" name="_token" value="{{ assignToken() }}">
                                             <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="{{ 'Delete'|trans({}, 'theliacms') }}">
                                                 <i class="bi bi-trash3" aria-hidden="true"></i>

@@ -21,6 +21,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
@@ -32,6 +33,7 @@ use Thelia\Model\Lang;
 use TheliaCMS\Menu\MenuTargetType;
 use TheliaCMS\Model\CmsMenu;
 use TheliaCMS\Model\CmsMenuItem;
+use TheliaCMS\Model\CmsMenuQuery;
 use TheliaCMS\Page\Admin\EditLanguage;
 use TheliaCMS\Security\CmsResources;
 use TheliaCMS\TheliaCMS;
@@ -41,6 +43,12 @@ use Twig\Environment;
  * Menu back office: the list of menus, and one editing screen per menu holding
  * its tree and the form of a single entry.
  *
+ * `{id}` is always the row being edited: the shared menu of a code, or the
+ * menu of one language. The screen shows the row of the language being edited,
+ * so a GET on another row of the same code is redirected to the right one
+ * (that is what the language switcher and the list rely on). Writes act on the
+ * row of the URL, and an entry that is not in that row is a 404.
+ *
  * Like the page controller, this one resolves input, delegates every write to
  * CmsMenuWriter and redirects.
  */
@@ -48,7 +56,11 @@ use Twig\Environment;
 final readonly class CmsMenuAdminController
 {
     private const string LIST_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/menus/list.html.twig';
+    private const string CONFIRM_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/menus/confirm.html.twig';
     private const string EDIT_TEMPLATE = '@TheliaCMSModule/backOffice/default-twig/menus/edit.html.twig';
+
+    /** What the `source` of a realignment says for the shared menu: a locale is never this. */
+    private const string SHARED_SOURCE = 'shared';
 
     public function __construct(
         private Environment $twig,
@@ -70,6 +82,7 @@ final readonly class CmsMenuAdminController
 
         return new Response($this->twig->render(self::LIST_TEMPLATE, [
             'menus' => $this->menus->menus($lang->getLocale()),
+            'languages' => $this->menus->languages(),
             'edit_locale' => $lang->getLocale(),
             'edit_language_id' => $lang->getId(),
         ]));
@@ -96,6 +109,10 @@ final readonly class CmsMenuAdminController
 
         return new Response($this->twig->render(self::EDIT_TEMPLATE, [
             'menu' => null,
+            'shared_menu' => null,
+            'is_detached' => false,
+            'languages' => [],
+            'realign_sources' => [],
             'menu_form' => $form->createView(),
             'rows' => [],
             'item_form' => null,
@@ -103,6 +120,7 @@ final readonly class CmsMenuAdminController
             'edit_locale' => $lang->getLocale(),
             'edit_language_id' => $lang->getId(),
             'may_write' => true,
+            'may_replace' => false,
             'place_url_template' => null,
             'assets_version' => null,
         ]));
@@ -113,6 +131,11 @@ final readonly class CmsMenuAdminController
     {
         $menu = $this->menuOrFail($id);
         $lang = $this->languages->resolve($request);
+
+        if ($request->isMethod('GET') && ($served = $this->servedRow($menu, $lang)) !== $id) {
+            return $this->backToEdit($served, $lang);
+        }
+
         $form = $this->menuForm($menu, $lang);
         $form->handleRequest($request);
 
@@ -128,7 +151,14 @@ final readonly class CmsMenuAdminController
     {
         $this->denyUnless(AccessManager::DELETE);
 
-        $this->writer->deleteMenu($this->menuOrFail($id));
+        $menu = $this->menuOrFail($id);
+
+        if (CmsMenuQuery::SHARED !== $menu->getMenuLocale()) {
+            // A language leaves its own menu through "back to the shared menu".
+            throw new NotFoundHttpException();
+        }
+
+        $this->writer->deleteMenu($menu);
 
         return new RedirectResponse($this->urls->generate('admin.cms.menus.list', [
             EditLanguage::PARAMETER => $this->languages->resolve($request)->getId(),
@@ -144,6 +174,11 @@ final readonly class CmsMenuAdminController
     {
         $menu = $this->menuOrFail($id);
         $lang = $this->languages->resolve($request);
+
+        if ($request->isMethod('GET') && ($served = $this->servedRow($menu, $lang)) !== $id) {
+            return $this->backToEdit($served, $lang);
+        }
+
         $item = 'new' === $itemId ? null : $this->itemOrFail($menu, (int) $itemId);
 
         $form = $this->itemForm($menu, $lang, $item);
@@ -213,6 +248,128 @@ final readonly class CmsMenuAdminController
         return new JsonResponse(['ok' => true]);
     }
 
+    /**
+     * Gives the language being edited a menu of its own, a copy of the shared one.
+     */
+    #[Route('/{id}/detach', name: 'detach', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function detach(Request $request, int $id): Response
+    {
+        $this->denyUnless(AccessManager::UPDATE);
+
+        $menu = $this->menuOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $target = $id;
+
+        try {
+            if (CmsMenuQuery::SHARED !== $menu->getMenuLocale()) {
+                throw new \DomainException('This language already has a menu of its own.');
+            }
+
+            $target = (int) $this->writer->detach((string) $menu->getCode(), $lang->getLocale())->getId();
+            $this->flash($request, 'success', 'This language has a menu of its own now, a copy of the shared one.');
+        } catch (\DomainException $exception) {
+            $this->flash($request, 'danger', $exception->getMessage());
+        }
+
+        return $this->backToEdit($target, $lang);
+    }
+
+    /**
+     * Asks for confirmation, with what the realignment would replace, then
+     * does it. `source` is a locale, or `shared`.
+     */
+    #[Route('/{id}/realign', name: 'realign', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    public function realign(Request $request, int $id): Response
+    {
+        $this->denyUnlessMayReplace();
+
+        $menu = $this->menuOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $code = (string) $menu->getCode();
+        $targetLocale = (string) $menu->getMenuLocale();
+        $source = $request->isMethod('POST') ? $request->request->getString('source') : $request->query->getString('source');
+        $sourceLocale = self::SHARED_SOURCE === $source ? CmsMenuQuery::SHARED : $source;
+
+        if ($request->isMethod('POST')) {
+            try {
+                if ('' === $source) {
+                    throw new \DomainException('The menu to copy from does not exist.');
+                }
+
+                $this->writer->realign($code, $targetLocale, $sourceLocale);
+                $this->flash($request, 'success', 'The menu was realigned.');
+            } catch (\DomainException $exception) {
+                $this->flash($request, 'danger', $exception->getMessage());
+            }
+
+            return $this->backToEdit($id, $lang);
+        }
+
+        try {
+            if ('' === $source) {
+                throw new \DomainException('The menu to copy from does not exist.');
+            }
+
+            $counts = $this->menus->realignCounts($code, $targetLocale, $sourceLocale);
+
+            if ($targetLocale === $sourceLocale) {
+                throw new \DomainException('A menu cannot be realigned on itself.');
+            }
+        } catch (\DomainException $exception) {
+            $this->flash($request, 'danger', $exception->getMessage());
+
+            return $this->backToEdit($id, $lang);
+        }
+
+        return $this->confirmation($menu, $lang, 'realign', [
+            'target_name' => $this->menuName($targetLocale),
+            'source_name' => $this->menuName($sourceLocale),
+            'target_entries' => $counts['target'],
+            'source_entries' => $counts['source'],
+            'source' => '' === $sourceLocale ? self::SHARED_SOURCE : $sourceLocale,
+        ]);
+    }
+
+    /**
+     * Sends the language of a menu of its own back to the shared one, after a
+     * confirmation: the entries of its menu are deleted.
+     */
+    #[Route('/{id}/reattach', name: 'reattach', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    public function reattach(Request $request, int $id): Response
+    {
+        $this->denyUnlessMayReplace();
+
+        $menu = $this->menuOrFail($id);
+        $lang = $this->languages->resolve($request);
+        $locale = (string) $menu->getMenuLocale();
+        $shared = $this->menus->findByCode((string) $menu->getCode());
+        $back = null === $shared ? $id : (int) $shared->getId();
+
+        if ($request->isMethod('POST')) {
+            try {
+                $this->writer->reattach((string) $menu->getCode(), $locale);
+                $this->flash($request, 'success', 'This language reads the shared menu again.');
+            } catch (\DomainException $exception) {
+                $this->flash($request, 'danger', $exception->getMessage());
+
+                return $this->backToEdit($id, $lang);
+            }
+
+            return $this->backToEdit($back, $lang);
+        }
+
+        if (CmsMenuQuery::SHARED === $locale) {
+            $this->flash($request, 'danger', 'The shared menu cannot be sent back to itself.');
+
+            return $this->backToEdit($id, $lang);
+        }
+
+        return $this->confirmation($menu, $lang, 'reattach', [
+            'target_name' => $this->menuName($locale),
+            'target_entries' => $this->menus->entryCount($menu),
+        ]);
+    }
+
     private function screen(
         CmsMenu $menu,
         Lang $lang,
@@ -221,9 +378,16 @@ final readonly class CmsMenuAdminController
         ?CmsMenuItem $editedItem = null,
     ): Response {
         $locale = $lang->getLocale();
+        $code = (string) $menu->getCode();
+        $menuLocale = (string) $menu->getMenuLocale();
+        $shared = CmsMenuQuery::SHARED === $menuLocale ? $menu : $this->menus->findByCode($code);
 
         return new Response($this->twig->render(self::EDIT_TEMPLATE, [
             'menu' => $menu,
+            'shared_menu' => $shared,
+            'is_detached' => CmsMenuQuery::SHARED !== $menuLocale,
+            'languages' => $this->menus->languages(),
+            'realign_sources' => $this->menus->realignSources($code, $menuLocale),
             'menu_form' => ($menuForm ?? $this->menuForm($menu, $lang))->createView(),
             'rows' => $this->menus->rows($menu, $locale),
             'item_form' => ($itemForm ?? $this->itemForm($menu, $lang, null))->createView(),
@@ -231,6 +395,7 @@ final readonly class CmsMenuAdminController
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
             'may_write' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::MENU], [], [AccessManager::UPDATE]),
+            'may_replace' => $this->mayReplace(),
             'place_url_template' => $this->placeUrlTemplate($menu, $lang),
             'assets_version' => $this->assetsVersion(),
         ]));
@@ -242,6 +407,7 @@ final readonly class CmsMenuAdminController
             'code' => $menu->getCode(),
             'title' => $menu->setLocale($lang->getLocale())->getTitle(),
         ], [
+            'code_locked' => CmsMenuQuery::SHARED !== $menu->getMenuLocale(),
             // Explicit, because this form is also rendered on the screen that
             // edits a single entry, whose URL it must not post to.
             'action' => $this->urls->generate('admin.cms.menus.edit', [
@@ -376,6 +542,64 @@ final readonly class CmsMenuAdminController
         }
 
         return $item;
+    }
+
+    /**
+     * The row of the code that serves the language: its own menu when it has
+     * one, the shared menu otherwise.
+     */
+    private function servedRow(CmsMenu $menu, Lang $lang): int
+    {
+        $own = $this->menus->findForLocale((string) $menu->getCode(), $lang->getLocale());
+
+        return (int) ($own ?? $this->menus->findByCode((string) $menu->getCode()) ?? $menu)->getId();
+    }
+
+    private function menuName(string $menuLocale): string
+    {
+        if (CmsMenuQuery::SHARED === $menuLocale) {
+            return $this->translate('Shared menu');
+        }
+
+        return (string) ($this->menus->languages()[$menuLocale] ?? null)?->getTitle() ?: $menuLocale;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function confirmation(CmsMenu $menu, Lang $lang, string $action, array $context): Response
+    {
+        return new Response($this->twig->render(self::CONFIRM_TEMPLATE, [
+            'menu' => $menu,
+            'action' => $action,
+            'edit_locale' => $lang->getLocale(),
+            'edit_language_id' => $lang->getId(),
+            ...$context,
+        ]));
+    }
+
+    private function flash(Request $request, string $type, string $message): void
+    {
+        if ($request->hasSession() && ($session = $request->getSession()) instanceof FlashBagAwareSessionInterface) {
+            $session->getFlashBag()->add($type, $this->translate($message));
+        }
+    }
+
+    /**
+     * Realigning and going back to the shared menu destroy entries and menus
+     * the way deleting them does: both rights are needed.
+     */
+    private function mayReplace(): bool
+    {
+        return $this->securityContext->isGranted(['ADMIN'], [CmsResources::MENU], [], [AccessManager::UPDATE])
+            && $this->securityContext->isGranted(['ADMIN'], [CmsResources::MENU], [], [AccessManager::DELETE]);
+    }
+
+    private function denyUnlessMayReplace(): void
+    {
+        if (!$this->mayReplace()) {
+            throw new AccessDeniedHttpException($this->translate('You are not allowed to change menus.'));
+        }
     }
 
     private function denyUnless(string $access): void

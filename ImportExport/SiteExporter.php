@@ -285,9 +285,14 @@ final readonly class SiteExporter
     {
         $menus = [];
 
-        foreach (CmsMenuQuery::create()->orderById()->find() as $menu) {
+        // Shared menus first ('' sorts before any locale): an importer meets
+        // the menu a language was detached from before the language.
+        foreach (CmsMenuQuery::create()->orderByMenuLocale()->orderById()->find() as $menu) {
             $menus[] = [
                 'code' => (string) $menu->getCode(),
+                // '' for the shared menu of the code, the locale for a
+                // language that has a menu of its own.
+                'locale' => (string) $menu->getMenuLocale(),
                 'translations' => $this->translationsOf($menu, $locales, ['title' => 'getTitle']),
                 'items' => $this->menuItems($menu, $locales),
             ];

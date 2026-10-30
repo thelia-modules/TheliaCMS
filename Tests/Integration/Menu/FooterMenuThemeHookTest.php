@@ -77,7 +77,7 @@ final class FooterMenuThemeHookTest extends CmsIntegrationTestCase
     {
         TheliaCMS::setConfigValue(FooterMenuThemeHook::SETTING, '1');
 
-        $menu = CmsMenuQuery::create()->findOneByCode('footer');
+        $menu = CmsMenuQuery::findShared('footer');
         self::assertNotNull($menu, 'The seeder creates the footer menu; without it this test measures nothing.');
 
         CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->find()->delete();
@@ -92,7 +92,7 @@ final class FooterMenuThemeHookTest extends CmsIntegrationTestCase
 
     private function footerMenuPointingAt(object $page): void
     {
-        $menu = CmsMenuQuery::create()->findOneByCode('footer');
+        $menu = CmsMenuQuery::findShared('footer');
 
         if (!$menu instanceof CmsMenu) {
             $menu = (new CmsMenu())->setCode('footer');

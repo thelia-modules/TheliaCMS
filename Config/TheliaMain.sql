@@ -178,10 +178,11 @@ CREATE TABLE `cms_menu`
 (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `code` VARCHAR(50) NOT NULL,
+    `menu_locale` VARCHAR(5) DEFAULT '' NOT NULL,
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
-    UNIQUE INDEX `unq_cms_menu_code` (`code`)
+    UNIQUE INDEX `unq_cms_menu_code_locale` (`code`, `menu_locale`)
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
@@ -313,6 +314,33 @@ CREATE TABLE `cms_script`
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
     INDEX `idx_cms_script_active_placement` (`active`, `placement`)
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+-- ---------------------------------------------------------------------
+-- cms_page_document
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_page_document`;
+
+CREATE TABLE `cms_page_document`
+(
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `page_id` INTEGER NOT NULL,
+    `file` VARCHAR(255) NOT NULL,
+    `original_name` VARCHAR(255) NOT NULL,
+    `mime_type` VARCHAR(127) NOT NULL,
+    `size` INTEGER NOT NULL,
+    `position` INTEGER DEFAULT 0 NOT NULL,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_page_document_file` (`file`),
+    INDEX `idx_cms_page_document_page_position` (`page_id`, `position`),
+    CONSTRAINT `fk_cms_page_document_page`
+        FOREIGN KEY (`page_id`)
+        REFERENCES `cms_page` (`id`)
+        ON UPDATE RESTRICT
+        ON DELETE CASCADE
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
@@ -574,6 +602,25 @@ CREATE TABLE `cms_page_type_i18n`
     CONSTRAINT `cms_page_type_i18n_fk_7b1d2a`
         FOREIGN KEY (`id`)
         REFERENCES `cms_page_type` (`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
+
+-- ---------------------------------------------------------------------
+-- cms_page_document_i18n
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `cms_page_document_i18n`;
+
+CREATE TABLE `cms_page_document_i18n`
+(
+    `id` INTEGER NOT NULL,
+    `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
+    `title` VARCHAR(255),
+    `description` TEXT,
+    PRIMARY KEY (`id`,`locale`),
+    CONSTRAINT `cms_page_document_i18n_fk_44bfb8`
+        FOREIGN KEY (`id`)
+        REFERENCES `cms_page_document` (`id`)
         ON DELETE CASCADE
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 

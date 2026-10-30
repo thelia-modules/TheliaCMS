@@ -276,15 +276,23 @@
         Menus are addressed by code, never by id: a theme calls
         `cms_menu('main')` and must keep working on a site where the menu was
         deleted and created again.
+
+        One row per code is the shared menu (`menu_locale` empty), read in
+        every language; a language may be detached with a row of its own,
+        same code, holding its own entries. Empty rather than NULL for the
+        shared row, so the unique index really allows one per code. Not named
+        `locale`: the i18n behavior already gives the model `setLocale()`.
     -->
     <table name="cms_menu" namespace="TheliaCMS\Model">
         <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
         <column name="code" required="true" size="50" type="VARCHAR"/>
+        <column defaultValue="" name="menu_locale" required="true" size="5" type="VARCHAR"/>
 
         <column name="title" size="255" type="VARCHAR"/>
 
-        <unique name="unq_cms_menu_code">
+        <unique name="unq_cms_menu_code_locale">
             <unique-column name="code"/>
+            <unique-column name="menu_locale"/>
         </unique>
 
         <behavior name="i18n">
@@ -663,6 +671,45 @@
             <index-column name="log_id"/>
         </index>
 
+        <behavior name="timestampable"/>
+    </table>
+
+    <!--
+        The files a page offers to download (a brochure, a price list), the
+        same in every language: only what is said of them is translated. One
+        row owns one file under `local/media/documents/cms-page/`: a copied
+        page gets copies of the files, never the same ones, so deleting a row
+        may delete its file. `file` is the stored name, unique; `original_name`
+        is the name it was sent under, what a visitor gets back.
+    -->
+    <table name="cms_page_document" namespace="TheliaCMS\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER"/>
+        <column name="page_id" required="true" type="INTEGER"/>
+        <column name="file" required="true" size="255" type="VARCHAR"/>
+        <column name="original_name" required="true" size="255" type="VARCHAR"/>
+        <column name="mime_type" required="true" size="127" type="VARCHAR"/>
+        <column name="size" required="true" type="INTEGER"/>
+        <column defaultValue="0" name="position" required="true" type="INTEGER"/>
+
+        <column name="title" size="255" type="VARCHAR"/>
+        <column name="description" type="LONGVARCHAR"/>
+
+        <foreign-key foreignTable="cms_page" name="fk_cms_page_document_page" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="page_id"/>
+        </foreign-key>
+
+        <unique name="unq_cms_page_document_file">
+            <unique-column name="file"/>
+        </unique>
+
+        <index name="idx_cms_page_document_page_position">
+            <index-column name="page_id"/>
+            <index-column name="position"/>
+        </index>
+
+        <behavior name="i18n">
+            <parameter name="i18n_columns" value="title, description"/>
+        </behavior>
         <behavior name="timestampable"/>
     </table>
 

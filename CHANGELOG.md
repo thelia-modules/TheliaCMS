@@ -7,8 +7,39 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Upgrading to 2.6.0
+
+- The update adds `cms_page_document` and `cms_page_document_i18n`, and
+  `cms_menu.menu_locale` (empty on every existing menu, which
+  stays the shared menu of its code) and replaces the unique index
+  `unq_cms_menu_code` by `unq_cms_menu_code_locale` on (`code`,
+  `menu_locale`) (`Config/update/2.6.0.sql`). Update the module before serving
+  pages, and remove `var/propel/<env>` so the models are generated again.
+- `CmsMenuQuery::create()->findOneByCode()` may now answer with the menu of a
+  language: code that reads a menu by its code goes through
+  `CmsMenuQuery::findShared()` or `findServed()`. `MenuCache::storedEntryCount()`
+  and `CmsMenuProvider::hasEntries()` take the locale.
+- Going back to 2.5 after the update, which deletes the documents of the
+  pages (their files stay under `local/media/documents/cms-page/`) and the
+  menus of the languages:
+
+  ```sql
+  DROP TABLE IF EXISTS `cms_page_document_i18n`, `cms_page_document`;
+  DELETE FROM `cms_menu` WHERE `menu_locale` <> '';
+  ALTER TABLE `cms_menu` ADD UNIQUE INDEX `unq_cms_menu_code` (`code`),
+      DROP INDEX `unq_cms_menu_code_locale`, DROP COLUMN `menu_locale`;
+  ```
+
 ### Added
 
+- **`cms_page_documents_block(page, locale)` draws the documents of a page.**
+  It answers the markup of the list (heading, title, type and size of each
+  file, the browser opening a pdf or a txt and saving the rest), or an empty
+  string when the page has no document. A theme overrides the markup by
+  shipping `cms-page-documents.html.twig` at its root; the template receives
+  the one variable `cms_page_documents_block` (`documents`, `page`,
+  `heading`), in the language of the page when a page is given. The page templates of the module
+  call it after the content of the page.
 - **A component is prototyped from the content screen of a page.** **Add a
   section > A new component** asks the generator of components in a few
   words; the answer is drawn in the preview in place of the draft, changed by
@@ -56,9 +87,68 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   import gives it to the tags it creates, and drops a name the palette does
   not have with a warning. The update to 2.5.0 adds `cms_tag.color`, empty
   for the tags a site has already.
+- **A page offers files to download.** The **Documents** tab of the edit
+  screen of a page takes several files per page (pdf, doc, docx, xls, xlsx,
+  ppt, pptx, odt, zip, txt; the extension and the detected type must agree,
+  html, svg and php are refused), up to what PHP allows (`upload_max_filesize`,
+  `post_max_size`, `max_file_uploads`). Adding, describing, ordering and
+  deleting are saved at once, draft or not; the tab waits until the page is
+  saved. The Pages right is enough (UPDATE to add, describe and order, DELETE
+  to remove), not the Media right. The file is shared by every language; the
+  title and the description are per language, and a document without a title
+  in a language shows its original name without the extension. There is no
+  fallback to another language. Files are stored under
+  `local/media/documents/cms-page/`, to back up with the media.
+- **`GET /cms/documents/{id}/{file}` serves them** (route `cms.page_document`),
+  also for a page offline or never published. It answers 404 for a name that
+  does not match the pattern, an unknown row, an id and a name that disagree, a
+  page in the bin or a missing file. The type comes from the extension, with
+  `nosniff` and `Content-Security-Policy: sandbox`; pdf and txt open in the
+  browser, the rest downloads under its original name. `Cache-Control: public,
+  max-age=300, must-revalidate`, with `ETag` and `Last-Modified`: a deleted
+  document can stay five minutes in a cache.
+- **`cms_page_documents(page, locale)` lists them in a template.** `page` is
+  a `PublishedPage` or an id. It is read when the page is served, so no new
+  publication is needed, and returns data only: `id`, `title`,
+  `description`, `url`, `extension`, `size` (bytes) and `originalName`. An
+  unknown page or one in the bin gives an empty list. It declares the cache
+  tag of the page.
+- **Documents follow their page.** Duplicating a page or creating one from a
+  model copies the documents and their files. Emptying the bin and deleting a
+  page type (and so its model page) remove the files once the database change
+  is committed; a file that cannot be removed is logged, without an error.
+  The export and the import of the site do not carry documents.
+- **The update to 2.6.0 adds `cms_page_document` and
+  `cms_page_document_i18n`** (`Config/update/2.6.0.sql`).
+- **A language may have a menu of its own.** Each code keeps a shared menu,
+  read by every language without a menu of its own; detaching a language
+  copies the shared menu (titles, entries, labels in every language) into a
+  menu of that language under the same code, which `cms_menu(code)` then
+  serves in that language. Realigning replaces the entries of a menu by a copy
+  of another menu of the code (a language on the shared menu, on another
+  language, or the shared menu on a language), never merged, titles kept.
+  Back to shared deletes the menu of the language. An emptied detached menu
+  stays empty in its language rather than show the shared one. Renaming or
+  deleting the shared menu renames or deletes the menus of its languages. The
+  services are `CmsMenuWriter::detach()`, `realign()`, `reattach()`.
+- **The menu screen edits the menu of the language being edited.** It says
+  whether that language follows the shared menu or has a menu of its own, and
+  offers to give it one, to realign a menu on another one and to send the
+  language back to the shared menu; realigning and going back show how many
+  entries are replaced or deleted and wait for a confirmation. The list shows
+  each code once, with a badge per language that has a menu of its own. New
+  routes: `admin.cms.menus.detach` (POST), `realign` and `reattach` (GET for
+  the confirmation, POST to do it); `{id}` is the row being edited.
+- **The export carries the language of a menu** (`locale`, empty for the
+  shared one) and the import matches menus on the code and that key; a file
+  without it holds shared menus. The format is version 3: a module of an
+  earlier version refuses the file rather than write the menu of a language
+  over the shared one.
 
 ### Fixed
 
+- **`ToolkitLinkTest` is skipped when the theme has no toolkit**, instead of
+  failing on section stories that cannot load.
 - **The generator of components leaves out a skill the site switched off**
   under CMS > Skills, as the generator of pages and `read_skill` do: it read
   the skill on accessibility whether it was on or not. Its heading is no

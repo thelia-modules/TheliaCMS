@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace TheliaCMS\Menu\Admin;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use Thelia\Model\Lang;
+use Thelia\Model\LangQuery;
 use TheliaCMS\Menu\MenuPlacement;
 use TheliaCMS\Menu\MenuTargetResolver;
 use TheliaCMS\Menu\MenuTargetType;
@@ -40,24 +42,36 @@ final readonly class CmsMenuRepository
     }
 
     /**
-     * @return list<array{menu: CmsMenu, entries: int, issues: int}>
+     * The shared menus, each once, with the languages that have a menu of
+     * their own under the same code.
+     *
+     * @return list<array{menu: CmsMenu, entries: int, issues: int, locales: list<string>}>
      */
     public function menus(string $locale): array
     {
         $menus = CmsMenuQuery::create()
+            ->filterByShared()
             ->joinWithI18n($locale, Criteria::LEFT_JOIN)
             ->orderByCode()
             ->find();
 
+        $detached = [];
+
+        foreach (CmsMenuQuery::create()->filterByMenuLocale(CmsMenuQuery::SHARED, Criteria::NOT_EQUAL)->orderByMenuLocale()->find() as $row) {
+            $detached[(string) $row->getCode()][] = (string) $row->getMenuLocale();
+        }
+
         $summaries = [];
 
         foreach ($menus as $menu) {
-            $rows = $this->rows($menu, $locale);
+            // What the language being edited reads: its own menu if it has one.
+            $rows = $this->rows(CmsMenuQuery::findForLocale((string) $menu->getCode(), $locale) ?? $menu, $locale);
 
             $summaries[] = [
                 'menu' => $menu,
                 'entries' => \count($rows),
                 'issues' => \count(array_filter($rows, static fn (MenuItemRow $row): bool => !$row->target->isUsable())),
+                'locales' => $detached[(string) $menu->getCode()] ?? [],
             ];
         }
 
@@ -69,9 +83,103 @@ final readonly class CmsMenuRepository
         return CmsMenuQuery::create()->findPk($id);
     }
 
+    /**
+     * The shared menu of the code.
+     */
     public function findByCode(string $code): ?CmsMenu
     {
-        return CmsMenuQuery::create()->findOneByCode($code);
+        return CmsMenuQuery::findShared($code);
+    }
+
+    /**
+     * The row stored for exactly this locale ('' for the shared menu),
+     * without falling back to the shared one.
+     */
+    public function findForLocale(string $code, string $locale): ?CmsMenu
+    {
+        return CmsMenuQuery::findForLocale($code, $locale);
+    }
+
+    /**
+     * The languages that have a menu of their own under this code.
+     *
+     * @return list<string>
+     */
+    public function detachedLocales(string $code): array
+    {
+        return array_values(array_map(
+            'strval',
+            CmsMenuQuery::create()
+                ->filterByCode($code)
+                ->filterByMenuLocale(CmsMenuQuery::SHARED, Criteria::NOT_EQUAL)
+                ->orderByMenuLocale()
+                ->select(['MenuLocale'])
+                ->find()
+                ->toArray(),
+        ));
+    }
+
+    /**
+     * The active languages by locale, to name them and show their flag.
+     *
+     * @return array<string, Lang>
+     */
+    public function languages(): array
+    {
+        $languages = [];
+
+        foreach (LangQuery::create()->filterByActive(1)->orderByPosition()->find() as $lang) {
+            $languages[(string) $lang->getLocale()] = $lang;
+        }
+
+        return $languages;
+    }
+
+    /**
+     * The menus of a code a menu can be realigned on: every one but itself, the
+     * shared menu first ('' as locale).
+     *
+     * @return list<array{locale: string, entries: int}>
+     */
+    public function realignSources(string $code, string $targetLocale): array
+    {
+        $sources = [];
+
+        foreach ([CmsMenuQuery::SHARED, ...$this->detachedLocales($code)] as $locale) {
+            $menu = CmsMenuQuery::findForLocale($code, $locale);
+
+            if ($locale !== $targetLocale && null !== $menu) {
+                $sources[] = ['locale' => $locale, 'entries' => $this->entryCount($menu)];
+            }
+        }
+
+        return $sources;
+    }
+
+    public function entryCount(CmsMenu $menu): int
+    {
+        return CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->count();
+    }
+
+    /**
+     * What realigning a menu on another one would do, for the confirmation:
+     * the entries of the target that go, and the entries of the source that
+     * take their place.
+     *
+     * @return array{target: int, source: int}
+     *
+     * @throws \DomainException when either menu does not exist
+     */
+    public function realignCounts(string $code, string $targetLocale, string $sourceLocale): array
+    {
+        $target = CmsMenuQuery::findForLocale($code, $targetLocale);
+        $source = CmsMenuQuery::findForLocale($code, $sourceLocale);
+
+        if (null === $target || null === $source) {
+            throw new \DomainException('There is no such menu to realign.');
+        }
+
+        return ['target' => $this->entryCount($target), 'source' => $this->entryCount($source)];
     }
 
     /**

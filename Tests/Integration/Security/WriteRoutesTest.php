@@ -66,6 +66,8 @@ final class WriteRoutesTest extends AdminScreenTestCase
         'admin.cms.menus.edit',
         'admin.cms.menus.entry_save',
         'admin.cms.menus.list',
+        'admin.cms.menus.realign',
+        'admin.cms.menus.reattach',
         'admin.cms.pages.content.edit',
         'admin.cms.pages.create',
         'admin.cms.pages.edit',

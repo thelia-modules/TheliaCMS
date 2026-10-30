@@ -216,7 +216,7 @@ final class CatalogueMenuTargetTest extends CmsIntegrationTestCase
 
         $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
 
-        $menu = CmsMenuQuery::create()->findOneByCode('main');
+        $menu = CmsMenuQuery::findShared('main');
         self::assertInstanceOf(CmsMenu::class, $menu);
         $entries = CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->find();
         self::assertCount(1, $entries);
@@ -238,7 +238,7 @@ final class CatalogueMenuTargetTest extends CmsIntegrationTestCase
 
         $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
 
-        $menu = CmsMenuQuery::create()->findOneByCode('main');
+        $menu = CmsMenuQuery::findShared('main');
         self::assertInstanceOf(CmsMenu::class, $menu);
         self::assertSame(1, CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->filterByTargetId($missing)->count(), 'The entry is kept.');
         self::assertContains(
@@ -308,7 +308,7 @@ final class CatalogueMenuTargetTest extends CmsIntegrationTestCase
      */
     private function entry(string $targetType, int $targetId, array $labels = []): CmsMenuItem
     {
-        $menu = CmsMenuQuery::create()->findOneByCode('footer');
+        $menu = CmsMenuQuery::findShared('footer');
         self::assertInstanceOf(CmsMenu::class, $menu);
 
         $entry = (new CmsMenuItem())
@@ -329,7 +329,7 @@ final class CatalogueMenuTargetTest extends CmsIntegrationTestCase
 
     private function onlyEntryOfMain(CmsMenuItem $entry): void
     {
-        $menu = CmsMenuQuery::create()->findOneByCode('main');
+        $menu = CmsMenuQuery::findShared('main');
         self::assertInstanceOf(CmsMenu::class, $menu);
         CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->find()->delete();
         $entry->setMenuId($menu->getId())->save();

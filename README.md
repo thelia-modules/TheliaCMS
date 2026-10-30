@@ -469,6 +469,95 @@ switched off. The screen takes the settings right; the choice is stored in
 mode, Flexy theme), a button opens it on the page that renders every
 component offered.
 
+## Documents of a page
+
+The **Documents** tab of the edit screen of a page lists the files the page
+offers to download. It takes several files per page: pdf, doc, docx, xls,
+xlsx, ppt, pptx, odt, zip and txt. The extension and the detected type must
+agree, and html, svg and php are refused. The size is bounded by PHP
+(`upload_max_filesize`, `post_max_size`, `max_file_uploads`). Adding,
+describing, ordering and deleting a file are saved at once, whether the page
+is a draft or not. The tab is inactive until the page is saved. It needs the
+Pages right (UPDATE to add, describe and order, DELETE to remove), not the
+Media right.
+
+The file is shared by every language, while the title and the description are
+per language. A document without a title in a language shows its original
+name without the extension; it does not fall back on another language. Files
+are stored under `local/media/documents/cms-page/` (back them up with the
+media), named by the slug of the original name, eight random hexadecimal
+characters and the extension.
+
+`GET /cms/documents/{id}/{file}` (route `cms.page_document`) serves a file.
+It answers 404 when the name does not match the pattern, the row is unknown,
+the id and the name disagree, the page is in the bin or the file is missing. A
+page offline or never published serves its files: the address is only known
+to whoever was given it. The content type comes from the extension, with
+`X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox`. A
+pdf or a txt opens in the browser, the rest downloads under its original name.
+The response is `Cache-Control: public, max-age=300, must-revalidate`, with
+`ETag` and `Last-Modified`, so a deleted document can stay five minutes in a
+cache.
+
+A template lists them with `cms_page_documents(page, locale)`, `page` being a
+`PublishedPage` or an id and the locale defaulting to the one being served.
+The list is read when the page is served, so adding or removing a file needs
+no new publication. It holds data only, objects with `id`, `title`,
+`description`, `url`, `extension`, `size` (in bytes) and `originalName`, and
+is empty for an unknown page or one in the bin. The call declares the cache
+tag of the page.
+
+```twig
+{% set documents = cms_page_documents(cms_page) %}
+{% if documents %}
+    <ul>
+        {% for document in documents %}
+            <li>
+                <a href="{{ document.url }}">{{ document.title }}</a>
+                ({{ document.extension|upper }}, {{ (document.size / 1024)|round }} KB)
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+```
+
+A template that only wants the list drawn calls
+`{{ cms_page_documents_block(cms_page) }}` (same arguments as
+`cms_page_documents`): it answers the markup, or an empty string when the
+page has no document, and declares the same cache tag. The Flexy and the
+generic page templates of the module call it after the content of the page
+(inside the `article`, before the `cmspage.content.after` hook), so a theme
+using them lists the files with nothing to write. The markup comes from
+`cms-page-documents.html.twig`: a theme takes it over by shipping a file of that
+name at its root, as it does for `cms-search.html.twig`; until it does, the
+neutral one of the module (`templates/front/`) is used, with `cms-documents*`
+class names and no style. The template receives one variable,
+`cms_page_documents_block`, holding:
+
+- `documents`: the documents, each with `id`, `title`, `description`
+  (or null), `url`, `extension`, `type` (the extension in upper case), `size`
+  (readable, "812 B", "1.5 KB", "2.4 MB", translated; null when unknown),
+  `bytes`, `download` (false for a pdf or a txt, which open in the tab, true
+  for the rest) and `originalName`;
+- `page`: what was given to the function (a page or an id);
+- `heading`: the translated "Documents to download".
+
+The language is the `locale` given, else the language of the page when a
+`PublishedPage` is given, else the one of the request.
+
+A theme that draws the documents itself with `cms_page_documents` while using
+a page template of the module would list them twice: take the page template
+over, or override `cms-page-documents.html.twig` instead. The template gets one
+variable only because the theme parser keeps every variable of a render for the
+rest of the page: a template of a theme should set none of its own.
+
+Duplicating a page or creating one from a model copies its documents,
+including the files. Emptying the bin and deleting a page type (and so its
+model page) remove the files once the database change is committed; a file
+that cannot be removed is logged, without an error. The export and the import
+of the site do not carry documents. The update to 2.6.0 adds
+`cms_page_document` and `cms_page_document_i18n`.
+
 ## Media
 
 **CMS > Media** stores images in [TheliaLibrary][library]. Alternative text is
@@ -550,6 +639,44 @@ the language being read; while it is empty, the slot keeps the folders and
 contents the shop configured, so activating the module changes nothing on the
 front until somebody builds a menu. The consent slots (the terms of sale linked
 from the checkout) stay with the contents of the shop.
+
+### A menu per language
+
+A menu is shared by every language until a language is given a menu of its
+own. Each code then has one shared menu, read by every language that has no
+menu of its own, and one detached menu per language that has one, under the
+same code: a theme keeps calling `cms_menu('main')` and gets the menu of the
+language it is served in.
+
+- **Detaching** a language copies the shared menu into a menu of its own: its
+  titles, every entry, and the labels of the entries in every language. From
+  then on, the two are edited apart. Only an active language can be detached.
+- **Realigning** replaces the entries of a menu by a copy of the entries of
+  another menu of the same code: a language on the shared menu, a language on
+  another language, or the shared menu on a language. The entries are
+  replaced, never merged, and the titles of the menu being realigned stay.
+- **Back to shared** deletes the menu of a language and its entries; the
+  language reads the shared menu again.
+
+A detached menu whose entries were all deleted is an empty menu in that
+language, not a way back to the shared one: the shared menu does not show
+through. Like an empty shared menu, it leaves the content slot of the core to
+the folders and contents of the shop in that language.
+
+In the back office, the tree of **CMS > Menus > Edit** is the one of the
+language being edited (the flags above the tree switch it). A line above the
+tree says whether that language follows the shared menu or has a menu of its
+own. **Give this language a menu of its own** detaches it at once. **Realign
+on…** asks which menu to copy, then shows how many entries are replaced before
+anything is written; on a language with its own menu, **Make the shared menu a
+copy of this one** does the same the other way round. **Go back to the shared
+menu** asks first too, because the entries of the language are deleted. The
+list shows each code once, with a flag for every language that has a menu of
+its own. The code can only be changed on the shared menu.
+
+The code belongs to the shared menu: renaming it renames the menus of its
+languages, and deleting it deletes them. The list of menus and the picker of a
+component of the theme show each code once.
 
 ## Forms
 
@@ -955,7 +1082,7 @@ modules. Each receives the page as `page`.
 |---|---|---|
 | `cmspage.top` | front | before the content |
 | `cmspage.content.before` | front | inside the article, before the content |
-| `cmspage.content.after` | front | inside the article, after the content |
+| `cmspage.content.after` | front | inside the article, after the content and the documents of the page |
 | `cmspage.bottom` | front | after the content |
 
 The page is a `TheliaCMS\Page\PublishedPage`: `cms_page` in the template,
@@ -1137,13 +1264,15 @@ the `cms_tag` table and `cms_page.tag_id`, the update to 2.5.0 `cms_tag.color`.
 
 | Function | Returns |
 |---|---|
-| `cms_menu(code, locale)` | the tree of a menu. Each entry has `label`, `url` (null for a heading), `blank`, `children`, `active`, `in_trail`. The locale defaults to the one being served. |
+| `cms_menu(code, locale)` | the tree of a menu: the menu of the language when it has one of its own, the shared menu otherwise (see [A menu per language](#a-menu-per-language)). Each entry has `label`, `url` (null for a heading), `blank`, `children`, `active`, `in_trail`. The locale defaults to the one being served. |
 | `cms_page_alternates()` | the page being served, in each language it exists in: `locale`, `code`, `title`, `url`, `current` |
 | `cms_pages_tagged(tag, locale)` | the pages online carrying the tag, the most recently published first. The locale defaults to the one being served. |
 | `cms_pages_of_type(type, options, locale)` | the pages online of a type, the model left out, ordered, filtered and cut by `options` (`sort`, `direction`, `filter`, `limit`, `offset`): see [Templates of pages](#templates-of-pages). |
 | `cms_page_type(type, locale)` | the `code`, `title` and `description` of a type, for the heading of a list. |
 | `cms_page_fields(page)` | the fields of a page or a card holding a value, each with its `code`, `label`, raw `value` and `text` written for a visitor ("1 h 30 min"). |
 | `cms_item_content(type, id, locale)` | the published document of a product, a category, a content, a folder or a store (`dealer`), as markup, or an empty string. The locale defaults to the one being served. |
+| `cms_page_documents(page, locale)` | the files a page offers to download, each with `id`, `title`, `description`, `url`, `extension`, `size` and `originalName`: see [Documents of a page](#documents-of-a-page). |
+| `cms_page_documents_block(page, locale)` | the same files drawn as markup (empty string without a file), from the `cms-page-documents.html.twig` of the theme or of the module, with the one variable `cms_page_documents_block` (`documents`, `page`, `heading`): see [Documents of a page](#documents-of-a-page). |
 | `cms_is_home(id)` | whether the page of this id is the one the module shows as the home page (setting `home_page_id`). |
 
 Except for `cms_item_content()`, whose document is markup by nature, they
@@ -1170,8 +1299,9 @@ theme. A menu of any depth takes a dozen lines:
 ```
 
 Menus are cached per code, language and host, and the cache is dropped whenever a
-menu is saved, or a page it points at is renamed, published, unpublished or
-binned.
+menu is saved, detached, realigned or sent back to shared, or a page it points
+at is renamed, published, unpublished or binned. Whether a menu has entries, which
+decides who fills the content slots, is cached per code and language too.
 
 `cms_page_alternates()` is what a language switcher should be built on: it
 answers with the current page in each language, absolute and on the right domain
@@ -1215,6 +1345,13 @@ is missing is named in the report rather than left as a silent hole.
 
 An import leaves alone whatever is already there: a page at the same address, a
 menu, a form or a component carrying the same code. It counts them and says so.
+A menu carries `locale`, empty for the shared menu of its code and the locale
+of the language for a menu of its own, and is matched on its code and that
+key; a file without it holds shared menus. The menu of a language the site
+does not have, or whose code has no shared menu in the file or on the site, is
+left out and named in the report. Since module 2.6.0 the file is in format
+version 3, which an older module refuses rather than write the menu of a
+language over the shared one.
 A component of the file is checked as if the generator had just written it; one
 the site refuses is left out and named. The document of a catalogue item goes
 on the item of the importing site with the same reference (a product) or the

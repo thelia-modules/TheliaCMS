@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Unit\Generation;
 
+use FlexyBundle\Toolkit\StoryProviderInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -27,6 +28,10 @@ final class ToolkitLinkTest extends TestCase
 {
     public function testLinksToThePageOfEverySectionInDebug(): void
     {
+        if (!interface_exists(StoryProviderInterface::class)) {
+            self::markTestSkipped('The theme has no toolkit: the section stories cannot load.');
+        }
+
         $urls = $this->createStub(UrlGeneratorInterface::class);
         $urls->method('generate')->willReturnCallback(static fn (string $route, array $parameters): string => '/'.$route.'/'.$parameters['slug']);
 

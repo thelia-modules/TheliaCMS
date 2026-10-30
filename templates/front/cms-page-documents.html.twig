@@ -1,0 +1,32 @@
+{#
+    The files a CMS page offers to download.
+
+    A theme takes over by shipping its own `cms-page-documents.html.twig` at
+    its root; until it does, this file lists them on any Twig theme. The markup
+    carries `cms-*` class names and no styling, so a theme that only adds a
+    stylesheet already gets a list that fits it.
+
+    Context: one variable only, `cms_page_documents_block`, because the theme
+    parser keeps every variable of a render for the rest of the page. None is
+    set here, and a theme template should set none either.
+      documents: list of {id, title, description, url, extension, type, size,
+                 bytes, download, originalName}; `size` is null when unknown
+      page:      the page as the caller gave it (a page or an id)
+      heading:   the translated heading of the list
+#}
+{% if cms_page_documents_block.documents|length > 0 %}
+    <section class="cms-documents" aria-labelledby="cms-documents-title">
+        <h2 class="cms-documents__title" id="cms-documents-title">{{ cms_page_documents_block.heading }}</h2>
+        <ul class="cms-documents__list">
+            {% for document in cms_page_documents_block.documents %}
+                <li class="cms-documents__item">
+                    <a class="cms-documents__link" href="{{ document.url }}"{{ document.download ? ' download' }}>{{ document.title }}</a>
+                    <span class="cms-documents__meta">{{ document.type }}{{ document.size ? ' · ' ~ document.size }}</span>
+                    {% if document.description %}
+                        <span class="cms-documents__description">{{ document.description }}</span>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+{% endif %}

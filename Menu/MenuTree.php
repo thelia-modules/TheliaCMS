@@ -143,6 +143,35 @@ final readonly class MenuTree
     }
 
     /**
+     * The parents of a copied menu, in the ids of the copy.
+     *
+     * `parent` stores the id of another entry, so a copy whose entries got
+     * new ids has to point them at each other again. An entry whose parent is
+     * not in the set is shown at the root, and is copied there.
+     *
+     * @param list<MenuPlacement> $placements of the original entries
+     * @param array<int, int>     $newIds     id of the copy, keyed by the id of the original
+     *
+     * @return array<int, int> parent in the copy, keyed by the id of the copy
+     */
+    public function remappedParents(array $placements, array $newIds): array
+    {
+        $parents = [];
+
+        foreach ($placements as $placement) {
+            $copy = $newIds[$placement->id] ?? null;
+
+            if (null === $copy) {
+                continue;
+            }
+
+            $parents[$copy] = $newIds[$this->parentOf($placements, $placement)] ?? self::ROOT;
+        }
+
+        return $parents;
+    }
+
+    /**
      * The parent an entry is actually shown under: a row pointing at an entry
      * that is not in the menu any more would otherwise disappear from the tree
      * while still being stored.

@@ -374,6 +374,10 @@ class TheliaCMS extends BaseModule
                 // Registered below, guarded: it implements an interface of the
                 // Flexy theme.
                 __DIR__.'/Content/Section/SectionStories.php',
+                __DIR__.'/Page/Document/PageDocument.php',
+                __DIR__.'/Page/Document/PageDocumentLink.php',
+                __DIR__.'/Page/Document/PageDocumentUpload.php',
+                __DIR__.'/Page/Admin/PageDocumentRow.php',
                 __DIR__.'/Page/PageCard.php',
                 __DIR__.'/Page/PageImage.php',
                 __DIR__.'/Page/PageTagName.php',

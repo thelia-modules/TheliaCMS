@@ -61,28 +61,36 @@ final readonly class CmsMenuProvider
     }
 
     /**
-     * Whether the menu stores at least one entry, whether or not any of them
-     * resolves in the language being read.
+     * Whether the menu read in this language stores at least one entry,
+     * whether or not any of them resolves in that language.
      *
      * A menu somebody filled in is a merchant taking that part of the site
      * over, even on the day all of its entries are offline: falling back to
-     * something else then would show links nobody chose.
+     * something else then would show links nobody chose. The menu asked about
+     * is the one the language reads: its own when it was detached, even
+     * emptied, the shared one otherwise.
      */
-    public function hasEntries(string $code): bool
+    public function hasEntries(string $code, ?string $locale = null): bool
     {
-        return $this->cache->storedEntryCount($code, static function () use ($code): int {
-            $menu = CmsMenuQuery::create()->findOneByCode($code);
+        $locale ??= $this->currentLocale();
+
+        return $this->cache->storedEntryCount($code, $locale, static function () use ($code, $locale): int {
+            $menu = CmsMenuQuery::findServed($code, $locale);
 
             return null === $menu ? 0 : CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->count();
         }) > 0;
     }
 
     /**
+     * A language with a menu of its own reads it, even empty: emptying it is
+     * what the merchant chose for that language, the shared menu does not
+     * show through.
+     *
      * @return list<array<string, mixed>>
      */
     private function build(string $code, string $locale): array
     {
-        $menu = CmsMenuQuery::create()->findOneByCode($code);
+        $menu = CmsMenuQuery::findServed($code, $locale);
 
         if (null === $menu) {
             return [];

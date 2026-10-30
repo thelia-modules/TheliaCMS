@@ -34,7 +34,10 @@ final class CmsMenuType extends AbstractType
             ])
             ->add('code', TextType::class, [
                 'label' => 'Code',
-                'help' => 'What the theme calls this menu by, for example main or footer. Letters, digits, dashes.',
+                'disabled' => $options['code_locked'],
+                'help' => $options['code_locked']
+                    ? 'The code belongs to the shared menu: change it there.'
+                    : 'What the theme calls this menu by, for example main or footer. Letters, digits, dashes.',
                 'constraints' => [
                     new NotBlank(),
                     new Length(max: 50),
@@ -45,6 +48,7 @@ final class CmsMenuType extends AbstractType
 
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefaults(['translation_domain' => 'theliacms']);
+        $resolver->setDefaults(['translation_domain' => 'theliacms', 'code_locked' => false]);
+        $resolver->setAllowedTypes('code_locked', 'bool');
     }
 }

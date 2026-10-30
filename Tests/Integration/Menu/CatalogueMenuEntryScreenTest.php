@@ -34,7 +34,7 @@ final class CatalogueMenuEntryScreenTest extends AdminScreenTestCase
         $product = $factory->product($category, $factory->taxRule(), $factory->currency());
         $product->setLocale($this->locale())->setTitle('Vernis mat')->save();
 
-        $menu = CmsMenuQuery::create()->findOneByCode('footer');
+        $menu = CmsMenuQuery::findShared('footer');
         self::assertInstanceOf(CmsMenu::class, $menu);
         $action = '/admin/cms/menus/'.$menu->getId().'/entries/new';
 

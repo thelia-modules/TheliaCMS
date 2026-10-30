@@ -155,4 +155,42 @@ final class MenuTreeTest extends TestCase
 
         self::assertSame([], $this->tree->flatten($placements));
     }
+
+    /**
+     * A copied menu has new ids: a child still pointing at the id of the
+     * original would hang under nothing, or under an entry of another menu.
+     * The ids of the original are kept lower than those of the copy on
+     * purpose, with a child stored before its parent.
+     */
+    public function testItPointsTheCopiesAtEachOther(): void
+    {
+        $placements = [
+            new MenuPlacement(id: 7, parent: 9, position: 1),
+            new MenuPlacement(id: 9, parent: 0, position: 1),
+            new MenuPlacement(id: 11, parent: 7, position: 1),
+            new MenuPlacement(id: 12, parent: 0, position: 2),
+        ];
+
+        self::assertSame(
+            [107 => 109, 109 => MenuTree::ROOT, 111 => 107, 112 => MenuTree::ROOT],
+            $this->tree->remappedParents($placements, [7 => 107, 9 => 109, 11 => 111, 12 => 112]),
+        );
+    }
+
+    /**
+     * Shown at the root while its parent is gone, so copied at the root rather
+     * than under whatever entry of the copy happens to take that id.
+     */
+    public function testAnEntryWhoseParentIsGoneIsCopiedAtTheRoot(): void
+    {
+        $placements = [
+            new MenuPlacement(id: 3, parent: 42, position: 1),
+            new MenuPlacement(id: 4, parent: 3, position: 1),
+        ];
+
+        self::assertSame(
+            [42 => MenuTree::ROOT, 43 => 42],
+            $this->tree->remappedParents($placements, [3 => 42, 4 => 43]),
+        );
+    }
 }

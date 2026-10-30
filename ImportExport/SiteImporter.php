@@ -21,6 +21,7 @@ use Thelia\Model\CategoryQuery;
 use Thelia\Model\ContentQuery;
 use Thelia\Model\FolderQuery;
 use Thelia\Model\Lang;
+use Thelia\Model\LangQuery;
 use Thelia\Model\ProductQuery;
 use Thelia\Model\RewritingUrlQuery;
 use TheliaCMS\Catalogue\CatalogueItemKeys;
@@ -634,7 +635,12 @@ final readonly class SiteImporter
         array $pageIds,
         ConnectionInterface $connection,
     ): void {
-        foreach ($document->menus() as $menu) {
+        $menus = $document->menus();
+        // The shared menus first, whatever order the file is in: the menu of
+        // a language is only taken in beside the shared menu of its code.
+        usort($menus, static fn (array $a, array $b): int => (CmsMenuQuery::SHARED === self::menuLocale($b)) <=> (CmsMenuQuery::SHARED === self::menuLocale($a)));
+
+        foreach ($menus as $menu) {
             $code = trim((string) ($menu['code'] ?? ''));
 
             if ('' === $code) {
@@ -643,7 +649,27 @@ final readonly class SiteImporter
                 continue;
             }
 
-            $existing = CmsMenuQuery::create()->findOneByCode($code);
+            $menuLocale = self::menuLocale($menu);
+
+            if (CmsMenuQuery::SHARED !== $menuLocale) {
+                if (!LangQuery::create()->filterByLocale($menuLocale)->exists($connection)) {
+                    $report->warn(\sprintf('The menu "%s" of the language %s was left out: this site has no such language.', $code, $menuLocale));
+                    $report->skipped('menus');
+
+                    continue;
+                }
+
+                // Nothing on this site would list it, and nothing would remove
+                // it with the menu of its code.
+                if (null === CmsMenuQuery::findShared($code, $connection)) {
+                    $report->warn(\sprintf('The menu "%s" of the language %s was left out: neither the file nor this site has the shared menu of that code.', $code, $menuLocale));
+                    $report->skipped('menus');
+
+                    continue;
+                }
+            }
+
+            $existing = CmsMenuQuery::findForLocale($code, $menuLocale, $connection);
 
             if (null !== $existing && !$options->replace) {
                 $report->skipped('menus');
@@ -651,7 +677,7 @@ final readonly class SiteImporter
                 continue;
             }
 
-            $model = $existing ?? (new CmsMenu())->setCode($code);
+            $model = $existing ?? (new CmsMenu())->setCode($code)->setMenuLocale($menuLocale);
 
             foreach ($menu['translations'] ?? [] as $locale => $translation) {
                 $model->setLocale((string) $locale)->setTitle((string) ($translation['title'] ?? $code));
@@ -695,7 +721,53 @@ final readonly class SiteImporter
             }
 
             null !== $existing ? $report->replaced('menus') : $report->created('menus');
+
+            if (null !== $existing && CmsMenuQuery::SHARED === $menuLocale) {
+                $this->warnAboutKeptMenus($code, $menus, $report, $connection);
+            }
         }
+    }
+
+    /**
+     * A shared menu replaced by the file does not reach the languages that
+     * have a menu of their own, unless the file carries that language too.
+     *
+     * @param list<array<mixed>> $menus
+     */
+    private function warnAboutKeptMenus(string $code, array $menus, ImportReport $report, ConnectionInterface $connection): void
+    {
+        $inFile = array_map(
+            static fn (array $menu): string => self::menuLocale($menu),
+            array_filter($menus, static fn (array $menu): bool => trim((string) ($menu['code'] ?? '')) === $code),
+        );
+
+        $kept = array_values(array_diff(array_map(
+            'strval',
+            CmsMenuQuery::create()
+                ->filterByCode($code)
+                ->filterByMenuLocale(CmsMenuQuery::SHARED, Criteria::NOT_EQUAL)
+                ->orderByMenuLocale()
+                ->select(['MenuLocale'])
+                ->find($connection)
+                ->toArray(),
+        ), $inFile));
+
+        if ([] !== $kept) {
+            $report->warn(\sprintf('The shared menu "%s" was replaced, but the language(s) %s keep a menu of their own that the file does not carry.', $code, implode(', ', $kept)));
+        }
+    }
+
+    /**
+     * A file written before languages could have a menu of their own has no
+     * key: its menus are the shared ones.
+     *
+     * @param array<mixed> $menu
+     */
+    private static function menuLocale(array $menu): string
+    {
+        $locale = $menu['locale'] ?? null;
+
+        return \is_string($locale) ? trim($locale) : CmsMenuQuery::SHARED;
     }
 
     /**
