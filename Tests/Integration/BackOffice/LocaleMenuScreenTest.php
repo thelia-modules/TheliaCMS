@@ -267,6 +267,55 @@ final class LocaleMenuScreenTest extends AdminScreenTestCase
         self::assertInstanceOf(CmsMenu::class, CmsMenuQuery::findForLocale(self::CODE, $this->other));
     }
 
+    public function testRealigningAndGoingBackNeedTheRightToDeleteToo(): void
+    {
+        $shared = $this->sharedMenu(['Accueil', 'Contact']);
+        $detached = $this->detach($shared);
+        $this->logInAs((new FixtureFactory($this->getPropelConnection()))->restrictedAdmin([CmsResources::MENU => [AccessManager::VIEW, AccessManager::UPDATE]]));
+
+        $screen = $this->screen($this->url($detached, $this->otherId));
+        self::assertSame(0, $screen->filter('[data-testid="cms-menu-realign"], [data-testid="cms-menu-realign-shared"], [data-testid="cms-menu-reattach"]')->count());
+        $token = $this->tokenOfTheScripts($screen);
+
+        foreach (['realign?source=shared', 'reattach'] as $action) {
+            $url = \sprintf('/admin/cms/menus/%d/%s', $detached->getId(), $action).(str_contains($action, '?') ? '&' : '?').'edit_language_id='.$this->otherId;
+            self::assertSame(403, $this->send('GET', $url), 'GET '.$action);
+            self::assertSame(403, $this->send('POST', $url, ['source' => 'shared', '_token' => $token]), 'POST '.$action);
+        }
+
+        self::assertSame(2, $this->entries($detached));
+        self::assertInstanceOf(CmsMenu::class, CmsMenuQuery::findForLocale(self::CODE, $this->other));
+    }
+
+    public function testTheListCountsTheEntriesOfTheMenuTheLanguageReads(): void
+    {
+        $shared = $this->sharedMenu(['Accueil', 'Contact']);
+        $detached = $this->detach($shared);
+        $this->entry($detached, 'Seulement ici', 3);
+        $cell = \sprintf('[data-testid="cms-menu-entries-%d"]', $shared->getId());
+
+        self::assertSame('3', trim(preg_replace('/\D.*/s', '', trim($this->screen('/admin/cms/menus?edit_language_id='.$this->otherId)->filter($cell)->text())) ?? ''));
+        self::assertSame('2', trim(preg_replace('/\D.*/s', '', trim($this->screen('/admin/cms/menus?edit_language_id='.$this->languageId())->filter($cell)->text())) ?? ''));
+    }
+
+    public function testDeletingASharedMenuWarnsAboutItsLanguagesAndDeletesThem(): void
+    {
+        $shared = $this->sharedMenu(['Accueil']);
+        $plain = $this->screen('/admin/cms/menus')->filter(\sprintf('[data-testid="cms-menu-row-%d"] form[action*="/delete"]', $shared->getId()))->attr('onsubmit');
+        $detached = $this->detach($shared);
+        $detachedId = (int) $detached->getId();
+
+        $form = $this->screen('/admin/cms/menus')->filter(\sprintf('[data-testid="cms-menu-row-%d"] form[action*="/delete"]', $shared->getId()));
+        self::assertNotSame($plain, $form->attr('onsubmit'), 'The question changes when languages have a menu of their own.');
+        self::assertMatchesRegularExpression('/languages|langues/', (string) $form->attr('onsubmit'));
+
+        self::assertSame(302, $this->send('POST', (string) $form->attr('action'), ['_token' => (string) $form->filter('input[name="_token"]')->attr('value')]));
+        CmsMenuTableMap::clearInstancePool();
+        self::assertNull(CmsMenuQuery::findForLocale(self::CODE, $this->other));
+        self::assertNull(CmsMenuQuery::create()->findPk($detachedId));
+        self::assertSame(0, CmsMenuItemQuery::create()->filterByMenuId($detachedId)->count());
+    }
+
     private function url(CmsMenu $menu, int $languageId): string
     {
         return \sprintf('/admin/cms/menus/%d?edit_language_id=%d', $menu->getId(), $languageId);

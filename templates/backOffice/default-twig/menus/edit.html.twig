@@ -86,7 +86,7 @@
                                     </form>
                                 {% endif %}
 
-                                {% if realign_sources is not empty %}
+                                {% if may_replace and realign_sources is not empty %}
                                     <form method="get" class="d-inline-flex gap-1" action="{{ path('admin.cms.menus.realign', { id: menu.id }) }}">
                                         <input type="hidden" name="edit_language_id" value="{{ edit_language_id }}">
                                         <label class="visually-hidden" for="cms-menu-realign-source">{{ 'Realign on…'|trans({}, 'theliacms') }}</label>
@@ -104,7 +104,7 @@
                                     </form>
                                 {% endif %}
 
-                                {% if is_detached and shared_menu %}
+                                {% if may_replace and is_detached and shared_menu %}
                                     <a class="btn btn-sm btn-outline-secondary" data-testid="cms-menu-realign-shared"
                                        href="{{ path('admin.cms.menus.realign', { id: shared_menu.id, source: edit_locale, edit_language_id: edit_language_id }) }}">
                                         {{ 'Make the shared menu a copy of this one'|trans({}, 'theliacms') }}

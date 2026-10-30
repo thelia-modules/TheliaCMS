@@ -120,6 +120,7 @@ final readonly class CmsMenuAdminController
             'edit_locale' => $lang->getLocale(),
             'edit_language_id' => $lang->getId(),
             'may_write' => true,
+            'may_replace' => false,
             'place_url_template' => null,
             'assets_version' => null,
         ]));
@@ -280,6 +281,8 @@ final readonly class CmsMenuAdminController
     #[Route('/{id}/realign', name: 'realign', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function realign(Request $request, int $id): Response
     {
+        $this->denyUnlessMayReplace();
+
         $menu = $this->menuOrFail($id);
         $lang = $this->languages->resolve($request);
         $code = (string) $menu->getCode();
@@ -288,8 +291,6 @@ final readonly class CmsMenuAdminController
         $sourceLocale = self::SHARED_SOURCE === $source ? CmsMenuQuery::SHARED : $source;
 
         if ($request->isMethod('POST')) {
-            $this->denyUnless(AccessManager::UPDATE);
-
             try {
                 if ('' === $source) {
                     throw new \DomainException('The menu to copy from does not exist.');
@@ -336,6 +337,8 @@ final readonly class CmsMenuAdminController
     #[Route('/{id}/reattach', name: 'reattach', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function reattach(Request $request, int $id): Response
     {
+        $this->denyUnlessMayReplace();
+
         $menu = $this->menuOrFail($id);
         $lang = $this->languages->resolve($request);
         $locale = (string) $menu->getMenuLocale();
@@ -343,8 +346,6 @@ final readonly class CmsMenuAdminController
         $back = null === $shared ? $id : (int) $shared->getId();
 
         if ($request->isMethod('POST')) {
-            $this->denyUnless(AccessManager::UPDATE);
-
             try {
                 $this->writer->reattach((string) $menu->getCode(), $locale);
                 $this->flash($request, 'success', 'This language reads the shared menu again.');
@@ -394,6 +395,7 @@ final readonly class CmsMenuAdminController
             'edit_locale' => $locale,
             'edit_language_id' => $lang->getId(),
             'may_write' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::MENU], [], [AccessManager::UPDATE]),
+            'may_replace' => $this->mayReplace(),
             'place_url_template' => $this->placeUrlTemplate($menu, $lang),
             'assets_version' => $this->assetsVersion(),
         ]));
@@ -580,6 +582,23 @@ final readonly class CmsMenuAdminController
     {
         if ($request->hasSession() && ($session = $request->getSession()) instanceof FlashBagAwareSessionInterface) {
             $session->getFlashBag()->add($type, $this->translate($message));
+        }
+    }
+
+    /**
+     * Realigning and going back to the shared menu destroy entries and menus
+     * the way deleting them does: both rights are needed.
+     */
+    private function mayReplace(): bool
+    {
+        return $this->securityContext->isGranted(['ADMIN'], [CmsResources::MENU], [], [AccessManager::UPDATE])
+            && $this->securityContext->isGranted(['ADMIN'], [CmsResources::MENU], [], [AccessManager::DELETE]);
+    }
+
+    private function denyUnlessMayReplace(): void
+    {
+        if (!$this->mayReplace()) {
+            throw new AccessDeniedHttpException($this->translate('You are not allowed to change menus.'));
         }
     }
 
