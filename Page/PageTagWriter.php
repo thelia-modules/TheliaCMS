@@ -23,7 +23,7 @@ use TheliaCMS\Page\Admin\CmsActivityLog;
  * Every change to the tags goes through here.
  *
  * A tag shows on the pages that carry it and on the lists of pages, so
- * renaming or deleting one drops them from the caches: the page itself did not
+ * renaming, recoloring or deleting one drops them from the caches: the page itself did not
  * change, the caches have no other way to know.
  */
 final readonly class PageTagWriter
@@ -37,11 +37,12 @@ final readonly class PageTagWriter
 
     /**
      * The tag of this name, created unless the site has it already under any
-     * spelling of its case.
+     * spelling of its case. The color goes to a tag this call creates; a tag
+     * the site has already keeps its own.
      *
      * @throws \InvalidArgumentException when the name is empty or too long
      */
-    public function add(string $name, ?ConnectionInterface $connection = null): CmsTag
+    public function add(string $name, ?PageTagColor $color = null, ?ConnectionInterface $connection = null): CmsTag
     {
         $name = PageTagName::normalize($name);
 
@@ -55,7 +56,7 @@ final readonly class PageTagWriter
             return $existing;
         }
 
-        $tag = (new CmsTag())->setName($name);
+        $tag = (new CmsTag())->setName($name)->setColor($color?->value);
         $tag->save($connection);
         $this->activityLog->record('CREATE', (int) $tag->getId(), \sprintf('Tag "%s" added', $name));
 
@@ -85,6 +86,20 @@ final readonly class PageTagWriter
 
         $this->purgePagesOf($tag);
         $this->activityLog->record('UPDATE', (int) $tag->getId(), \sprintf('Tag "%s" renamed to "%s"', $former, $name));
+    }
+
+    public function recolor(CmsTag $tag, ?PageTagColor $color): void
+    {
+        $former = PageTagColor::fromStored($tag->getColor());
+
+        if ($former === $color) {
+            return;
+        }
+
+        $tag->setColor($color?->value)->save();
+
+        $this->purgePagesOf($tag);
+        $this->activityLog->record('UPDATE', (int) $tag->getId(), \sprintf('Tag "%s" recolored from %s to %s', (string) $tag->getName(), $former->value ?? 'none', $color->value ?? 'none'));
     }
 
     /**

@@ -64,6 +64,7 @@ use TheliaCMS\Model\CmsPageSearchQuery;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Page\Field\FieldDefinitions;
 use TheliaCMS\Page\Field\InvalidFieldsException;
+use TheliaCMS\Page\PageTagColor;
 use TheliaCMS\Page\PageTagName;
 use TheliaCMS\Page\PageTagWriter;
 use TheliaCMS\Page\PageTypeCode;
@@ -1021,7 +1022,8 @@ final readonly class SiteImporter
      * The tag of an imported page, created here when the site lacks it: a tag
      * is a label of the content, so bringing one in takes no more than the
      * right to write the page, from a site file or from a saved template.
-     * Files written before 1.3.0 carry no tag.
+     * Files written before 1.3.0 carry no tag, before 2.5.0 no color. The
+     * color goes to a tag created here: a tag the site has keeps its own.
      *
      * @param array<string, mixed> $page
      */
@@ -1041,7 +1043,27 @@ final readonly class SiteImporter
             return null;
         }
 
-        return (int) $this->tagWriter->add($name, $connection)->getId();
+        return (int) $this->tagWriter->add($name, $this->tagColorOf($page, $name, $report), $connection)->getId();
+    }
+
+    /**
+     * @param array<string, mixed> $page
+     */
+    private function tagColorOf(array $page, string $name, ImportReport $report): ?PageTagColor
+    {
+        $raw = $page['tag_color'] ?? null;
+
+        if (null === $raw) {
+            return null;
+        }
+
+        $color = \is_string($raw) ? PageTagColor::tryFrom($raw) : null;
+
+        if (null === $color) {
+            $report->warn(\sprintf('The tag "%s" was imported without its color, which is not one of the palette.', $name));
+        }
+
+        return $color;
     }
 
     /**

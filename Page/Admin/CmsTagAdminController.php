@@ -28,6 +28,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
 use TheliaCMS\Model\CmsTag;
+use TheliaCMS\Page\PageTagColor;
 use TheliaCMS\Page\PageTagExistsException;
 use TheliaCMS\Page\PageTagName;
 use TheliaCMS\Page\PageTagRepository;
@@ -89,6 +90,7 @@ final readonly class CmsTagAdminController
             $rows[] = [
                 'id' => (int) $tag->getId(),
                 'name' => (string) $tag->getName(),
+                'badge' => PageTagColor::badgeClassOf(PageTagColor::fromStored($tag->getColor())),
                 'pages' => $pageCounts[(int) $tag->getId()] ?? 0,
             ];
         }
@@ -107,7 +109,7 @@ final readonly class CmsTagAdminController
     {
         $tag = $this->tagOrFail($id);
 
-        $form = $this->forms->create(PageTagType::class, ['name' => $tag->getName()], [
+        $form = $this->forms->create(PageTagType::class, ['name' => $tag->getName(), 'color' => PageTagColor::fromStored($tag->getColor())], [
             'action' => $this->urls->generate('admin.cms.tags.edit', ['id' => $id]),
         ]);
 
@@ -120,7 +122,8 @@ final readonly class CmsTagAdminController
         if ($form->isSubmitted() && $form->isValid()) {
             try {
                 $this->writer->rename($tag, (string) $form->get('name')->getData());
-                $this->flash($request, 'success', $this->translate('The tag has been renamed.'));
+                $this->writer->recolor($tag, $form->get('color')->getData());
+                $this->flash($request, 'success', $this->translate('The tag has been saved.'));
 
                 return $this->backToList();
             } catch (PageTagExistsException) {
@@ -158,7 +161,7 @@ final readonly class CmsTagAdminController
             return null;
         }
 
-        $this->writer->add($name);
+        $this->writer->add($name, $form->get('color')->getData());
         $this->flash($request, 'success', $this->translate('The tag has been added.'));
 
         return $this->backToList();

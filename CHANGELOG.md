@@ -47,6 +47,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   paused and that nothing moves for a visitor who asks for less motion. A
   test holds the recipe of the skill to the validator, and the elements the
   prompt names as taken out to the filter of the page.
+- **A tag may have a color**, picked on its screen under **CMS > Tags** among
+  six (`red`, `orange`, `yellow`, `green`, `cyan`, `dark`) or none. The list
+  of tags and the list of pages show each tag in its color; a tag without one
+  stays grey. A theme reads the name of the color as `tagColor`, beside `tag`,
+  on the cards of `cms_pages_tagged()`, on `cms_page` and on the page handed
+  to the `cmspage.*` hooks. The export carries it per page (`tag_color`); an
+  import gives it to the tags it creates, and drops a name the palette does
+  not have with a warning. The update to 2.5.0 adds `cms_tag.color`, empty
+  for the tags a site has already.
 
 ### Fixed
 

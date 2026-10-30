@@ -24,7 +24,9 @@ use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsTag;
 use TheliaCMS\Model\CmsTagQuery;
 use TheliaCMS\Model\Map\CmsPageTableMap;
+use TheliaCMS\Model\Map\CmsTagTableMap;
 use TheliaCMS\Page\PageCard;
+use TheliaCMS\Page\PageTagColor;
 use TheliaCMS\Page\PageTagExistsException;
 use TheliaCMS\Page\PageTagRepository;
 use TheliaCMS\Page\PageTagWriter;
@@ -85,6 +87,41 @@ final class PageTagTest extends CmsIntegrationTestCase
         self::assertSame('Recette', $this->tags()->find((int) $recipe->getId())?->getName());
     }
 
+    public function testATagIsCreatedInItsColorAndOneTheSiteHasKeepsItsOwn(): void
+    {
+        $tag = $this->tagWriter()->add('Recette', PageTagColor::Green);
+
+        self::assertSame('green', $tag->getColor());
+        self::assertSame('green', $this->tagWriter()->add('recette', PageTagColor::Red)->getColor(), 'Adding a name the site has changes nothing.');
+        self::assertNull($this->tagWriter()->add('Actualité')->getColor());
+    }
+
+    public function testRecoloringATagDropsItsPagesFromTheSharedCacheUnlessTheColorIsTheSame(): void
+    {
+        $tag = $this->tagWriter()->add('Recette', PageTagColor::Green);
+        $page = $this->tagged('Gratin de pâtes', $tag);
+        $purger = new class implements CachePurgerInterface {
+            /** @var list<string> */
+            public array $purged = [];
+
+            public function purge(array $tags): void
+            {
+                array_push($this->purged, ...$tags);
+            }
+        };
+        $writer = $this->purgingWith(PageTagWriter::class, $purger);
+
+        $writer->recolor($tag, PageTagColor::Green);
+        self::assertSame([], $purger->purged, 'The same color changes nothing.');
+
+        $writer->recolor($tag, PageTagColor::Red);
+        self::assertSame('red', $this->tags()->find((int) $tag->getId())?->getColor());
+        self::assertSame([CacheTags::partial(PageListPartial::NAME), CacheTags::page((int) $page->getId())], $purger->purged);
+
+        $writer->recolor($tag, null);
+        self::assertNull($this->tags()->find((int) $tag->getId())?->getColor());
+    }
+
     public function testDeletingATagDetachesItsPagesTheBinIncluded(): void
     {
         $tag = $this->tagWriter()->add('Recette');
@@ -108,6 +145,28 @@ final class PageTagTest extends CmsIntegrationTestCase
 
         self::assertSame('Recette', $this->published($page)->tag);
         self::assertNull($this->published($this->createPage('Sans étiquette'))->tag);
+    }
+
+    public function testThePageAndTheCardsCarryTheColorOfTheTagAsANameOfThePalette(): void
+    {
+        $tag = $this->tagWriter()->add('Recette', PageTagColor::Cyan);
+        $page = $this->tagged('Gratin de pâtes', $tag);
+
+        self::assertSame('cyan', $this->published($page)->tagColor);
+        self::assertSame('cyan', $this->published($page)->withHtml('<p>resolved</p>')->tagColor);
+        self::assertSame('cyan', $this->repository()->withTag('Recette', $this->locale())[0]->tagColor);
+        $ofType = array_values(array_filter(
+            $this->repository()->ofType((string) $page->getPageType(), $this->locale()),
+            static fn (PageCard $card): bool => $card->id === (int) $page->getId(),
+        ));
+        self::assertSame('cyan', $ofType[0]->tagColor ?? null);
+        self::assertNull($this->published($this->createPage('Sans étiquette'))->tagColor);
+
+        // A name written by hand in the table is not one a theme can map.
+        $this->getPropelConnection()->exec(\sprintf("UPDATE cms_tag SET color = 'pink' WHERE id = %d", $tag->getId()));
+        CmsTagTableMap::clearInstancePool();
+        CmsPageTableMap::clearInstancePool();
+        self::assertNull($this->published($page)->tagColor);
     }
 
     public function testThePagesOfATagAreTheOnesOnlineInTheLanguage(): void
@@ -209,6 +268,49 @@ final class PageTagTest extends CmsIntegrationTestCase
         $imported = $this->tags()->findByName('Étiquette importée');
         self::assertInstanceOf(CmsTag::class, $imported);
         self::assertSame((int) $imported->getId(), $this->tagIdInDatabase($page));
+    }
+
+    public function testTheColorTravelsWithTheExportAndColorsTheTagsTheImportCreates(): void
+    {
+        $page = $this->tagged('Gratin de pâtes', $this->tagWriter()->add('Recette', PageTagColor::Orange));
+        $document = $this->exportedPage($page);
+
+        self::assertSame('orange', $document['pages'][0]['tag_color']);
+
+        $document['pages'][0]['tag'] = 'Étiquette importée';
+        $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
+
+        self::assertSame([], $report->warnings());
+        self::assertSame('orange', $this->tags()->findByName('Étiquette importée')?->getColor());
+    }
+
+    public function testATagTheSiteHasKeepsItsColorOnImport(): void
+    {
+        $page = $this->tagged('Gratin de pâtes', $this->tagWriter()->add('Recette', PageTagColor::Orange));
+        $document = $this->exportedPage($page);
+        $document['pages'][0]['tag_color'] = 'dark';
+
+        $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
+
+        CmsTagTableMap::clearInstancePool();
+        self::assertSame('orange', $this->tags()->findByName('Recette')?->getColor());
+    }
+
+    public function testAnImportedColorOutsideThePaletteIsDroppedWithAWarning(): void
+    {
+        $page = $this->createPage('Gratin de pâtes');
+        $document = $this->exportedPage($page);
+        $document['pages'][0]['tag'] = 'Étiquette importée';
+        $document['pages'][0]['tag_color'] = '#ff00ff';
+
+        $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($document), new ImportOptions(replace: true));
+
+        $imported = $this->tags()->findByName('Étiquette importée');
+        self::assertInstanceOf(CmsTag::class, $imported, 'The tag is kept.');
+        self::assertNull($imported->getColor());
+        self::assertSame((int) $imported->getId(), $this->tagIdInDatabase($page));
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('Étiquette importée', $report->warnings()[0]);
     }
 
     public function testAFileWrittenBeforeTagsImportsPagesWithoutOne(): void
