@@ -136,18 +136,28 @@ final readonly class CmsMenuWriter
 
         $shared = CmsMenuQuery::findShared($code) ?? throw new \DomainException('There is no menu with this code.');
 
-        if (null !== CmsMenuQuery::findForLocale($code, $locale)) {
-            throw new \DomainException('This language already has a menu of its own.');
-        }
-
         $detached = (new CmsMenu())->setCode($code)->setMenuLocale($locale);
 
-        $this->transactional(function (ConnectionInterface $connection) use ($shared, $detached): void {
+        $this->transactional(function (ConnectionInterface $connection) use ($shared, $detached, $code, $locale): void {
+            // Inside the transaction, and backed by the unique index: two
+            // administrators detaching the same language at once get the
+            // message, not an error page.
+            if (null !== CmsMenuQuery::findForLocale($code, $locale, $connection)) {
+                throw new \DomainException('This language already has a menu of its own.');
+            }
+
             foreach ($shared->getCmsMenuI18ns(null, $connection) as $translation) {
                 $detached->setLocale((string) $translation->getLocale())->setTitle($translation->getTitle());
             }
 
-            $detached->save($connection);
+            try {
+                $detached->save($connection);
+            } catch (\Throwable $throwable) {
+                throw UniqueViolation::caused($throwable)
+                    ? new \DomainException('This language already has a menu of its own.', 0, $throwable)
+                    : $throwable;
+            }
+
             $this->copyEntries($shared, $detached, $connection);
         });
 
