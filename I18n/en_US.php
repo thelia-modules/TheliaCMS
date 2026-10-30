@@ -1336,4 +1336,5 @@ return [
     'The title is limited to %max% characters.' => 'The title is limited to %max% characters.',
     'Document saved.' => 'Document saved.',
     'Document deleted.' => 'Document deleted.',
+    'The description is limited to %max% bytes.' => 'The description is limited to %max% bytes.',
 ];

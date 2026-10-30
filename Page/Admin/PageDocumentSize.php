@@ -15,12 +15,15 @@ declare(strict_types=1);
 namespace TheliaCMS\Page\Admin;
 
 /**
- * A size in bytes as an editor reads it: 850 B, 12.4 KB, 3 MB (powers of 1024,
- * the decimal mark of the language).
+ * A size in bytes as an editor reads it: 850 B, 12.4 KB, 3 MB in English,
+ * 850 o, 12,4 Ko, 3 Mo in French (powers of 1024), the decimal mark being the
+ * one of the language.
  */
 final class PageDocumentSize
 {
     private const array UNITS = ['B', 'KB', 'MB', 'GB'];
+
+    private const array FRENCH_UNITS = ['o', 'Ko', 'Mo', 'Go'];
 
     private function __construct()
     {
@@ -36,12 +39,11 @@ final class PageDocumentSize
             ++$unit;
         }
 
-        $text = 0 === $unit ? (string) (int) $value : rtrim(rtrim(number_format($value, 1, '.', ''), '0'), '.');
+        $formatter = new \NumberFormatter($locale, \NumberFormatter::DECIMAL);
+        $formatter->setAttribute(\NumberFormatter::MAX_FRACTION_DIGITS, 0 === $unit ? 0 : 1);
 
-        if (str_starts_with($locale, 'fr') || str_starts_with($locale, 'de') || str_starts_with($locale, 'it') || str_starts_with($locale, 'es')) {
-            $text = str_replace('.', ',', $text);
-        }
+        $units = str_starts_with($locale, 'fr') ? self::FRENCH_UNITS : self::UNITS;
 
-        return $text.' '.self::UNITS[$unit];
+        return \sprintf('%s %s', $formatter->format($value), $units[$unit]);
     }
 }

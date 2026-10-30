@@ -31,7 +31,6 @@ use Thelia\Core\Security\SecurityContext;
 use Thelia\Model\Lang;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageDocument;
-use TheliaCMS\Page\Document\PageDocument;
 use TheliaCMS\Page\Document\PageDocumentRepository;
 use TheliaCMS\Page\Document\PageDocumentUpload;
 use TheliaCMS\Page\Document\PageDocumentWriter;
@@ -48,6 +47,9 @@ final readonly class CmsPageDocumentController
 {
     /** Characters of the title of a document, as the column holds them. */
     private const int TITLE_MAX_LENGTH = 255;
+
+    /** Bytes of the description: a TEXT column holds 65535 bytes of UTF-8. */
+    private const int DESCRIPTION_MAX_BYTES = 65535;
 
     public function __construct(
         private UrlGeneratorInterface $urls,
@@ -110,7 +112,7 @@ final readonly class CmsPageDocumentController
     {
         $this->denyUnless(AccessManager::UPDATE);
         $lang = $this->languages->resolve($request);
-        $this->documentOfPageOrFail($id, $documentId, $lang->getLocale());
+        $this->documentOfPageOrFail($id, $documentId);
 
         $title = $request->request->getString('title');
 
@@ -120,7 +122,15 @@ final readonly class CmsPageDocumentController
             return $this->backToTab($id, $lang);
         }
 
-        $this->writer->describe($documentId, $lang->getLocale(), $title, $request->request->getString('description'));
+        $description = $request->request->getString('description');
+
+        if (\strlen(trim($description)) > self::DESCRIPTION_MAX_BYTES) {
+            $this->flash($request, 'danger', $this->translator->trans('The description is limited to %max% bytes.', ['%max%' => self::DESCRIPTION_MAX_BYTES], TheliaCMS::DOMAIN_NAME));
+
+            return $this->backToTab($id, $lang);
+        }
+
+        $this->writer->describe($documentId, $lang->getLocale(), $title, $description);
         $this->flash($request, 'success', $this->translate('Document saved.'));
 
         return $this->backToTab($id, $lang);
@@ -150,7 +160,7 @@ final readonly class CmsPageDocumentController
     {
         $this->denyUnless(AccessManager::DELETE);
         $lang = $this->languages->resolve($request);
-        $this->documentOfPageOrFail($id, $documentId, $lang->getLocale());
+        $this->documentOfPageOrFail($id, $documentId);
 
         $this->writer->delete($documentId);
         $this->flash($request, 'success', $this->translate('Document deleted.'));
@@ -178,17 +188,13 @@ final readonly class CmsPageDocumentController
      * A document of this page, or a 404: the address names both, and a
      * document of another page is not reachable through this one.
      */
-    private function documentOfPageOrFail(int $pageId, int $documentId, string $locale): PageDocument
+    private function documentOfPageOrFail(int $pageId, int $documentId): void
     {
         $this->livePageOrFail($pageId);
 
-        foreach ($this->documents->forPage($pageId, $locale) as $document) {
-            if ($document->id === $documentId) {
-                return $document;
-            }
+        if (!$this->documents->belongsToPage($documentId, $pageId)) {
+            throw new NotFoundHttpException();
         }
-
-        throw new NotFoundHttpException();
     }
 
     private function denyUnless(string $access): void

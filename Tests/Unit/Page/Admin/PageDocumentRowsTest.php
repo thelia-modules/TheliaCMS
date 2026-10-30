@@ -79,7 +79,9 @@ final class PageDocumentRowsTest extends TestCase
         self::assertSame('0 B', PageDocumentSize::human(0, 'en_US'));
         self::assertSame('850 B', PageDocumentSize::human(850, 'en_US'));
         self::assertSame('12.4 KB', PageDocumentSize::human(12_700, 'en_US'));
-        self::assertSame('12,4 KB', PageDocumentSize::human(12_700, 'fr_FR'));
+        self::assertSame('12,4 Ko', PageDocumentSize::human(12_700, 'fr_FR'));
+        self::assertSame('850 o', PageDocumentSize::human(850, 'fr_FR'));
+        self::assertSame('100 Mo', PageDocumentSize::human(100 * 1024 * 1024, 'fr_FR'));
         self::assertSame('100 MB', PageDocumentSize::human(100 * 1024 * 1024, 'en_US'));
         self::assertSame('1.5 MB', PageDocumentSize::human((int) (1.5 * 1024 * 1024), 'en_US'));
         self::assertSame('0 B', PageDocumentSize::human(-5, 'en_US'));

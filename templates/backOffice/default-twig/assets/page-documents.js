@@ -38,7 +38,7 @@
         var token = form.querySelector('input[name="_token"]');
         var extensions = (form.getAttribute('data-extensions') || '').split(',');
         var maxSize = parseInt(form.getAttribute('data-max-size') || '0', 10);
-        var m = JSON.parse(form.getAttribute('data-messages') || '{}');
+        var messages = JSON.parse(form.getAttribute('data-messages') || '{}');
         var busy = false;
 
         form.addEventListener('submit', function (event) {
@@ -51,11 +51,11 @@
             var extension = (file.name.split('.').pop() || '').toLowerCase();
 
             if (file.name.indexOf('.') === -1 || extensions.indexOf(extension) === -1) {
-                return m.format;
+                return messages.format;
             }
 
             if (maxSize > 0 && file.size > maxSize) {
-                return m.tooLarge;
+                return messages.tooLarge;
             }
 
             return null;
@@ -68,20 +68,30 @@
             name.style.maxWidth = '40%';
             var bar = element('div', 'progress flex-grow-1');
             bar.style.height = '6px';
+            bar.setAttribute('role', 'progressbar');
+            bar.setAttribute('aria-label', file.name);
+            bar.setAttribute('aria-valuemin', '0');
+            bar.setAttribute('aria-valuemax', '100');
+            bar.setAttribute('aria-valuenow', '0');
             var fill = element('div', 'progress-bar');
             fill.style.width = '0%';
             bar.appendChild(fill);
-            var status = element('span', 'text-nowrap text-body-secondary', m.sending);
+            var status = element('span', 'text-nowrap text-body-secondary', messages.sending);
             item.append(name, bar, status);
             list.appendChild(item);
 
             return {
-                progress: function (ratio) { fill.style.width = Math.round(ratio * 100) + '%'; },
+                progress: function (ratio) {
+                    var percent = Math.round(ratio * 100);
+                    fill.style.width = percent + '%';
+                    bar.setAttribute('aria-valuenow', String(percent));
+                },
                 added: function () {
                     fill.style.width = '100%';
+                    bar.setAttribute('aria-valuenow', '100');
                     fill.classList.add('bg-success');
                     status.className = 'text-nowrap text-success';
-                    status.textContent = m.added;
+                    status.textContent = messages.added;
                 },
                 refused: function (reason) {
                     bar.remove();
@@ -123,11 +133,11 @@
                         return;
                     }
 
-                    view.refused(answer && answer.refused && answer.refused[0] ? answer.refused[0].reason : m.failed);
+                    view.refused(answer && answer.refused && answer.refused[0] ? answer.refused[0].reason : messages.failed);
                     resolve(false);
                 });
                 request.addEventListener('error', function () {
-                    view.refused(m.failed);
+                    view.refused(messages.failed);
                     resolve(false);
                 });
                 request.send(body);
@@ -145,7 +155,6 @@
             }
 
             busy = true;
-            list.classList.remove('d-none');
             done.classList.add('d-none');
             done.replaceChildren();
 
@@ -182,7 +191,7 @@
                 }
 
                 if (stored > 0) {
-                    var show = element('button', 'btn btn-sm btn-primary', m.show);
+                    var show = element('button', 'btn btn-sm btn-primary', messages.show);
                     show.type = 'button';
                     show.setAttribute('data-cms-document-upload-show', '');
                     show.addEventListener('click', reload);

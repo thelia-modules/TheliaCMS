@@ -36,7 +36,10 @@
             <div class="form-text" id="cms-page-document-files-help">
                 {{ 'Formats: %formats%. Up to %size% per file and %count% files at a time.'|trans({ '%formats%': document_extensions|join(', '), '%size%': document_max_size_label, '%count%': document_max_files }, 'theliacms') }}
             </div>
-            <ul class="list-unstyled small mt-2 mb-0 d-none" data-cms-document-upload-files aria-live="polite"></ul>
+            {# Always there, so a screen reader that watches it hears the rows added. #}
+            <div class="small mt-2" aria-live="polite" data-testid="cms-page-document-upload-status">
+                <ul class="list-unstyled mb-0" data-cms-document-upload-files></ul>
+            </div>
             <div class="d-none mt-2" data-cms-document-upload-done></div>
         </form>
     {% endif %}
