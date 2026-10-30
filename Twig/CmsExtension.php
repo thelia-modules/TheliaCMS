@@ -17,6 +17,7 @@ namespace TheliaCMS\Twig;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\Lang;
+use TheliaCMS\Content\ExampleRenderingInterface;
 use TheliaCMS\Content\Partial\PartialSection;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Front\ThemeTemplateRenderer;
@@ -104,6 +105,12 @@ final class CmsExtension extends AbstractExtension
 
         if (null === $definition) {
             return '';
+        }
+
+        // The toolkit asks for no props: a section that draws its example in
+        // its own way (a picture of the theme) is asked to.
+        if (null === $props && $definition instanceof ExampleRenderingInterface) {
+            return $definition->renderExample($locale ?? $this->langService->getLocale());
         }
 
         return $definition->render(

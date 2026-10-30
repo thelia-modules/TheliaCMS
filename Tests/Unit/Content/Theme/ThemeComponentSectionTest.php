@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Unit\Content\Theme;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Asset\Packages;
 use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\Component\Translation\Translator;
 use Symfony\UX\TwigComponent\ComponentRendererInterface;
@@ -84,5 +85,49 @@ final class ThemeComponentSectionTest extends TestCase
 
         self::assertSame('fr_FR', $drawnIn, 'A page in French is drawn in French, whatever the language of the one saving it.');
         self::assertSame('en_US', $translator->getLocale(), 'The language of the request is given back.');
+    }
+
+    public function testAPictureOfTheThemeIsDrawnInTheExampleOnly(): void
+    {
+        $received = null;
+        $section = $this->bannerWith(['image' => 'images/illustrations/banner.webp', 'title' => 'Hello'], $received);
+
+        self::assertNull($section->sample()['image'], 'A document stores an id or an https address: the path of a file of the theme is never part of the sample.');
+        self::assertSame('Hello', $section->sample()['title'], 'The rest of the example is kept.');
+
+        $section->renderExample('fr_FR');
+
+        self::assertSame(['title' => 'Hello', 'image' => '/assets/images/illustrations/banner-abc123.webp'], $received, 'The component is given the address the theme serves the file from.');
+    }
+
+    public function testAnHttpsAddressOfTheExampleIsLeftAsItIs(): void
+    {
+        $received = null;
+        $section = $this->bannerWith(['image' => 'https://example.com/banner.webp'], $received);
+
+        self::assertSame('https://example.com/banner.webp', $section->sample()['image']);
+
+        $section->renderExample('fr_FR');
+
+        self::assertSame('https://example.com/banner.webp', $received['image'] ?? null, 'An address is not turned into a file of the theme.');
+    }
+
+    /**
+     * @param array<string, mixed> $example
+     * @param array<string, mixed>|null $received the props the component is drawn with
+     */
+    private function bannerWith(array $example, ?array &$received): ThemeComponentSection
+    {
+        $renderer = $this->createStub(ComponentRendererInterface::class);
+        $renderer->method('createAndRender')->willReturnCallback(static function (string $name, array $props) use (&$received): string {
+            $received = $props;
+
+            return '<div></div>';
+        });
+        $packages = $this->createStub(Packages::class);
+        $packages->method('getUrl')->willReturnCallback(static fn (string $path): string => '/assets/'.preg_replace('/\.(\w+)$/', '-abc123.$1', $path));
+        $schema = new PropSchema([Prop::text('title', 'title'), Prop::image('image', 'image')]);
+
+        return new ThemeComponentSection('Layouts:Banner:Base', '', $schema, ['title' => 'title', 'image' => 'image'], $renderer, [], $example, null, $packages);
     }
 }

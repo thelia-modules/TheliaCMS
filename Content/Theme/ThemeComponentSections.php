@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Content\Theme;
 
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Asset\Packages;
 use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\UX\TwigComponent\ComponentRendererInterface;
 use Thelia\Core\Template\TemplateDefinition;
@@ -39,6 +40,7 @@ final readonly class ThemeComponentSections implements SectionProviderInterface,
         private ComponentRendererInterface $renderer,
         private LoggerInterface $logger,
         private ?LocaleSwitcher $localeSwitcher = null,
+        private ?Packages $packages = null,
     ) {
     }
 
@@ -61,7 +63,7 @@ final readonly class ThemeComponentSections implements SectionProviderInterface,
                 $twigNames[$prop->name] = self::twigName($prop->name);
             }
 
-            yield new ThemeComponentSection($component, $read['description'], $read['schema'], $twigNames, $this->renderer, $read['id_lists'], self::example($declaration->examples[$component] ?? []), $this->localeSwitcher);
+            yield new ThemeComponentSection($component, $read['description'], $read['schema'], $twigNames, $this->renderer, $read['id_lists'], self::example($declaration->examples[$component] ?? []), $this->localeSwitcher, $this->packages);
         }
     }
 

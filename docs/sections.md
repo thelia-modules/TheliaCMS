@@ -199,6 +199,26 @@ when a page is rendered, at its save: a page saved before the theme named it
 keeps its old rendering until it is saved or published again, or until
 `thelia_cms:render` renders its draft again.
 
+The same file may give a component the props the toolkit shows it with,
+which the generator is shown and a section added by hand starts from:
+
+```yaml
+sections:
+    examples:
+        Layouts:Banner:Base:
+            title: Fresh from the farm
+            image: images/illustrations/banner.webp
+```
+
+A picture prop of an example may be the path of a file of the theme, written
+as `asset()` takes it (relative, with no scheme and no leading slash). The
+toolkit draws it from the address the theme serves it from, so the "All
+sections" page shows real pictures. A document stores only the id of an image
+of the media library or an https address: the generator and a section added
+by hand never see the path and start with the picture empty. An id or an
+https address given in an example is kept as it is. Pictures nested in a
+`json` prop are not resolved.
+
 A component that wires its behaviour with Stimulus (a carousel, tabs) keeps
 it once published only if the theme names its controllers:
 
