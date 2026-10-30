@@ -69,7 +69,10 @@ final class PageDocumentDownloadTest extends WebIntegrationTestCase
         self::assertStringStartsWith('inline;', (string) $response->headers->get('Content-Disposition'));
         self::assertStringContainsString("filename*=utf-8''Fiche%20technique%20%C3%89t%C3%A9.pdf", (string) $response->headers->get('Content-Disposition'));
         self::assertStringContainsString('public', (string) $response->headers->get('Cache-Control'));
-        self::assertStringContainsString('max-age=86400', (string) $response->headers->get('Cache-Control'));
+        // Five minutes, then the browser asks again: a 304 while the document
+        // is there, a 404 once it is gone (see the controller).
+        self::assertStringContainsString('max-age=300', (string) $response->headers->get('Cache-Control'));
+        self::assertStringContainsString('must-revalidate', (string) $response->headers->get('Cache-Control'));
         self::assertStringNotContainsString('private', (string) $response->headers->get('Cache-Control'));
     }
 

@@ -131,11 +131,18 @@ final class PageDocumentsBlockTest extends CmsIntegrationTestCase
     /**
      * The theme parser keeps every variable of a render for the rest of the
      * page: the block sets one, under a name no other template uses.
+     *
+     * The parser also assigns its own variables on every render (THELIA_VERSION,
+     * locale, lang_code, current_url, app...), new to the request on its first
+     * render only: a first render of a template of the test leaves them there,
+     * and only what the block adds remains to be measured.
      */
     public function testOnlyOneVariableIsLeftToTheRestOfThePage(): void
     {
         $page = $this->createPage('Page à variables');
         $this->givenDocument($page, 'Notice.pdf', $this->pdf());
+        file_put_contents($this->themeDirectory.'/cms-block-warm-up.html.twig', 'warm-up');
+        self::assertSame('warm-up', $this->renderer()->renderTemplate('cms-block-warm-up.html.twig'));
         $parser = $this->parser();
         $assigned = new \ReflectionMethod($parser, 'withAssignedVariables');
         $before = array_keys($assigned->invoke($parser, []));
@@ -143,7 +150,7 @@ final class PageDocumentsBlockTest extends CmsIntegrationTestCase
         $this->block((int) $page->getId(), 'en_US');
 
         $added = array_values(array_diff(array_keys($assigned->invoke($parser, [])), $before));
-        self::assertSame([], array_diff($added, ['cms_page_documents_block']), 'Nothing but cms_page_documents_block is left to the next render.');
+        self::assertSame(['cms_page_documents_block'], $added, 'Nothing but cms_page_documents_block is left to the next render.');
     }
 
     public function testAPublishedPageIsListedInItsOwnLanguage(): void
