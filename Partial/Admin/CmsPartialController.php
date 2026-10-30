@@ -97,13 +97,14 @@ final readonly class CmsPartialController
     }
 
     /**
-     * Menus an editor may pick for a component of the theme.
+     * Menus an editor may pick for a component of the theme: one per code,
+     * the language a page is read in picks its menu.
      */
     #[Route('/admin/cms/partials/sources/menus', name: 'admin.cms.partials.sources.menus', methods: ['GET'])]
     public function menus(Request $request): Response
     {
         $locale = $request->getLocale();
-        $menus = CmsMenuQuery::create()->orderByCode()->find();
+        $menus = CmsMenuQuery::create()->filterByShared()->orderByCode()->find();
 
         return new JsonResponse(array_map(
             static function ($menu) use ($locale): array {

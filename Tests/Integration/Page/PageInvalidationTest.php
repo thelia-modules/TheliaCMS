@@ -247,7 +247,7 @@ final class PageInvalidationTest extends CmsIntegrationTestCase
 
     private function linkFromTheMainMenu(CmsPage $page): void
     {
-        $menu = CmsMenuQuery::create()->findOneByCode('main');
+        $menu = CmsMenuQuery::findShared('main');
         self::assertInstanceOf(CmsMenu::class, $menu);
         CmsMenuItemQuery::create()->filterByMenuId($menu->getId())->find()->delete();
         (new CmsMenuItem())

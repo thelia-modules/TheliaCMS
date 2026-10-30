@@ -52,7 +52,7 @@ final readonly class CmsContentSlotResolver implements ContentSlotResolverInterf
     {
         $code = self::MENU_OF_SLOT[$slot] ?? null;
 
-        if (null === $code || !$this->menus->hasEntries($code)) {
+        if (null === $code || !$this->menus->hasEntries($code, $locale)) {
             return null;
         }
 

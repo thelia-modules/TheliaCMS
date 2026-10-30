@@ -178,10 +178,11 @@ CREATE TABLE `cms_menu`
 (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `code` VARCHAR(50) NOT NULL,
+    `menu_locale` VARCHAR(5) DEFAULT '' NOT NULL,
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
-    UNIQUE INDEX `unq_cms_menu_code` (`code`)
+    UNIQUE INDEX `unq_cms_menu_code_locale` (`code`, `menu_locale`)
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------

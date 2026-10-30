@@ -45,7 +45,7 @@ final readonly class MenuSeeder
         );
 
         foreach (self::MENUS as $code => $titles) {
-            if (null !== CmsMenuQuery::create()->findOneByCode($code)) {
+            if (null !== CmsMenuQuery::findShared($code)) {
                 continue;
             }
 

@@ -59,14 +59,16 @@ final readonly class MenuCache
     }
 
     /**
-     * How many entries a menu stores, usable or not, cached and invalidated
-     * with the resolved menus.
+     * How many entries the menu read in this locale stores, usable or not,
+     * cached and invalidated with the resolved menus.
+     *
+     * Per locale: a language may have a menu of its own.
      *
      * @param callable(): int $count
      */
-    public function storedEntryCount(string $code, callable $count): int
+    public function storedEntryCount(string $code, string $locale, callable $count): int
     {
-        $key = \sprintf('thelia_cms_menu_entries.%s', preg_replace('/[^a-z0-9_-]/i', '_', $code));
+        $key = \sprintf('thelia_cms_menu_entries.%s.%s', preg_replace('/[^a-z0-9_-]/i', '_', $code), preg_replace('/[^a-z0-9_-]/i', '_', $locale));
 
         return (int) $this->cache->get($key, function (ItemInterface $item) use ($count): int {
             $item->tag(self::TAG);

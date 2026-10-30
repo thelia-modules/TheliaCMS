@@ -145,7 +145,7 @@ final class CmsContentSlotResolverTest extends CmsIntegrationTestCase
 
     private function emptyMenu(string $code): void
     {
-        $menu = CmsMenuQuery::create()->findOneByCode($code);
+        $menu = CmsMenuQuery::findShared($code);
 
         if (!$menu instanceof CmsMenu) {
             $menu = (new CmsMenu())->setCode($code);
@@ -166,7 +166,7 @@ final class CmsContentSlotResolverTest extends CmsIntegrationTestCase
         ?string $label = null,
         bool $newTab = false,
     ): CmsMenuItem {
-        $menu = CmsMenuQuery::create()->findOneByCode($menuCode);
+        $menu = CmsMenuQuery::findShared($menuCode);
         self::assertInstanceOf(CmsMenu::class, $menu);
 
         $item = (new CmsMenuItem())
