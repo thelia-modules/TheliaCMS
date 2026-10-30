@@ -1374,4 +1374,5 @@ return [
     'B' => 'B',
     'KB' => 'KB',
     'MB' => 'MB',
+    'Delete this menu, all of its entries and the menus of its languages?' => 'Delete this menu, all of its entries and the menus of its languages?',
 ];

@@ -64,7 +64,8 @@ final readonly class CmsMenuRepository
         $summaries = [];
 
         foreach ($menus as $menu) {
-            $rows = $this->rows($menu, $locale);
+            // What the language being edited reads: its own menu if it has one.
+            $rows = $this->rows(CmsMenuQuery::findForLocale((string) $menu->getCode(), $locale) ?? $menu, $locale);
 
             $summaries[] = [
                 'menu' => $menu,
