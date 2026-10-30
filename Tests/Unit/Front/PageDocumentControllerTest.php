@@ -16,11 +16,14 @@ namespace TheliaCMS\Tests\Unit\Front;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Generator\UrlGenerator;
 use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\RouteCollection;
 use TheliaCMS\Front\PageDocumentController;
+use TheliaCMS\Http\ShownTags;
 use TheliaCMS\Page\Document\PageDocumentRepository;
 use TheliaCMS\Page\Document\PageDocumentStorage;
 use TheliaCMS\Page\Document\PageDocumentUrl;
@@ -52,11 +55,11 @@ final class PageDocumentControllerTest extends TestCase
     {
         // The repository would reach for Propel, which a unit test has not booted:
         // the exception below is the only way out.
-        $controller = new PageDocumentController(new PageDocumentRepository(), new PageDocumentStorage(sys_get_temp_dir()));
+        $controller = new PageDocumentController(new PageDocumentRepository(), new PageDocumentStorage(sys_get_temp_dir()), new ShownTags(new RequestStack()));
 
         $this->expectException(NotFoundHttpException::class);
 
-        $controller(1, $file);
+        $controller(new Request(), 1, $file);
     }
 
     public function testTheAddressNamesTheRowAndTheStoredName(): void

@@ -15,10 +15,13 @@ declare(strict_types=1);
 namespace TheliaCMS\Front;
 
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpKernel\EventListener\AbstractSessionListener;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use TheliaCMS\Http\CacheTags;
+use TheliaCMS\Http\ShownTags;
 use TheliaCMS\Page\Document\PageDocumentDelivery;
 use TheliaCMS\Page\Document\PageDocumentRepository;
 use TheliaCMS\Page\Document\PageDocumentStorage;
@@ -31,18 +34,19 @@ use TheliaCMS\Page\Document\PageDocumentStorage;
  * the back office links a file from the page it is writing, and the name
  * holds eight random digits, so an address is only known to who was given it.
  * The trash is the exception: a page deleted takes its files out of reach
- * until it is restored or purged.
+ * until it is restored or purged; a cache keeps the answer five minutes, not more.
  */
 final readonly class PageDocumentController
 {
     public function __construct(
         private PageDocumentRepository $documents,
         private PageDocumentStorage $storage,
+        private ShownTags $shownTags,
     ) {
     }
 
     #[Route('/cms/documents/{id}/{file}', name: 'cms.page_document', requirements: ['id' => '\d+', 'file' => '[^/]+'], methods: ['GET'])]
-    public function __invoke(int $id, string $file): BinaryFileResponse
+    public function __invoke(Request $request, int $id, string $file): BinaryFileResponse
     {
         // Before any read: a name out of shape is never a path, nor a query.
         if (!PageDocumentStorage::isStoredName($file)) {
@@ -67,15 +71,36 @@ final readonly class PageDocumentController
             $this->asciiFallback($document->originalName, $document->extension),
         );
 
-        // The stored name changes with every file deposited, so what an
-        // address serves never changes: a day in any cache is safe.
+        // The file behind an address never changes, but the address may stop
+        // answering (document deleted, page binned). Five minutes in any cache,
+        // then it asks again: a 304 while the document is there, a 404 once it
+        // is not. When the shop turns on the shared cache of the core, the
+        // response is also filed under the tag of its page, which the changes
+        // of the page purge at once.
         $response->setPublic();
-        $response->setMaxAge(86400);
+        $response->setMaxAge(300);
+        $response->headers->addCacheControlDirective('must-revalidate');
+        $response->setAutoEtag();
+        $response->setAutoLastModified();
+
+        // Whatever the file holds, it is never given the origin of the site: a
+        // sandboxed document has no cookie, no storage, no script.
+        $response->headers->set('Content-Security-Policy', 'sandbox');
+
+        $pageId = $this->documents->pageIdOf($id);
+
+        if (null !== $pageId) {
+            $this->shownTags->add(CacheTags::page($pageId));
+        }
 
         // Without this, the session listener rewrites the header above to
         // `private` on the way out, because a session was opened during the
         // request. Symfony strips the marker itself before sending.
         $response->headers->set(AbstractSessionListener::NO_AUTO_CACHE_CONTROL_HEADER, 'true');
+
+
+
+        $response->isNotModified($request);
 
         return $response;
     }
