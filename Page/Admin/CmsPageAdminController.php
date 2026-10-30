@@ -39,6 +39,7 @@ use TheliaCMS\Notice\NativeContentNotice;
 use TheliaCMS\Page\CmsUrlService;
 use TheliaCMS\Page\Field\InvalidFieldsException;
 use TheliaCMS\Page\Field\PageFields;
+use TheliaCMS\Page\Document\PageDocumentFormat;
 use TheliaCMS\Page\FixedAddressException;
 use TheliaCMS\Page\PageTagRepository;
 use TheliaCMS\Page\PageTypeRepository;
@@ -77,6 +78,7 @@ final readonly class CmsPageAdminController
         private PageTypeRepository $pageTypes,
         private PageTagRepository $tags,
         private PageFields $fields,
+        private PageDocumentRows $documentRows,
     ) {
     }
 
@@ -400,8 +402,15 @@ final readonly class CmsPageAdminController
             'edit_language_id' => $lang->getId(),
             'is_home' => !$page->isNew() && (int) $page->getId() === (int) TheliaCMS::getConfigValue('home_page_id', 0),
             'preview_url' => $page->isNew() ? null : $page->getUrl($locale),
+            'documents' => $page->isNew() ? [] : $this->documentRows->forPage((int) $page->getId(), $locale),
+            'document_extensions' => PageDocumentFormat::extensions(),
+            'document_max_size' => (int) UploadedFile::getMaxFilesize(),
+            'document_max_size_label' => PageDocumentSize::human((int) UploadedFile::getMaxFilesize(), $locale),
+            'document_max_files' => max(1, (int) \ini_get('max_file_uploads')),
+            'may_change_documents' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::UPDATE]),
+            'may_delete_documents' => $this->securityContext->isGranted(['ADMIN'], [CmsResources::PAGE], [], [AccessManager::DELETE]),
             // The browser keeps the script until its version changes.
-            'assets_version' => substr(hash('xxh3', (string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/page-address.js').(string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/media-picker.js')), 0, 12),
+            'assets_version' => substr(hash('xxh3', (string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/page-address.js').(string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/media-picker.js').(string) @filemtime(__DIR__.'/../../templates/backOffice/default-twig/assets/page-documents.js')), 0, 12),
         ]));
     }
 

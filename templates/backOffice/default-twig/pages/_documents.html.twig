@@ -1,0 +1,129 @@
+{#
+    The Documents tab of the edit screen of a page. Out of the settings form:
+    each action is a POST of its own, written at once, so the form of the page
+    never holds another form.
+#}
+{% set documents_url = path('admin.cms.pages.documents.add', { id: page.id, edit_language_id: edit_language_id }) %}
+
+<div class="tab-pane fade" id="tab-documents" role="tabpanel" data-testid="cms-page-documents">
+    <p class="text-muted">
+        {{ 'Files visitors can download from this page: a data sheet, a catalogue, a form. They are saved as soon as you act, with no need to save the draft, and are online at once, without publishing the page again.'|trans({}, 'theliacms') }}
+    </p>
+
+    {% if may_change_documents %}
+        <form method="post" action="{{ documents_url }}" enctype="multipart/form-data" class="border rounded p-3 mb-4"
+              data-cms-document-upload data-max-size="{{ document_max_size }}"
+              data-extensions="{{ document_extensions|join(',') }}"
+              data-messages="{{ {
+                  sending: 'Sending…'|trans({}, 'theliacms'),
+                  added: 'Attached'|trans({}, 'theliacms'),
+                  format: 'Only PDF, Word, Excel, PowerPoint, OpenDocument text, ZIP and plain text files can be attached.'|trans({}, 'theliacms'),
+                  tooLarge: 'The file is larger than the server accepts.'|trans({}, 'theliacms'),
+                  failed: 'The file did not arrive whole. Send it again.'|trans({}, 'theliacms'),
+                  show: 'Show the new documents'|trans({}, 'theliacms'),
+              }|json_encode }}"
+              data-testid="cms-page-document-upload">
+            <input type="hidden" name="_token" value="{{ assignToken() }}">
+            <label for="cms-page-document-files" class="form-label fw-semibold">{{ 'Add files'|trans({}, 'theliacms') }}</label>
+            <div class="input-group">
+                <input type="file" class="form-control" id="cms-page-document-files" name="files[]" multiple required
+                       accept="{{ document_extensions|map(extension => '.' ~ extension)|join(',') }}"
+                       aria-describedby="cms-page-document-files-help" data-testid="cms-page-document-files">
+                <button type="submit" class="btn btn-primary" data-testid="cms-page-document-add">
+                    <i class="bi bi-upload" aria-hidden="true"></i> {{ 'Attach'|trans({}, 'theliacms') }}
+                </button>
+            </div>
+            <div class="form-text" id="cms-page-document-files-help">
+                {{ 'Formats: %formats%. Up to %size% per file and %count% files at a time.'|trans({ '%formats%': document_extensions|join(', '), '%size%': document_max_size_label, '%count%': document_max_files }, 'theliacms') }}
+            </div>
+            <ul class="list-unstyled small mt-2 mb-0 d-none" data-cms-document-upload-files aria-live="polite"></ul>
+            <div class="d-none mt-2" data-cms-document-upload-done></div>
+        </form>
+    {% endif %}
+
+    {% if documents is empty %}
+        <p class="text-muted" data-testid="cms-page-documents-empty">{{ 'No document is attached to this page.'|trans({}, 'theliacms') }}</p>
+    {% else %}
+        <p class="form-text">
+            {{ 'A file is the same in every language. The title and the description below are written in the language being edited (%language%): without a title, the file is named after its original name.'|trans({ '%language%': edit_locale }, 'theliacms') }}
+        </p>
+        <ol class="list-group list-group-numbered mb-3" data-testid="cms-page-documents-list">
+            {% for document in documents %}
+                <li class="list-group-item" data-testid="cms-page-document-{{ document.id }}" data-document-id="{{ document.id }}">
+                    <div class="d-flex flex-wrap align-items-start gap-2 ms-2">
+                        <div class="flex-grow-1 me-auto">
+                            <div class="fw-semibold" data-testid="cms-page-document-title-{{ document.id }}">{{ document.title }}</div>
+                            <div class="small text-body-secondary">
+                                <span data-testid="cms-page-document-name-{{ document.id }}">{{ document.originalName }}</span>
+                                <span class="badge text-bg-secondary ms-1" data-testid="cms-page-document-extension-{{ document.id }}">{{ document.extension }}</span>
+                                <span class="ms-1" data-testid="cms-page-document-size-{{ document.id }}">{{ document.size }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1">
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ document.url }}" target="_blank" rel="noopener" data-testid="cms-page-document-open-{{ document.id }}">
+                                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ 'Open the file'|trans({}, 'theliacms') }}<span class="visually-hidden"> {{ document.title }}</span>
+                            </a>
+                            {% if may_change_documents %}
+                                {% for move in [{ ids: document.moveUp, route: 'up', icon: 'bi-arrow-up', label: 'Move %title% up' }, { ids: document.moveDown, route: 'down', icon: 'bi-arrow-down', label: 'Move %title% down' }] %}
+                                    <form method="post" action="{{ path('admin.cms.pages.documents.order', { id: page.id, edit_language_id: edit_language_id }) }}">
+                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                        {% for id in move.ids ?? [] %}<input type="hidden" name="documents[]" value="{{ id }}">{% endfor %}
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" {{ move.ids is null ? 'disabled' : '' }}
+                                                title="{{ move.label|trans({ '%title%': document.title }, 'theliacms') }}"
+                                                aria-label="{{ move.label|trans({ '%title%': document.title }, 'theliacms') }}"
+                                                data-testid="cms-page-document-{{ move.route }}-{{ document.id }}">
+                                            <i class="bi {{ move.icon }}" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                {% endfor %}
+                            {% endif %}
+                            {% if may_delete_documents %}
+                                <button type="button" class="btn btn-sm btn-outline-danger" command="show-modal" commandfor="cms-page-document-delete-{{ document.id }}" data-cms-document-dialog-open
+                                        aria-label="{{ 'Delete %title%'|trans({ '%title%': document.title }, 'theliacms') }}" title="{{ 'Delete'|trans({}, 'theliacms') }}"
+                                        data-testid="cms-page-document-delete-open-{{ document.id }}">
+                                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if may_change_documents %}
+                        <form method="post" class="row g-2 mt-1 ms-2" action="{{ path('admin.cms.pages.documents.describe', { id: page.id, documentId: document.id, edit_language_id: edit_language_id }) }}">
+                            <input type="hidden" name="_token" value="{{ assignToken() }}">
+                            <div class="col-lg-4">
+                                <label class="form-label small mb-1" for="cms-page-document-title-input-{{ document.id }}">{{ 'Title'|trans({}, 'theliacms') }}</label>
+                                <input type="text" class="form-control form-control-sm" id="cms-page-document-title-input-{{ document.id }}" name="title" maxlength="255"
+                                       value="{{ document.titleValue }}" placeholder="{{ document.title }}" data-testid="cms-page-document-title-input-{{ document.id }}">
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label small mb-1" for="cms-page-document-description-input-{{ document.id }}">{{ 'Description'|trans({}, 'theliacms') }}</label>
+                                <textarea class="form-control form-control-sm" id="cms-page-document-description-input-{{ document.id }}" name="description" rows="2"
+                                          data-testid="cms-page-document-description-input-{{ document.id }}">{{ document.description }}</textarea>
+                            </div>
+                            <div class="col-lg-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-sm btn-primary" data-testid="cms-page-document-save-{{ document.id }}">{{ 'Save'|trans({}, 'theliacms') }}</button>
+                            </div>
+                        </form>
+                    {% endif %}
+
+                    {% if may_delete_documents %}
+                        <dialog class="border-0 rounded shadow p-0" id="cms-page-document-delete-{{ document.id }}" aria-labelledby="cms-page-document-delete-title-{{ document.id }}"
+                                style="width: min(480px, calc(100vw - 32px))" data-testid="cms-page-document-delete-dialog-{{ document.id }}">
+                            <div class="p-4">
+                                <h2 class="h5" id="cms-page-document-delete-title-{{ document.id }}">{{ 'Delete this document for good?'|trans({}, 'theliacms') }}</h2>
+                                <p class="text-body-secondary">{{ '%name% and its file are removed, in every language. A link to it written in a page stops working.'|trans({ '%name%': document.originalName }, 'theliacms') }}</p>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <form method="dialog"><button type="submit" class="btn btn-outline-secondary" data-testid="cms-page-document-delete-cancel-{{ document.id }}">{{ 'Cancel'|trans({}, 'theliacms') }}</button></form>
+                                    <form method="post" action="{{ path('admin.cms.pages.documents.delete', { id: page.id, documentId: document.id, edit_language_id: edit_language_id }) }}">
+                                        <input type="hidden" name="_token" value="{{ assignToken() }}">
+                                        <button type="submit" class="btn btn-danger" data-testid="cms-page-document-delete-confirm-{{ document.id }}">{{ 'Delete this document'|trans({}, 'theliacms') }}</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </dialog>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ol>
+    {% endif %}
+</div>

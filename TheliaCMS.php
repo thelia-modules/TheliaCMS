@@ -377,6 +377,7 @@ class TheliaCMS extends BaseModule
                 __DIR__.'/Page/Document/PageDocument.php',
                 __DIR__.'/Page/Document/PageDocumentLink.php',
                 __DIR__.'/Page/Document/PageDocumentUpload.php',
+                __DIR__.'/Page/Admin/PageDocumentRow.php',
                 __DIR__.'/Page/PageCard.php',
                 __DIR__.'/Page/PageImage.php',
                 __DIR__.'/Page/PageTagName.php',

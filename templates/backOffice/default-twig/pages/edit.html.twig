@@ -58,6 +58,21 @@
                     {{ 'Image'|trans({}, 'theliacms') }}
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                {% if is_new %}
+                    {# A page not saved has no id to attach files to. #}
+                    <span title="{{ 'Save the draft of the page first: documents are attached to a saved page.'|trans({}, 'theliacms') }}" data-testid="cms-page-tab-documents-hint">
+                        <button class="nav-link disabled" type="button" disabled aria-disabled="true" aria-describedby="tab-documents-unavailable" data-testid="cms-page-tab-documents">
+                            {{ 'Documents'|trans({}, 'theliacms') }}
+                        </button>
+                    </span>
+                    <span class="visually-hidden" id="tab-documents-unavailable">{{ 'Save the draft of the page first: documents are attached to a saved page.'|trans({}, 'theliacms') }}</span>
+                {% else %}
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-documents" type="button" data-testid="cms-page-tab-documents">
+                        {{ 'Documents'|trans({}, 'theliacms') }}{% if documents|length > 0 %} <span class="badge text-bg-secondary" data-testid="cms-page-tab-documents-count">{{ documents|length }}</span>{% endif %}
+                    </button>
+                {% endif %}
+            </li>
         </ul>
         {% if not is_new %}
             <div class="bo-tab-bar__aside">
@@ -138,10 +153,17 @@
             </div>
         </div>
 
-        <div class="d-flex flex-wrap gap-2 mt-3">
+        <div class="d-flex flex-wrap gap-2 mt-3" data-cms-page-save-bar>
             <button type="submit" class="btn btn-primary">{{ 'Save draft'|trans({}, 'theliacms') }}</button>
         </div>
     {{ form_end(form) }}
+
+    {% if not is_new %}
+        {# After the form, not in it: its forms are not part of the draft. #}
+        <div class="tab-content">
+            {{ include('@TheliaCMSModule/backOffice/default-twig/pages/_documents.html.twig') }}
+        </div>
+    {% endif %}
 
     {% if not is_new %}
         {# Kept out of the settings form: each one is a POST of its own. #}
@@ -174,5 +196,8 @@
     {{ parent() }}
     {{ safe_hook('wysiwyg.js', { location: 'cms-page-edit-js' }) }}
     <script src="{{ module_asset('TheliaCMS', 'assets/page-address.js') }}?v={{ assets_version }}" defer></script>
+    {% if not is_new %}
+        <script src="{{ module_asset('TheliaCMS', 'assets/page-documents.js') }}?v={{ assets_version }}" defer></script>
+    {% endif %}
     {{ include('@TheliaCMSModule/backOffice/default-twig/media/_picker.html.twig', { media_picker_version: assets_version }) }}
 {% endblock %}
