@@ -88,7 +88,10 @@ final class PublishedContentSanitizerTest extends TestCase
      * The icons of the components of the theme are inline svg (`ux_icon()`),
      * which the filter once removed: a button arrow came out empty. The
      * sanitizer writes `viewBox` in lowercase, which a browser reads back as
-     * `viewBox` inside an svg.
+     * `viewBox` inside an svg. The `xmlns` declaration is kept by the native
+     * parser of PHP 8.4 and dropped by the one used on 8.3: an inline svg takes
+     * its namespace from the HTML parser either way, so it is left out of the
+     * comparison.
      */
     public function testKeepsTheSvgIconsOfTheComponents(): void
     {
@@ -96,7 +99,9 @@ final class PublishedContentSanitizerTest extends TestCase
         $stroked = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(1 1)"><path d="M5 12h14" fill-rule="evenodd" clip-rule="evenodd"></path><circle cx="12" cy="12" r="3"></circle><rect x="1" y="1" width="2" height="2" rx="1"></rect><polyline points="1,2 3,4"></polyline></g></svg>';
 
         self::assertSame('<span class="button-icon">'.str_replace('viewBox', 'viewbox', $arrow).'</span>', $this->sanitizer->html('<span class="button-icon">'.$arrow.'</span>'));
-        self::assertSame(str_replace('viewBox', 'viewbox', $stroked), $this->sanitizer->html($stroked));
+        $withoutNamespace = static fn (?string $html): string => str_replace(' xmlns="http://www.w3.org/2000/svg"', '', (string) $html);
+
+        self::assertSame($withoutNamespace(str_replace('viewBox', 'viewbox', $stroked)), $withoutNamespace($this->sanitizer->html($stroked)));
     }
 
     public function testKeepsTheMarkupAPageIsMadeOf(): void
