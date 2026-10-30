@@ -16,6 +16,7 @@ namespace TheliaCMS\Page\Document;
 
 use Propel\Runtime\ActiveQuery\Criteria;
 use TheliaCMS\Model\CmsPageDocumentQuery;
+use TheliaCMS\Model\CmsPageQuery;
 
 /**
  * The files of a page as a theme lists them: in the order the editor set,
@@ -42,11 +43,10 @@ final readonly class PageDocumentRepository
             $originalName = (string) $document->getOriginalName();
             $title = trim((string) $translation->getTitle());
             $description = trim((string) $translation->getDescription());
-            $bareName = pathinfo($originalName, \PATHINFO_FILENAME);
 
             $list[] = new PageDocument(
                 id: (int) $document->getId(),
-                title: '' !== $title ? $title : ('' !== $bareName ? $bareName : $originalName),
+                title: '' !== $title ? $title : $this->nameOf($originalName),
                 description: '' !== $description ? $description : null,
                 file: (string) $document->getFile(),
                 originalName: $originalName,
@@ -57,5 +57,54 @@ final readonly class PageDocumentRepository
         }
 
         return $list;
+    }
+
+    /**
+     * The document a download address names, or null when the address does
+     * not name one: no such row, a stored name that is not the row's, or a
+     * page in the trash.
+     *
+     * The page being online is not asked: the back office links a file of a
+     * draft, and the stored name carries eight random digits. The title is
+     * the name of the file: no language is read here.
+     */
+    public function findForDownload(int $documentId, string $file): ?PageDocument
+    {
+        $document = CmsPageDocumentQuery::create()->findPk($documentId);
+
+        if (null === $document || (string) $document->getFile() !== $file || !$this->pageIsLive((int) $document->getPageId())) {
+            return null;
+        }
+
+        $originalName = (string) $document->getOriginalName();
+
+        return new PageDocument(
+            id: (int) $document->getId(),
+            title: $this->nameOf($originalName),
+            description: null,
+            file: $file,
+            originalName: $originalName,
+            extension: PageDocumentFormat::extensionOf($file),
+            mimeType: (string) $document->getMimeType(),
+            size: (int) $document->getSize(),
+        );
+    }
+
+    /**
+     * Whether the page exists and is out of the trash.
+     */
+    public function pageIsLive(int $pageId): bool
+    {
+        return CmsPageQuery::create()
+            ->filterById($pageId)
+            ->filterByDeletedAt(null, Criteria::ISNULL)
+            ->exists();
+    }
+
+    private function nameOf(string $originalName): string
+    {
+        $bareName = pathinfo($originalName, \PATHINFO_FILENAME);
+
+        return '' !== $bareName ? $bareName : $originalName;
     }
 }

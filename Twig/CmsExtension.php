@@ -23,6 +23,8 @@ use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Http\ShownTags;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
+use TheliaCMS\Page\Document\PageDocumentLink;
+use TheliaCMS\Page\Document\PageDocumentLinks;
 use TheliaCMS\Page\Field\FieldFormatter;
 use TheliaCMS\Page\PageCard;
 use TheliaCMS\Page\PageListQuery;
@@ -56,6 +58,7 @@ final class CmsExtension extends AbstractExtension
         private readonly PageTypeRepository $pageTypes,
         private readonly FieldFormatter $fieldFormatter,
         private readonly ShownTags $shownTags,
+        private readonly PageDocumentLinks $documentLinks,
     ) {
     }
 
@@ -78,6 +81,7 @@ final class CmsExtension extends AbstractExtension
             new TwigFunction('cms_pages_of_type', $this->pagesOfType(...)),
             new TwigFunction('cms_page_type', $this->pageType(...)),
             new TwigFunction('cms_page_fields', $this->pageFields(...)),
+            new TwigFunction('cms_page_documents', $this->pageDocuments(...)),
             new TwigFunction('cms_is_home', $this->isHome(...)),
         ];
     }
@@ -184,6 +188,34 @@ final class CmsExtension extends AbstractExtension
         }
 
         return $this->fieldFormatter->rows($this->pageTypes->fieldsOf($page->pageType), $page->fields, $page->locale);
+    }
+
+    /**
+     * The files attached to a page, in the order the editor set, with what
+     * was written of them in the language served (never another language's):
+     * `cms_page_documents(page)`. Data, not markup: how a file is listed is the
+     * theme's business.
+     *
+     * Read when the page is served and not frozen with its HTML, so adding or
+     * removing a file does not call for publishing again; the page is filed
+     * in the shared cache under its tag, which the writer of the documents drops.
+     * A page unknown or in the trash has no document.
+     *
+     * @return list<PageDocumentLink>
+     */
+    public function pageDocuments(PublishedPage|int|string|null $page, ?string $locale = null): array
+    {
+        $pageId = $page instanceof PublishedPage ? $page->id : (int) $page;
+
+        if ($pageId <= 0) {
+            return [];
+        }
+
+        // A template of another page may list these files: that page has to be
+        // dropped with this one when they change.
+        $this->shownTags->add(CacheTags::page($pageId));
+
+        return $this->documentLinks->forPage($pageId, $locale ?? $this->currentLocale());
     }
 
     private function currentLocale(): string
