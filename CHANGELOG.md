@@ -169,6 +169,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- **A row field spelled in camelCase keeps its value.** A theme writes
+  `imageAlt` or `buttonLabel` in a row; the form stored them as `image_alt`,
+  `button_label` and dropped the values already written under the template's
+  spelling, and the component read nothing back. A row is now read under
+  either spelling, stored in snake case, and handed to the component under the
+  names its template uses.
+- **The rows of a list stay compact in the section form.** The fields of a row
+  share a line (a name, a quantity and a picture), their labels show on the
+  first row only, a row of one value takes the line, and a row holding a text
+  of paragraphs folds under its first words. A form with a list opens wider.
 - **The svg icons of the theme components survive the publication filter.**
   A page filter took out every `<svg>`: the arrow of a button, the arrows of a
   carousel, the chevrons of an accordion came out empty on a published page.

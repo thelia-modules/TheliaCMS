@@ -342,7 +342,7 @@ final readonly class PropSchema
             }
 
             try {
-                $items[] = $schema->normalize($item);
+                $items[] = $schema->normalize(self::rowKeys($item));
             } catch (InvalidDocumentException $exception) {
                 foreach ($exception->problems as $problem) {
                     $problems[] = \sprintf('"%s" item %d: %s', $prop->name, $index + 1, $problem);
@@ -355,6 +355,29 @@ final readonly class PropSchema
         }
 
         return $items;
+    }
+
+    /**
+     * A row with its keys as the schema names them: a theme component reads a
+     * row as it spells it (`imageAlt`), as a document written for it, an
+     * example of the theme or a generator does. The key of the schema wins
+     * when a row holds both.
+     *
+     * @param array<array-key, mixed> $row
+     *
+     * @return array<array-key, mixed>
+     */
+    public static function rowKeys(array $row): array
+    {
+        foreach ($row as $key => $value) {
+            $name = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', (string) $key) ?? (string) $key);
+
+            if ($name !== $key && !\array_key_exists($name, $row)) {
+                $row[$name] = $value;
+            }
+        }
+
+        return $row;
     }
 
     private static function isBlank(mixed $value): bool

@@ -68,6 +68,15 @@ final class SectionFormItemsTest extends TestCase
         self::assertSame(['ingredients' => [['name' => 'Flour'], ['name' => 'Salt']]], $builder->propsFrom($form->getData(), [$ingredients]));
     }
 
+    public function testARowSpelledAsItsTemplateFillsItsFields(): void
+    {
+        $slides = Prop::items('items', 'items', [Prop::text('title', 'title'), Prop::text('button_label', 'button_label')], 0, 50);
+        $builder = $this->builder();
+        $form = $builder->build($this->definition($slides), new Section('carousel', 'Organisms:Carousel:Base', ['items' => [['title' => 'Spring', 'buttonLabel' => 'Read more']]]), '/save');
+
+        self::assertSame('Read more', $form->get('items')->get('0')->get('button_label')->getData(), 'A row stored before it was read as fields keeps its values in the form.');
+    }
+
     private function builder(): SectionFormBuilder
     {
         return new SectionFormBuilder(

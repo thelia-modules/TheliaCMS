@@ -354,16 +354,104 @@ body:has(.cms-content) {
 
 @container (min-width: 34rem) {
     .cms-content__edit form[data-cms-section-form],
-    .cms-content__item-fields,
     .cms-content__appearance-fields {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
+/* A form with a list is wider: the fields of a row share a line. */
+.cms-content__edit:has(.cms-content__items) {
+    width: clamp(30rem, 56vw, 64rem);
+}
+
+/* The fields of a row side by side as soon as they fit: a name, a quantity
+   and a picture on one line. A line of text in a row is a label, a link or a
+   caption, read in its field; only a text of paragraphs and a folded part
+   take the line, and a picture two columns. */
+.cms-content__item-fields {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 8rem), 1fr));
+}
+
+.cms-content__item-fields > .mb-3 {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    margin-bottom: 0.5rem !important;
+}
+
 .cms-content__edit form[data-cms-section-form] > :is(.mb-3:has(textarea), .mb-3:has([data-cms-long]), .mb-3:has([data-cms-image-field]), fieldset:not([data-cms-choice-buttons]), details, .cms-content__edit-actions),
-.cms-content__item-fields > :is(.mb-3:has(textarea), .mb-3:has([data-cms-long]), .mb-3:has([data-cms-image-field]), fieldset:not([data-cms-choice-buttons]), details),
+.cms-content__item-fields > :is(.mb-3:has(textarea), fieldset:not([data-cms-choice-buttons]), details),
 .cms-content__appearance-fields > .cms-content__colors {
     grid-column: 1 / -1;
+}
+
+.cms-content__item-fields > .mb-3:has([data-cms-image-field]) {
+    grid-column: span 2;
+}
+
+/* A row of one value, a step of a recipe: the value takes the line, under
+   no heading. */
+.cms-content__item-fields:not(:has(> .mb-3 ~ .mb-3)) > .mb-3 {
+    grid-column: 1 / -1;
+}
+
+.cms-content__item-fields:not(:has(> .mb-3 ~ .mb-3)) > .cms-content__field > .cms-content__field-head {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* The picture of a row: a thumbnail, its name and its buttons on one line. */
+.cms-content__item-fields [data-cms-image-field] {
+    flex-wrap: nowrap !important;
+    gap: 0.5rem !important;
+    padding: 0.25rem 0.5rem !important;
+}
+
+.cms-content__item-fields [data-cms-image-field] > .ratio {
+    width: 2.5rem !important;
+}
+
+.cms-content__item-fields [data-cms-image-field] > .flex-grow-1 {
+    flex: 1 1 0;
+    min-width: 0 !important;
+    font-size: 0.75rem;
+}
+
+.cms-content__item-fields [data-cms-image-field] > .flex-grow-1 > * {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cms-content__item-fields [data-cms-image-field] > .d-flex {
+    flex-wrap: nowrap !important;
+}
+
+.cms-content__item-fields [data-cms-image-field] .btn {
+    white-space: nowrap;
+}
+
+.cms-content__item-fields > details.cms-content__more {
+    margin: -0.25rem 0 0;
+    font-size: 0.75rem;
+}
+
+.cms-content__item-fields > details.cms-content__more > summary {
+    font-weight: 400;
+}
+
+/* Rows of short fields read as a table: their labels show on the first row,
+   and stay for a screen reader on the others. */
+.cms-content__item-row + .cms-content__item-row > .cms-content__item-fields > .cms-content__field > .cms-content__field-head {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 /* A field is three parts: its label with the "?" of its help, the control,
@@ -752,6 +840,25 @@ body:has(.cms-content) {
 
 .cms-content__item-remove {
     flex: none;
+}
+
+/* A folded row: its first words, then its fields once opened. */
+.cms-content__item-fold {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cms-content__item-summary {
+    overflow: hidden;
+    font-weight: 500;
+    line-height: 1.5rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.cms-content__item-fold[open] > .cms-content__item-summary {
+    margin-bottom: 0.5rem;
 }
 
 /* The progress of a generation, over the draft it is about to replace. */

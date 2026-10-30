@@ -823,6 +823,7 @@ return [
     'Edit by hand' => 'Modifier à la main',
     'Save this section' => 'Enregistrer cette section',
     'Add a row' => 'Ajouter une ligne',
+    'A row without a title' => 'Ligne sans titre',
     'Remove this row' => 'Retirer cette ligne',
     'Search…' => 'Rechercher…',
     'The section is saved in the draft.' => 'La section est enregistrée dans le brouillon.',

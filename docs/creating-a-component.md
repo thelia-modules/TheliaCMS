@@ -84,7 +84,8 @@ from two places:
   alternatives, `image`), is required unless its type says `|null`, and gets a
   field of the form; a list may hold fifty rows. The component receives a list
   of rows, `item.name`, `item.image` (the address of the picture, as for an
-  `image` prop). A field that a row cannot hold, a list or a record such as
+  `image` prop), under the names the template spells: `imageAlt` is stored as
+  `image_alt` and comes back as `item.imageAlt`. A field that a row cannot hold, a list or a record such as
   `product`, leaves the whole prop a JSON one. A list of plain strings
   (`list<string>`, `string[]`, and `list<html>`, `html[]` for markup) is one
   field per row, and stays a list of strings, `["one", "two"]`, in the

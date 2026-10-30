@@ -140,11 +140,27 @@
     {% endif %}
 {% endmacro %}
 
+{#
+    A row whose fields hold a text of several paragraphs is folded under its
+    first words, so a list of slides or panels reads as a list: a new row,
+    and a row with an error, open. A row of short fields stays on its lines.
+#}
 {% macro item(item) %}
+    {% set long = item.children|filter(child => child.vars.attr['data-cms-html'] is defined)|length > 0 %}
     <li class="cms-content__item-row" data-cms-item>
-        <div class="cms-content__item-fields">
-            {{ _self.fields(item) }}
-        </div>
+        {% if long %}
+            {% set named = item.children|filter(child => 'text' in child.vars.block_prefixes and child.vars.value is not iterable and child.vars.value|striptags|trim is not empty)|first %}
+            <details class="cms-content__item-fold" {{ item.vars.value is empty or not item.vars.valid ? 'open' }}>
+                <summary class="cms-content__item-summary">{{ named ? named.vars.value|striptags|trim|slice(0, 80) : 'A row without a title'|trans({}, 'theliacms') }}</summary>
+                <div class="cms-content__item-fields">
+                    {{ _self.fields(item) }}
+                </div>
+            </details>
+        {% else %}
+            <div class="cms-content__item-fields">
+                {{ _self.fields(item) }}
+            </div>
+        {% endif %}
         <button type="button" class="btn btn-sm btn-outline-danger cms-content__item-remove" data-cms-item-remove hidden
                 aria-label="{{ 'Remove this row'|trans({}, 'theliacms') }}" title="{{ 'Remove this row'|trans({}, 'theliacms') }}">
             <i class="bi bi-x-lg" aria-hidden="true"></i>

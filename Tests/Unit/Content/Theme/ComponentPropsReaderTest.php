@@ -163,6 +163,27 @@ final class ComponentPropsReaderTest extends TestCase
         self::assertSame([], $read['id_lists'], 'Rows of fields are not lists of ids.');
     }
 
+    public function testARowSpelledAsItsTemplateIsReadUnderTheNamesOfTheSchema(): void
+    {
+        $read = $this->reader()->readSource(<<<'TWIG'
+            {# @prop slides list<{image: image|null, imageAlt: string|null, buttonLabel: string|null}> The slides #}
+            {% props slides = [] %}
+            TWIG);
+        $slides = $this->byName($read)['slides'];
+
+        self::assertSame(['image', 'image_alt', 'button_label'], array_map(static fn (Prop $item): string => $item->name, $slides->items));
+        self::assertSame(
+            [['image' => 12, 'image_alt' => 'A field', 'button_label' => 'Read more']],
+            $read['schema']->normalize(['slides' => [['image' => '/image-library/12/full/max/0/default.jpg', 'imageAlt' => 'A field', 'buttonLabel' => 'Read more']]])['slides'],
+            'A row written as the template spells it keeps its values.',
+        );
+        self::assertSame(
+            'Kept',
+            $read['schema']->normalize(['slides' => [['image_alt' => 'Kept', 'imageAlt' => 'Dropped']]])['slides'][0]['image_alt'],
+            'The name of the schema wins over the spelling of the template.',
+        );
+    }
+
     public function testAListWhoseItemCannotBeHeldByAFormStaysJson(): void
     {
         $read = $this->reader()->readSource(<<<'TWIG'
