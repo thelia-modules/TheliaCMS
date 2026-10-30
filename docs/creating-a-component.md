@@ -71,13 +71,29 @@ from two places:
   prop to the component when the document leaves it empty;
 - one `{# @prop name type description #}` comment per prop gives the type and
   the meaning. `bool` or `boolean` is a boolean, `int` or `integer` an integer,
-  `array`, `list`, `iterable`, `object` or `array<…>` a JSON prop, a list of
+  `array`, `list`, `iterable`, `object` or any other `array<…>` a JSON prop
+  (an editor types JSON by hand), a list of
   quoted alternatives (`'primary'|'secondary'`) a choice, `html` markup
   (handed to the component as it is, to print with `|raw`, and filtered by
   the writer on the rendered page), and anything else a line of
   text, 500 characters at most. A type naming `null` makes the prop optional.
+- a list the editor fills row by row is documented with the shape of a row,
+  type and spaces included: `list<{name: string, quantity: string, image:
+  image|null}>` (`array<{…}>` reads the same). Each field is typed like a
+  prop of its own (text, 500 characters at most, `html`, `int`, `bool`, quoted
+  alternatives, `image`), is required unless its type says `|null`, and gets a
+  field of the form; a list may hold fifty rows. The component receives a list
+  of rows, `item.name`, `item.image` (the address of the picture, as for an
+  `image` prop). A field that a row cannot hold, a list or a record such as
+  `product`, leaves the whole prop a JSON one. A list of plain strings
+  (`list<string>`, `string[]`, and `list<html>`, `html[]` for markup) is one
+  field per row, and stays a list of strings, `["one", "two"]`, in the
+  document and in the component; a blank row is dropped. `product[]` and the
+  other lists of records are not affected, see below.
 - a prop may name what the site holds: `image` is a picture of the media
-  library (its id, or the `https://` address of a picture kept elsewhere),
+  library (its id, the path the library serves it from, such as
+  `/image-library/17/full/max/0/default.webp`, or the `https://` address of a
+  picture kept elsewhere),
   handed to the component as the address of the picture, to print in a
   `src`;
   `product`, `category`, `folder`, `form` or `menu` is one record,

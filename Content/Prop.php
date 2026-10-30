@@ -27,6 +27,10 @@ final readonly class Prop
      * @param array<string, string> $choices value => label, for a Choice
      * @param list<Prop>            $items   the props of one item, for Items
      * @param array<string, string> $icons   a pictogram per choice, for a Choice drawn as buttons
+     *
+     * With `scalarItems`, the list is stored, and handed to the component, as a
+     * list of scalars (`["one", "two"]`): its single item prop, named `value`,
+     * is the field of a row of the form, and the row is not part of the value.
      */
     public function __construct(
         public string $name,
@@ -44,6 +48,7 @@ final readonly class Prop
         public ?string $picker = null,
         public bool $searchable = false,
         public array $icons = [],
+        public bool $scalarItems = false,
     ) {
         if (1 !== preg_match('/^[a-z][a-z0-9_]*$/', $name)) {
             throw new \InvalidArgumentException(\sprintf('A prop name is lowercase letters, digits and underscores: "%s" given.', $name));
@@ -55,6 +60,10 @@ final readonly class Prop
 
         if (PropType::Items === $type && [] === $items) {
             throw new \InvalidArgumentException(\sprintf('The items prop "%s" describes no item.', $name));
+        }
+
+        if ($scalarItems && (PropType::Items !== $type || 1 !== \count($items) || 'value' !== $items[0]->name)) {
+            throw new \InvalidArgumentException(\sprintf('The list of scalars "%s" holds one item prop, named "value".', $name));
         }
     }
 
@@ -103,9 +112,9 @@ final readonly class Prop
     /**
      * @param list<Prop> $items
      */
-    public static function items(string $name, string $label, array $items, int $min = 0, int $max = 12, ?string $help = null): self
+    public static function items(string $name, string $label, array $items, int $min = 0, int $max = 12, ?string $help = null, bool $scalarItems = false): self
     {
-        return new self($name, PropType::Items, $label, [], $min > 0, $help, items: $items, minItems: $min, maxItems: $max);
+        return new self($name, PropType::Items, $label, [], $min > 0, $help, items: $items, minItems: $min, maxItems: $max, scalarItems: $scalarItems);
     }
 
     /**
@@ -158,7 +167,7 @@ final readonly class Prop
                 'type' => 'array',
                 'minItems' => $this->minItems ?? 0,
                 'maxItems' => $this->maxItems ?? 12,
-                'items' => (new PropSchema($this->items))->toJsonSchema(),
+                'items' => $this->scalarItems ? $this->items[0]->toJsonSchema() : (new PropSchema($this->items))->toJsonSchema(),
             ],
             PropType::Reference => ['type' => $this->required ? 'integer' : ['integer', 'null']],
             PropType::Json => ['type' => ['array', 'object']],

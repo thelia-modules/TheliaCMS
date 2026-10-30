@@ -83,6 +83,70 @@ final class PropSchemaTest extends TestCase
         self::assertSame(42, $values['picture']);
     }
 
+    public function testAnImageMayBeTheAddressTheMediaLibraryServesAPictureFrom(): void
+    {
+        $addresses = [
+            '/image-library/17/full/max/0/default.webp' => 17,
+            ' /image-library/3/full/480,!/0/default.jpg ' => 3,
+            '/image-library/8/full/max/0/default.PNG' => 8,
+        ];
+
+        foreach ($addresses as $address => $id) {
+            $values = $this->schema->normalize(['title' => 'T', 'picture' => $address, 'items' => [['label' => 'One', 'image' => $address]]]);
+
+            self::assertSame($id, $values['picture'], $address);
+            self::assertSame($id, $values['items'][0]['image'], 'An image of an item reads it the same way.');
+        }
+
+        self::assertNull($this->schema->normalize(['title' => 'T', 'picture' => '/image-library/0/full/max/0/default.webp', 'items' => [['label' => 'One', 'image' => 7]]])['picture'], 'Zero is no picture, as for an id.');
+    }
+
+    public function testAListOfScalarsIsStoredAsAListOfScalars(): void
+    {
+        $schema = new PropSchema([Prop::items('steps', 'steps', [Prop::text('value', 'value', required: true, max: 20)], 0, 3, scalarItems: true)]);
+
+        self::assertSame(['one', 'two'], $schema->normalize(['steps' => ['one', ' two ']])['steps']);
+        self::assertSame(['one', 'two'], $schema->normalize(['steps' => [['value' => 'one'], ['value' => 'two']]])['steps'], 'A row of the form is read too.');
+        self::assertSame(['one', 'two'], $schema->normalize(['steps' => ['one', '', null, '  ', ['value' => ''], 'two']])['steps'], 'A blank row of the form is dropped.');
+        self::assertSame(['one'], $schema->normalize(['steps' => '["one"]'])['steps'], 'A generator writes the list as a JSON string.');
+        self::assertSame([], $schema->normalize([])['steps']);
+
+        foreach ([[['a' => 1]], [['one']], ['one', 'two', 'three', 'four'], [str_repeat('x', 21)], 'nope'] as $wrong) {
+            try {
+                $schema->normalize(['steps' => $wrong]);
+                self::fail('A wrong list should have been refused: '.json_encode($wrong));
+            } catch (InvalidDocumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+
+        $blanks = new PropSchema([Prop::items('steps', 'steps', [Prop::text('value', 'value', required: true)], 2, 3, scalarItems: true)]);
+        $this->expectException(InvalidDocumentException::class);
+        $blanks->normalize(['steps' => ['one', '', '']]);
+    }
+
+    public function testAListOfScalarsIsDescribedAsAnArrayOfTheScalar(): void
+    {
+        $steps = Prop::items('steps', 'Steps', [Prop::text('value', 'value', required: true, max: 500)], 0, 50, scalarItems: true)->toJsonSchema();
+
+        self::assertSame('array', $steps['type']);
+        self::assertSame(50, $steps['maxItems']);
+        self::assertSame('string', $steps['items']['type']);
+        self::assertSame(500, $steps['items']['maxLength']);
+        self::assertArrayNotHasKey('properties', $steps['items'], 'Not an object per row.');
+
+        $html = Prop::items('blocks', 'Blocks', [Prop::html('value', 'value', required: true)], 0, 50, scalarItems: true)->toJsonSchema();
+
+        self::assertSame('string', $html['items']['type']);
+    }
+
+    public function testAScalarListHoldsOneItemNamedValue(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        Prop::items('steps', 'steps', [Prop::text('label', 'label')], scalarItems: true);
+    }
+
     public function testAnImageMayBeTheHttpsAddressOfAPictureKeptElsewhere(): void
     {
         $values = $this->schema->normalize(['title' => 'T', 'picture' => ' https://cdn.example.org/a%20b.jpg?x=1 ', 'items' => [['label' => 'One', 'image' => 'https://example.org/one.png']]]);
@@ -90,7 +154,7 @@ final class PropSchemaTest extends TestCase
         self::assertSame('https://cdn.example.org/a%20b.jpg?x=1', $values['picture'], 'Kept as typed, trimmed.');
         self::assertSame('https://example.org/one.png', $values['items'][0]['image']);
 
-        foreach (['http://example.org/one.png', 'https://', '/image-library/3/full/max/0/default.webp', 'https://example.org/a b.png'] as $address) {
+        foreach (['http://example.org/one.png', 'https://', 'https://example.org/a b.png', '/image-library/abc/full/max/0/default.webp', '/image-library/3/full/max/default.webp', '/image-library/3/full/max/0/default.exe', '//evil.example/image-library/3/full/max/0/default.webp', '/image-library/3/full/max/0/default.webp?x=1'] as $address) {
             try {
                 $this->schema->normalize(['title' => 'T', 'picture' => $address, 'items' => [['label' => 'One', 'image' => 7]]]);
                 self::fail(\sprintf('"%s" should have been refused.', $address));

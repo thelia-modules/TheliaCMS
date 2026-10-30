@@ -101,6 +101,16 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
         // drawn by renderExample() only.
         $declared = array_diff_key(array_intersect_key($this->example, $sample), $this->themePictures());
 
+        // The same inside the rows of a list: the picture of a row is drawn
+        // by renderExample() only.
+        foreach ($this->themeRowPictures() as $name => $rows) {
+            foreach ($rows as $index => $fields) {
+                foreach (array_keys($fields) as $field) {
+                    $declared[$name][$index][$field] = null;
+                }
+            }
+        }
+
         return [...$sample, ...$declared];
     }
 
@@ -116,6 +126,16 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
         foreach ($this->themePictures() as $name => $path) {
             if (null !== $this->packages) {
                 $addresses[$name] = $this->packages->getUrl($path);
+            }
+        }
+
+        if (null !== $this->packages) {
+            foreach ($this->themeRowPictures() as $name => $rows) {
+                foreach ($rows as $index => $fields) {
+                    foreach ($fields as $field => $path) {
+                        $addresses[$name][$index][$field] = $this->packages->getUrl($path);
+                    }
+                }
             }
         }
 
@@ -149,6 +169,37 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
     }
 
     /**
+     * The picture fields of the rows of a list whose example is the path of a
+     * file of the theme: the path by field, by row, by the name of the list.
+     *
+     * @return array<string, array<int, array<string, string>>>
+     */
+    private function themeRowPictures(): array
+    {
+        $paths = [];
+
+        foreach ($this->schema->props as $prop) {
+            $rows = $this->example[$prop->name] ?? null;
+
+            if (PropType::Items !== $prop->type || $prop->scalarItems || !\is_array($rows)) {
+                continue;
+            }
+
+            foreach (array_values($rows) as $index => $row) {
+                foreach ($prop->items as $item) {
+                    $value = \is_array($row) ? ($row[$item->name] ?? null) : null;
+
+                    if (PropType::Image === $item->type && \is_string($value) && self::isThemePath($value)) {
+                        $paths[$prop->name][$index][$item->name] = trim($value);
+                    }
+                }
+            }
+        }
+
+        return $paths;
+    }
+
+    /**
      * A relative path with no scheme and no leading slash, which is neither
      * an id of the media library nor an https address.
      */
@@ -162,16 +213,23 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
 
     /**
      * @param array<string, mixed>  $props
-     * @param array<string, string> $addresses the address to draw a picture prop from, by prop, instead of reading it as an id
+     * @param array<string, string|array<int, array<string, string>>> $addresses the address to draw a picture prop from, by prop, instead of reading it as an id; for the picture of a row of a list, by row and field
      */
     private function draw(array $props, string $locale, array $addresses): string
     {
         $forComponent = [];
         $images = [];
+        $rowImages = [];
 
         foreach ($this->schema->props as $prop) {
             if (PropType::Image === $prop->type) {
                 $images[] = $prop->name;
+            } elseif (PropType::Items === $prop->type && !$prop->scalarItems && !\in_array($prop->name, $this->idLists, true)) {
+                foreach ($prop->items as $item) {
+                    if (PropType::Image === $item->type) {
+                        $rowImages[$prop->name][] = $item->name;
+                    }
+                }
             }
         }
 
@@ -179,10 +237,12 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
             // A picture is stored as an id of the media library; the component
             // prints what it is given in a src, as a template of the theme
             // hands it an address.
-            if (isset($addresses[$name])) {
+            if (isset($addresses[$name]) && \is_string($addresses[$name])) {
                 $value = $addresses[$name];
             } elseif (\in_array($name, $images, true)) {
                 $value = ImageSource::of($value);
+            } elseif (isset($rowImages[$name]) && \is_array($value)) {
+                $value = $this->rowsWithAddresses($value, $rowImages[$name], \is_array($addresses[$name] ?? null) ? $addresses[$name] : []);
             }
 
             // A prop left empty is left to the default of the component, which
@@ -203,5 +263,32 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
         $draw = fn (): string => $this->renderer->createAndRender($this->component, $forComponent);
 
         return null === $this->localeSwitcher ? $draw() : $this->localeSwitcher->runWithLocale($locale, $draw);
+    }
+
+    /**
+     * The rows of a list with the picture of each drawn from an address, as a
+     * picture prop of its own is.
+     *
+     * @param array<mixed>                      $rows
+     * @param list<string>                      $fields    the picture fields of a row
+     * @param array<int, array<string, string>> $addresses by row and field, instead of reading the field as an id
+     *
+     * @return array<mixed>
+     */
+    private function rowsWithAddresses(array $rows, array $fields, array $addresses): array
+    {
+        $drawn = [];
+
+        foreach (array_values($rows) as $index => $row) {
+            foreach ($fields as $field) {
+                if (\is_array($row) && \array_key_exists($field, $row)) {
+                    $row[$field] = $addresses[$index][$field] ?? ImageSource::of($row[$field]);
+                }
+            }
+
+            $drawn[] = $row;
+        }
+
+        return $drawn;
     }
 }
