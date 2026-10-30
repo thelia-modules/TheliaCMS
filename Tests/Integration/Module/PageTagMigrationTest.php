@@ -24,7 +24,9 @@ use TheliaCMS\TheliaCMS;
  *
  * Runs outside a transaction: an ALTER TABLE commits on its own, so a rollback
  * would undo nothing and the test would prove nothing. The schema is put back
- * the way 1.2.0 left it, the update is played, then checked.
+ * the way 1.2.0 left it, the update is played, then checked. The table the
+ * update makes is the one of 1.3.0: the later updates of `cms_tag` are played
+ * after it, so the tests that follow find the schema of this version.
  *
  * A column is dropped with ALGORITHM=COPY: MariaDB drops it instantly
  * otherwise and keeps it in the rows, so about thirty runs leave the table
@@ -34,7 +36,7 @@ final class PageTagMigrationTest extends CmsIntegrationTestCase
 {
     protected bool $useTransaction = false;
 
-    /** @var list<array{id: int, name: string}> */
+    /** @var list<array{id: int, name: string, color: string|null}> */
     private array $tagsBefore = [];
 
     /** @var array<int, int> */
@@ -44,7 +46,7 @@ final class PageTagMigrationTest extends CmsIntegrationTestCase
     {
         parent::setUp();
 
-        $this->tagsBefore = $this->rows('SELECT id, name FROM cms_tag');
+        $this->tagsBefore = $this->rows('SELECT id, name, color FROM cms_tag');
         $this->pageTagsBefore = array_column($this->rows('SELECT id, tag_id FROM cms_page WHERE tag_id IS NOT NULL'), 'tag_id', 'id');
     }
 
@@ -52,10 +54,12 @@ final class PageTagMigrationTest extends CmsIntegrationTestCase
     {
         $connection = $this->getPropelConnection();
 
-        (new TheliaCMS())->update('1.2.0', '1.3.0', $connection);
+        $module = new TheliaCMS();
+        $module->update('1.2.0', '1.3.0', $connection);
+        $module->update('2.4.0', '2.5.0', $connection);
 
         foreach ($this->tagsBefore as $tag) {
-            $connection->prepare('INSERT IGNORE INTO cms_tag (id, name, created_at, updated_at) VALUES (?, ?, NOW(), NOW())')->execute([$tag['id'], $tag['name']]);
+            $connection->prepare('INSERT IGNORE INTO cms_tag (id, name, color, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())')->execute([$tag['id'], $tag['name'], $tag['color']]);
         }
 
         foreach ($this->pageTagsBefore as $pageId => $tagId) {

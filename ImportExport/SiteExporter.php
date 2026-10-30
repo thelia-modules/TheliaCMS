@@ -118,6 +118,7 @@ final readonly class SiteExporter
             'model' => 1 === $page->getModel(),
             'fields' => PageFields::decode($page->getFields()),
             'tag' => $page->getCmsTag()?->getName(),
+            'tag_color' => $page->getCmsTag()?->getColor(),
             'image_id' => $page->getImageId(),
             'publish_at' => $this->date($page->getPublishAt()),
             'unpublish_at' => $this->date($page->getUnpublishAt()),

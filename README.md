@@ -555,7 +555,7 @@ Duplicating a page or creating one from a model copies its documents,
 including the files. Emptying the bin and deleting a page type (and so its
 model page) remove the files once the database change is committed; a file
 that cannot be removed is logged, without an error. The export and the import
-of the site do not carry documents. The update to 2.5.0 adds
+of the site do not carry documents. The update to 2.6.0 adds
 `cms_page_document` and `cms_page_document_i18n`.
 
 ## Media
@@ -1220,17 +1220,31 @@ adding a component, step by step, and what the generator does with it:
 ### Tags
 
 A page carries one tag or none, picked in the "General" tab among the tags of
-the site, which are listed, added, renamed and deleted under **CMS > Tags**. A
+the site, which are listed, added, edited and deleted under **CMS > Tags**. A
 tag is a name shown as it is in every language — "Recette", "Actualité" — and
 managing them takes the same right as editing pages. Deleting a tag leaves its
 pages without one; the screen says how many.
 
+A tag may have a color, one of a palette of six or none: the back office
+shows the tag in a badge of that color, grey without one. The palette is a
+closed list so that a theme can map each name to its own design:
+
+| Name | Badge in the back office |
+|---|---|
+| `red` | `text-bg-danger` |
+| `orange` | `text-bg-primary` |
+| `yellow` | `text-bg-warning` |
+| `green` | `text-bg-success` |
+| `cyan` | `text-bg-info` |
+| `dark` | `text-bg-dark` |
+
 The tag is what gathers pages: a theme lists the pages of a tag with
 `cms_pages_tagged('Recette')`, which answers with the pages online in the
 language served, the most recently published first, each as `id`, `title`,
-`url`, `chapo`, `description`, `image`, `pageType`, `tag` and `publishedAt`.
-The page being served reads its own tag as `cms_page.tag`, and the modules
-hooked on `cmspage.*` as `page.tag`. From PHP, the same list comes from
+`url`, `chapo`, `description`, `image`, `pageType`, `tag`, `tagColor` and
+`publishedAt`. The page being served reads its own tag as `cms_page.tag`, and
+the modules hooked on `cmspage.*` as `page.tag`; the color of the tag, as a
+name of the palette or null, is `tagColor` beside it. From PHP, the same list comes from
 `PublishedPageRepository::withTag($tag, $locale)`.
 
 ```twig
@@ -1241,9 +1255,10 @@ hooked on `cmspage.*` as `page.tag`. From PHP, the same list comes from
 {% endfor %}
 ```
 
-The tag follows a page when it is duplicated and travels with the site export;
-an import creates the tags the site lacks. The update
-to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
+The tag follows a page when it is duplicated and travels with the site export,
+its color with it; an import creates the tags the site lacks, in the color of
+the file, and leaves the color of a tag the site has. The update to 1.3.0 adds
+the `cms_tag` table and `cms_page.tag_id`, the update to 2.5.0 `cms_tag.color`.
 
 ### Twig functions
 

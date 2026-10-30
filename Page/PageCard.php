@@ -22,7 +22,8 @@ namespace TheliaCMS\Page;
 final readonly class PageCard
 {
     /**
-     * @param array<string, int|float|string|bool|null> $fields the value of every field its type defines, by code, in this language
+     * @param string|null                               $tagColor the name of the color of the tag in the palette (PageTagColor), when it has one
+     * @param array<string, int|float|string|bool|null> $fields   the value of every field its type defines, by code, in this language
      */
     public function __construct(
         public int $id,
@@ -34,6 +35,7 @@ final readonly class PageCard
         public ?string $description = null,
         public ?PageImage $image = null,
         public ?string $tag = null,
+        public ?string $tagColor = null,
         public ?\DateTimeInterface $publishedAt = null,
         public array $fields = [],
     ) {

@@ -9,7 +9,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Upgrading to 2.6.0
 
-- The update adds `cms_menu.menu_locale` (empty on every existing menu, which
+- The update adds `cms_page_document` and `cms_page_document_i18n`, and
+  `cms_menu.menu_locale` (empty on every existing menu, which
   stays the shared menu of its code) and replaces the unique index
   `unq_cms_menu_code` by `unq_cms_menu_code_locale` on (`code`,
   `menu_locale`) (`Config/update/2.6.0.sql`). Update the module before serving
@@ -18,10 +19,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   language: code that reads a menu by its code goes through
   `CmsMenuQuery::findShared()` or `findServed()`. `MenuCache::storedEntryCount()`
   and `CmsMenuProvider::hasEntries()` take the locale.
-- Going back to 2.5 after the update, which deletes the menus of the
-  languages:
+- Going back to 2.5 after the update, which deletes the documents of the
+  pages (their files stay under `local/media/documents/cms-page/`) and the
+  menus of the languages:
 
   ```sql
+  DROP TABLE IF EXISTS `cms_page_document_i18n`, `cms_page_document`;
   DELETE FROM `cms_menu` WHERE `menu_locale` <> '';
   ALTER TABLE `cms_menu` ADD UNIQUE INDEX `unq_cms_menu_code` (`code`),
       DROP INDEX `unq_cms_menu_code_locale`, DROP COLUMN `menu_locale`;
@@ -75,6 +78,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   paused and that nothing moves for a visitor who asks for less motion. A
   test holds the recipe of the skill to the validator, and the elements the
   prompt names as taken out to the filter of the page.
+- **A tag may have a color**, picked on its screen under **CMS > Tags** among
+  six (`red`, `orange`, `yellow`, `green`, `cyan`, `dark`) or none. The list
+  of tags and the list of pages show each tag in its color; a tag without one
+  stays grey. A theme reads the name of the color as `tagColor`, beside `tag`,
+  on the cards of `cms_pages_tagged()`, on `cms_page` and on the page handed
+  to the `cmspage.*` hooks. The export carries it per page (`tag_color`); an
+  import gives it to the tags it creates, and drops a name the palette does
+  not have with a warning. The update to 2.5.0 adds `cms_tag.color`, empty
+  for the tags a site has already.
 - **A page offers files to download.** The **Documents** tab of the edit
   screen of a page takes several files per page (pdf, doc, docx, xls, xlsx,
   ppt, pptx, odt, zip, txt; the extension and the detected type must agree,
@@ -106,8 +118,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   page type (and so its model page) remove the files once the database change
   is committed; a file that cannot be removed is logged, without an error.
   The export and the import of the site do not carry documents.
-- **The update to 2.5.0 adds `cms_page_document` and
-  `cms_page_document_i18n`** (`Config/update/2.5.0.sql`).
+- **The update to 2.6.0 adds `cms_page_document` and
+  `cms_page_document_i18n`** (`Config/update/2.6.0.sql`).
 - **A language may have a menu of its own.** Each code keeps a shared menu,
   read by every language without a menu of its own; detaching a language
   copies the shared menu (titles, entries, labels in every language) into a
