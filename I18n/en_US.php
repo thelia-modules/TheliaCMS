@@ -1370,4 +1370,8 @@ return [
     'This language already reads the shared menu.' => 'This language already reads the shared menu.',
     'This language is not active on the shop.' => 'This language is not active on the shop.',
     'This language has no menu of its own: detach it first.' => 'This language has no menu of its own: detach it first.',
+    'Documents to download' => 'Documents to download',
+    'B' => 'B',
+    'KB' => 'KB',
+    'MB' => 'MB',
 ];

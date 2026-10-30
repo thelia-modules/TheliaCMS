@@ -19,10 +19,12 @@ use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\Lang;
 use TheliaCMS\Content\Partial\PartialSection;
 use TheliaCMS\Content\SectionCatalog;
+use TheliaCMS\Front\ThemeTemplateRenderer;
 use TheliaCMS\Http\CacheTags;
 use TheliaCMS\Http\ShownTags;
 use TheliaCMS\Locale\AlternateUrls;
 use TheliaCMS\Menu\CmsMenuProvider;
+use TheliaCMS\Page\Document\PageDocumentBlock;
 use TheliaCMS\Page\Document\PageDocumentLink;
 use TheliaCMS\Page\Document\PageDocumentLinks;
 use TheliaCMS\Page\Field\FieldFormatter;
@@ -59,6 +61,8 @@ final class CmsExtension extends AbstractExtension
         private readonly FieldFormatter $fieldFormatter,
         private readonly ShownTags $shownTags,
         private readonly PageDocumentLinks $documentLinks,
+        private readonly PageDocumentBlock $documentBlock,
+        private readonly ThemeTemplateRenderer $templates,
     ) {
     }
 
@@ -82,6 +86,7 @@ final class CmsExtension extends AbstractExtension
             new TwigFunction('cms_page_type', $this->pageType(...)),
             new TwigFunction('cms_page_fields', $this->pageFields(...)),
             new TwigFunction('cms_page_documents', $this->pageDocuments(...)),
+            new TwigFunction('cms_page_documents_block', $this->pageDocumentsBlock(...), ['is_safe' => ['html']]),
             new TwigFunction('cms_is_home', $this->isHome(...)),
         ];
     }
@@ -216,6 +221,34 @@ final class CmsExtension extends AbstractExtension
         $this->shownTags->add(CacheTags::page($pageId));
 
         return $this->documentLinks->forPage($pageId, $locale ?? $this->currentLocale());
+    }
+
+    /**
+     * The files of a page listed, markup included: `cms_page_documents_block(page)`.
+     * Nothing when the page has no file, so a template calls it without a test.
+     *
+     * The template is `cms-page-documents.html.twig` at the root of the theme
+     * when it ships one, the neutral one of the module otherwise; it receives
+     * `cms_documents` (see PageDocumentBlock), `cms_page` (what was given) and
+     * `labels`. The files are read through `pageDocuments()`, which files the
+     * page under its cache tag.
+     */
+    public function pageDocumentsBlock(PublishedPage|int|string|null $page, ?string $locale = null): string
+    {
+        $locale ??= $this->currentLocale();
+        $links = $this->pageDocuments($page, $locale);
+
+        if ([] === $links) {
+            return '';
+        }
+
+        $context = $this->documentBlock->context($links, $locale);
+
+        return $this->templates->render('cms-page-documents', '@TheliaCMSModule/front/cms-page-documents.html.twig', [
+            'cms_documents' => $context['documents'],
+            'cms_page' => $page,
+            'labels' => $context['labels'],
+        ]);
     }
 
     private function currentLocale(): string

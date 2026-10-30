@@ -1370,4 +1370,8 @@ return [
     'This language already reads the shared menu.' => 'Cette langue lit déjà le menu partagé.',
     'This language is not active on the shop.' => 'Cette langue n’est pas active sur la boutique.',
     'This language has no menu of its own: detach it first.' => 'Cette langue n’a pas son propre menu : donnez-lui-en un d’abord.',
+    'Documents to download' => 'Documents à télécharger',
+    'B' => 'o',
+    'KB' => 'Ko',
+    'MB' => 'Mo',
 ];

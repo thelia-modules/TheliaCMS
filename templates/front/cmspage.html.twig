@@ -56,6 +56,7 @@
     <article class="cms-page__content cms-page-content" {{ ai_provenance_attributes(cms_page.provenance) }}>
         {{ theme_hook('cmspage.content.before', {page: cms_page}) }}
         {{ cms_page.html|raw }}
+        {{ cms_page_documents_block(cms_page) }}
         {{ theme_hook('cmspage.content.after', {page: cms_page}) }}
     </article>
     {% set ai_label = ai_provenance_label(cms_page.provenance, cms_page.locale) %}
