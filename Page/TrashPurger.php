@@ -59,6 +59,7 @@ final readonly class TrashPurger
 
         $connection = Propel::getConnection('TheliaMain');
         $connection->beginTransaction();
+        $files = [];
 
         try {
             foreach ($pages as $page) {
@@ -72,8 +73,10 @@ final readonly class TrashPurger
                     ->filterByViewId((string) $page->getId())
                     ->delete($connection);
 
-                // The rows of its documents cascade, their files do not.
-                $this->documents->deleteFilesOf((int) $page->getId(), $connection);
+                // The rows of its documents cascade, their files do not: they
+                // are removed once the deletion is committed, so a rollback
+                // keeps a page whose documents still open.
+                array_push($files, ...$this->documents->filesOf((int) $page->getId(), $connection));
 
                 // Contents, revisions, search payload, documents and
                 // translations go with the page: the foreign keys cascade.
@@ -86,6 +89,8 @@ final readonly class TrashPurger
 
             throw $throwable;
         }
+
+        $this->documents->deleteFiles($files);
 
         return $pages->count();
     }

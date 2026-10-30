@@ -212,19 +212,30 @@ final readonly class PageDocumentWriter
     }
 
     /**
-     * Removes from the disk the files of the documents of a page about to be
-     * deleted for good; its rows go with it, the foreign key cascades.
+     * The stored files of the documents of a page, read before the page is
+     * deleted for good: its rows go with it, the foreign key cascades.
+     *
+     * @return list<string>
      */
-    public function deleteFilesOf(int $pageId, ?ConnectionInterface $connection = null): void
+    public function filesOf(int $pageId, ?ConnectionInterface $connection = null): array
     {
-        $files = CmsPageDocumentQuery::create()
+        return array_map('strval', CmsPageDocumentQuery::create()
             ->filterByPageId($pageId)
             ->select(['File'])
             ->find($connection)
-            ->toArray();
+            ->toArray());
+    }
 
+    /**
+     * Removes stored files from the disk, once the rows that named them are
+     * gone for good.
+     *
+     * @param list<string> $files
+     */
+    public function deleteFiles(array $files): void
+    {
         foreach ($files as $file) {
-            $this->storage->delete((string) $file);
+            $this->storage->delete($file);
         }
     }
 
