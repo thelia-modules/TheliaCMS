@@ -7,6 +7,26 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Upgrading to 2.6.0
+
+- The update adds `cms_menu.menu_locale` (empty on every existing menu, which
+  stays the shared menu of its code) and replaces the unique index
+  `unq_cms_menu_code` by `unq_cms_menu_code_locale` on (`code`,
+  `menu_locale`) (`Config/update/2.6.0.sql`). Update the module before serving
+  pages, and remove `var/propel/<env>` so the models are generated again.
+- `CmsMenuQuery::create()->findOneByCode()` may now answer with the menu of a
+  language: code that reads a menu by its code goes through
+  `CmsMenuQuery::findShared()` or `findServed()`. `MenuCache::storedEntryCount()`
+  and `CmsMenuProvider::hasEntries()` take the locale.
+- Going back to 2.5 after the update, which deletes the menus of the
+  languages:
+
+  ```sql
+  DELETE FROM `cms_menu` WHERE `menu_locale` <> '';
+  ALTER TABLE `cms_menu` ADD UNIQUE INDEX `unq_cms_menu_code` (`code`),
+      DROP INDEX `unq_cms_menu_code_locale`, DROP COLUMN `menu_locale`;
+  ```
+
 ### Added
 
 - **A component is prototyped from the content screen of a page.** **Add a
@@ -80,6 +100,23 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   The export and the import of the site do not carry documents.
 - **The update to 2.5.0 adds `cms_page_document` and
   `cms_page_document_i18n`** (`Config/update/2.5.0.sql`).
+- **A language may have a menu of its own.** Each code keeps a shared menu,
+  read by every language without a menu of its own; detaching a language
+  copies the shared menu (titles, entries, labels in every language) into a
+  menu of that language under the same code, which `cms_menu(code)` then
+  serves in that language. Realigning replaces the entries of a menu by a copy
+  of another menu of the code (a language on the shared menu, on another
+  language, or the shared menu on a language), never merged, titles kept.
+  Back to shared deletes the menu of the language. An emptied detached menu
+  stays empty in its language rather than show the shared one. Renaming or
+  deleting the shared menu renames or deletes the menus of its languages. The
+  services are `CmsMenuWriter::detach()`, `realign()`, `reattach()`; the
+  screen comes with a later version.
+- **The export carries the language of a menu** (`locale`, empty for the
+  shared one) and the import matches menus on the code and that key; a file
+  without it holds shared menus. The format is version 3: a module of an
+  earlier version refuses the file rather than write the menu of a language
+  over the shared one.
 
 ### Fixed
 

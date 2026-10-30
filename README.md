@@ -610,6 +610,33 @@ contents the shop configured, so activating the module changes nothing on the
 front until somebody builds a menu. The consent slots (the terms of sale linked
 from the checkout) stay with the contents of the shop.
 
+### A menu per language
+
+A menu is shared by every language until a language is given a menu of its
+own. Each code then has one shared menu, read by every language that has no
+menu of its own, and one detached menu per language that has one, under the
+same code: a theme keeps calling `cms_menu('main')` and gets the menu of the
+language it is served in.
+
+- **Detaching** a language copies the shared menu into a menu of its own: its
+  titles, every entry, and the labels of the entries in every language. From
+  then on, the two are edited apart. Only an active language can be detached.
+- **Realigning** replaces the entries of a menu by a copy of the entries of
+  another menu of the same code: a language on the shared menu, a language on
+  another language, or the shared menu on a language. The entries are
+  replaced, never merged, and the titles of the menu being realigned stay.
+- **Back to shared** deletes the menu of a language and its entries; the
+  language reads the shared menu again.
+
+A detached menu whose entries were all deleted is an empty menu in that
+language, not a way back to the shared one: the shared menu does not show
+through. Like an empty shared menu, it leaves the content slot of the core to
+the folders and contents of the shop in that language.
+
+The code belongs to the shared menu: renaming it renames the menus of its
+languages, and deleting it deletes them. The list of menus and the picker of a
+component of the theme show each code once.
+
 ## Forms
 
 Forms live under **CMS > Forms**. A form has a code, the way a menu does, and
@@ -1181,7 +1208,7 @@ to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
 
 | Function | Returns |
 |---|---|
-| `cms_menu(code, locale)` | the tree of a menu. Each entry has `label`, `url` (null for a heading), `blank`, `children`, `active`, `in_trail`. The locale defaults to the one being served. |
+| `cms_menu(code, locale)` | the tree of a menu: the menu of the language when it has one of its own, the shared menu otherwise (see [A menu per language](#a-menu-per-language)). Each entry has `label`, `url` (null for a heading), `blank`, `children`, `active`, `in_trail`. The locale defaults to the one being served. |
 | `cms_page_alternates()` | the page being served, in each language it exists in: `locale`, `code`, `title`, `url`, `current` |
 | `cms_pages_tagged(tag, locale)` | the pages online carrying the tag, the most recently published first. The locale defaults to the one being served. |
 | `cms_pages_of_type(type, options, locale)` | the pages online of a type, the model left out, ordered, filtered and cut by `options` (`sort`, `direction`, `filter`, `limit`, `offset`): see [Templates of pages](#templates-of-pages). |
@@ -1215,8 +1242,9 @@ theme. A menu of any depth takes a dozen lines:
 ```
 
 Menus are cached per code, language and host, and the cache is dropped whenever a
-menu is saved, or a page it points at is renamed, published, unpublished or
-binned.
+menu is saved, detached, realigned or sent back to shared, or a page it points
+at is renamed, published, unpublished or binned. Whether a menu has entries, which
+decides who fills the content slots, is cached per code and language too.
 
 `cms_page_alternates()` is what a language switcher should be built on: it
 answers with the current page in each language, absolute and on the right domain
@@ -1260,6 +1288,13 @@ is missing is named in the report rather than left as a silent hole.
 
 An import leaves alone whatever is already there: a page at the same address, a
 menu, a form or a component carrying the same code. It counts them and says so.
+A menu carries `locale`, empty for the shared menu of its code and the locale
+of the language for a menu of its own, and is matched on its code and that
+key; a file without it holds shared menus. The menu of a language the site
+does not have, or whose code has no shared menu in the file or on the site, is
+left out and named in the report. Since module 2.6.0 the file is in format
+version 3, which an older module refuses rather than write the menu of a
+language over the shared one.
 A component of the file is checked as if the generator had just written it; one
 the site refuses is left out and named. The document of a catalogue item goes
 on the item of the importing site with the same reference (a product) or the
