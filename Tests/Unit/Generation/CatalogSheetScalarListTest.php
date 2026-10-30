@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the Thelia package.
+ * http://www.thelia.net
+ *
+ * (c) OpenStudio <info@thelia.net>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace TheliaCMS\Tests\Unit\Generation;
+
+use PHPUnit\Framework\TestCase;
+use TheliaCMS\Content\Prop;
+use TheliaCMS\Content\PropSchema;
+use TheliaCMS\Content\SectionDefinitionInterface;
+use TheliaCMS\Generation\CatalogSheet;
+
+/**
+ * The generator is told a list of scalars is a list of strings, not of objects.
+ */
+final class CatalogSheetScalarListTest extends TestCase
+{
+    public function testAListOfScalarsIsToldAsAListOfStrings(): void
+    {
+        $definition = new class implements SectionDefinitionInterface {
+            public function name(): string
+            {
+                return 'Organisms:Recipe:Base';
+            }
+
+            public function label(): string
+            {
+                return 'Recipe';
+            }
+
+            public function description(): string
+            {
+                return 'A recipe.';
+            }
+
+            public function schema(): PropSchema
+            {
+                return new PropSchema([
+                    Prop::items('steps', 'steps', [Prop::text('value', 'value', required: true, max: 500)], 0, 50, 'The steps', scalarItems: true),
+                    Prop::items('blocks', 'blocks', [Prop::html('value', 'value', required: true)], 0, 50, scalarItems: true),
+                    Prop::items('ingredients', 'ingredients', [Prop::text('name', 'name', required: true)], 0, 50),
+                ]);
+            }
+
+            public function sample(): array
+            {
+                return [];
+            }
+
+            public function normalizeProps(array $props): array
+            {
+                return $props;
+            }
+
+            public function render(array $props, string $locale): string
+            {
+                return '';
+            }
+        };
+
+        $sheet = (new \ReflectionClass(CatalogSheet::class))->newInstanceWithoutConstructor()->section($definition);
+
+        self::assertStringContainsString('- `steps` (list of 0 to 50 strings, each 500 characters at most)', $sheet);
+        self::assertStringContainsString('- `blocks` (list of 0 to 50 html strings)', $sheet);
+        self::assertStringNotContainsString('`value`', $sheet, 'No object per row is described.');
+        self::assertStringContainsString('- `ingredients` (list of 0 to 50 items)', $sheet);
+        self::assertStringContainsString('`name`* (text', $sheet, 'A list of rows is still described by its fields.');
+    }
+}

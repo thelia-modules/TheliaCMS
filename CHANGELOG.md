@@ -32,6 +32,22 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- **A list a theme component documents is drawn as rows of fields.**
+  `{# @prop ingredients list<{name: string, quantity: string, image:
+  image|null}> … #}` (or `array<{…}>`) gives the editor one row per item, to
+  add, remove and fill, with the picker of the media library for an `image`
+  field, in place of a JSON text area; `|null` makes a field optional. `list<string>`,
+  `list<html>`, `string[]` and `html[]` give rows of one field and are still
+  stored, and handed to the component, as a list of strings. Up to 50 rows.
+  A row that holds a list or a record (`product`…) leaves the prop a JSON
+  one, as `array`, `list`, `object` and `iterable` do. The generator is told
+  such a list is an array of strings.
+- **The picture of a row is drawn from its address**, as a picture prop of its
+  own is, and an example of the theme written as a path of the theme
+  (`images/…`) inside a row resolves the same way.
+- **An image prop accepts the address the media library serves a picture
+  from** (`/image-library/17/full/max/0/default.webp`) and stores the id of the
+  picture.
 - **`cms_page_documents_block(page, locale)` draws the documents of a page.**
   It answers the markup of the list (heading, title, type and size of each
   file, the browser opening a pdf or a txt and saving the rest), or an empty

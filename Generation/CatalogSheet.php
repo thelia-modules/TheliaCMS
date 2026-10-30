@@ -101,7 +101,7 @@ final readonly class CatalogSheet
             $line .= '. '.rtrim($prop->help, '.').'.';
         }
 
-        if (PropType::Items === $prop->type) {
+        if (PropType::Items === $prop->type && !$prop->scalarItems) {
             $items = array_map(static fn (Prop $item): string => self::propLine($item, $indent.'  - '), $prop->items);
             $line .= "\n".implode("\n", $items);
         }
@@ -119,10 +119,21 @@ final readonly class CatalogSheet
             PropType::Choice => 'one of '.implode(', ', array_map(static fn (string|int $value): string => '`'.$value.'`', array_keys($prop->choices))),
             PropType::Image => 'image id from search_media, an https address the brief gives, or null',
             PropType::Url => 'url',
-            PropType::Items => \sprintf('list of %d to %d items', $prop->minItems ?? 0, $prop->maxItems ?? 12),
+            PropType::Items => $prop->scalarItems ? self::scalarListOf($prop) : \sprintf('list of %d to %d items', $prop->minItems ?? 0, $prop->maxItems ?? 12),
             PropType::Reference => 'id from the search tools',
             PropType::Json => 'JSON string',
         };
+    }
+
+    /**
+     * A list of scalars is a list of strings, not of objects with one field.
+     */
+    private static function scalarListOf(Prop $prop): string
+    {
+        $item = $prop->items[0];
+        $kind = PropType::Html === $item->type ? 'html strings' : 'strings';
+
+        return \sprintf('list of %d to %d %s%s', $prop->minItems ?? 0, $prop->maxItems ?? 12, $kind, null !== $item->max ? ', each '.$item->max.' characters at most' : '');
     }
 
     private static function exampleId(string $component): string

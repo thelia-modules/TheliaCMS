@@ -112,6 +112,68 @@ final class ThemeComponentSectionTest extends TestCase
         self::assertSame('https://example.com/banner.webp', $received['image'] ?? null, 'An address is not turned into a file of the theme.');
     }
 
+    public function testThePicturesOfTheRowsAreDrawnFromTheirAddress(): void
+    {
+        $received = null;
+        $section = $this->recipeWith([], $received);
+
+        $section->render(['title' => 'Cake', 'ingredients' => [
+            ['name' => 'Flour', 'image' => 'https://example.com/flour.webp'],
+            ['name' => 'Salt', 'image' => null],
+            ['name' => 'Eggs', 'image' => 0],
+        ], 'steps' => ['Mix', 'Bake']], 'fr_FR');
+
+        self::assertSame([
+            ['name' => 'Flour', 'image' => 'https://example.com/flour.webp'],
+            ['name' => 'Salt', 'image' => null],
+            ['name' => 'Eggs', 'image' => null],
+        ], $received['ingredients'], 'An image of a row is read as an address like a prop of its own: an unknown one is none.');
+        self::assertSame(['Mix', 'Bake'], $received['steps'], 'A list of scalars reaches the component as it is stored.');
+    }
+
+    public function testAPictureOfTheThemeInARowIsDrawnInTheExampleOnly(): void
+    {
+        $received = null;
+        $section = $this->recipeWith(['ingredients' => [
+            ['name' => 'Flour', 'image' => 'images/recipes/flour.webp'],
+            ['name' => 'Salt', 'image' => 'https://example.com/salt.webp'],
+            ['name' => 'Eggs'],
+        ], 'steps' => ['Mix']], $received);
+
+        self::assertNull($section->sample()['ingredients'][0]['image'], 'A document never stores the path of a file of the theme.');
+        self::assertSame('https://example.com/salt.webp', $section->sample()['ingredients'][1]['image']);
+        self::assertSame('Flour', $section->sample()['ingredients'][0]['name']);
+
+        $section->renderExample('fr_FR');
+
+        self::assertSame('/assets/images/recipes/flour-abc123.webp', $received['ingredients'][0]['image'], 'The address the theme serves the file from.');
+        self::assertSame('https://example.com/salt.webp', $received['ingredients'][1]['image']);
+        self::assertSame(['Mix'], $received['steps']);
+    }
+
+    /**
+     * @param array<string, mixed>      $example
+     * @param array<string, mixed>|null $received the props the component is drawn with
+     */
+    private function recipeWith(array $example, ?array &$received): ThemeComponentSection
+    {
+        $renderer = $this->createStub(ComponentRendererInterface::class);
+        $renderer->method('createAndRender')->willReturnCallback(static function (string $name, array $props) use (&$received): string {
+            $received = $props;
+
+            return '<div></div>';
+        });
+        $packages = $this->createStub(Packages::class);
+        $packages->method('getUrl')->willReturnCallback(static fn (string $path): string => '/assets/'.preg_replace('/\.(\w+)$/', '-abc123.$1', $path));
+        $schema = new PropSchema([
+            Prop::text('title', 'title'),
+            Prop::items('ingredients', 'ingredients', [Prop::text('name', 'name', required: true), Prop::image('image', 'image')], 0, 50),
+            Prop::items('steps', 'steps', [Prop::text('value', 'value', required: true)], 0, 50, scalarItems: true),
+        ]);
+
+        return new ThemeComponentSection('Organisms:Recipe:Base', '', $schema, ['title' => 'title', 'ingredients' => 'ingredients', 'steps' => 'steps'], $renderer, [], $example, null, $packages);
+    }
+
     /**
      * @param array<string, mixed> $example
      * @param array<string, mixed>|null $received the props the component is drawn with

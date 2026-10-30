@@ -195,13 +195,37 @@ final readonly class SectionFormBuilder
                 PropType::Reference => (int) ($value ?? 0),
                 PropType::Integer => (int) ($value ?? $prop->default ?? 0),
                 PropType::Boolean => (bool) $value,
-                PropType::Items => array_values(array_map(fn (array $item): array => $this->propsFrom($item, $prop->items), \is_array($value) ? $value : [])),
+                PropType::Items => $this->itemsFrom($prop, \is_array($value) ? $value : []),
                 PropType::Json => $value ?? [],
                 default => (string) ($value ?? ''),
             };
         }
 
         return $values;
+    }
+
+    /**
+     * The rows of a list as the model writes them: rows of fields, or, for a
+     * list of scalars, the value of the one field of each row.
+     *
+     * @param array<mixed> $rows
+     *
+     * @return list<mixed>
+     */
+    private function itemsFrom(Prop $prop, array $rows): array
+    {
+        $items = [];
+
+        foreach ($rows as $row) {
+            if (!\is_array($row)) {
+                continue;
+            }
+
+            $item = $this->propsFrom($row, $prop->items);
+            $items[] = $prop->scalarItems ? $item['value'] : $item;
+        }
+
+        return $items;
     }
 
     /**
@@ -428,11 +452,20 @@ final readonly class SectionFormBuilder
                 continue;
             }
 
+            // A path of the media library is the id of its picture.
+            if (PropType::Image === $prop->type && \is_string($value)) {
+                $value = PropSchema::libraryImageId($value) ?? $value;
+            }
+
             $data[$prop->name] = match ($prop->type) {
                 PropType::Image => null === $value || 0 === (int) $value ? null : (int) $value,
                 PropType::Reference => null === $value ? null : (int) $value,
                 PropType::Choice => null === $value ? null : (string) $value,
-                PropType::Items => array_map(fn (array $item): array => $this->dataFor($prop->items, $item), \is_array($value) ? $value : []),
+                // A list of scalars is one field per row: each value is wrapped.
+                PropType::Items => array_map(
+                    fn (mixed $item): array => $this->dataFor($prop->items, $prop->scalarItems && !\is_array($item) ? ['value' => $item] : (array) $item),
+                    \is_array($value) ? $value : [],
+                ),
                 default => $value,
             };
         }

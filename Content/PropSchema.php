@@ -209,6 +209,12 @@ final readonly class PropSchema
             return trim($value);
         }
 
+        // The address the media library serves a picture from, as an editor
+        // copies it from a page: the picture it names is its id.
+        if (PropType::Image === $prop->type && \is_string($value) && null !== ($libraryId = self::libraryImageId($value))) {
+            $value = $libraryId;
+        }
+
         if (!\is_int($value) && !(\is_string($value) && 1 === preg_match('/^\d+$/', $value))) {
             throw InvalidDocumentException::because([\sprintf('"%s" must be %s.', $prop->name, $what)]);
         }
@@ -230,6 +236,21 @@ final readonly class PropSchema
         }
 
         return $id;
+    }
+
+    /**
+     * The id of the picture a path of the media library names, or null when
+     * the value is no such path. The route of the library is
+     * `/image-library/{id}/{region}/{size}/{rotation}/{quality}.{format}`
+     * (IIIF), in the formats it renders.
+     */
+    public static function libraryImageId(string $value): ?int
+    {
+        if (1 !== preg_match('#^/image-library/(\d+)/[^/\s?\#]+/[^/\s?\#]+/[^/\s?\#]+/[^/\s?\#.]+\.(?:jpe?g|png|gif|jp2|webp)$#i', trim($value), $matches)) {
+            return null;
+        }
+
+        return (int) $matches[1];
     }
 
     /**
@@ -268,7 +289,7 @@ final readonly class PropSchema
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array<string, mixed>>|list<bool|float|int|string|null>
      */
     private function items(Prop $prop, mixed $value): array
     {
@@ -286,6 +307,11 @@ final readonly class PropSchema
             throw InvalidDocumentException::because([\sprintf('"%s" must be a list.', $prop->name)]);
         }
 
+        if ($prop->scalarItems) {
+            // The form sends a blank row for a field left empty: it holds nothing.
+            $value = array_values(array_filter($value, static fn (mixed $row): bool => !self::isBlank(\is_array($row) && \array_key_exists('value', $row) ? $row['value'] : $row)));
+        }
+
         $count = \count($value);
 
         if ((null !== $prop->minItems && $count < $prop->minItems) || (null !== $prop->maxItems && $count > $prop->maxItems)) {
@@ -297,6 +323,18 @@ final readonly class PropSchema
         $problems = [];
 
         foreach ($value as $index => $item) {
+            if ($prop->scalarItems) {
+                try {
+                    $items[] = $schema->normalize(['value' => \is_array($item) && \array_key_exists('value', $item) ? $item['value'] : $item])['value'];
+                } catch (InvalidDocumentException $exception) {
+                    foreach ($exception->problems as $problem) {
+                        $problems[] = \sprintf('"%s" item %d: %s', $prop->name, $index + 1, $problem);
+                    }
+                }
+
+                continue;
+            }
+
             if (!\is_array($item)) {
                 $problems[] = \sprintf('"%s" item %d is not an object.', $prop->name, $index + 1);
 
@@ -317,5 +355,10 @@ final readonly class PropSchema
         }
 
         return $items;
+    }
+
+    private static function isBlank(mixed $value): bool
+    {
+        return null === $value || (\is_string($value) && '' === trim($value));
     }
 }

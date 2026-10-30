@@ -125,6 +125,100 @@ final class ComponentPropsReaderTest extends TestCase
         self::assertSame(str_repeat('<p>Un paragraphe.</p>', 50), $read['schema']->normalize(['html' => str_repeat('<p>Un paragraphe.</p>', 50)])['html']);
     }
 
+    public function testAListOfObjectsIsRowsOfFieldsTheFormDraws(): void
+    {
+        $read = $this->reader()->readSource(<<<'TWIG'
+            {# @prop title string The heading #}
+            {# @prop ingredients list<{name: string, quantity: string, image: image|null, vegan: bool, unit: 'g'|'cl', count: int, note: html|null}> Items of the recipe #}
+            {# @prop extras array<{label: string}>|null More rows #}
+            {% props title = '', ingredients = [], extras = null %}
+            TWIG);
+        $props = $this->byName($read);
+        $ingredients = $props['ingredients'];
+
+        self::assertSame(PropType::Items, $ingredients->type);
+        self::assertFalse($ingredients->scalarItems);
+        self::assertSame(0, $ingredients->minItems);
+        self::assertSame(50, $ingredients->maxItems);
+        self::assertSame('Items of the recipe', $ingredients->help, 'The description follows a type that holds spaces.');
+        self::assertSame(['name', 'quantity', 'image', 'vegan', 'unit', 'count', 'note'], array_map(static fn (Prop $item): string => $item->name, $ingredients->items));
+
+        $fields = [];
+        foreach ($ingredients->items as $item) {
+            $fields[$item->name] = $item;
+        }
+
+        self::assertSame(PropType::Text, $fields['name']->type);
+        self::assertSame(500, $fields['name']->max);
+        self::assertTrue($fields['name']->required);
+        self::assertSame(PropType::Image, $fields['image']->type);
+        self::assertFalse($fields['image']->required, '|null makes a field optional.');
+        self::assertSame(PropType::Boolean, $fields['vegan']->type);
+        self::assertSame(PropType::Choice, $fields['unit']->type);
+        self::assertSame(['g' => 'g', 'cl' => 'cl'], $fields['unit']->choices);
+        self::assertSame(PropType::Integer, $fields['count']->type);
+        self::assertSame(PropType::Html, $fields['note']->type);
+        self::assertFalse($fields['note']->required);
+        self::assertSame(PropType::Items, $props['extras']->type, 'array<{…}> reads as list<{…}>.');
+        self::assertSame([], $read['id_lists'], 'Rows of fields are not lists of ids.');
+    }
+
+    public function testAListWhoseItemCannotBeHeldByAFormStaysJson(): void
+    {
+        $read = $this->reader()->readSource(<<<'TWIG'
+            {# @prop nested list<{name: string, tags: list<string>}> A list in a row #}
+            {# @prop cards list<{title: string, product: product}> A record in a row #}
+            {# @prop objects list<{title: string, meta: array}> A bare array in a row #}
+            {# @prop broken list<{title string}> No type #}
+            {# @prop plain array Free #}
+            {# @prop generic array<string, int> A map #}
+            {# @prop iter iterable Whatever #}
+            {# @prop obj object Whatever #}
+            {# @prop bare list Whatever #}
+            {% props nested = [], cards = [], objects = [], broken = [], plain = [], generic = [], iter = [], obj = [], bare = [] %}
+            TWIG);
+
+        foreach ($this->byName($read) as $name => $prop) {
+            self::assertSame(PropType::Json, $prop->type, \sprintf('"%s" stays a JSON prop.', $name));
+        }
+    }
+
+    public function testAListOfTextsIsRowsOfOneFieldStoredAsAListOfScalars(): void
+    {
+        $read = $this->reader()->readSource(<<<'TWIG'
+            {# @prop steps list<string> The steps #}
+            {# @prop notes string[]|null Notes #}
+            {# @prop paragraphs list<html> Paragraphs #}
+            {# @prop blocks html[] Blocks #}
+            {# @prop productIds product[] Products #}
+            {# @prop ints list<int> Numbers #}
+            {% props steps = [], notes = null, paragraphs = [], blocks = [], productIds = [], ints = [] %}
+            TWIG);
+        $props = $this->byName($read);
+
+        foreach (['steps', 'notes'] as $name) {
+            self::assertSame(PropType::Items, $props[$name]->type);
+            self::assertTrue($props[$name]->scalarItems, $name);
+            self::assertSame(50, $props[$name]->maxItems);
+            self::assertCount(1, $props[$name]->items);
+            self::assertSame('value', $props[$name]->items[0]->name);
+            self::assertSame(PropType::Text, $props[$name]->items[0]->type);
+            self::assertSame(500, $props[$name]->items[0]->max);
+        }
+
+        foreach (['paragraphs', 'blocks'] as $name) {
+            self::assertTrue($props[$name]->scalarItems, $name);
+            self::assertSame(PropType::Html, $props[$name]->items[0]->type);
+        }
+
+        self::assertFalse($props['product_ids']->scalarItems, 'An id list keeps its own path.');
+        self::assertSame('id', $props['product_ids']->items[0]->name);
+        self::assertSame(12, $props['product_ids']->maxItems);
+        self::assertSame(PropType::Json, $props['ints']->type);
+        self::assertSame(['product_ids'], $read['id_lists']);
+        self::assertSame(['a', 'b'], $read['schema']->normalize(['steps' => [['value' => 'a'], 'b', '']])['steps']);
+    }
+
     /**
      * @return array<string, Prop>
      */

@@ -60,6 +60,13 @@ final readonly class ComponentPropsReader
     /** How many records a list of them may hold. */
     private const int MAX_IDS = 12;
 
+    /**
+     * How many rows a list the theme documents may hold: a recipe already
+     * has thirteen ingredients, and the twelve of a generated section are too
+     * few for it.
+     */
+    private const int MAX_ITEMS = 50;
+
     public function __construct(
         private Environment $twig,
         private UrlGeneratorInterface $urls,
@@ -139,14 +146,45 @@ final readonly class ComponentPropsReader
      */
     private static function documentedProps(string $source): array
     {
-        preg_match_all('/\{#\s*@prop\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+(\S+)\s*(.*?)\s*#\}/s', $source, $matches, \PREG_SET_ORDER);
+        preg_match_all('/\{#\s*@prop\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+(\S.*?)\s*#\}/s', $source, $matches, \PREG_SET_ORDER);
         $documented = [];
 
         foreach ($matches as $match) {
-            $documented[self::propName($match[1])] = ['type' => $match[2], 'description' => trim(preg_replace('/\s+/', ' ', $match[3]) ?? '')];
+            [$type, $description] = self::splitType($match[2]);
+            $documented[self::propName($match[1])] = ['type' => $type, 'description' => trim(preg_replace('/\s+/', ' ', $description) ?? '')];
         }
 
         return $documented;
+    }
+
+    /**
+     * The type a comment opens with and the words that follow it. A type is
+     * one word, unless it opens a `<`, a `{` or a `(` that has to be closed:
+     * `list<{name: string, image: image|null}>` holds spaces.
+     *
+     * @return array{string, string}
+     */
+    private static function splitType(string $text): array
+    {
+        $depth = 0;
+        $length = \strlen($text);
+
+        for ($i = 0; $i < $length; ++$i) {
+            if (\in_array($text[$i], ['<', '{', '('], true)) {
+                ++$depth;
+            } elseif (\in_array($text[$i], ['>', '}', ')'], true)) {
+                --$depth;
+            } elseif ($depth <= 0 && 1 === preg_match('/\s/', $text[$i])) {
+                break;
+            }
+        }
+
+        // A type that never closes is read as the first word, as before.
+        if ($depth > 0) {
+            $i = strcspn($text, " \t\r\n");
+        }
+
+        return [substr($text, 0, $i), ltrim(substr($text, $i))];
     }
 
     /**
@@ -200,9 +238,11 @@ final readonly class ComponentPropsReader
     }
 
     /**
+     * @param bool $angles whether a `<` opens a level like a bracket does, for a type; an argument of a tag may hold a bare `<`
+     *
      * @return list<string>
      */
-    private static function splitTopLevel(string $arguments): array
+    private static function splitTopLevel(string $arguments, bool $angles = false, string $separator = ','): array
     {
         $parts = [];
         $depth = 0;
@@ -225,11 +265,11 @@ final readonly class ComponentPropsReader
 
             if ('"' === $char || "'" === $char) {
                 $quote = $char;
-            } elseif (\in_array($char, ['(', '[', '{'], true)) {
+            } elseif (\in_array($char, $angles ? ['(', '[', '{', '<'] : ['(', '[', '{'], true)) {
                 ++$depth;
-            } elseif (\in_array($char, [')', ']', '}'], true)) {
+            } elseif (\in_array($char, $angles ? [')', ']', '}', '>'] : [')', ']', '}'], true)) {
                 --$depth;
-            } elseif (',' === $char && 0 === $depth) {
+            } elseif ($separator === $char && 0 === $depth) {
                 $parts[] = $current;
                 $current = '';
 
@@ -281,13 +321,19 @@ final readonly class ComponentPropsReader
     {
         $nullable = str_contains($type, 'null') || null === $default && $hasDefault;
         $required = !$hasDefault && !$nullable;
-        $kinds = array_map(trim(...), explode('|', $type));
+        $kinds = self::kinds($type);
         $choices = [];
 
         if (self::isIdList($type)) {
             $record = self::recordOf($type);
 
             return Prop::items($name, $name, [$this->reference('id', $record, true, null)], 0, self::MAX_IDS, $description);
+        }
+
+        $rows = $this->rows($name, $kinds, $description);
+
+        if (null !== $rows) {
+            return $rows;
         }
 
         if (\in_array('image', $kinds, true)) {
@@ -329,6 +375,105 @@ final readonly class ComponentPropsReader
         return Prop::text($name, $name, \is_scalar($default) ? (string) $default : '', $required, 500, $description);
     }
 
+    /**
+     * `list<{name: string, image: image|null}>` is rows of fields, and
+     * `list<string>` or `string[]` rows of one field, stored as a list of
+     * strings: both are drawn by the form as rows to add and remove. Null for
+     * anything else, and for a list whose rows the form cannot hold, which
+     * stays a JSON prop.
+     *
+     * @param list<string> $kinds
+     */
+    private function rows(string $name, array $kinds, string $description): ?Prop
+    {
+        foreach ($kinds as $kind) {
+            if (1 === preg_match('/^(?:(string|html)\[\]|(?:list|array)<\s*(string|html)\s*>)$/', $kind, $match)) {
+                $scalar = '' !== $match[1] ? $match[1] : $match[2];
+                $value = 'html' === $scalar ? Prop::html('value', 'value', '', true) : Prop::text('value', 'value', '', true, 500);
+
+                return Prop::items($name, $name, [$value], 0, self::MAX_ITEMS, $description, true);
+            }
+
+            if (1 !== preg_match('/^(?:list|array)<\s*\{(.*)\}\s*>$/s', $kind, $match)) {
+                continue;
+            }
+
+            $fields = [];
+
+            foreach (self::splitTopLevel($match[1], true) as $field) {
+                if (1 !== preg_match('/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.+?)\s*$/s', $field, $parts)) {
+                    return null;
+                }
+
+                $item = self::field(self::propName($parts[1]), $parts[2]);
+
+                if (null === $item) {
+                    return null;
+                }
+
+                $fields[] = $item;
+            }
+
+            return [] === $fields ? null : Prop::items($name, $name, $fields, 0, self::MAX_ITEMS, $description);
+        }
+
+        return null;
+    }
+
+    /**
+     * One field of a row, typed as a prop of its own: null when a row cannot
+     * hold it (a list, a record of the site).
+     */
+    private static function field(string $name, string $type): ?Prop
+    {
+        $kinds = self::kinds($type);
+        $required = !\in_array('null', $kinds, true);
+        $choices = [];
+
+        foreach ($kinds as $kind) {
+            if (isset(self::SOURCES[$kind]) || 1 === preg_match('/^(?:array|list|iterable|object)\b|\[\]$/', $kind)) {
+                return null;
+            }
+
+            if (1 === preg_match('/^["\'](.+)["\']$/', $kind, $match)) {
+                $choices[$match[1]] = $match[1];
+            }
+        }
+
+        if (\in_array('image', $kinds, true)) {
+            return Prop::image($name, $name, $required);
+        }
+
+        if ([] !== $choices) {
+            return Prop::choice($name, $name, $choices, (string) array_key_first($choices));
+        }
+
+        if (array_intersect($kinds, ['bool', 'boolean'])) {
+            return Prop::boolean($name, $name);
+        }
+
+        if (array_intersect($kinds, ['int', 'integer'])) {
+            return Prop::integer($name, $name, 0, \PHP_INT_MIN, \PHP_INT_MAX);
+        }
+
+        if (\in_array('html', $kinds, true)) {
+            return Prop::html($name, $name, '', $required);
+        }
+
+        return Prop::text($name, $name, '', $required, 500);
+    }
+
+    /**
+     * The alternatives of a type, `a|b|null`, the bars inside a `<…>` or a
+     * `{…}` left alone.
+     *
+     * @return list<string>
+     */
+    private static function kinds(string $type): array
+    {
+        return array_map(trim(...), self::splitTopLevel($type, true, '|'));
+    }
+
     private function reference(string $name, string $record, bool $required, ?string $description): Prop
     {
         return Prop::reference(
@@ -347,9 +492,7 @@ final readonly class ComponentPropsReader
      */
     private static function namesOneRecord(string $type): bool
     {
-        foreach (explode('|', $type) as $kind) {
-            $kind = trim($kind);
-
+        foreach (self::kinds($type) as $kind) {
             if ('image' === $kind || isset(self::SOURCES[$kind])) {
                 return true;
             }
@@ -368,9 +511,7 @@ final readonly class ComponentPropsReader
 
     private static function recordOf(string $type): ?string
     {
-        foreach (explode('|', $type) as $kind) {
-            $kind = trim($kind);
-
+        foreach (self::kinds($type) as $kind) {
             if (1 === preg_match('/^(?:(\w+)\[\]|(?:list|array)<(\w+)>)$/', $kind, $match)) {
                 $record = '' !== ($match[1] ?? '') ? $match[1] : $match[2];
 
