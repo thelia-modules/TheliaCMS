@@ -220,11 +220,14 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
         $forComponent = [];
         $images = [];
         $rowImages = [];
+        $rowLists = [];
 
         foreach ($this->schema->props as $prop) {
             if (PropType::Image === $prop->type) {
                 $images[] = $prop->name;
             } elseif (PropType::Items === $prop->type && !$prop->scalarItems && !\in_array($prop->name, $this->idLists, true)) {
+                $rowLists[] = $prop->name;
+
                 foreach ($prop->items as $item) {
                     if (PropType::Image === $item->type) {
                         $rowImages[$prop->name][] = $item->name;
@@ -243,6 +246,12 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
                 $value = ImageSource::of($value);
             } elseif (isset($rowImages[$name]) && \is_array($value)) {
                 $value = $this->rowsWithAddresses($value, $rowImages[$name], \is_array($addresses[$name] ?? null) ? $addresses[$name] : []);
+            }
+
+            // A row is stored as the schema names its fields and read by the
+            // component as it spells them, as a prop of its own is.
+            if (\in_array($name, $rowLists, true) && \is_array($value)) {
+                $value = array_map(static fn (mixed $row): mixed => \is_array($row) ? self::twigKeys($row) : $row, $value);
             }
 
             // A prop left empty is left to the default of the component, which
@@ -290,5 +299,17 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
         }
 
         return $drawn;
+    }
+
+    /**
+     * @param array<array-key, mixed> $row
+     *
+     * @return array<array-key, mixed>
+     */
+    private static function twigKeys(array $row): array
+    {
+        $keys = array_map(static fn (int|string $key): int|string => \is_string($key) ? ThemeComponentSections::twigName($key) : $key, array_keys($row));
+
+        return array_combine($keys, array_values($row));
     }
 }

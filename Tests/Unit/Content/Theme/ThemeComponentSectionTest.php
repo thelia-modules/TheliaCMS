@@ -131,6 +131,25 @@ final class ThemeComponentSectionTest extends TestCase
         self::assertSame(['Mix', 'Bake'], $received['steps'], 'A list of scalars reaches the component as it is stored.');
     }
 
+    public function testARowReachesTheComponentUnderTheKeysItSpells(): void
+    {
+        $received = null;
+        $renderer = $this->createStub(ComponentRendererInterface::class);
+        $renderer->method('createAndRender')->willReturnCallback(static function (string $name, array $props) use (&$received): string {
+            $received = $props;
+
+            return '';
+        });
+        $schema = new PropSchema([
+            Prop::items('items', 'items', [Prop::image('image', 'image'), Prop::text('image_alt', 'image_alt'), Prop::text('button_label', 'button_label')], 0, 50),
+        ]);
+        $section = new ThemeComponentSection('Organisms:Carousel:Base', '', $schema, ['items' => 'items'], $renderer);
+
+        $section->render($section->normalizeProps(['items' => [['image' => 'https://example.com/a.webp', 'imageAlt' => 'A field', 'buttonLabel' => 'Read more']]]), 'fr_FR');
+
+        self::assertSame([['image' => 'https://example.com/a.webp', 'imageAlt' => 'A field', 'buttonLabel' => 'Read more']], $received['items'], 'Stored under the names of the schema, handed back as the template reads the row.');
+    }
+
     public function testAPictureOfTheThemeInARowIsDrawnInTheExampleOnly(): void
     {
         $received = null;

@@ -109,7 +109,7 @@ final readonly class ThemeComponentSections implements SectionProviderInterface,
      * `snake_case` back to the `camelCase` the component declares. A prop the
      * component spells in lowercase comes back unchanged.
      */
-    private static function twigName(string $name): string
+    public static function twigName(string $name): string
     {
         return lcfirst(str_replace('_', '', ucwords($name, '_')));
     }

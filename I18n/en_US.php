@@ -823,6 +823,7 @@ return [
     'Edit by hand' => 'Edit by hand',
     'Save this section' => 'Save this section',
     'Add a row' => 'Add a row',
+    'A row without a title' => 'A row without a title',
     'Remove this row' => 'Remove this row',
     'Search…' => 'Search…',
     'The section is saved in the draft.' => 'The section is saved in the draft.',

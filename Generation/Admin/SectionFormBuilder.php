@@ -463,7 +463,7 @@ final readonly class SectionFormBuilder
                 PropType::Choice => null === $value ? null : (string) $value,
                 // A list of scalars is one field per row: each value is wrapped.
                 PropType::Items => array_map(
-                    fn (mixed $item): array => $this->dataFor($prop->items, $prop->scalarItems && !\is_array($item) ? ['value' => $item] : (array) $item),
+                    fn (mixed $item): array => $this->dataFor($prop->items, $prop->scalarItems && !\is_array($item) ? ['value' => $item] : PropSchema::rowKeys((array) $item)),
                     \is_array($value) ? $value : [],
                 ),
                 default => $value,
