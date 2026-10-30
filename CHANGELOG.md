@@ -29,6 +29,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- **`cms_page_documents_block(page, locale)` draws the documents of a page.**
+  It answers the markup of the list (heading, title, type and size of each
+  file, the browser opening a pdf or a txt and saving the rest), or an empty
+  string when the page has no document. A theme overrides the markup by
+  shipping `cms-page-documents.html.twig` at its root; the template receives
+  `cms_documents`, `cms_page` and `labels`. The page templates of the module
+  call it after the content of the page.
 - **A component is prototyped from the content screen of a page.** **Add a
   section > A new component** asks the generator of components in a few
   words; the answer is drawn in the preview in place of the draft, changed by

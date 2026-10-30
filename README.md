@@ -521,6 +521,32 @@ tag of the page.
 {% endif %}
 ```
 
+A template that only wants the list drawn calls
+`{{ cms_page_documents_block(cms_page) }}` (same arguments as
+`cms_page_documents`): it answers the markup, or an empty string when the
+page has no document, and declares the same cache tag. The Flexy and the
+generic page templates of the module call it after the content of the page
+(inside the `article`, before the `cmspage.content.after` hook), so a theme
+using them lists the files with nothing to write. The markup comes from
+`cms-page-documents.html.twig`: a theme takes it over by shipping a file of that
+name at its root, as it does for `cms-search.html.twig`; until it does, the
+neutral one of the module (`templates/front/`) is used, with `cms-documents*`
+class names and no style. The template receives:
+
+- `cms_documents`: the documents, each with `id`, `title`, `description`
+  (or null), `url`, `extension`, `type` (the extension in upper case), `size`
+  (readable, "812 B", "1.5 KB", "2.4 MB", translated; null when unknown),
+  `bytes`, `download` (false for a pdf or a txt, which open in the tab, true
+  for the rest) and `originalName`;
+- `cms_page`: what was given to the function (a page or an id);
+- `labels`: `heading`, the translated "Documents to download".
+
+A theme that draws the documents itself with `cms_page_documents` while using
+a page template of the module would list them twice: take the page template
+over, or override `cms-page-documents.html.twig` instead. The variables of the
+template are named `cms_*` because the theme parser keeps every variable of a
+render for the rest of the page.
+
 Duplicating a page or creating one from a model copies its documents,
 including the files. Emptying the bin and deleting a page type (and so its
 model page) remove the files once the database change is committed; a file
@@ -1052,7 +1078,7 @@ modules. Each receives the page as `page`.
 |---|---|---|
 | `cmspage.top` | front | before the content |
 | `cmspage.content.before` | front | inside the article, before the content |
-| `cmspage.content.after` | front | inside the article, after the content |
+| `cmspage.content.after` | front | inside the article, after the content and the documents of the page |
 | `cmspage.bottom` | front | after the content |
 
 The page is a `TheliaCMS\Page\PublishedPage`: `cms_page` in the template,
@@ -1227,6 +1253,7 @@ to 1.3.0 adds the `cms_tag` table and `cms_page.tag_id`.
 | `cms_page_fields(page)` | the fields of a page or a card holding a value, each with its `code`, `label`, raw `value` and `text` written for a visitor ("1 h 30 min"). |
 | `cms_item_content(type, id, locale)` | the published document of a product, a category, a content, a folder or a store (`dealer`), as markup, or an empty string. The locale defaults to the one being served. |
 | `cms_page_documents(page, locale)` | the files a page offers to download, each with `id`, `title`, `description`, `url`, `extension`, `size` and `originalName`: see [Documents of a page](#documents-of-a-page). |
+| `cms_page_documents_block(page, locale)` | the same files drawn as markup (empty string without a file), from the `cms-page-documents.html.twig` of the theme or of the module, with `cms_documents`, `cms_page` and `labels`: see [Documents of a page](#documents-of-a-page). |
 | `cms_is_home(id)` | whether the page of this id is the one the module shows as the home page (setting `home_page_id`). |
 
 Except for `cms_item_content()`, whose document is markup by nature, they
