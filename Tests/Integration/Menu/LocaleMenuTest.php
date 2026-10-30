@@ -281,6 +281,39 @@ final class LocaleMenuTest extends CmsIntegrationTestCase
         self::assertCount(2, array_filter($report->warnings(), static fn (string $warning): bool => str_contains($warning, 'was left out')));
     }
 
+    public function testDeletingTheSharedMenuDeletesTheMenusOfItsLanguages(): void
+    {
+        $shared = $this->sharedMenu(['Accueil']);
+        $detached = $this->menuWriter()->detach(self::CODE, $this->other);
+        $detachedId = (int) $detached->getId();
+
+        $this->menuWriter()->deleteMenu($shared);
+
+        self::assertSame(0, CmsMenuQuery::create()->filterByCode(self::CODE)->count());
+        self::assertSame(0, CmsMenuItemQuery::create()->filterByMenuId($detachedId)->count());
+    }
+
+    public function testReplacingASharedMenuWarnsAboutTheLanguagesKeepingTheirOwn(): void
+    {
+        $this->sharedMenu(['Accueil']);
+        $this->menuWriter()->detach(self::CODE, $this->other);
+        $file = $this->getService(SiteExporter::class)->export();
+        $menus = array_values(array_filter($file['menus'], static fn (array $menu): bool => self::CODE === $menu['code']));
+        $kept = static fn ($report): array => array_values(array_filter($report->warnings(), static fn (string $warning): bool => str_contains($warning, 'keep a menu of their own')));
+
+        $file['menus'] = [$menus[0]];
+        $report = $this->getService(SiteImporter::class)->import(SiteDocument::fromArray($file), new ImportOptions(replace: true));
+        self::assertCount(1, $kept($report));
+        self::assertStringContainsString(self::CODE, $kept($report)[0]);
+        self::assertStringContainsString($this->other, $kept($report)[0]);
+
+        $file['menus'] = $menus;
+        self::assertSame([], $kept($this->getService(SiteImporter::class)->import(SiteDocument::fromArray($file), new ImportOptions(replace: true))), 'The file carries the language: nothing is kept.');
+
+        $file['menus'] = [$menus[0]];
+        self::assertSame([], $kept($this->getService(SiteImporter::class)->import(SiteDocument::fromArray($file), new ImportOptions())), 'Without replace the menu is left alone.');
+    }
+
     /**
      * @param list<string> $labels
      */

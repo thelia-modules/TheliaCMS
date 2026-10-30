@@ -720,6 +720,39 @@ final readonly class SiteImporter
             }
 
             null !== $existing ? $report->replaced('menus') : $report->created('menus');
+
+            if (null !== $existing && CmsMenuQuery::SHARED === $menuLocale) {
+                $this->warnAboutKeptMenus($code, $menus, $report, $connection);
+            }
+        }
+    }
+
+    /**
+     * A shared menu replaced by the file does not reach the languages that
+     * have a menu of their own, unless the file carries that language too.
+     *
+     * @param list<array<mixed>> $menus
+     */
+    private function warnAboutKeptMenus(string $code, array $menus, ImportReport $report, ConnectionInterface $connection): void
+    {
+        $inFile = array_map(
+            static fn (array $menu): string => self::menuLocale($menu),
+            array_filter($menus, static fn (array $menu): bool => trim((string) ($menu['code'] ?? '')) === $code),
+        );
+
+        $kept = array_values(array_diff(array_map(
+            'strval',
+            CmsMenuQuery::create()
+                ->filterByCode($code)
+                ->filterByMenuLocale(CmsMenuQuery::SHARED, Criteria::NOT_EQUAL)
+                ->orderByMenuLocale()
+                ->select(['MenuLocale'])
+                ->find($connection)
+                ->toArray(),
+        ), $inFile));
+
+        if ([] !== $kept) {
+            $report->warn(\sprintf('The shared menu "%s" was replaced, but the language(s) %s keep a menu of their own that the file does not carry.', $code, implode(', ', $kept)));
         }
     }
 
