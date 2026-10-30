@@ -31,8 +31,15 @@ final class ExportFormat
      * (see TheliaCMS\Content\Document) and its rendering, where version 1
      * carried the project of the former editor and its stylesheets. A version
      * 1 file still imports everything but those contents.
+     *
+     * 3 since module 2.6.0: a menu carries `locale`, '' for the shared menu of
+     * its code and a locale for a language with a menu of its own, so a code
+     * may appear more than once. A reader of version 2 matched menus on the
+     * code alone and, asked to replace, would have written the menu of a
+     * language over the shared one. A version 2 file still imports: its
+     * menus are the shared ones.
      */
-    public const int VERSION = 2;
+    public const int VERSION = 3;
 
     /** The first version whose contents this module can read. */
     public const int FIRST_VERSION_WITH_DOCUMENTS = 2;
