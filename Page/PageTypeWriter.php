@@ -21,6 +21,7 @@ use TheliaCMS\Generation\Brief;
 use TheliaCMS\Model\CmsPageQuery;
 use TheliaCMS\Model\CmsPageTypeDefinitionQuery;
 use TheliaCMS\Page\Admin\CmsActivityLog;
+use TheliaCMS\Page\Document\PageDocumentWriter;
 use TheliaCMS\Page\Field\FieldDefinitions;
 use TheliaCMS\Page\Field\InvalidFieldsException;
 use TheliaCMS\Security\CmsResources;
@@ -34,6 +35,7 @@ final readonly class PageTypeWriter
     public function __construct(
         private PageTypeRepository $types,
         private CmsActivityLog $activityLog,
+        private PageDocumentWriter $documents,
     ) {
     }
 
@@ -76,6 +78,7 @@ final readonly class PageTypeWriter
 
         $connection = Propel::getConnection('TheliaMain');
         $connection->beginTransaction();
+        $files = [];
 
         try {
             // The model goes with its type, binned or not: it is the demo of
@@ -85,6 +88,10 @@ final readonly class PageTypeWriter
                     ->filterByView($model->getRewrittenUrlViewName())
                     ->filterByViewId((string) $model->getId())
                     ->delete($connection);
+
+                // The rows of its documents cascade, their files do not: they
+                // are removed once the deletion is committed.
+                array_push($files, ...$this->documents->filesOf((int) $model->getId(), $connection));
 
                 $model->delete($connection);
             }
@@ -97,6 +104,8 @@ final readonly class PageTypeWriter
 
             throw $throwable;
         }
+
+        $this->documents->deleteFiles($files);
 
         $this->activityLog->record('DELETE', 0, \sprintf('Page type "%s" deleted', $code), CmsResources::SETTINGS);
     }

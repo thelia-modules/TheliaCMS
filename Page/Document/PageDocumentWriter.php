@@ -17,6 +17,7 @@ namespace TheliaCMS\Page\Document;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Propel;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use TheliaCMS\Model\CmsPageDocument;
@@ -37,6 +38,7 @@ final readonly class PageDocumentWriter
     public function __construct(
         private PageDocumentStorage $storage,
         private PageInvalidator $invalidator,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -141,6 +143,7 @@ final readonly class PageDocumentWriter
     /**
      * Deletes the document and its file. The file goes once the row is gone:
      * a row left without its file would be offered to visitors and answer 404.
+     * A file that cannot be removed is logged, the document being gone.
      */
     public function delete(int $documentId): void
     {
@@ -149,9 +152,11 @@ final readonly class PageDocumentWriter
         $file = (string) $document->getFile();
 
         $document->delete();
-        $this->storage->delete($file);
 
+        // Before the file: the row is gone, so is the document, whatever the
+        // disk answers next.
         $this->invalidator->contentChanged($pageId);
+        $this->deleteFiles([$file]);
     }
 
     /**
@@ -235,7 +240,16 @@ final readonly class PageDocumentWriter
     public function deleteFiles(array $files): void
     {
         foreach ($files as $file) {
-            $this->storage->delete($file);
+            // The rows are gone for good already: a file that stays is an orphan
+            // to clean, not a reason to fail, nor to stop at the first one.
+            try {
+                $this->storage->delete($file);
+            } catch (\Throwable $throwable) {
+                $this->logger->error('Thelia CMS: the file of a deleted page document was not removed: {file} ({reason})', [
+                    'file' => $file,
+                    'reason' => $throwable->getMessage(),
+                ]);
+            }
         }
     }
 

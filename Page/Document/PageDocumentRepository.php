@@ -91,6 +91,24 @@ final readonly class PageDocumentRepository
     }
 
     /**
+     * Whether the document is one of the page: one query, whatever the page holds.
+     */
+    public function belongsToPage(int $documentId, int $pageId): bool
+    {
+        return CmsPageDocumentQuery::create()->filterByPageId($pageId)->filterById($documentId)->exists();
+    }
+
+    /**
+     * The page the document is attached to, null when there is no such row.
+     */
+    public function pageIdOf(int $documentId): ?int
+    {
+        $pageId = CmsPageDocumentQuery::create()->filterById($documentId)->select(['PageId'])->findOne();
+
+        return null === $pageId ? null : (int) $pageId;
+    }
+
+    /**
      * Whether the page exists and is out of the trash.
      */
     public function pageIsLive(int $pageId): bool
