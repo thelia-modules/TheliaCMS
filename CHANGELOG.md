@@ -144,6 +144,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   without it holds shared menus. The format is version 3: a module of an
   earlier version refuses the file rather than write the menu of a language
   over the shared one.
+- **A theme shows pictures in its examples.** A picture prop of an entry of
+  `sections.examples` may be the path of a file of the theme, as `asset()`
+  takes it (`images/illustrations/banner.webp`). The toolkit draws it from the
+  address the theme serves it from; the generator and a section added by hand
+  never see it, `sample()` keeps the prop empty, and the format of the
+  documents does not change.
 
 ### Fixed
 

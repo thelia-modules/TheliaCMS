@@ -53,6 +53,19 @@ use Symfony\Component\Yaml\Yaml;
  * fill the rest; a component whose defaults render nothing (a video player
  * with no video) needs one.
  *
+ * A picture prop of an example may be the path of a file of the theme, as
+ * `asset()` takes it, with no scheme and no leading slash:
+ *
+ *     sections:
+ *         examples:
+ *             Layouts:Banner:Base:
+ *                 image: images/illustrations/banner.webp
+ *
+ * Only the toolkit draws it, from the address the theme serves the file from.
+ * A document stores the id of an image of the media library or an https
+ * address, so the generator and a section added by hand start with the
+ * picture empty. An id or an https address is kept as it is.
+ *
  * Nothing is opened by default: a component of a shop — a cart line, a
  * checkout step — makes no sense on a page, and the theme is the one that
  * knows which ones do. A child theme inherits the list of its parent unless it
