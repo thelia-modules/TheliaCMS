@@ -92,7 +92,7 @@ final class PageDocumentBlockTest extends TestCase
                 'originalName' => 'Tarifs.zip',
             ],
         ], $context['documents']);
-        self::assertSame(['heading' => 'Documents to download@fr_FR'], $context['labels']);
+        self::assertSame('Documents to download@fr_FR', $context['heading']);
     }
 
     /**

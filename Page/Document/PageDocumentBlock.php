@@ -34,7 +34,7 @@ final readonly class PageDocumentBlock
     /**
      * @param list<PageDocumentLink> $links
      *
-     * @return array{documents: list<array{id: int, title: string, description: ?string, url: string, extension: string, type: string, size: ?string, bytes: int, download: bool, originalName: string}>, labels: array{heading: string}}
+     * @return array{documents: list<array{id: int, title: string, description: ?string, url: string, extension: string, type: string, size: ?string, bytes: int, download: bool, originalName: string}>, heading: string}
      */
     public function context(array $links, string $locale): array
     {
@@ -62,7 +62,7 @@ final readonly class PageDocumentBlock
                 ],
                 $links,
             ),
-            'labels' => ['heading' => $this->translate('Documents to download', $locale)],
+            'heading' => $this->translate('Documents to download', $locale),
         ];
     }
 

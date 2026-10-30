@@ -34,7 +34,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   file, the browser opening a pdf or a txt and saving the rest), or an empty
   string when the page has no document. A theme overrides the markup by
   shipping `cms-page-documents.html.twig` at its root; the template receives
-  `cms_documents`, `cms_page` and `labels`. The page templates of the module
+  the one variable `cms_page_documents_block` (`documents`, `page`,
+  `heading`), in the language of the page when a page is given. The page templates of the module
   call it after the content of the page.
 - **A component is prototyped from the content screen of a page.** **Add a
   section > A new component** asks the generator of components in a few

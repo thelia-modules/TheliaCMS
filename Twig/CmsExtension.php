@@ -229,13 +229,16 @@ final class CmsExtension extends AbstractExtension
      *
      * The template is `cms-page-documents.html.twig` at the root of the theme
      * when it ships one, the neutral one of the module otherwise; it receives
-     * `cms_documents` (see PageDocumentBlock), `cms_page` (what was given) and
-     * `labels`. The files are read through `pageDocuments()`, which files the
-     * page under its cache tag.
+     * one variable, `cms_page_documents_block`: `documents` (see
+     * PageDocumentBlock), `page` (what was given) and `heading`. One name only,
+     * because the theme parser keeps every variable of a render for the rest of
+     * the page. The language is the one given, else the one of the page when a
+     * page is given, else the one of the request. The files are read through
+     * `pageDocuments()`, which files the page under its cache tag.
      */
     public function pageDocumentsBlock(PublishedPage|int|string|null $page, ?string $locale = null): string
     {
-        $locale ??= $this->currentLocale();
+        $locale ??= $page instanceof PublishedPage ? $page->locale : $this->currentLocale();
         $links = $this->pageDocuments($page, $locale);
 
         if ([] === $links) {
@@ -245,9 +248,11 @@ final class CmsExtension extends AbstractExtension
         $context = $this->documentBlock->context($links, $locale);
 
         return $this->templates->render('cms-page-documents', '@TheliaCMSModule/front/cms-page-documents.html.twig', [
-            'cms_documents' => $context['documents'],
-            'cms_page' => $page,
-            'labels' => $context['labels'],
+            'cms_page_documents_block' => [
+                'documents' => $context['documents'],
+                'page' => $page,
+                'heading' => $context['heading'],
+            ],
         ]);
     }
 

@@ -16,10 +16,14 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Twig;
 
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Thelia\Core\Template\ParserInterface;
+use TheliaCMS\Front\ThemeTemplateRenderer;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageDocumentQuery;
 use TheliaCMS\Page\Document\PageDocumentStorage;
 use TheliaCMS\Page\Document\PageDocumentWriter;
+use TheliaCMS\Page\PublishedPage;
+use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
 use TheliaCMS\Twig\CmsExtension;
 
@@ -35,15 +39,35 @@ final class PageDocumentsBlockTest extends CmsIntegrationTestCase
     /** @var list<string> paths of the temporary uploads */
     private array $uploads = [];
 
+    private string $themeDirectory = '';
+
+    private string $realThemePath = '';
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->useAnInstalledFrontTheme();
+
+        // The active theme may ship its own cms-page-documents.html.twig (the Weitech one does): measure the module
+        // template and the override branch against a directory of the test instead, empty unless a test fills it.
+        $this->themeDirectory = sys_get_temp_dir().'/cms-block-theme-'.bin2hex(random_bytes(4));
+        mkdir($this->themeDirectory, 0o777, true);
+        $renderer = $this->renderer();
+        // Resolved first: resolving sets the path of the active theme.
+        $parser = $this->parser();
+        $property = new \ReflectionProperty($renderer, 'themePath');
+        $this->realThemePath = (string) $property->getValue($renderer);
+        $property->setValue($renderer, $this->themeDirectory);
+        $parser->getTwig()->getLoader()->prependPath($this->themeDirectory);
     }
 
     protected function tearDown(): void
     {
+        array_map('unlink', glob($this->themeDirectory.'/*') ?: []);
+        @rmdir($this->themeDirectory);
+        (new \ReflectionProperty($this->renderer(), 'themePath'))->setValue($this->renderer(), $this->realThemePath);
+
         $storage = new PageDocumentStorage();
 
         foreach (CmsPageDocumentQuery::create()->select(['File'])->find()->toArray() as $file) {
@@ -99,23 +123,45 @@ final class PageDocumentsBlockTest extends CmsIntegrationTestCase
         $page = $this->createPage('Page au thème');
         $this->givenDocument($page, 'Notice.pdf', $this->pdf());
 
-        $directory = \dirname(__DIR__, 3).'/templates/frontOffice/default';
-        $file = $directory.'/cms-page-documents.html.twig';
-        $created = !is_dir($directory);
-        $created && mkdir($directory, 0o777, true);
-        file_put_contents($file, '<div class="theme-docs">{% for d in cms_documents %}[{{ d.title }}|{{ d.type }}]{% endfor %}</div>');
+        file_put_contents($this->themeDirectory.'/cms-page-documents.html.twig', '<div class="theme-docs">{% for d in cms_page_documents_block.documents %}[{{ d.title }}|{{ d.type }}]{% endfor %}{{ cms_page_documents_block.heading }}</div>');
 
-        try {
-            $this->registerForTheDefaultTheme($directory);
+        self::assertSame('<div class="theme-docs">[Notice|PDF]Documents to download</div>', $this->block((int) $page->getId(), 'en_US'));
+    }
 
-            self::assertSame('<div class="theme-docs">[Notice|PDF]</div>', $this->block((int) $page->getId(), 'en_US'));
-        } finally {
-            unlink($file);
-            $created && rmdir($directory);
-        }
+    /**
+     * The theme parser keeps every variable of a render for the rest of the
+     * page: the block sets one, under a name no other template uses.
+     */
+    public function testOnlyOneVariableIsLeftToTheRestOfThePage(): void
+    {
+        $page = $this->createPage('Page à variables');
+        $this->givenDocument($page, 'Notice.pdf', $this->pdf());
+        $parser = $this->parser();
+        $assigned = new \ReflectionMethod($parser, 'withAssignedVariables');
+        $before = array_keys($assigned->invoke($parser, []));
+
+        $this->block((int) $page->getId(), 'en_US');
+
+        $added = array_values(array_diff(array_keys($assigned->invoke($parser, [])), $before));
+        self::assertSame([], array_diff($added, ['cms_page_documents_block']), 'Nothing but cms_page_documents_block is left to the next render.');
+    }
+
+    public function testAPublishedPageIsListedInItsOwnLanguage(): void
+    {
+        $page = $this->createPage('Page en anglais', 'en_US');
+        $this->givenDocument($page, 'Notice.pdf', $this->pdf());
+        $published = $this->getService(PublishedPageRepository::class)->find((int) $page->getId(), 'en_US');
+        self::assertNotNull($published);
+
+        self::assertStringContainsString('>Documents to download</h2>', $this->blockOf($published));
     }
 
     private function block(?int $pageId, ?string $locale = null): string
+    {
+        return $this->blockOf($pageId, $locale);
+    }
+
+    private function blockOf(PublishedPage|int|null $page, ?string $locale = null): string
     {
         $extension = $this->getService(CmsExtension::class);
 
@@ -123,22 +169,23 @@ final class PageDocumentsBlockTest extends CmsIntegrationTestCase
             if ('cms_page_documents_block' === $function->getName()) {
                 self::assertSame(['html'], $function->getSafe(new \Twig\Node\Node()), 'The markup is not escaped by Twig.');
 
-                return (string) ($function->getCallable())($pageId, $locale);
+                return (string) ($function->getCallable())($page, $locale);
             }
         }
 
         self::fail('The extension registers no "cms_page_documents_block" function, so no theme can ask.');
     }
 
-    private function registerForTheDefaultTheme(string $directory): void
+    private function renderer(): ThemeTemplateRenderer
     {
-        $renderer = (new \ReflectionProperty($this->getService(CmsExtension::class), 'templates'))->getValue($this->getService(CmsExtension::class));
-        $parser = (new \ReflectionMethod($renderer, 'parser'))->invoke($renderer);
-        $property = new \ReflectionProperty($parser, 'templateDirectories');
-        $registry = $property->getValue($parser);
-        $registry[\Thelia\Core\Template\TemplateDefinition::FRONT_OFFICE]['default'][] = $directory;
-        $property->setValue($parser, $registry);
-        $parser->getTwig()->getLoader()->addPath($directory);
+        $extension = $this->getService(CmsExtension::class);
+
+        return (new \ReflectionProperty($extension, 'templates'))->getValue($extension);
+    }
+
+    private function parser(): ParserInterface
+    {
+        return (new \ReflectionMethod($this->renderer(), 'parser'))->invoke($this->renderer());
     }
 
     private function givenDocument(CmsPage $page, string $name, string $content): void
