@@ -110,8 +110,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   Back to shared deletes the menu of the language. An emptied detached menu
   stays empty in its language rather than show the shared one. Renaming or
   deleting the shared menu renames or deletes the menus of its languages. The
-  services are `CmsMenuWriter::detach()`, `realign()`, `reattach()`; the
-  screen comes with a later version.
+  services are `CmsMenuWriter::detach()`, `realign()`, `reattach()`.
+- **The menu screen edits the menu of the language being edited.** It says
+  whether that language follows the shared menu or has a menu of its own, and
+  offers to give it one, to realign a menu on another one and to send the
+  language back to the shared menu; realigning and going back show how many
+  entries are replaced or deleted and wait for a confirmation. The list shows
+  each code once, with a badge per language that has a menu of its own. New
+  routes: `admin.cms.menus.detach` (POST), `realign` and `reattach` (GET for
+  the confirmation, POST to do it); `{id}` is the row being edited.
 - **The export carries the language of a menu** (`locale`, empty for the
   shared one) and the import matches menus on the code and that key; a file
   without it holds shared menus. The format is version 3: a module of an

@@ -633,6 +633,17 @@ language, not a way back to the shared one: the shared menu does not show
 through. Like an empty shared menu, it leaves the content slot of the core to
 the folders and contents of the shop in that language.
 
+In the back office, the tree of **CMS > Menus > Edit** is the one of the
+language being edited (the flags above the tree switch it). A line above the
+tree says whether that language follows the shared menu or has a menu of its
+own. **Give this language a menu of its own** detaches it at once. **Realign
+on…** asks which menu to copy, then shows how many entries are replaced before
+anything is written; on a language with its own menu, **Make the shared menu a
+copy of this one** does the same the other way round. **Go back to the shared
+menu** asks first too, because the entries of the language are deleted. The
+list shows each code once, with a flag for every language that has a menu of
+its own. The code can only be changed on the shared menu.
+
 The code belongs to the shared menu: renaming it renames the menus of its
 languages, and deleting it deletes them. The list of menus and the picker of a
 component of the theme show each code once.
