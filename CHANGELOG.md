@@ -17,6 +17,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   `reference_file` in `block` mode. The ledger keeps the name of the file,
   never its text.
 
+### Fixed
+
+- **The purpose of the reference file judge reads in the language of the back
+  office.** The AI usage screens showed it in English to a French
+  administrator: it had no entry in the catalogues.
+
 ## [2.21.0] - 2026-11-09
 
 ### Added
