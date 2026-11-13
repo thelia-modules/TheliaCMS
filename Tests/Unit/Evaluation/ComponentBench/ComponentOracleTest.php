@@ -227,7 +227,7 @@ final class ComponentOracleTest extends TestCase
     {
         $cases = BenchCase::loadAll(\dirname(__DIR__, 4).'/docs/evaluation/components/cases');
 
-        self::assertCount(29, $cases);
+        self::assertCount(30, $cases);
         self::assertNull($cases['compose-steps-faq']->gap, 'The composition is no longer a known gap (N71, ADR 15).');
         self::assertSame(['copy', 'component'], $cases['quote-dark']->outcomes);
     }
