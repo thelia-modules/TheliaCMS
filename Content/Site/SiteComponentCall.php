@@ -31,4 +31,18 @@ final readonly class SiteComponentCall
         public array $props = [],
     ) {
     }
+
+    /**
+     * The name the catalogue gives what a call draws: `Site:<code>` for a
+     * component of the site, the name of a component of the theme as written.
+     */
+    public static function catalogueName(string $name): string
+    {
+        return str_contains($name, ':') ? $name : SiteComponent::PREFIX.$name;
+    }
+
+    public function name(): string
+    {
+        return self::catalogueName($this->code);
+    }
 }

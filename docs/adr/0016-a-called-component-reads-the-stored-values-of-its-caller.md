@@ -1,6 +1,6 @@
 # 16. A called component reads the stored values of its caller
 
-Date: 2026-11-13. Status: proposed. Amends ADR 15.
+Date: 2026-11-13. Status: accepted. Amends ADR 15.
 
 ## Context
 

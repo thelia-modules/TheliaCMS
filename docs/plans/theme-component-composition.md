@@ -1,6 +1,6 @@
 # Plan: a component of the site draws a component of the theme
 
-Status: designed on 2026-11-13, not started. Decision in ADR 16 (amends
+Status: steps 1 to 3 done on 2026-11-13 on `feat/theme-component-composition`; step 4 (the round of the bench) waits for the agreement of the maintainer, and for a theme that declares components (Flexy 1.3.0 ships no `config/theliacms.yaml`). Decision in ADR 16 (amends
 ADR 15).
 
 ## What is asked

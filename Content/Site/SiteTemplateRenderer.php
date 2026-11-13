@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace TheliaCMS\Content\Site;
 
 use Psr\Log\LoggerInterface;
+use TheliaCMS\Content\InvalidDocumentException;
+use TheliaCMS\Content\Prop;
 use Twig\Environment;
 use Twig\Error\Error;
 use Twig\Error\SyntaxError;
@@ -25,7 +27,6 @@ use Twig\Node\CheckToStringNode;
 use Twig\Node\Expression\ArrayExpression;
 use Twig\Node\Expression\ConstantExpression;
 use Twig\Node\Expression\FunctionExpression;
-use Twig\Node\Expression\GetAttrExpression;
 use Twig\Node\ForNode;
 use Twig\Node\Node;
 use Twig\Sandbox\SecurityError;
@@ -85,17 +86,28 @@ final class SiteTemplateRenderer
 
     private ?Environment $twig = null;
 
+    /** A name `cms_component` takes: the code of a component of the site, or the catalogue name of one of the theme. */
+    public const string NAME = '/^(?:[A-Z][A-Za-z0-9]{1,39}|[A-Za-z][A-Za-z0-9_-]*(?::[A-Za-z0-9_-]+)+)$/';
+
     /** 1 while a component called by another is drawn: it calls nothing. */
     private int $depth = 0;
 
     private int $calls = 0;
 
+    /** @var array<string, mixed> the props the caller being drawn stores */
+    private array $stored = [];
+
+    private string $locale = 'en_US';
+
+    /** @var array<string, string> the markup of the components of the theme drawn, by the placeholder printed in their place */
+    private array $placed = [];
+
     /**
-     * @param KeptSiteComponents|null $components what `cms_component` draws from; without it (a unit test) the function draws nothing
+     * @param DrawableSections|null $sections what `cms_component` draws; without it (a unit test) the function draws nothing
      */
     public function __construct(
         private ?SiteIcon $icon = null,
-        private ?KeptSiteComponents $components = null,
+        private ?DrawableSections $sections = null,
         private ?LoggerInterface $logger = null,
     ) {
     }
@@ -187,11 +199,12 @@ final class SiteTemplateRenderer
     }
 
     /**
-     * @param array<string, mixed> $props as the template reads them (SiteComponentSection::forTemplate)
+     * @param array<string, mixed> $props  as the template reads them (SiteComponentSection::forTemplate)
+     * @param array<string, mixed> $stored as the page stores them: what `cms_component` hands on
      *
      * @throws Error when the template is refused or fails while rendering
      */
-    public function render(string $template, array $props): string
+    public function render(string $template, array $props, array $stored = [], string $locale = 'en_US'): string
     {
         if ([] !== $problems = $this->problems($template)) {
             throw new SecurityError(implode(' ', $problems));
@@ -201,20 +214,50 @@ final class SiteTemplateRenderer
             $this->calls = 0;
         }
 
-        return $this->twig()->createTemplate($template)->render(['props' => $props]);
+        [$callerStored, $callerLocale] = [$this->stored, $this->locale];
+        [$this->stored, $this->locale] = [$stored, $locale];
+
+        try {
+            return $this->twig()->createTemplate($template)->render(['props' => $props]);
+        } finally {
+            [$this->stored, $this->locale] = [$callerStored, $callerLocale];
+        }
     }
 
     /**
-     * What `cms_component` prints: the component kept for the site under
-     * that code, drawn with the values given (the template form the caller
-     * reads its own props in), the keys it does not declare left out, inside
-     * the element its stylesheet is scoped to. Nothing for a component
-     * called by another, past MAX_CALLS, for a code the site does not keep,
-     * or when the component fails, which is logged.
+     * Puts the markup of the components of the theme a rendering drew in
+     * place of their placeholders, once the caller's markup is filtered: the
+     * theme draws them as it draws its sections, with the attributes its
+     * controllers read, which the filter of a component would take out.
      */
-    private function draw(mixed $code, mixed $values): string
+    public function placeTheme(string $html): string
     {
-        if ($this->depth > 0 || null === $this->components || !\is_string($code)) {
+        foreach ($this->placed as $placeholder => $markup) {
+            if (str_contains($html, $placeholder)) {
+                $html = str_replace($placeholder, $markup, $html);
+                unset($this->placed[$placeholder]);
+            }
+        }
+
+        return $html;
+    }
+
+    /**
+     * What `cms_component` prints: the section of that name the catalogue
+     * offers, given the values the caller stores for the props it passes and
+     * the values written in the call (ADR 16), normalised by its own schema
+     * and drawn by its own section. A component of the theme prints a
+     * placeholder, replaced by placeTheme(). Nothing for a component called
+     * by another, past MAX_CALLS, for a name the catalogue does not offer,
+     * or for values its schema refuses or a drawing that fails, which is
+     * logged.
+     *
+     * @param mixed $written the values of the call, as the template reads them
+     * @param mixed $props   the prop of the caller behind each key, which ComponentCallVisitor adds
+     */
+    private function draw(mixed $name, mixed $written, mixed $props): string
+    {
+        if ($this->depth > 0 || null === $this->sections || !\is_string($name)) {
             return '';
         }
 
@@ -226,30 +269,44 @@ final class SiteTemplateRenderer
             return '';
         }
 
-        $component = $this->components->kept($code);
+        $catalogueName = SiteComponentCall::catalogueName($name);
+        $section = $this->sections->find($catalogueName);
 
-        if (null === $component) {
-            $this->logger?->warning('TheliaCMS: a component of the site draws {code}, which the site does not keep.', ['code' => $code]);
+        if (null === $section) {
+            $this->logger?->warning('TheliaCMS: a component of the site draws {code}, which the catalogue does not offer.', ['code' => $name]);
 
             return '';
         }
 
-        $names = array_filter(array_map(static fn (array $prop): mixed => $prop['name'] ?? null, $component->props), \is_string(...));
-        $props = array_intersect_key(\is_array($values) ? $values : [], array_flip($names));
+        $values = \is_array($written) ? $written : [];
+
+        foreach (\is_array($props) ? $props : [] as $key => $prop) {
+            $values[$key] = $this->stored[$prop] ?? null;
+        }
+
+        $declared = array_map(static fn (Prop $prop): string => $prop->name, $section->schema()->props);
+        $values = array_filter(array_intersect_key($values, array_flip($declared)), static fn (mixed $value): bool => null !== $value);
 
         ++$this->depth;
 
         try {
-            $html = $this->render($component->template, $props);
-        } catch (Error $exception) {
-            $this->logger?->error('TheliaCMS: the component {name} of the site cannot be drawn inside another: {message}', ['name' => $component->name(), 'message' => $exception->getMessage()]);
+            $html = $section->render($section->normalizeProps($values), $this->locale);
+        } catch (InvalidDocumentException|Error $exception) {
+            $this->logger?->error('TheliaCMS: the component {name} cannot be drawn inside another: {message}', ['name' => $catalogueName, 'message' => $exception->getMessage()]);
 
             return '';
         } finally {
             --$this->depth;
         }
 
-        return '' === trim($html) ? '' : \sprintf('<div class="cms-site %s">%s</div>', $component->scopeClass(), $html);
+        if ($section instanceof SiteComponentSection || '' === trim($html)) {
+            return $html;
+        }
+
+        $placeholder = 'cms-theme-call-'.bin2hex(random_bytes(8));
+        $this->placed[$placeholder] = $html;
+
+        return $placeholder;
     }
 
     /**
@@ -264,14 +321,18 @@ final class SiteTemplateRenderer
             $arguments = iterator_to_array($node->getNode('arguments'));
             $code = $arguments[0] ?? null;
 
-            if (!array_is_list($arguments) || \count($arguments) > 2) {
+            $written = $node->hasAttribute(ComponentCallVisitor::MARK) ? 2 : \count($arguments);
+
+            if (!array_is_list($arguments) || $written > 2) {
                 $problems[] = \sprintf("Line %d: %s takes the code of a component, then the values it draws, and nothing else: %s('Carousel', {slides: props.photos}).", $line, self::CALL, self::CALL);
-            } elseif (!$code instanceof ConstantExpression || !\is_string($code->getAttribute('value')) || 1 !== preg_match('/^[A-Z][A-Za-z0-9]{1,39}$/', $code->getAttribute('value'))) {
-                $problems[] = \sprintf("Line %d: the first value of %s is the code of a component of the site, written as it is between quotes ('Carousel'), not a prop nor a variable.", $line, self::CALL);
+            } elseif (!$code instanceof ConstantExpression || !\is_string($code->getAttribute('value')) || 1 !== preg_match(self::NAME, $code->getAttribute('value'))) {
+                $problems[] = \sprintf("Line %d: the first value of %s is the code of a component of the site or the name of a component of the theme, written as it is between quotes ('Carousel'), not a prop nor a variable.", $line, self::CALL);
             } elseif ([] !== self::callNodes($node->getNode('arguments'))) {
                 $problems[] = \sprintf('Line %d: %s draws one component; the values it passes are props, never another %s.', $line, self::CALL, self::CALL);
             } elseif (isset($arguments[1]) && (!$arguments[1] instanceof ArrayExpression || [] !== array_filter($arguments[1]->getKeyValuePairs(), static fn (array $pair): bool => !$pair['key'] instanceof ConstantExpression || !\is_string($pair['key']->getAttribute('value'))))) {
                 $problems[] = \sprintf('Line %d: the values %s draws are written as a mapping of the names of the props of that component, {slides: props.photos}.', $line, self::CALL);
+            } elseif (isset($arguments[1]) && $arguments[1] instanceof ArrayExpression && [] !== $refused = array_filter($arguments[1]->getKeyValuePairs(), static fn (array $pair): bool => null === ComponentCallVisitor::propOf($pair['value']) && !self::isWritten($pair['value']))) {
+                $problems[] = \sprintf('Line %d: %s passes "%s" something else than a prop of the component (props.photos) or a value written as it is (a text, a number, true or false): it hands on what the page stores, never a field of a row nor a computed value.', $line, self::CALL, implode('", "', array_map(static fn (array $pair): string => (string) $pair['key']->getAttribute('value'), $refused)));
             }
         }
 
@@ -305,15 +366,23 @@ final class SiteTemplateRenderer
         foreach (isset($arguments[1]) && $arguments[1] instanceof ArrayExpression ? $arguments[1]->getKeyValuePairs() : [] as $pair) {
             $key = (string) $pair['key']->getAttribute('value');
             $keys[] = $key;
-            // The sandbox wraps what may be printed in a check of its own.
-            $value = $pair['value'] instanceof CheckToStringNode ? $pair['value']->getNode('expr') : $pair['value'];
 
-            if ($value instanceof GetAttrExpression && $value->getNode('attribute') instanceof ConstantExpression && $value->getNode('node')->hasAttribute('name') && 'props' === $value->getNode('node')->getAttribute('name')) {
-                $props[$key] = (string) $value->getNode('attribute')->getAttribute('value');
+            if (null !== $prop = ComponentCallVisitor::propOf($pair['value'])) {
+                $props[$key] = $prop;
             }
         }
 
         return new SiteComponentCall((string) $arguments[0]->getAttribute('value'), $keys, $node->getTemplateLine(), $props);
+    }
+
+    /**
+     * A value written as it is: a text, a number, true, false or null.
+     */
+    private static function isWritten(Node $value): bool
+    {
+        $value = $value instanceof CheckToStringNode ? $value->getNode('expr') : $value;
+
+        return $value instanceof ConstantExpression && (null === $value->getAttribute('value') || \is_scalar($value->getAttribute('value')));
     }
 
     private static function lineOfTooDeepLoop(Node $node, int $depth = 0): ?int
@@ -352,7 +421,8 @@ final class SiteTemplateRenderer
         $twig->addFunction(new TwigFunction('cms_icon', static fn (mixed $reference, array $attributes = []): string => null === $icon ? '' : $icon->render($reference, $attributes), ['is_safe' => ['html']]));
 
         // Drawn in this sandbox, and filtered with the markup of the caller.
-        $twig->addFunction(new TwigFunction(self::CALL, fn (mixed $code, mixed $values = []): string => $this->draw($code, $values), ['is_safe' => ['html']]));
+        $twig->addFunction(new TwigFunction(self::CALL, fn (mixed $code, mixed $written = [], mixed $props = []): string => $this->draw($code, $written, $props), ['is_safe' => ['html']]));
+        $twig->addNodeVisitor(new ComponentCallVisitor());
 
         return $this->twig = $twig;
     }
