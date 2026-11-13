@@ -392,7 +392,10 @@ What the generator writes, and what the site checks
   the schema refuses draw nothing and are logged. A component of the theme
   that reads records (`Layouts:CrossSelling:Base` and its `product_ids`) is
   given the `reference` props of the caller, a list of them as rows of one
-  `id` field; a reference to another kind of record is refused.
+  `id` field; a reference to another kind of record is refused. A part the
+  called component offers among its props (its heading, the button of
+  `Layouts:CrossSelling:Base`) is handed to it rather than drawn again
+  beside it: the generator is told so (`ComponentPrompt::OFFERED_PARTS_RULE`).
 
 Making, changing and keeping a component take the settings and the custom
 code permissions. A new version of a kept component is refused while a page
