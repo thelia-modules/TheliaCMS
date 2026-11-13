@@ -859,6 +859,7 @@ return [
     'Edit by hand' => 'Edit by hand',
     'Save this section' => 'Save this section',
     'Add a row' => 'Add a row',
+    'Add %label%' => 'Add %label%',
     'A row without a title' => 'A row without a title',
     'Remove this row' => 'Remove this row',
     'Drag to move this row' => 'Drag to move this row',

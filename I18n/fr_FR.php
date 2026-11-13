@@ -859,6 +859,7 @@ return [
     'Edit by hand' => 'Modifier à la main',
     'Save this section' => 'Enregistrer cette section',
     'Add a row' => 'Ajouter une ligne',
+    'Add %label%' => 'Ajouter « %label% »',
     'A row without a title' => 'Ligne sans titre',
     'Remove this row' => 'Retirer cette ligne',
     'Drag to move this row' => 'Glisser pour déplacer cette ligne',

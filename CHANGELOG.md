@@ -7,6 +7,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Changed
+
+- **A button in the form of a section reads by what it says.** A row is
+  folded under its words before its link: the button of a band of the theme
+  (`{href, label}`) reads « Voir tout le catalogue », no longer « /catalogue »;
+  a row whose only text is a link still reads by it. A list of one row at most
+  (an object such as that button) is added by its name, « Ajouter « Bouton » »,
+  no longer « Ajouter une ligne ».
+
 ## [2.28.0] - 2026-11-13
 
 ### Added
