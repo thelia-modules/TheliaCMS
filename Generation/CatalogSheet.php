@@ -177,7 +177,11 @@ final readonly class CatalogSheet
             PropType::Url => 'url',
             PropType::Embed => 'https address of a YouTube, Vimeo or Dailymotion video, or empty',
             PropType::Icon => 'icon name, taken from the list of the icons: `cms:<name>` for an icon of the media library, or the name of an icon of the theme, or empty',
-            PropType::Items => $prop->scalarItems ? self::scalarListOf($prop) : \sprintf('list of %d to %d items', $prop->minItems ?? 0, $prop->maxItems ?? 12),
+            PropType::Items => match (true) {
+                $prop->scalarItems => self::scalarListOf($prop),
+                1 === $prop->maxItems => 'one object, held as a list of one row'.(0 === ($prop->minItems ?? 0) ? ', or an empty list for none' : ''),
+                default => \sprintf('list of %d to %d items', $prop->minItems ?? 0, $prop->maxItems ?? 12),
+            },
             PropType::Reference => 'id from the search tools',
             PropType::Json => 'JSON string',
         };

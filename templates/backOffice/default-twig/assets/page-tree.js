@@ -44,7 +44,7 @@
 
         tree.setAttribute('aria-busy', 'true');
 
-        return fetch(url.toString(), { credentials: 'same-origin', headers: { Accept: 'text/html' } })
+        return fetch(url.toString(), { credentials: 'same-origin', headers: { Accept: 'text/html', 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (response) {
                 // A session that expired answers with the login screen: no tree in it.
                 if (!response.ok) {

@@ -65,7 +65,7 @@
     }
 
     function getJson(url) {
-        return fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        return fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (response) { return response.ok ? response.json() : null; })
             .catch(function () { return null; });
     }
@@ -403,7 +403,7 @@
             var body = new FormData();
             body.append('_token', backOfficeToken());
             body.append('files[]', chosen);
-            fetch(withParameters(state.uploadUrl, { picker: 1 }), { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' }, body: body })
+            fetch(withParameters(state.uploadUrl, { picker: 1 }), { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: body })
                 .then(function (response) { return response.json(); })
                 .then(function (answer) {
                     file.value = '';
