@@ -15,6 +15,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   the markup of the caller is filtered: the attributes its controllers read
   are kept. The generator of components is told which components of the
   theme it may draw, with their props. See ADR 16.
+- **A component of the site names products, categories, folders, forms and
+  menus.** A `reference` prop, alone or in the rows of a list, holds the id
+  of the record its `record` names; the editor picks it from the list of its
+  kind, searched for the products and the categories. The template hands it
+  on to a component of the theme that shows such records
+  (`cms_component('Layouts:CrossSelling:Base', {product_ids: props.products})`);
+  a call that passes another kind of record is refused when the component is
+  saved.
 
 ### Changed
 

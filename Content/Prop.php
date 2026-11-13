@@ -40,6 +40,9 @@ final readonly class Prop
      * JSON schema and of the catalogue sheet, `editorOnlyChoices` lists the
      * values of a choice the model is not offered, and `editor` names the
      * control the form draws the prop with
+     *
+     * `record` names what a Reference points at (`product`, `category`…), so
+     * two references are known to name the same kind of record
      * @param list<string> $editorOnlyChoices
      */
     public function __construct(
@@ -63,6 +66,7 @@ final readonly class Prop
         public bool $editorOnly = false,
         public array $editorOnlyChoices = [],
         public ?string $editor = null,
+        public ?string $record = null,
     ) {
         if (1 !== preg_match('/^[a-z][a-z0-9_]*$/', $name)) {
             throw new \InvalidArgumentException(\sprintf('A prop name is lowercase letters, digits and underscores: "%s" given.', $name));
@@ -109,6 +113,7 @@ final readonly class Prop
             $only,
             $onlyChoices,
             $editor,
+            $this->record,
         );
     }
 
@@ -140,6 +145,7 @@ final readonly class Prop
             $this->editorOnly,
             $this->editorOnlyChoices,
             $this->editor,
+            $this->record,
         );
     }
 
@@ -225,16 +231,13 @@ final readonly class Prop
     }
 
     /**
-     * @param string $source what the id names: `page`, `menu`, `form`, `product`, `category`, `folder`
-     */
-    /**
-     * @param string      $source     what the reference names, for the model: "a page", "a product"
+     * @param string      $source     what the id names, for the model and for the record it is: `page`, `menu`, `form`, `product`, `category`, `folder`
      * @param string|null $picker     the address of the list a screen picks the record from, `{id, name}` rows
      * @param bool        $searchable whether the picker answers `?q=` with the matching rows rather than listing them all
      */
     public static function reference(string $name, string $label, string $source, bool $required = true, ?string $help = null, ?string $picker = null, bool $searchable = false): self
     {
-        return new self($name, PropType::Reference, $label, null, $required, trim($source.'. '.($help ?? '')), picker: $picker, searchable: $searchable);
+        return new self($name, PropType::Reference, $label, null, $required, trim($source.'. '.($help ?? '')), picker: $picker, searchable: $searchable, record: $source);
     }
 
     public static function json(string $name, string $label, mixed $default = [], ?string $help = null): self
