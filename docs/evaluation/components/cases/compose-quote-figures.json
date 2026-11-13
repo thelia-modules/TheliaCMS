@@ -19,7 +19,9 @@
     ],
     "markup": {
       "require": [
-        "<blockquote"
+        "<blockquote",
+        "cms-site--quote",
+        "cms-site--key-figures"
       ],
       "forbid": []
     },
@@ -27,6 +29,5 @@
       "require": [],
       "forbid": []
     }
-  },
-  "gap": "N71"
+  }
 }
