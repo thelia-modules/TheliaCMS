@@ -45,9 +45,10 @@ final class PageSeoModulesScreenTest extends AdminScreenTestCase
 
         $this->listener = static function (HookRenderEvent $event): void {
             $event->add(\sprintf(
-                '<form method="post" action="/admin/seo" data-testid="a-seo-module"><input name="object_id" value="%d"><input name="object_type" value="%s"></form>',
+                '<form method="post" action="/admin/seo" data-testid="a-seo-module"><input name="object_id" value="%d"><input name="object_type" value="%s"><input name="fields" value="%s"></form>',
                 (int) $event->getArgument('id'),
                 htmlspecialchars((string) $event->getArgument('type')),
+                htmlspecialchars(implode(',', (array) $event->getArgument('fields'))),
             ));
         };
         $this->events()->addListener(\sprintf(self::EVENT, TemplateDefinition::BACK_OFFICE), $this->listener);
@@ -72,6 +73,7 @@ final class PageSeoModulesScreenTest extends AdminScreenTestCase
         self::assertSame(1, $module->count(), 'The card of the module, in the panel.');
         self::assertSame((string) $page->getId(), $module->filter('input[name="object_id"]')->attr('value'));
         self::assertSame(TheliaCMS::PAGE_VIEW, $module->filter('input[name="object_type"]')->attr('value'), 'Named as the view of the site, the one SEOne reads.');
+        self::assertSame('json_data', $module->filter('input[name="fields"]')->attr('value'), 'The structured data only: the page holds its robots and its canonical URL.');
         self::assertSame(0, $screen->filter('form#cms-page-settings-form [data-testid="a-seo-module"]')->count(), 'Never inside the settings form: a form in a form is dropped by the browser.');
         self::assertSame($this->say('Each card is saved by its own button. The Save of the page saves the settings of the page only.'), trim($screen->filter('#tab-seo-modules [data-testid="cms-page-seo-modules-help"]')->text()), 'The panel says which button saves what.');
     }

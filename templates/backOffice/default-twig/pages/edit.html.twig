@@ -19,9 +19,11 @@
     {% form_theme form with bo_form_themes only %}
 
     {# Rendered once, before the tabs: the tab shows only when a module answers. A page not saved has
-       no id to attach them to; a model is never published. A capture, not a filtered value: it stays
+       no id to attach them to; a model is never published. `fields`: the page holds its robots and
+       its canonical URL itself (SEO tab), and prints neither the H1 nor the links of SEOne; its card
+       shows the structured data only (SEOne 1.8, which shows every field before). A capture, not a filtered value: it stays
        markup, a filter would hand back a string the escaper would print as text. #}
-    {% set seo_module_cards %}{% if not is_new and not is_model %}{{ hook_cards(['cmspage.seo.update-form', 'tab-seo.update-form', 'tab-seo.bottom'], { cmspage_id: page.id, id: page.id, type: 'cmspage' }) }}{% endif %}{% endset %}
+    {% set seo_module_cards %}{% if not is_new and not is_model %}{{ hook_cards(['cmspage.seo.update-form', 'tab-seo.update-form', 'tab-seo.bottom'], { cmspage_id: page.id, id: page.id, type: 'cmspage', fields: ['json_data'] }) }}{% endif %}{% endset %}
     {# A module sends the editor back with `current_tab=seo` after a save in its card (SEOne, as on the
        catalogue screens): its tab opens again. #}
     {% set seo_modules_open = seo_module_cards|trim is not empty and app.request.query.get('current_tab') == 'seo' %}

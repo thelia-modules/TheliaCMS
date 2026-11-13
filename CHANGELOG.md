@@ -62,6 +62,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - **The tab of the SEO of the modules says which button saves what.** Each
   card is saved by its own button; the Save of the page saves its settings
   only.
+- **The card of SEOne on a page shows the structured data only.** The page
+  holds its robots and its canonical URL in its own SEO tab, and prints
+  neither the H1 nor the links of SEOne: the editor passes
+  `fields: ['json_data']` to the hook (SEOne 1.8 and later; an older SEOne
+  shows every field). The robots checkboxes of SEOne printed a second robots
+  tag, without the response header nor the removal from the sitemap.
 - **Coming back from a save in a card of the SEO of the modules opens that
   tab again.** SEOne sends the editor back with `current_tab=seo`, as on the
   catalogue screens; the editor opened its general tab.
