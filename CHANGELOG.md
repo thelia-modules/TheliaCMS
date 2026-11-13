@@ -15,6 +15,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   a button (round 8 of the bench: 3 trials out of 3). Its prompt now says that
   a part the drawn component offers among its props (its heading, its button)
   is handed to it, never drawn again beside it.
+- **A button in the form of a section reads by what it says.** A row is
+  folded under its words before its link: the button of a band of the theme
+  (`{href, label}`) reads « Voir tout le catalogue », no longer « /catalogue »;
+  a row whose only text is a link still reads by it. A list of one row at most
+  (an object such as that button) is added by its name, « Ajouter « Bouton » »,
+  no longer « Ajouter une ligne ».
 
 ### Fixed
 
