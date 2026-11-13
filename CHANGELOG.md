@@ -7,6 +7,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [2.27.0] - 2026-11-13
+
 ### Added
 
 - **A component of the site draws another.** Its template may call
@@ -62,7 +64,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   of an image that is an icon is refused when the new result is not fit to be
   an icon, and so is replacing it with a JPEG, a PNG or a WebP: an icon is
   replaced by an SVG only. The media library gets an **Icons** filter, and shows the `cms:` name
-  on the card and on the sheet of an icon.
+  on the card and on the sheet of an icon. The names are kept in `cms_icon`
+  (`Config/update/2.27.0.sql`). See ADR 14.
 - **An `icon` prop type.** A component of the theme (`{# @prop icon icon The
   icon #}`, also as a field of a list) or of the site declares a prop that
   holds the name of an icon, as `ux_icon()` reads it: `cms:<name>` for an icon
@@ -3348,7 +3351,8 @@ the published pages.
 - The breadcrumb of a page filed under a draft one offered a link to that page,
   which answers 404, both to the reader and in the `BreadcrumbList`.
 
-[Unreleased]: https://github.com/thelia-modules/TheliaCMS/compare/2.26.1...HEAD
+[Unreleased]: https://github.com/thelia-modules/TheliaCMS/compare/2.27.0...HEAD
+[2.27.0]: https://github.com/thelia-modules/TheliaCMS/releases/tag/2.27.0
 [2.26.1]: https://github.com/thelia-modules/TheliaCMS/releases/tag/2.26.1
 [2.26.0]: https://github.com/thelia-modules/TheliaCMS/releases/tag/2.26.0
 [2.25.0]: https://github.com/thelia-modules/TheliaCMS/releases/tag/2.25.0
