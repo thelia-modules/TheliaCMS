@@ -22,3 +22,4 @@ decision supersedes it with a new file.
 | [14](0014-an-icon-is-a-named-svg-of-the-library.md) | An icon is a named SVG of the library |
 | [15](0015-a-component-of-the-site-draws-another-by-its-code.md) | A component of the site draws another by its code |
 | [16](0016-a-called-component-reads-the-stored-values-of-its-caller.md) | A called component reads the stored values of its caller |
+| [17](0017-a-heading-of-the-site-is-drawn-at-any-depth.md) | A heading of the site is drawn at any depth |

@@ -15,6 +15,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   text, offered under « Text and media » of the dialog that adds a section,
   and read by the heading check of the publication like any other heading.
   The page generator finds it in the catalogue.
+- **A component of the site draws a heading of the site** (ADR 17):
+  `cms_component('cms:heading', {text: props.title, level: 'h3'})`, so its
+  heading reads like the other headings of the site. A heading draws
+  nothing itself: any component draws one, a component another draws too,
+  and it stays a component another may draw. A level the heading does not
+  offer, written in the call or offered by a `choice` prop of the caller, is
+  refused when the component is saved; the generator of components is told
+  the levels.
 
 ## [2.28.0] - 2026-11-13
 

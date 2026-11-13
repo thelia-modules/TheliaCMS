@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation\Component;
 
+use TheliaCMS\Content\HeadingSection;
 use TheliaCMS\Content\ImageFraming;
 use TheliaCMS\Content\PickedRecord;
 use TheliaCMS\Content\Prop;
@@ -203,12 +204,12 @@ final readonly class ComponentPrompt
     private function drawable(SectionDefinitionInterface $definition, array $offered): ?string
     {
         if ($definition instanceof SiteComponentSection) {
-            if ($definition->prototype || [] !== $this->renderer->calls($definition->component->template)) {
+            if ($definition->prototype || [] !== $this->renderer->nesting($definition->component->template)) {
                 return null;
             }
 
             $name = $definition->component->code;
-        } elseif ($definition instanceof ThemeComponentSection && isset($offered[$definition->name()])) {
+        } elseif (($definition instanceof ThemeComponentSection || $definition instanceof HeadingSection) && isset($offered[$definition->name()])) {
             $name = $definition->name();
         } else {
             return null;
@@ -229,6 +230,7 @@ final readonly class ComponentPrompt
                 match ($prop->type) {
                     PropType::Items => (1 === $prop->maxItems ? 'one object, held as a list of one row: ' : 'list of rows: ').self::propsLine($prop->items),
                     PropType::Reference => 'reference, record '.$prop->record,
+                    PropType::Choice => 'one of '.implode(', ', array_map(static fn (string $value): string => '`'.$value.'`', array_keys($prop->choices))),
                     default => $prop->type->value,
                 },
                 $prop->required ? ', required' : '',
@@ -399,7 +401,7 @@ final readonly class ComponentPrompt
             '',
             \sprintf('- Tags: %s. Filters: %s. Tests: %s. Functions: %s. Nothing else: no include, no macro, no block, no `raw`.', implode(', ', SiteTemplateRenderer::TAGS), implode(', ', SiteTemplateRenderer::FILTERS), implode(', ', SiteTemplateRenderer::TESTS), implode(', ', SiteTemplateRenderer::FUNCTIONS)),
             \sprintf('- At most %d `for` inside each other: loop over a list, and over the list of an item, never deeper.', SiteTemplateRenderer::MAX_LOOP_DEPTH),
-            \sprintf("- A component the list marks \"Drawable\" is placed inside yours with `%s('Carousel', {slides: props.photos, title: props.heading, columns: 3})`, printed where it goes: the code of a component of the site or the name of a component of the theme, as the list writes it, between quotes; then a mapping of its props to values, each one of your props (`props.photos`, handed on as the page stores it) or a value written as it is (a text, a number, true or false), never the field of a row in a loop nor a computed value. What it shows is filled through your props: declare them with the type its props have, a list with rows of the fields its rows read, under the names they have there. It is drawn inside its own element with its own stylesheet: your stylesheet styles your parts, never what it draws. A component you draw draws none, and %d are drawn at most.", SiteTemplateRenderer::CALL, SiteTemplateRenderer::MAX_CALLS),
+            \sprintf("- A component the list marks \"Drawable\" is placed inside yours with `%s('Carousel', {slides: props.photos, title: props.heading, columns: 3})`, printed where it goes: the code of a component of the site or the name of a component of the theme, as the list writes it, between quotes; then a mapping of its props to values, each one of your props (`props.photos`, handed on as the page stores it) or a value written as it is (a text, a number, true or false), never the field of a row in a loop nor a computed value. What it shows is filled through your props: declare them with the type its props have, a list with rows of the fields its rows read, under the names they have there. It is drawn inside its own element with its own stylesheet: your stylesheet styles your parts, never what it draws. A component you draw draws none, but `%s`, a heading of the site, which any component draws, a drawn one too: a heading of yours drawn with it reads like the other headings of the site, at the level you give it. %d are drawn at most.", SiteTemplateRenderer::CALL, HeadingSection::NAME, SiteTemplateRenderer::MAX_CALLS),
             '- Text is escaped when printed; an `html` prop is printed as it is.',
             '- No text of its own outside what it prints: the template writes markup and props, nothing else.',
             '- No `script`, `style`, `iframe`, `object`, `embed`, `form`, `link`, `meta`, no `on…` attribute, no `javascript:`. A YouTube, Vimeo or Dailymotion video is an `embed` prop, not an `iframe`.',

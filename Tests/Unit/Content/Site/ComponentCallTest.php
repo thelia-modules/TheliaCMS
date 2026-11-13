@@ -17,6 +17,7 @@ namespace TheliaCMS\Tests\Unit\Content\Site;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
+use TheliaCMS\Content\HeadingSection;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
 use TheliaCMS\Content\Prop;
 use TheliaCMS\Content\PropSchema;
@@ -66,6 +67,32 @@ final class ComponentCallTest extends TestCase
         $html = $this->renderer()->render('{{ cms_component("Calling", {said: "inner"}) }}', []);
 
         self::assertSame('<div class="cms-site cms-site--calling"><p>inner</p></div>', $html);
+    }
+
+    /**
+     * A heading of the site draws nothing itself: any component draws it, a
+     * component drawn by another too, in place, at the level it is given.
+     */
+    public function testAHeadingOfTheSiteIsDrawnInPlaceAtAnyDepth(): void
+    {
+        self::assertSame(
+            '<section><div class="cms-heading"><h3 class="cms-heading__text">Nos &lt;ateliers&gt;</h3></div></section>',
+            $this->renderer()->render('<section>{{ cms_component("cms:heading", {text: props.title, level: "h3"}) }}</section>', ['title' => 'ignored'], ['title' => 'Nos <ateliers>']),
+        );
+        self::assertSame(
+            '<div class="cms-site cms-site--titled"><div class="cms-heading"><h2 class="cms-heading__text">inner</h2></div><p>inner</p></div>',
+            $this->renderer()->render('{{ cms_component("Titled", {said: "inner"}) }}', []),
+            'Drawn inside a component another draws.',
+        );
+    }
+
+    public function testAHeadingIsAmongTheCallsButNeverMakesAComponentDrawOthers(): void
+    {
+        $template = '{{ cms_component("cms:heading", {text: props.title}) }}{{ cms_component("Echo", {said: "x"}) }}';
+
+        self::assertSame(['cms:heading', 'Site:Echo'], array_map(static fn (SiteComponentCall $call): string => $call->name(), $this->renderer()->calls($template)));
+        self::assertSame(['Site:Echo'], array_map(static fn (SiteComponentCall $call): string => $call->name(), $this->renderer()->nesting($template)));
+        self::assertSame([], $this->renderer()->nesting('{{ cms_component("cms:heading", {text: props.title}) }}'));
     }
 
     public function testANameTheCatalogueDoesNotOfferOrValuesItsSchemaRefusesDrawNothingAndAreLogged(): void
@@ -199,7 +226,7 @@ final class ComponentCallTest extends TestCase
             TWIG);
 
         self::assertEquals([
-            new SiteComponentCall('Carousel', ['slides', 'title', 'count'], 4, ['slides' => 'photos']),
+            new SiteComponentCall('Carousel', ['slides', 'title', 'count'], 4, ['slides' => 'photos'], ['title' => 'Ours', 'count' => 3]),
             new SiteComponentCall('Layouts:Products:Base', [], 6),
         ], $calls);
         self::assertSame(['Site:Carousel', 'Layouts:Products:Base'], array_map(static fn (SiteComponentCall $call): string => $call->name(), $calls));
@@ -216,7 +243,8 @@ final class ComponentCallTest extends TestCase
             new SiteComponent('Keys', 'Keys', 'Names what it is given.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '<p>{{ props|keys|join(",") }}</p>'),
             new SiteComponent('Strict', 'Strict', 'Takes a number.', [['name' => 'count', 'type' => 'integer', 'label' => 'Count']], [], '<p>{{ props.count }}</p>'),
             new SiteComponent('Calling', 'Calling', 'Calls another.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '<p>{{ props.said }}</p>{{ cms_component("Echo", {said: "deeper"}) }}'),
-        ]);
+            new SiteComponent('Titled', 'Titled', 'A heading over a word.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '{{ cms_component("cms:heading", {text: props.said}) }}<p>{{ props.said }}</p>'),
+        ], [new HeadingSection()]);
         $renderer = new SiteTemplateRenderer(null, $sections, $logger);
         $sections->renderer = $renderer;
 

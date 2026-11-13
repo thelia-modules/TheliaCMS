@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Content\Site;
 
 use Psr\Log\LoggerInterface;
+use TheliaCMS\Content\HeadingSection;
 use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\Prop;
 use Twig\Environment;
@@ -72,6 +73,15 @@ final class SiteTemplateRenderer
      * inside a loop counting each time: a list holds 24 items.
      */
     public const int MAX_CALLS = 24;
+
+    /**
+     * The sections of the module a component may draw at any depth: they draw
+     * nothing themselves, so drawing one never makes a component one that
+     * draws others (ADR 17).
+     *
+     * @var list<string>
+     */
+    public const array LEAVES = [HeadingSection::NAME];
 
     /** @var list<string> */
     public const array TESTS = ['empty', 'defined', 'null', 'none', 'odd', 'even', 'iterable', 'same as', 'divisible by'];
@@ -199,6 +209,17 @@ final class SiteTemplateRenderer
     }
 
     /**
+     * The calls that make a component one that draws others, the ones of a
+     * leaf left out: what the rule of one level deep reads.
+     *
+     * @return list<SiteComponentCall>
+     */
+    public function nesting(string $template): array
+    {
+        return array_values(array_filter($this->calls($template), static fn (SiteComponentCall $call): bool => !\in_array($call->name(), self::LEAVES, true)));
+    }
+
+    /**
      * @param array<string, mixed> $props  as the template reads them (SiteComponentSection::forTemplate)
      * @param array<string, mixed> $stored as the page stores them: what `cms_component` hands on
      *
@@ -257,7 +278,13 @@ final class SiteTemplateRenderer
      */
     private function draw(mixed $name, mixed $written, mixed $props): string
     {
-        if ($this->depth > 0 || null === $this->sections || !\is_string($name)) {
+        if (null === $this->sections || !\is_string($name)) {
+            return '';
+        }
+
+        $catalogueName = SiteComponentCall::catalogueName($name);
+
+        if ($this->depth > 0 && !\in_array($catalogueName, self::LEAVES, true)) {
             return '';
         }
 
@@ -269,7 +296,6 @@ final class SiteTemplateRenderer
             return '';
         }
 
-        $catalogueName = SiteComponentCall::catalogueName($name);
         $section = $this->sections->find($catalogueName);
 
         if (null === $section) {
@@ -299,7 +325,8 @@ final class SiteTemplateRenderer
             --$this->depth;
         }
 
-        if ($section instanceof SiteComponentSection || '' === trim($html)) {
+        // A leaf is drawn in place, filtered with the markup of the caller.
+        if ($section instanceof SiteComponentSection || \in_array($catalogueName, self::LEAVES, true) || '' === trim($html)) {
             return $html;
         }
 
@@ -362,6 +389,7 @@ final class SiteTemplateRenderer
         $arguments = iterator_to_array($node->getNode('arguments'));
         $keys = [];
         $props = [];
+        $written = [];
 
         foreach (isset($arguments[1]) && $arguments[1] instanceof ArrayExpression ? $arguments[1]->getKeyValuePairs() : [] as $pair) {
             $key = (string) $pair['key']->getAttribute('value');
@@ -369,10 +397,13 @@ final class SiteTemplateRenderer
 
             if (null !== $prop = ComponentCallVisitor::propOf($pair['value'])) {
                 $props[$key] = $prop;
+            } elseif (self::isWritten($pair['value'])) {
+                $value = $pair['value'] instanceof CheckToStringNode ? $pair['value']->getNode('expr') : $pair['value'];
+                $written[$key] = $value->getAttribute('value');
             }
         }
 
-        return new SiteComponentCall((string) $arguments[0]->getAttribute('value'), $keys, $node->getTemplateLine(), $props);
+        return new SiteComponentCall((string) $arguments[0]->getAttribute('value'), $keys, $node->getTemplateLine(), $props, $written);
     }
 
     /**
