@@ -19,6 +19,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Hook\Theme\ThemeHookInterface;
 use Thelia\Model\LangQuery;
 use Thelia\Tools\URL;
+use TheliaCMS\Http\CoreUrls;
 use TheliaCMS\Menu\SiteRoot;
 use TheliaCMS\Page\ScheduledChanges;
 use TheliaCMS\TheliaCMS;
@@ -234,16 +235,11 @@ final readonly class SitemapThemeHook implements ThemeHookInterface
     }
 
     /**
-     * Null outside a request: the core resolves addresses against it and throws
-     * when there is none, though its signature promises an instance.
+     * Null outside a request: the core resolves addresses against it.
      */
     private function urls(): ?URL
     {
-        try {
-            return URL::getInstance();
-        } catch (\Throwable) {
-            return null;
-        }
+        return CoreUrls::instance();
     }
 
     private function urlOf(URL $urls, int $pageId, string $locale): ?string

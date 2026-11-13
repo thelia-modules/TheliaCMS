@@ -15,7 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Page;
 
 use Propel\Runtime\ActiveQuery\Criteria;
-use Thelia\Tools\URL;
+use TheliaCMS\Http\CoreUrls;
 use TheliaCMS\Media\CmsMediaLibrary;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
@@ -415,8 +415,15 @@ final readonly class PublishedPageRepository
     {
         $ids = array_map(static fn (CmsPage $page): int => (int) $page->getId(), $pages);
 
+        $urls = CoreUrls::instance();
+
+        // Nothing to warm without the service: each address is then read on its own, or not at all.
+        if (null === $urls) {
+            return;
+        }
+
         foreach (array_chunk($ids, self::ADDRESSES_PER_QUERY) as $batch) {
-            URL::getInstance()->preloadRewrittenUrls(TheliaCMS::PAGE_VIEW, $locale, $batch);
+            $urls->preloadRewrittenUrls(TheliaCMS::PAGE_VIEW, $locale, $batch);
         }
     }
 

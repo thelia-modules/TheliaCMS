@@ -49,6 +49,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   of the editor: the kind of record of a row ("Produit", "Catégorie"), and
   "Texte en gras", "Texte du lien", the size of a picture, the wishlist.
 
+- **A menu, a sitemap, a form link or a search result no longer throws when the URL service of the core is not built yet.** `URL::getInstance()` throws instead of returning null, so the checks for null after it never ran: a component rendered before any service asked for the URL service, or a command, failed with "URL instance is not initialized". Every call now goes through `Http\CoreUrls::instance()`, which returns null then.
+
 ## [2.27.0] - 2026-11-13
 
 ### Added

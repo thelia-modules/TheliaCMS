@@ -20,9 +20,9 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\Lang;
-use Thelia\Tools\URL;
 use TheliaCMS\Front\ThemeTemplateRenderer;
 use TheliaCMS\Http\ContentSecurityPolicyListener;
+use TheliaCMS\Http\CoreUrls;
 use TheliaCMS\Menu\SiteRoot;
 use TheliaCMS\Search\PageSearch;
 use TheliaCMS\Search\SearchTerms;
@@ -137,7 +137,7 @@ final readonly class CmsSearchController
 
     private function urlOf(int $pageId, string $locale): string
     {
-        $urls = URL::getInstance();
+        $urls = CoreUrls::instance();
 
         if (null === $urls) {
             return '/';
