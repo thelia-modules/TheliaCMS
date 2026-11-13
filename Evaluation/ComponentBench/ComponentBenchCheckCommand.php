@@ -36,6 +36,7 @@ final class ComponentBenchCheckCommand extends Command
 {
     public function __construct(
         private readonly BenchPreviews $previews,
+        private readonly BenchShopRequest $shop,
         private readonly ComponentOracle $oracle = new ComponentOracle(),
     ) {
         parent::__construct();
@@ -83,28 +84,35 @@ final class ComponentBenchCheckCommand extends Command
         }
 
         $trials = [];
+        // The sample is drawn again, and a component of the theme it draws
+        // reads the catalogue through the request of a visit, as in the run.
+        $close = $this->shop->open();
 
-        foreach ($files as $file) {
-            try {
-                $trial = TrialFiles::read($file);
-            } catch (\InvalidArgumentException $exception) {
-                $output->writeln('<comment>'.$exception->getMessage().' (left out)</comment>');
+        try {
+            foreach ($files as $file) {
+                try {
+                    $trial = TrialFiles::read($file);
+                } catch (\InvalidArgumentException $exception) {
+                    $output->writeln('<comment>'.$exception->getMessage().' (left out)</comment>');
 
-                continue;
+                    continue;
+                }
+
+                $case = $cases[(string) ($trial['case'] ?? '')] ?? null;
+
+                if (null === $case) {
+                    $output->writeln(\sprintf('<comment>%s: no case "%s" (left out).</comment>', $file, (string) ($trial['case'] ?? '')));
+
+                    continue;
+                }
+
+                $verdict = $this->oracle->judge($case, $trial);
+                $trial['verdict'] = $verdict;
+                TrialFiles::write($file, $trial);
+                $trials[] = $trial;
             }
-
-            $case = $cases[(string) ($trial['case'] ?? '')] ?? null;
-
-            if (null === $case) {
-                $output->writeln(\sprintf('<comment>%s: no case "%s" (left out).</comment>', $file, (string) ($trial['case'] ?? '')));
-
-                continue;
-            }
-
-            $verdict = $this->oracle->judge($case, $trial);
-            $trial['verdict'] = $verdict;
-            TrialFiles::write($file, $trial);
-            $trials[] = $trial;
+        } finally {
+            $close();
         }
 
         $output->writeln(RoundReport::markdown($cases, $trials));

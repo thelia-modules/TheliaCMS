@@ -128,7 +128,8 @@ folder), `--case` (repeatable, a filter), `--runs` (default 3), `--out`
   service of the core). A component of the theme reads the catalogue through
   `resources()`, which needs them; without them the sample of a component that
   draws one (`Layouts:CrossSelling:Base`) failed with "No current request
-  found", and was refused as drawing nothing (round 6).
+  found", and was refused as drawing nothing (round 6). The check, which draws
+  the sample again, runs in the same visit (round 7).
 - The generator keeps nothing but its line of the AI ledger: no component is
   saved. `thelia_cms:component-bench:check` calls no API and can be run as often
   as the contracts change; it rewrites `verdict` in each file.
