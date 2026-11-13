@@ -16,6 +16,7 @@ namespace TheliaCMS\Tests\Unit\Content\Site;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use TheliaCMS\Content\HeadingSection;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentValidator;
@@ -61,6 +62,8 @@ final class ComponentCallValidationTest extends TestCase
         yield 'rows naming another record' => ['{{ cms_component("Shelf", {products: props.categories}) }}', 'Line 1: "id" of the rows of props.categories names a category, and Shelf reads a product.'];
         yield 'a reference to another record' => ['{{ cms_component("Shelf", {lead: props.section}) }}', 'Line 1: props.section names a category, and the prop "lead" of Shelf a product.'];
         yield 'a text for an object' => ['{{ cms_component("Band", {button: props.heading}) }}', 'Line 1: props.heading is of type text, and the prop "button" of Band of type items.'];
+        yield 'a level the heading does not offer' => ['{{ cms_component("cms:heading", {text: props.heading, level: "h5"}) }}', 'Line 1: "h5" is written for the prop "level" of cms:heading, which offers h2, h3, h4.'];
+        yield 'a choice with a value the heading does not offer' => ['{{ cms_component("cms:heading", {text: props.heading, level: props.size}) }}', 'Line 1: props.size may be h1, which the prop "level" of cms:heading does not offer; it offers h2, h3, h4.'];
         yield 'rows with a field of another type' => ['{{ cms_component("Carousel", {slides: props.wrong}) }}', 'Line 1: "image" of the rows of props.wrong is of type text, and Carousel reads it as of type image.'];
     }
 
@@ -85,6 +88,19 @@ final class ComponentCallValidationTest extends TestCase
         } catch (InvalidSiteComponentException $exception) {
             self::assertContains('The component Carousel is drawn by Gallery: a component draws others one level deep, so one that another draws cannot draw any itself.', $exception->problems);
         }
+    }
+
+    /**
+     * A heading of the site draws nothing (ADR 17): a component drawn by
+     * another may draw one, and drawing one that does is not drawing a
+     * component that draws others.
+     */
+    public function testAHeadingKeepsAComponentOneThatAnotherMayDraw(): void
+    {
+        $carousel = new SiteComponent('Carousel', 'Carousel', 'Photos in a row.', self::CAROUSEL_PROPS, ['title' => 'Photos', 'slides' => [['image' => 'https://example.com/a.jpg', 'alt' => 'A']]], '{{ cms_component("cms:heading", {text: props.title, level: "h3"}) }}<section>{% for slide in props.slides %}<img src="{{ slide.image }}" alt="{{ slide.alt }}">{% endfor %}</section>');
+
+        self::assertSame('Carousel', $this->validator()->validate($carousel)->code, 'Gallery draws it, and it draws a heading.');
+        self::assertSame('Row', $this->validator()->validate($this->row('{{ cms_component("Titled", {said: props.heading}) }}{{ cms_component("cms:heading", {text: props.heading, level: props.level}) }}'))->code, 'Titled draws a heading only.');
     }
 
     public function testTheProductsAPageStoresAreHandedOnToAComponentThatShowsProducts(): void
@@ -120,6 +136,8 @@ final class ComponentCallValidationTest extends TestCase
             ['name' => 'categories', 'type' => 'items', 'label' => 'Categories', 'items' => [['name' => 'id', 'type' => 'reference', 'label' => 'Category', 'record' => 'category', 'required' => true]]],
             ['name' => 'star', 'type' => 'reference', 'label' => 'Product', 'record' => 'product'],
             ['name' => 'section', 'type' => 'reference', 'label' => 'Category', 'record' => 'category'],
+            ['name' => 'size', 'type' => 'choice', 'label' => 'Size', 'choices' => ['h1' => 'Large', 'h2' => 'Medium'], 'default' => 'h2'],
+            ['name' => 'level', 'type' => 'choice', 'label' => 'Level', 'choices' => ['h2' => 'Part', 'h3' => 'Sub-part'], 'default' => 'h2'],
             ['name' => 'cta', 'type' => 'items', 'label' => 'Button', 'max' => 1, 'items' => [['name' => 'href', 'type' => 'url', 'label' => 'Address', 'required' => true], ['name' => 'label', 'type' => 'text', 'label' => 'Label', 'required' => true]]],
         ], ['heading' => 'Photos', 'body' => '<p>Hello</p>', 'photos' => [['image' => 'https://example.com/a.jpg', 'alt' => 'A']]], '<div class="row"><h2>{{ props.heading }}</h2>'.$call.'</div>');
     }
@@ -137,12 +155,13 @@ final class ComponentCallValidationTest extends TestCase
             ], [], '<div>{% for button in props.button %}<a href="{{ button.href }}">{{ button.label }}</a>{% endfor %}</div>'),
             new SiteComponent('Echo', 'Echo', 'Says a word.', [['name' => 'said', 'type' => 'html', 'label' => 'Said']], [], '<p>{{ props.said }}</p>'),
             new SiteComponent('Calling', 'Calling', 'Calls another.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '<p>{{ props.said }}</p>{{ cms_component("Echo", {said: "x"}) }}'),
+            new SiteComponent('Titled', 'Titled', 'A heading over a word.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '{{ cms_component("cms:heading", {text: props.said}) }}<p>{{ props.said }}</p>'),
             new SiteComponent('Gallery', 'Gallery', 'Calls the carousel.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '<div>{{ cms_component("Carousel", {title: props.said}) }}</div>'),
         ], [
             new SiteComponent('Draft', 'Draft', 'A prototype.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '<p>draft</p>'),
         ]);
 
-        $sections = new InMemoryDrawableSections(array_values(array_filter($components->all(), static fn (SiteComponent $component): bool => null !== $components->kept($component->code))));
+        $sections = new InMemoryDrawableSections(array_values(array_filter($components->all(), static fn (SiteComponent $component): bool => null !== $components->kept($component->code))), [new HeadingSection()]);
         $renderer = new SiteTemplateRenderer(null, $sections);
         $sections->renderer = $renderer;
 

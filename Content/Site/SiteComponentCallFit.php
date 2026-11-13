@@ -38,6 +38,10 @@ final class SiteComponentCallFit
             return [\sprintf('Line %d: props.%s is of type %s, and the prop "%s" of %s of type %s.', $call->line, $given->name, $given->type->value, $read->name, $call->code, $read->type->value)];
         }
 
+        if (PropType::Choice === $read->type && [] !== $unknown = array_diff(array_keys($given->choices), array_keys($read->choices))) {
+            return [\sprintf('Line %d: props.%s may be %s, which the prop "%s" of %s does not offer; it offers %s.', $call->line, $given->name, implode(', ', $unknown), $read->name, $call->code, implode(', ', array_keys($read->choices)))];
+        }
+
         if (self::namesAnotherRecord($given, $read)) {
             return [\sprintf('Line %d: props.%s names a %s, and the prop "%s" of %s a %s.', $call->line, $given->name, $given->record, $read->name, $call->code, $read->record)];
         }
@@ -72,6 +76,18 @@ final class SiteComponentCallFit
      * Whether a value of the type given prints as the type read: the same
      * type, a text and markup either way, an address as a text.
      */
+    /**
+     * A value written in the call for a choice: one of its values.
+     */
+    public static function writtenMismatch(string|int|float|bool|null $value, Prop $read, SiteComponentCall $call): ?string
+    {
+        if (PropType::Choice !== $read->type || \array_key_exists((string) $value, $read->choices)) {
+            return null;
+        }
+
+        return \sprintf('Line %d: "%s" is written for the prop "%s" of %s, which offers %s.', $call->line, (string) $value, $read->name, $call->code, implode(', ', array_keys($read->choices)));
+    }
+
     private static function reads(Prop $given, Prop $read): bool
     {
         $textual = [PropType::Text, PropType::Html];

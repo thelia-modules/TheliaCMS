@@ -17,14 +17,14 @@ namespace TheliaCMS\Content\Site;
 use TheliaCMS\Content\SectionDefinitionInterface;
 
 /**
- * The sections `cms_component()` may draw (ADR 15, ADR 16): a component of
- * the site kept for the whole site, or a component of the theme, as long as
- * the catalogue offers it.
+ * The sections `cms_component()` may draw (ADR 15, ADR 16, ADR 17): a
+ * component of the site kept for the whole site, a component of the theme,
+ * or a heading of the site, as long as the catalogue offers it.
  */
 interface DrawableSections
 {
     /**
-     * @param string $name the catalogue name: `Site:<code>` or the name of a component of the theme
+     * @param string $name the catalogue name: `Site:<code>`, the name of a component of the theme, or `cms:heading`
      */
     public function find(string $name): ?SectionDefinitionInterface;
 }

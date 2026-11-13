@@ -67,6 +67,45 @@ final class ComponentCompositionTest extends AdminScreenTestCase
         );
     }
 
+    /**
+     * A heading of the site (ADR 17): kept with the component that draws it,
+     * drawn in place at the level the caller gives, and the component stays
+     * one that another draws.
+     */
+    public function testAComponentDrawsAHeadingOfTheSiteAndAnotherStillDrawsIt(): void
+    {
+        $repository = $this->getService(SiteComponentRepository::class);
+        $repository->save($this->getService(SiteComponentValidator::class)->validate(new SiteComponent(
+            'TitledQuote',
+            'Titled quote',
+            'A quote under its heading.',
+            [['name' => 'heading', 'type' => 'text', 'label' => 'Heading'], ['name' => 'said', 'type' => 'text', 'label' => 'Said']],
+            ['heading' => 'Notre devise', 'said' => 'Less is more.'],
+            '<figure>{{ cms_component("cms:heading", {text: props.heading, level: "h3"}) }}<blockquote>{{ props.said }}</blockquote></figure>',
+        )), SiteComponentRepository::STATUS_READY);
+        $repository->save($this->getService(SiteComponentValidator::class)->validate(new SiteComponent(
+            'QuoteRow',
+            'Quote row',
+            'The titled quote in a row.',
+            [['name' => 'heading', 'type' => 'text', 'label' => 'Heading'], ['name' => 'said', 'type' => 'text', 'label' => 'Said']],
+            ['heading' => 'Notre devise', 'said' => 'Less is more.'],
+            '<div class="row">{{ cms_component("TitledQuote", {heading: props.heading, said: props.said}) }}</div>',
+        )), SiteComponentRepository::STATUS_READY);
+        $catalog = $this->getService(SectionCatalog::class);
+        $catalog->reset();
+
+        self::assertSame(
+            '<div class="cms-site cms-site--quote-row"><div class="row"><div class="cms-site cms-site--titled-quote"><figure><div class="cms-heading"><h3 class="cms-heading__text">Notre devise</h3></div><blockquote>Less is more.</blockquote></figure></div></div></div>',
+            $catalog->find('Site:QuoteRow')?->render(['heading' => 'Notre devise', 'said' => 'Less is more.'], $this->locale()),
+        );
+
+        $lines = explode("\n", $this->getService(ComponentPrompt::class)->userMessage(new ComponentRequest('Un titre.', $this->locale())));
+        $after = static fn (string $name): string => $lines[(int) array_search(true, array_map(static fn (string $line): bool => str_starts_with($line, '- `'.$name.'`'), $lines), true) + 1];
+
+        self::assertSame("  Drawable: `cms_component('cms:heading', {…})`, props `text` (text, required), `level` (one of `h2`, `h3`, `h4`).", $after('cms:heading'));
+        self::assertStringContainsString('Drawable', $after('Site:TitledQuote'), 'Drawing a heading keeps it drawable.');
+    }
+
     public function testAComponentAnotherDrawsIsNotDeletedAndItsSheetNamesTheCaller(): void
     {
         $this->keepBoth();

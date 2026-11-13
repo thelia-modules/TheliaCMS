@@ -372,7 +372,7 @@ What the generator writes, and what the site checks
   after the one of the blocks.
 - **A sample** that fills every prop: what the preview, the toolkit and the
   generator of pages are shown.
-- **Other components, drawn inside it** (ADR 15, ADR 16):
+- **Other components, drawn inside it** (ADR 15, ADR 16, ADR 17):
   `{{ cms_component('Carousel', {slides: props.photos, title: props.heading, columns: 3}) }}`
   draws the component kept for the whole site under that code, or a
   component of the theme the catalogue offers under its name
@@ -396,6 +396,12 @@ What the generator writes, and what the site checks
   called component offers among its props (its heading, the button of
   `Layouts:CrossSelling:Base`) is handed to it rather than drawn again
   beside it: the generator is told so (`ComponentPrompt::OFFERED_PARTS_RULE`).
+  A heading of the site is drawn the same way (ADR 17):
+  `cms_component('cms:heading', {text: props.title, level: 'h3'})`, at
+  level `h2`, `h3` or `h4`, in place, at any depth, a drawn component
+  included; drawing one does not make a component one that draws others. A
+  level the heading does not offer, written in the call or offered by a
+  `choice` prop of the caller, is refused.
 
 Making, changing and keeping a component take the settings and the custom
 code permissions. A new version of a kept component is refused while a page

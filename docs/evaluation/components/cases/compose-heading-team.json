@@ -1,0 +1,34 @@
+{
+  "id": "compose-heading-team",
+  "family": "composition",
+  "locale": "fr_FR",
+  "request": "Un titre de section « Notre équipe », puis trois portraits côte à côte, chacun avec une photo, un nom et un rôle.",
+  "oracle": {
+    "outcome": [
+      "component"
+    ],
+    "target": [
+      "cms:heading"
+    ],
+    "props": [
+      {
+        "type": "items",
+        "min": 1,
+        "with": [
+          "image",
+          "text"
+        ]
+      }
+    ],
+    "markup": {
+      "require": [
+        "class=\"[^\"]*\\bcms-heading__text\\b"
+      ],
+      "forbid": []
+    },
+    "css": {
+      "require": [],
+      "forbid": []
+    }
+  }
+}

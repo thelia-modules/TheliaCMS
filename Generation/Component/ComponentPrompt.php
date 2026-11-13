@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation\Component;
 
+use TheliaCMS\Content\HeadingSection;
 use TheliaCMS\Content\ImageFraming;
 use TheliaCMS\Content\PickedRecord;
 use TheliaCMS\Content\Prop;
@@ -61,6 +62,8 @@ final readonly class ComponentPrompt
     public const string NARROW_SCREEN_RULE = 'Narrow screens: at 375 px wide the page never scrolls sideways. A table or a row wider than a phone either lays out again below `48rem` (its columns stacked, a row turned into a card), or scrolls inside an element of its own: `overflow-x: auto` and `position: relative` on a wrapper with `tabindex="0"`, `role="region"` and an `aria-label` printed from a prop, so a keyboard reaches it and a screen reader names it (without `position: relative`, a text hidden inside for screen readers, which is positioned, escapes the wrapper and widens the page). Anything else that scrolls (the track of a carousel, a strip of logos) is reached the same way.';
 
     public const string OFFERED_PARTS_RULE = 'A part the drawn component offers among its props (its heading, its button, its link) is handed to it, never drawn again beside it: a button under a band whose props hold `button` is that prop, declared with the same fields and handed on whole (`button: props.button`), not a link of yours.';
+
+    public const string SITE_HEADING_RULE = "The heading that opens your component, its title, is the heading of the site, not one of yours: `{% if props.title is not empty %}{{ cms_component('cms:heading', {text: props.title, level: 'h2'}) }}{% endif %}`, a text prop of yours for its words, the level written in the call. It reads like the other headings of the site and needs no style of yours. The headings inside it, of a card, a row, a step (`h3`), stay yours.";
 
     public const string NARROW_SCREEN_EXAMPLE = '<section class="compare">{% if props.title is not empty %}<h2>{{ props.title }}</h2>{% endif %}<div class="compare__scroll" tabindex="0" role="region" aria-label="{{ props.title }}"><table><tr>{% for plan in props.plans %}<th scope="col">{{ plan.name }}</th>{% endfor %}</tr><tr>{% for plan in props.plans %}<td>{{ plan.price }}</td>{% endfor %}</tr></table></div></section>';
 
@@ -205,12 +208,12 @@ final readonly class ComponentPrompt
     private function drawable(SectionDefinitionInterface $definition, array $offered): ?string
     {
         if ($definition instanceof SiteComponentSection) {
-            if ($definition->prototype || [] !== $this->renderer->calls($definition->component->template)) {
+            if ($definition->prototype || [] !== $this->renderer->nesting($definition->component->template)) {
                 return null;
             }
 
             $name = $definition->component->code;
-        } elseif ($definition instanceof ThemeComponentSection && isset($offered[$definition->name()])) {
+        } elseif (($definition instanceof ThemeComponentSection || $definition instanceof HeadingSection) && isset($offered[$definition->name()])) {
             $name = $definition->name();
         } else {
             return null;
@@ -231,6 +234,7 @@ final readonly class ComponentPrompt
                 match ($prop->type) {
                     PropType::Items => (1 === $prop->maxItems ? 'one object, held as a list of one row: ' : 'list of rows: ').self::propsLine($prop->items),
                     PropType::Reference => 'reference, record '.$prop->record,
+                    PropType::Choice => 'one of '.implode(', ', array_map(static fn (string $value): string => '`'.$value.'`', array_keys($prop->choices))),
                     default => $prop->type->value,
                 },
                 $prop->required ? ', required' : '',
@@ -401,13 +405,14 @@ final readonly class ComponentPrompt
             '',
             \sprintf('- Tags: %s. Filters: %s. Tests: %s. Functions: %s. Nothing else: no include, no macro, no block, no `raw`.', implode(', ', SiteTemplateRenderer::TAGS), implode(', ', SiteTemplateRenderer::FILTERS), implode(', ', SiteTemplateRenderer::TESTS), implode(', ', SiteTemplateRenderer::FUNCTIONS)),
             \sprintf('- At most %d `for` inside each other: loop over a list, and over the list of an item, never deeper.', SiteTemplateRenderer::MAX_LOOP_DEPTH),
-            \sprintf("- A component the list marks \"Drawable\" is placed inside yours with `%s('Carousel', {slides: props.photos, title: props.heading, columns: 3})`, printed where it goes: the code of a component of the site or the name of a component of the theme, as the list writes it, between quotes; then a mapping of its props to values, each one of your props (`props.photos`, handed on as the page stores it) or a value written as it is (a text, a number, true or false), never the field of a row in a loop nor a computed value. What it shows is filled through your props: declare them with the type its props have, a list with rows of the fields its rows read, under the names they have there. %s It is drawn inside its own element with its own stylesheet: your stylesheet styles your parts, never what it draws. A component you draw draws none, and %d are drawn at most.", SiteTemplateRenderer::CALL, self::OFFERED_PARTS_RULE, SiteTemplateRenderer::MAX_CALLS),
+            \sprintf("- A component the list marks \"Drawable\" is placed inside yours with `%s('Carousel', {slides: props.photos, title: props.heading, columns: 3})`, printed where it goes: the code of a component of the site or the name of a component of the theme, as the list writes it, between quotes; then a mapping of its props to values, each one of your props (`props.photos`, handed on as the page stores it) or a value written as it is (a text, a number, true or false), never the field of a row in a loop nor a computed value. What it shows is filled through your props: declare them with the type its props have, a list with rows of the fields its rows read, under the names they have there. %s It is drawn inside its own element with its own stylesheet: your stylesheet styles your parts, never what it draws. A component you draw draws none, but `%s`, a heading of the site, which any component draws, a drawn one too: a heading of yours drawn with it reads like the other headings of the site, at the level you give it. %d are drawn at most.", SiteTemplateRenderer::CALL, self::OFFERED_PARTS_RULE, HeadingSection::NAME, SiteTemplateRenderer::MAX_CALLS),
             '- Text is escaped when printed; an `html` prop is printed as it is.',
             '- No text of its own outside what it prints: the template writes markup and props, nothing else.',
             '- No `script`, `style`, `iframe`, `object`, `embed`, `form`, `link`, `meta`, no `on…` attribute, no `javascript:`. A YouTube, Vimeo or Dailymotion video is an `embed` prop, not an `iframe`.',
             '- What it draws is filtered like a page that goes online, which keeps the elements of HTML text and layout and their attributes, and takes out the rest without a word: '.implode(', ', array_map(static fn (string $element): string => 'no `'.$element.'`', self::ELEMENTS_TAKEN_OUT)).', no `data-` attribute but the two of the width of the pictures, below. The template is refused when it holds another.',
             '- '.self::IMAGE_WIDTH_RULE.' For instance: `'.self::IMAGE_WIDTH_EXAMPLE.'`',
             '- One root element, a `section` or a `div`. Headings start at `h2`: the page has its own `h1`.',
+            '- '.self::SITE_HEADING_RULE,
             '- Test what may be empty before drawing it: `{% if props.image %}`, `{% if props.title is not empty %}`. An image is drawn with its `alt` from a prop.',
             '- Class names describe the parts (`plan`, `plan__price`); the site puts the component inside an element of its own class, which the stylesheet is scoped to.',
             '',

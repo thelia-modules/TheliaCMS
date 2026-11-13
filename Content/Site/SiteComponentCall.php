@@ -21,14 +21,16 @@ namespace TheliaCMS\Content\Site;
 final readonly class SiteComponentCall
 {
     /**
-     * @param list<string>          $keys  the keys of the values it passes
-     * @param array<string, string> $props the key passed and the prop of the caller it passes as it is (`slides: props.photos`), when it is one
+     * @param list<string>                              $keys    the keys of the values it passes
+     * @param array<string, string>                     $props   the key passed and the prop of the caller it passes as it is (`slides: props.photos`), when it is one
+     * @param array<string, string|int|float|bool|null> $written the key passed and the value written as it is in the call (`level: "h3"`)
      */
     public function __construct(
         public string $code,
         public array $keys,
         public int $line,
         public array $props = [],
+        public array $written = [],
     ) {
     }
 

@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Content\Site;
 
 use Symfony\Component\DependencyInjection\Attribute\AutowireServiceClosure;
+use TheliaCMS\Content\HeadingSection;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\SectionDefinitionInterface;
 use TheliaCMS\Content\Theme\ThemeComponentSection;
@@ -36,14 +37,14 @@ final readonly class CatalogueDrawableSections implements DrawableSections
     }
 
     /**
-     * A component of the site or of the theme the catalogue offers; never a
-     * section of the module (a text, a picture, a form), which a component
-     * draws with its own markup.
+     * A component of the site or of the theme the catalogue offers, or a
+     * heading of the site (ADR 17); never another section of the module (a
+     * text, a picture, a form), which a component draws with its own markup.
      */
     public function find(string $name): ?SectionDefinitionInterface
     {
         $section = ($this->catalog)()->offered()[$name] ?? null;
 
-        return $section instanceof SiteComponentSection || $section instanceof ThemeComponentSection ? $section : null;
+        return $section instanceof SiteComponentSection || $section instanceof ThemeComponentSection || $section instanceof HeadingSection ? $section : null;
     }
 }

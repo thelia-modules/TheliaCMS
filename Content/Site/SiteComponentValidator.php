@@ -166,9 +166,11 @@ final readonly class SiteComponentValidator
 
         $problems = [];
 
-        if ([] !== $calls) {
+        // A heading of the site (a leaf, ADR 17) draws nothing: drawing one
+        // keeps a component one that another may draw.
+        if ([] !== $this->renderer->nesting($component->template)) {
             foreach ($this->components->all() as $other) {
-                if ($other->code !== $component->code && \in_array($component->code, array_map(static fn (SiteComponentCall $call): string => $call->code, $this->renderer->calls($other->template)), true)) {
+                if ($other->code !== $component->code && \in_array($component->code, array_map(static fn (SiteComponentCall $call): string => $call->code, $this->renderer->nesting($other->template)), true)) {
                     $problems[] = \sprintf('The component %s is drawn by %s: a component draws others one level deep, so one that another draws cannot draw any itself.', $component->code, $other->code);
                 }
             }
@@ -195,7 +197,7 @@ final readonly class SiteComponentValidator
                 continue;
             }
 
-            if (null !== $kept && [] !== $this->renderer->calls($kept->template)) {
+            if (null !== $kept && [] !== $this->renderer->nesting($kept->template)) {
                 $problems[] = \sprintf('Line %d: %s draws other components itself, and a component draws others one level deep only: draw what it draws next to it instead.', $call->line, $call->code);
             }
 
@@ -216,6 +218,8 @@ final readonly class SiteComponentValidator
 
                 if (isset($call->props[$key], $own[$call->props[$key]])) {
                     $problems = [...$problems, ...SiteComponentCallFit::mismatches($own[$call->props[$key]], $props[$key], $call)];
+                } elseif (\array_key_exists($key, $call->written) && null !== $problem = SiteComponentCallFit::writtenMismatch($call->written[$key], $props[$key], $call)) {
+                    $problems[] = $problem;
                 }
             }
         }

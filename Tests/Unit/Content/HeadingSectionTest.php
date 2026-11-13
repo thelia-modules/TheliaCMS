@@ -85,4 +85,15 @@ final class HeadingSectionTest extends TestCase
         self::assertSame([], (new HeadingChecker(new IdentityTranslator()))->check($render('h2').$render('h3'), underTitle: true), 'h2 then h3 under the title of the page.');
         self::assertNotSame([], (new HeadingChecker(new IdentityTranslator()))->check($render('h2').$render('h4'), underTitle: true), 'A level skipped is reported.');
     }
+
+    /**
+     * Drawn by a component of the site (ADR 17), the heading sits in the box
+     * of the component: the width of a section of its own put it 1rem in.
+     */
+    public function testAHeadingDrawnByAComponentTakesTheBoxOfTheComponent(): void
+    {
+        $css = (string) file_get_contents(\dirname(__DIR__, 3).'/assets/blocks.css');
+
+        self::assertMatchesRegularExpression('/\.cms-site \.cms-heading \{\s*margin-inline: 0;\s*width: auto;\s*\}/', $css);
+    }
 }
