@@ -23,6 +23,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   (`cms_component('Layouts:CrossSelling:Base', {product_ids: props.products})`);
   a call that passes another kind of record is refused when the component is
   saved.
+- **The example of a component shows records of the shop.** The generator
+  of components is offered a few products, categories and folders shown on
+  the site (the most recent), the forms and the shared menus, and the sample
+  of a component that names records takes their ids, so the toolkit shows a
+  band of related products rather than an empty one. A sample naming a
+  record the shop does not show goes back for correction.
 
 ### Changed
 
