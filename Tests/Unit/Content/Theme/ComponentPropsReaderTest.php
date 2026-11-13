@@ -101,6 +101,7 @@ final class ComponentPropsReaderTest extends TestCase
         self::assertSame(12, $props['product_ids']->maxItems);
         self::assertSame('id', $props['product_ids']->items[0]->name);
         self::assertSame(PropType::Reference, $props['product_ids']->items[0]->type);
+        self::assertSame('id', $props['product_ids']->items[0]->label, 'Labelled by its name: the form says the kind of record in the language of the editor.');
         self::assertSame('/admin.cms.partials.sources.products', $props['product_ids']->items[0]->picker);
         self::assertSame(PropType::Items, $props['folders']->type);
         self::assertSame(PropType::Json, $props['tags']->type, 'A plain array stays a JSON prop.');

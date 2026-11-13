@@ -414,6 +414,26 @@ is offered the same list. The list is read at each call, after the cached
 system prompt, so it never breaks the cache. The bench fills the library with
 `thelia_cms:component-bench:media` (`docs/evaluation/components/README.md`).
 
+### The records the generator of components is offered
+
+After the media, a section **Records of the shop for the sample** lists what a
+`reference` prop of the sample may name (`Generation\Component\SampleRecords`):
+the 8 most recent products, the 4 most recent categories and the 4 most recent
+folders shown on the site, the first 3 forms not deleted and the first 3
+shared menus by code, one line each (`- product 3: Stacy (PROD003)`), the name
+in the language of the request and then in the default language of the shop,
+a product followed by its reference. A kind the shop holds none of is left
+out, and the section with it when the shop holds nothing.
+
+The rule of the system prompt follows: a `reference` of the sample takes the
+id of a listed record of the kind it names, a list of references two to four
+of them; null or an empty list only when the message lists none of that kind.
+A reference outside a row is still never `required`: the editor picks the
+records of a page. Once the validator has kept the component, the generator
+looks the ids of its sample up (`SampleRecords::unknown()`): an id the shop
+does not show (made up, or hidden since) is a problem sent back for
+correction, like any refusal of the validator.
+
 A file that instructs rather than documents (it addresses an assistant, asks
 to act or to ignore rules, or has nothing to do with a page to write) is
 refused, not only neutralised, by `Generation/Guardrail/ReferenceFileGuardrail.php`:

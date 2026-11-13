@@ -32,6 +32,12 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   (`cms_component('Layouts:CrossSelling:Base', {product_ids: props.products})`);
   a call that passes another kind of record is refused when the component is
   saved.
+- **The example of a component shows records of the shop.** The generator
+  of components is offered a few products, categories and folders shown on
+  the site (the most recent), the forms and the shared menus, and the sample
+  of a component that names records takes their ids, so the toolkit shows a
+  band of related products rather than an empty one. A sample naming a
+  record the shop does not show goes back for correction.
 
 ### Changed
 
@@ -41,6 +47,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   the called component normalises them with its own schema. A field of a
   row in a loop or a computed value is no longer accepted: a component that
   did so is refused at its next save.
+
+### Fixed
+
+- **A record picked in the form of a section reads by its name.** A product
+  or a category already chosen showed its number (`#3`) instead of its name;
+  a row holding records only (the products of a band) is titled by the first
+  one rather than "A row without a title"; a row added to such a list gets
+  its picker. The fields of the components of the theme read in the language
+  of the editor: the kind of record of a row ("Produit", "Catégorie"), and
+  "Texte en gras", "Texte du lien", the size of a picture, the wishlist.
 
 ## [2.27.0] - 2026-11-13
 

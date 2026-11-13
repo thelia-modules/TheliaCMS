@@ -38,6 +38,7 @@ final class PropLabelTest extends TestCase
         yield 'a name that would mislead' => ['max_note', 'Highest score'];
         yield 'a link' => ['href', 'Link'];
         yield 'a plain word' => ['author', 'Author'];
+        yield 'a word of a theme an editor would not use' => ['strongText', 'Text in bold'];
     }
 
     #[DataProvider('names')]

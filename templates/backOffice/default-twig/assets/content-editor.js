@@ -2247,7 +2247,11 @@
                 var id = label.getAttribute("data-cms-item-source");
                 var source = id ? row.querySelector('[id="' + id + '"]') : null;
                 // A text of paragraphs is HTML: its words without the tags.
-                var words = source ? source.value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() : "";
+                // A record picked from a select reads by the name of its option.
+                var text = source && source.tagName === "SELECT"
+                    ? (source.value ? source.options[source.selectedIndex].textContent : "")
+                    : (source ? source.value : "");
+                var words = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
                 label.textContent = words ? words.slice(0, 80) : label.getAttribute("data-cms-item-empty");
             }
@@ -2398,6 +2402,7 @@
                     window.CmsMediaPicker.bind(row);
                 }
 
+                bindRecordPickers(row);
                 bindIconPickers(row);
                 row.dispatchEvent(new CustomEvent("cms-item-added", { bubbles: true }));
 
@@ -2469,11 +2474,21 @@
             window.CmsImageCrop.bind(root);
         }
 
-        // A reference is picked from the list its source answers: a select for a
-        // short list, a search box for a long one. The number field, which
-        // the form sends, is hidden behind it; it shows again when the list
-        // cannot be read.
+        bindRecordPickers(root);
+        bindIconPickers(root);
+    }
+
+    // A reference is picked from the list its source answers: a select for a
+    // short list, a search box for a long one. The number field, which the
+    // form sends, is hidden behind it; it shows again when the list cannot be
+    // read. Bound on the form and on each row added to a list.
+    function bindRecordPickers(root) {
         root.querySelectorAll("input[data-cms-picker]").forEach(function (input) {
+            if (input.dataset.cmsPickerBound) {
+                return;
+            }
+
+            input.dataset.cmsPickerBound = "1";
             var source = input.getAttribute("data-cms-picker");
             var searchable = input.hasAttribute("data-cms-picker-searchable");
             var picker = document.createElement(searchable ? "input" : "select");
@@ -2547,7 +2562,18 @@
                     picker.placeholder = "#" + input.value;
                     fetch(source + "?id=" + encodeURIComponent(input.value), { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
                         .then(function (response) { return response.json(); })
-                        .then(function (row) { if (row && row.name) { picker.value = row.name; found[row.name] = row.id; } })
+                        // The source answers a list, as for a search: the
+                        // record asked, or nothing when it is gone.
+                        .then(function (rows) {
+                            var row = Array.isArray(rows) ? rows[0] : rows;
+
+                            if (row && row.name) {
+                                picker.value = row.name;
+                                found[row.name] = row.id;
+                                // The title of a row named by this record.
+                                picker.dispatchEvent(new Event("input", { bubbles: true }));
+                            }
+                        })
                         .catch(function () {});
                 }
             } else {
@@ -2558,12 +2584,14 @@
                 input.hidden = true;
                 fetch(source, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
                     .then(function (response) { return response.json(); })
-                    .then(fill)
+                    .then(function (rows) {
+                        fill(rows);
+                        // The title of a row named by this record.
+                        picker.dispatchEvent(new Event("input", { bubbles: true }));
+                    })
                     .catch(function () { picker.remove(); input.hidden = false; });
             }
         });
-
-        bindIconPickers(root);
     }
 
     /* ---- Icon picker ----------------------------------------------- */

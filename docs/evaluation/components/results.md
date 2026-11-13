@@ -204,6 +204,34 @@ included.
 | compose-steps-faq | 3 | 3 component | 3/3 | 0 | - | 0.044 |
 | compose-text-carousel | 3 | 3 component | 3/3 | 0 | - | 0.057 |
 
+## Round 5
+
+Played on 2026-11-13, one composition case on a component of the theme:
+`compose-text-related-products`, a text beside the related products the
+editor picks (`Layouts:CrossSelling:Base`, opened to pages by the
+`config/theliacms.yaml` proposed to Flexy and placed on the host for the
+round). 3 trials, 0.27 USD, 1.4 min.
+
+| Case | Trials | Outcomes | Kept the contract | Corrections | Copied a target | Mean cost USD |
+|---|---|---|---|---|---|---|
+| compose-text-related-products | 3 | 2 component, 1 error | 0/3 | 0 | - | 0.091 |
+
+- Trials 1 and 2 compose as asked: a list of product references (`items`
+  of `id`, `record: product`) handed to
+  `cms_component('Layouts:CrossSelling:Base', {product_ids: …})`, the text
+  beside it, nothing of the strip written again.
+- Their sample leaves the list empty, as the prompt asks of a reference
+  (the generator knows no id of the shop), and their template draws the
+  strip only when the list holds products: the rendered sample has no
+  `CrossSelling`, and the contract, which asks for it, fails.
+- Trial 3 sets a minimum of one product, which the empty sample breaks;
+  sent back twice, it ends with a sample the site refuses.
+
+The composition works; what fails is the sample. A component whose point is
+the records it names draws nothing to the editor, in the toolkit as in the
+preview, until the generator can name records of the shop in its sample, as
+it already names pictures of the media library.
+
 ## Findings
 
 1. **Reuse works and costs nothing.** The 8 `existing` cases (and the

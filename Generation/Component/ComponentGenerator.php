@@ -103,6 +103,7 @@ final readonly class ComponentGenerator
         private SectionCatalog $catalog,
         private SitePropReader $props = new SitePropReader(),
         private ObservedStream $streams = new ObservedStream(),
+        private ?SampleRecords $records = null,
     ) {
     }
 
@@ -231,6 +232,12 @@ final readonly class ComponentGenerator
                     // other refusal, the pages named.
                     if (null !== $request->componentId && [] !== $breakages = $this->usage->breakages($component, $this->props->read($component->props))) {
                         throw InvalidSiteComponentException::because($breakages);
+                    }
+
+                    // The sample shows the records it names: an id made up
+                    // draws nothing, the editor sees an empty example.
+                    if (null !== $this->records && [] !== $unknown = $this->records->unknown($this->props->read($component->props), $component->sample)) {
+                        throw InvalidSiteComponentException::because($unknown);
                     }
                 } catch (InvalidSiteComponentException $exception) {
                     if (++$corrections > self::CORRECTIONS) {

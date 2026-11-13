@@ -528,7 +528,7 @@ final readonly class ComponentPropsReader
     {
         return Prop::reference(
             $name,
-            'id' === $name ? ucfirst($record) : $name,
+            $name,
             $record,
             $required,
             $description,

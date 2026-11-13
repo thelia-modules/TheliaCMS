@@ -95,6 +95,7 @@ final readonly class ComponentPrompt
         private ShopContext $shop,
         private BlockStyles $blocks,
         private ?SampleMedia $media = null,
+        private ?SampleRecords $records = null,
         private SiteTemplateRenderer $renderer = new SiteTemplateRenderer(),
     ) {
     }
@@ -157,6 +158,7 @@ final readonly class ComponentPrompt
 
         $lines[] = '';
         array_push($lines, ...$this->mediaLines($request->locale));
+        array_push($lines, ...$this->recordLines($request->locale));
 
         if (null !== $request->current) {
             $lines[] = '# The component to change';
@@ -260,6 +262,30 @@ final readonly class ComponentPrompt
     }
 
     /**
+     * The records of the shop a reference of the sample may name, one line
+     * each, with the heading; nothing when the shop holds none.
+     *
+     * @return list<string>
+     */
+    private function recordLines(string $locale): array
+    {
+        $records = $this->records?->offered($locale) ?? [];
+
+        if ([] === $records) {
+            return [];
+        }
+
+        return [
+            '# Records of the shop for the sample',
+            '',
+            'The shop holds these, among others: the kind of record, its id, then its name. A `reference` prop of the sample takes the id of one of them of the kind its `record` names, chosen for the request; a list of references takes two to four of them.',
+            '',
+            ...array_map(static fn (SampleRecord $record): string => $record->line(), $records),
+            '',
+        ];
+    }
+
+    /**
      * The message that sends a component back for correction.
      *
      * @param list<string> $problems
@@ -356,7 +382,7 @@ final readonly class ComponentPrompt
             '- `embed`: a video of YouTube, Vimeo or Dailymotion, given as the https address of its page (an editor pastes it; the sample is such an address the brief gives, or empty). It is the only way to show such a video, in a row of an `items` list too (a video per card of a carousel). The template receives the markup of a facade, a play button that loads the player when the visitor clicks, or null when there is none: print it as it is, `{{ props.video }}`, inside an element that sets its width; the facade is 16:9 and fills it. Never an `iframe`, and no link to the video next to it.',
             '- `url`: a link, a path of the site or an absolute address.',
             '- `icon`: an icon name, `cms:<name>` or an icon of the theme. The template receives it as text: draw it with `{{ cms_icon(props.<name>) }}`: an `svg`, or nothing when the name is empty or unknown. A second argument gives `class`, `width`, `height` or `aria-label`; without an `aria-label` the icon is hidden from screen readers, which is right next to a text that says the same. An icon alone in a link or a button needs a `text` prop that names that link or button for screen readers (its `aria-label`, or a visually hidden text): the name depends on the place, never on the icon.',
-            \sprintf('- `reference`: the id of a record of the shop, `record` naming which: %s. The template receives the id, or null when there is none: it prints nothing of it, it hands it on to a component it draws that shows such records (below), a list of them as the rows its list reads (`{"name": "products", "type": "items", "items": [{"name": "id", "type": "reference", "record": "product", "required": true}]}`). The sample holds null, or an empty list: the editor picks the records, so a reference outside a row is never `required`.', implode(', ', PickedRecord::values())),
+            \sprintf('- `reference`: the id of a record of the shop, `record` naming which: %s. The template receives the id, or null when there is none: it prints nothing of it, it hands it on to a component it draws that shows such records (below), a list of them as the rows its list reads (`{"name": "products", "type": "items", "items": [{"name": "id", "type": "reference", "record": "product", "required": true}]}`). The sample names records the user message lists under "Records of the shop for the sample", so the example shows them: the id of one of the kind the prop names, two to four rows for a list; null, or an empty list, only when the message lists none of that kind. The editor picks the records of a page, so a reference outside a row is never `required`.', implode(', ', PickedRecord::values())),
             '- `items`: a list of objects, `items` being the props of one (any type but `items`), `min` and `max` (at most 24). For rows, cards, steps.',
             '',
             '```json',
