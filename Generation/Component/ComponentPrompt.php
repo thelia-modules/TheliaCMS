@@ -63,6 +63,8 @@ final readonly class ComponentPrompt
 
     public const string OFFERED_PARTS_RULE = 'A part the drawn component offers among its props (its heading, its button, its link) is handed to it, never drawn again beside it: a button under a band whose props hold `button` is that prop, declared with the same fields and handed on whole (`button: props.button`), not a link of yours.';
 
+    public const string SITE_HEADING_RULE = "The heading that opens your component, its title, is the heading of the site, not one of yours: `{% if props.title is not empty %}{{ cms_component('cms:heading', {text: props.title, level: 'h2'}) }}{% endif %}`, a text prop of yours for its words, the level written in the call. It reads like the other headings of the site and needs no style of yours. The headings inside it, of a card, a row, a step (`h3`), stay yours.";
+
     public const string NARROW_SCREEN_EXAMPLE = '<section class="compare">{% if props.title is not empty %}<h2>{{ props.title }}</h2>{% endif %}<div class="compare__scroll" tabindex="0" role="region" aria-label="{{ props.title }}"><table><tr>{% for plan in props.plans %}<th scope="col">{{ plan.name }}</th>{% endfor %}</tr><tr>{% for plan in props.plans %}<td>{{ plan.price }}</td>{% endfor %}</tr></table></div></section>';
 
     /**
@@ -410,6 +412,7 @@ final readonly class ComponentPrompt
             '- What it draws is filtered like a page that goes online, which keeps the elements of HTML text and layout and their attributes, and takes out the rest without a word: '.implode(', ', array_map(static fn (string $element): string => 'no `'.$element.'`', self::ELEMENTS_TAKEN_OUT)).', no `data-` attribute but the two of the width of the pictures, below. The template is refused when it holds another.',
             '- '.self::IMAGE_WIDTH_RULE.' For instance: `'.self::IMAGE_WIDTH_EXAMPLE.'`',
             '- One root element, a `section` or a `div`. Headings start at `h2`: the page has its own `h1`.',
+            '- '.self::SITE_HEADING_RULE,
             '- Test what may be empty before drawing it: `{% if props.image %}`, `{% if props.title is not empty %}`. An image is drawn with its `alt` from a prop.',
             '- Class names describe the parts (`plan`, `plan__price`); the site puts the component inside an element of its own class, which the stylesheet is scoped to.',
             '',

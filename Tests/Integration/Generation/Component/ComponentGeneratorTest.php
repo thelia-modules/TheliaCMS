@@ -90,6 +90,7 @@ final class ComponentGeneratorTest extends CmsIntegrationTestCase
         self::assertStringContainsString('A YouTube, Vimeo or Dailymotion video is an `embed` prop, not an `iframe`.', (string) $request->system, 'The model is sent to the embed prop instead of an iframe.');
         self::assertStringContainsString('`{{ props.video }}`', (string) $request->system);
         self::assertStringContainsString('# Movement and interaction without script', (string) $request->system, 'The skill on motion is read beside the one on accessibility.');
+        self::assertStringContainsString(ComponentPrompt::SITE_HEADING_RULE, (string) $request->system, 'The heading that opens a component is the heading of the site.');
         self::assertStringContainsString(ComponentPrompt::OFFERED_PARTS_RULE, (string) $request->system, 'A part a drawn component offers is handed to it.');
         self::assertStringContainsString('`cms:richtext`', $request->messages[0]->content, 'The model is told what the site already has.');
         self::assertStringContainsString('Un tableau de prix', $request->messages[0]->content);
