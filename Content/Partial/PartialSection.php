@@ -80,6 +80,11 @@ final readonly class PartialSection implements SectionDefinitionInterface
         return new PropSchema(array_map($this->prop(...), $this->partial->props()));
     }
 
+    /**
+     * The props a section of this partial starts with when it is added by
+     * hand. A required text with no default would be refused by the draft:
+     * it starts with its label, which the author then replaces.
+     */
     public function sample(): array
     {
         $sample = [];
@@ -88,6 +93,7 @@ final readonly class PartialSection implements SectionDefinitionInterface
             $sample[$prop->name] = match ($prop->type) {
                 PartialPropType::Reference => $prop->required ? 1 : null,
                 PartialPropType::References => [[$prop->itemName ?? 'id' => 1], [$prop->itemName ?? 'id' => 2]],
+                PartialPropType::Text => $this->sampleText($prop),
                 default => $prop->default,
             };
         }
@@ -128,6 +134,15 @@ final readonly class PartialSection implements SectionDefinitionInterface
                 $prop->help,
             ),
         };
+    }
+
+    private function sampleText(PartialProp $prop): string|int|bool|null
+    {
+        if (!$prop->required || '' !== trim((string) $prop->default)) {
+            return $prop->default;
+        }
+
+        return mb_substr($prop->label, 0, $prop->max ?? 255);
     }
 
     /**
