@@ -9,6 +9,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- **The SEO a module adds to a page, in the page editor.** A module that
+  answers the hooks of the SEO tab of the catalogue screens
+  (`tab-seo.bottom`, `tab-seo.update-form`, `cmspage.seo.update-form`) gets a
+  tab « Search engines (modules) » on a saved page, with `id` and `type`
+  (`cmspage`) as the catalogue gives them: SEOne shows its structured data
+  (JSON-LD), H1 and robots there, which it already prints in the head of the
+  page. Its panel stands out of the settings form, as the documents, since
+  each card brings its own form. No tab when no module answers, on a new
+  page or on a model.
 - **A component of the site draws a component of the theme.**
   `cms_component('Layouts:Subheader:Base', {title: props.heading, tag: 'h2'})`
   draws a component of the theme the catalogue offers, by the theme, once

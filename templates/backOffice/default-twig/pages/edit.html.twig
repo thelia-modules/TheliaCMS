@@ -18,6 +18,11 @@
 {% block content %}
     {% form_theme form with bo_form_themes only %}
 
+    {# Rendered once, before the tabs: the tab shows only when a module answers. A page not saved has
+       no id to attach them to; a model is never published. A capture, not a filtered value: it stays
+       markup, a filter would hand back a string the escaper would print as text. #}
+    {% set seo_module_cards %}{% if not is_new and not is_model %}{{ hook_cards(['cmspage.seo.update-form', 'tab-seo.update-form', 'tab-seo.bottom'], { cmspage_id: page.id, id: page.id, type: 'cmspage' }) }}{% endif %}{% endset %}
+
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: block('title') } %}
         {% block title %}
             {{ parent() }}
@@ -88,6 +93,13 @@
                     {{ 'Search engines and sharing'|trans({}, 'theliacms') }}
                 </button>
             </li>
+            {% if seo_module_cards|trim is not empty %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-seo-modules" type="button" data-testid="cms-page-tab-seo-modules">
+                        {{ 'Search engines (modules)'|trans({}, 'theliacms') }}
+                    </button>
+                </li>
+            {% endif %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-image" type="button" data-testid="cms-page-tab-image">
                     {{ 'Image'|trans({}, 'theliacms') }}
@@ -208,6 +220,14 @@
     {% if not is_new %}
         {# After the form, not in it: its forms are not part of the draft. #}
         <div class="tab-content">
+            {% if seo_module_cards|trim is not empty %}
+                {# The SEO a module adds to a page (SEOne: robots, H1, structured data), on the hooks the
+                   catalogue screens call in their SEO tab. Each card brings its own form, saved by its
+                   module: out of the settings form, as the documents. #}
+                <div class="tab-pane fade" id="tab-seo-modules" role="tabpanel" data-testid="cms-page-seo-modules">
+                    {{ seo_module_cards }}
+                </div>
+            {% endif %}
             {{ include('@TheliaCMSModule/backOffice/default-twig/pages/_documents.html.twig') }}
         </div>
     {% endif %}
