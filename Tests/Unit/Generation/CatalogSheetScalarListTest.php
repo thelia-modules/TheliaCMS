@@ -43,6 +43,23 @@ final class CatalogSheetScalarListTest extends TestCase
     }
 
     /**
+     * An object of the theme (a button: `{href, label}`) is held as a list of
+     * at most one row: the generator is told it is one object, not a list.
+     */
+    public function testAListOfAtMostOneRowIsToldAsOneObject(): void
+    {
+        $sheet = (new \ReflectionClass(CatalogSheet::class))->newInstanceWithoutConstructor()->section(self::definitionOf(new PropSchema([
+            Prop::items('button', 'button', [Prop::url('href', 'href'), Prop::text('label', 'label')], 0, 1, 'The button under the band'),
+            Prop::items('author', 'author', [Prop::text('name', 'name', required: true)], 1, 1),
+        ])));
+
+        self::assertStringContainsString('- `button` (one object, held as a list of one row, or an empty list for none). The button under the band.', $sheet);
+        self::assertStringContainsString('- `author`* (one object, held as a list of one row)', $sheet);
+        self::assertStringContainsString('`label` (text', $sheet, 'The object is still described by its fields.');
+        self::assertStringNotContainsString('list of 0 to 1 items', $sheet);
+    }
+
+    /**
      * The editor chooses a video, the generator never looks for one.
      */
     public function testAVideoIsToldAsAlwaysNullBecauseTheEditorChoosesIt(): void
