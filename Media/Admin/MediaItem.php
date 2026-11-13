@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Media\Admin;
 
+use TheliaCMS\Media\Icon\IconName;
 use TheliaCMS\Media\Video\VideoConversionStatus;
 
 /**
@@ -39,9 +40,17 @@ final readonly class MediaItem
         public array $tags,
         public int $usageCount,
         public bool $video = false,
+        // The name the image answers to as an icon, without its `cms:` prefix.
+        public ?string $iconName = null,
         public VideoConversionStatus $conversion = VideoConversionStatus::Ready,
         public ?string $conversionProblem = null,
     ) {
+    }
+
+    /** The name as `ux_icon()` writes it, or null when the image is not an icon. */
+    public function iconTag(): ?string
+    {
+        return null === $this->iconName ? null : IconName::prefixed($this->iconName);
     }
 
     /**
@@ -53,8 +62,9 @@ final readonly class MediaItem
      */
     public function isDescribed(): bool
     {
-        // A video has no alternative text to give: it never waits for one.
-        return $this->video || $this->decorative || (null !== $this->alt && '' !== trim($this->alt));
+        // A video has no alternative text to give, nor an icon, whose text
+        // belongs to where it is placed: neither ever waits for one.
+        return $this->video || null !== $this->iconName || $this->decorative || (null !== $this->alt && '' !== trim($this->alt));
     }
 
     public function dimensions(): ?string

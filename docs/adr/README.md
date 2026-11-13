@@ -1,7 +1,7 @@
 # Architecture decision records
 
 One file per decision, in the order they were taken, for the generation of
-pages from a brief (2.0.0). A record is never edited once accepted: a later
+pages from a brief (2.0.0) and the features after it. A record is never edited once accepted: a later
 decision supersedes it with a new file.
 
 | # | Decision |
@@ -19,3 +19,4 @@ decision supersedes it with a new file.
 | [11](0011-a-catalogue-item-carries-a-document.md) | A catalogue item carries a document |
 | [12](0012-content-does-not-depend-on-generation.md) | Content does not depend on Generation |
 | [13](0013-videos-are-converted-in-the-background.md) | Videos are converted in the background, under the same id |
+| [14](0014-an-icon-is-a-named-svg-of-the-library.md) | An icon is a named SVG of the library |

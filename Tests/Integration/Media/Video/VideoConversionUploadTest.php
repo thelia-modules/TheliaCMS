@@ -213,6 +213,8 @@ final class VideoConversionUploadTest extends CmsIntegrationTestCase
             $this->getService(CmsMediaLibrary::class),
             $this->getService(SvgSanitizerInterface::class),
             $this->getService(PreparedSvgStore::class),
+            $this->getService(\TheliaCMS\Media\Icon\IconNames::class),
+            $this->getService(\TheliaCMS\Media\Icon\IconCacheInvalidator::class),
             new VideoIntake(new FfmpegBinary($executor)),
             new VideoConversions($bus),
         );
