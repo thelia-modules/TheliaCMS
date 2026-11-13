@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
-use Thelia\Tools\URL;
+use TheliaCMS\Http\CoreUrls;
 use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\TheliaCMS;
 
@@ -169,12 +169,12 @@ final readonly class AlternateUrls
     /**
      * The rewritten path of a view, without its host.
      *
-     * `URL::getInstance()` is nullable outside an HTTP request: a menu or a
+     * No URL service outside an HTTP request (CoreUrls): a menu or a
      * sitemap built from a command must not bring the command down.
      */
     private function path(string $view, int $viewId, string $locale): ?string
     {
-        $urls = URL::getInstance();
+        $urls = CoreUrls::instance();
 
         if (null === $urls) {
             return null;
