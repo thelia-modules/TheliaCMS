@@ -7,6 +7,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Changed
+
+- **A part a drawn component offers is handed to it.** Asked for related
+  products with a button under them, the generator of components drew the
+  band of the theme and a link of its own beside it, though the band offers
+  a button (round 8 of the bench: 3 trials out of 3). Its prompt now says that
+  a part the drawn component offers among its props (its heading, its button)
+  is handed to it, never drawn again beside it.
+
 ### Fixed
 
 - **Saving a card of the SEO of the modules comes back to the page.** The
