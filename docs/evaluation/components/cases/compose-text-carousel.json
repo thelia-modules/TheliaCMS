@@ -26,7 +26,8 @@
     ],
     "markup": {
       "require": [
-        "<img"
+        "<img",
+        "cms-site--carousel"
       ],
       "forbid": []
     },
@@ -34,6 +35,5 @@
       "require": [],
       "forbid": []
     }
-  },
-  "gap": "N71"
+  }
 }

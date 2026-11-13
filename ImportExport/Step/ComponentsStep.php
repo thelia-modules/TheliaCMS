@@ -19,6 +19,7 @@ use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentValidator;
+use TheliaCMS\Content\Site\SiteTemplateRenderer;
 use TheliaCMS\ImportExport\ImportOptions;
 use TheliaCMS\ImportExport\ImportReport;
 use TheliaCMS\ImportExport\SiteDocument;
@@ -46,7 +47,12 @@ final readonly class ComponentsStep
             return;
         }
 
-        foreach ($document->components() as $row) {
+        // The components another draws come in first: one that draws another
+        // is checked against the components the site keeps (ADR 15).
+        $rows = $document->components();
+        usort($rows, static fn (array $a, array $b): int => self::draws($a) <=> self::draws($b));
+
+        foreach ($rows as $row) {
             $code = \is_string($row['code'] ?? null) ? $row['code'] : '';
 
             try {
@@ -91,6 +97,14 @@ final readonly class ComponentsStep
             $this->components->save($component, $status, $component->code);
             $report->replaced('components');
         }
+    }
+
+    /**
+     * @param array<mixed> $row
+     */
+    private static function draws(array $row): bool
+    {
+        return \is_string($row['template'] ?? null) && str_contains($row['template'], SiteTemplateRenderer::CALL.'(');
     }
 
     /**

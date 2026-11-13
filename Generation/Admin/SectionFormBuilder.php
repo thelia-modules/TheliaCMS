@@ -42,6 +42,7 @@ use TheliaCMS\Content\SectionDefinitionInterface;
 use TheliaCMS\Media\Admin\CmsMediaType;
 use TheliaCMS\Media\Admin\CmsMediaWriter;
 use TheliaCMS\Media\CmsMediaLibrary;
+use TheliaCMS\Media\Icon\IconName;
 use TheliaCMS\Media\MediaKind;
 use TheliaCMS\Security\CmsResources;
 use TheliaLibrary\Model\LibraryImage;
@@ -96,6 +97,12 @@ final readonly class SectionFormBuilder
         'thumbnail_image_id' => 'Poster image',
         'tag' => 'Heading level',
         'container' => 'Width',
+        'strong_text' => 'Text in bold',
+        'link_label' => 'Text of the link',
+        'img_width' => 'Width of the picture',
+        'img_height' => 'Height of the picture',
+        'wish_button' => 'Wishlist button',
+        'in_wishlist' => 'Drawn as in the wishlist',
     ];
 
     public function __construct(
@@ -385,9 +392,10 @@ final readonly class SectionFormBuilder
         ];
 
         // A prop of the theme labelled by its bare name gets words of its
-        // own, translated like the rest of the screen.
+        // own, translated like the rest of the screen; the `id` of a row
+        // that names a record reads as the kind of record.
         if ($prop->label === $prop->name || '' === $prop->label) {
-            $common['label'] = self::humanize($prop->name);
+            $common['label'] = self::humanize('id' === $prop->name && null !== $prop->record ? $prop->record : $prop->name);
             $common['label_translation_parameters'] = [];
             $common['translation_domain'] = 'theliacms';
         }
@@ -417,6 +425,16 @@ final readonly class SectionFormBuilder
             // identifier; the field is filled back from those two.
             PropType::Embed => $builder->add($prop->name, TextType::class, [...$common, 'help' => $common['help'] ?? $this->translator->trans('The address of a YouTube, Vimeo or Dailymotion video, from its page or its share button. It plays when the visitor clicks it, and nothing is loaded from the platform before.', [], 'theliacms')] + [
                 'attr' => ['maxlength' => 2048, 'inputmode' => 'url', 'placeholder' => 'https://www.youtube.com/watch?v=', 'data-cms-wide' => ''],
+            ]),
+            // The name is typed as text; the script of the screen adds a grid of
+            // the icons to pick from, and without it the field still works.
+            PropType::Icon => $builder->add($prop->name, TextType::class, $common + [
+                'attr' => [
+                    'maxlength' => IconName::MAXIMUM_REFERENCE_LENGTH,
+                    'autocomplete' => 'off',
+                    'spellcheck' => 'false',
+                    'data-cms-icon-picker' => $this->urls->generate('admin.cms.partials.sources.icons'),
+                ],
             ]),
             PropType::Integer => $builder->add($prop->name, IntegerType::class, $common + [
                 'attr' => ['min' => $prop->min, 'max' => $prop->max],

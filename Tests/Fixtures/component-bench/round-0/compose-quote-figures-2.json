@@ -21,12 +21,12 @@
     }
   },
   "verdict": {
-    "pass": true,
+    "pass": false,
     "checks": {
       "outcome": true,
       "valid": true,
       "props": true,
-      "markup": true,
+      "markup": false,
       "css": true,
       "no_h1": true,
       "img_alt": true,

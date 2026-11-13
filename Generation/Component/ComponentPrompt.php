@@ -14,9 +14,16 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation\Component;
 
+use TheliaCMS\Content\ImageFraming;
+use TheliaCMS\Content\PickedRecord;
+use TheliaCMS\Content\Prop;
+use TheliaCMS\Content\PropType;
 use TheliaCMS\Content\SectionCatalog;
+use TheliaCMS\Content\SectionDefinitionInterface;
 use TheliaCMS\Content\Site\SiteComponent;
+use TheliaCMS\Content\Site\SiteComponentSection;
 use TheliaCMS\Content\Site\SiteTemplateRenderer;
+use TheliaCMS\Content\Theme\ThemeComponentSection;
 use TheliaCMS\Front\BlockStyles;
 use TheliaCMS\Generation\ShopContext;
 use TheliaCMS\Skill\SkillRepository;
@@ -88,6 +95,8 @@ final readonly class ComponentPrompt
         private ShopContext $shop,
         private BlockStyles $blocks,
         private ?SampleMedia $media = null,
+        private ?SampleRecords $records = null,
+        private SiteTemplateRenderer $renderer = new SiteTemplateRenderer(),
     ) {
     }
 
@@ -122,7 +131,7 @@ final readonly class ComponentPrompt
                 '',
                 '- `existing`: a component of this list already does what is asked, the request differing by its wording or its example only. Put its name, as written between backticks, in `existing`; say in `reason`, in one sentence in the language of the request, what it already does; leave every other field empty.',
                 '- `copy`: what is asked is a variant of a component named `Site:…` in this list (another look, one prop more or less). Put its name in `existing`; say in `reason` what the variant changes; leave every other field empty. You are sent its source, and write the variant under a new code.',
-                '- `component`: any other request, which none of these does. `existing` and `reason` stay empty.',
+                '- `component`: any other request, which none of these does. `existing` and `reason` stay empty. A request that puts together what components of the site marked "drawable" show (a text next to a carousel, a quote above figures) is a new component that draws them with `cms_component`, not one that writes them again.',
                 '',
             );
         } else {
@@ -133,16 +142,23 @@ final readonly class ComponentPrompt
             );
         }
 
+        $offered = $this->catalog->offered();
+
         foreach ($this->catalog->all() as $name => $definition) {
             if (null !== $request->current && $name === $request->current->name()) {
                 continue;
             }
 
             $lines[] = \sprintf('- `%s` (%s): %s', $name, $definition->label(), $definition->description());
+
+            if (null !== $drawable = $this->drawable($definition, $offered)) {
+                $lines[] = '  '.$drawable;
+            }
         }
 
         $lines[] = '';
         array_push($lines, ...$this->mediaLines($request->locale));
+        array_push($lines, ...$this->recordLines($request->locale));
 
         if (null !== $request->current) {
             $lines[] = '# The component to change';
@@ -176,6 +192,52 @@ final readonly class ComponentPrompt
     }
 
     /**
+     * How a component is drawn inside another (ADR 15, ADR 16): a component
+     * of the site kept for the whole site by its code, a component of the
+     * theme the catalogue offers by its name, with its props, the fields of
+     * its rows included; null for anything else, and for a component of the
+     * site that draws others itself.
+     *
+     * @param array<string, SectionDefinitionInterface> $offered
+     */
+    private function drawable(SectionDefinitionInterface $definition, array $offered): ?string
+    {
+        if ($definition instanceof SiteComponentSection) {
+            if ($definition->prototype || [] !== $this->renderer->calls($definition->component->template)) {
+                return null;
+            }
+
+            $name = $definition->component->code;
+        } elseif ($definition instanceof ThemeComponentSection && isset($offered[$definition->name()])) {
+            $name = $definition->name();
+        } else {
+            return null;
+        }
+
+        return \sprintf('Drawable: `cms_component(\'%s\', {…})`, props %s.', $name, self::propsLine($definition->schema()->props));
+    }
+
+    /**
+     * @param list<Prop> $props
+     */
+    private static function propsLine(array $props): string
+    {
+        return implode(', ', array_map(
+            static fn (Prop $prop): string => \sprintf(
+                '`%s` (%s%s)',
+                $prop->name,
+                match ($prop->type) {
+                    PropType::Items => 'list of rows: '.self::propsLine($prop->items),
+                    PropType::Reference => 'reference, record '.$prop->record,
+                    default => $prop->type->value,
+                },
+                $prop->required ? ', required' : '',
+            ),
+            array_values(array_filter($props, static fn (Prop $prop): bool => !ImageFraming::isFraming($prop))),
+        ));
+    }
+
+    /**
      * The media of the library the sample may show, one line each, with the
      * heading; nothing when the library holds none.
      *
@@ -195,6 +257,30 @@ final readonly class ComponentPrompt
             'The media library of the site holds these, the most recent first: the number is the id, followed by the kind, the size and what it shows. The sample takes the id of one of them for an `image` or `video` prop, chosen for what it shows, and null when none fits.',
             '',
             ...array_map(static fn (SampleMediaItem $item): string => $item->line(), $items),
+            '',
+        ];
+    }
+
+    /**
+     * The records of the shop a reference of the sample may name, one line
+     * each, with the heading; nothing when the shop holds none.
+     *
+     * @return list<string>
+     */
+    private function recordLines(string $locale): array
+    {
+        $records = $this->records?->offered($locale) ?? [];
+
+        if ([] === $records) {
+            return [];
+        }
+
+        return [
+            '# Records of the shop for the sample',
+            '',
+            'The shop holds these, among others: the kind of record, its id, then its name. A `reference` prop of the sample takes the id of one of them of the kind its `record` names, chosen for the request; a list of references takes two to four of them.',
+            '',
+            ...array_map(static fn (SampleRecord $record): string => $record->line(), $records),
             '',
         ];
     }
@@ -295,6 +381,8 @@ final readonly class ComponentPrompt
             '- `video`: an MP4 video of the media library. The template receives the address of its file, or null when there is none: print it in a `<video>` with `preload="none"`, never playing on its own with sound.',
             '- `embed`: a video of YouTube, Vimeo or Dailymotion, given as the https address of its page (an editor pastes it; the sample is such an address the brief gives, or empty). It is the only way to show such a video, in a row of an `items` list too (a video per card of a carousel). The template receives the markup of a facade, a play button that loads the player when the visitor clicks, or null when there is none: print it as it is, `{{ props.video }}`, inside an element that sets its width; the facade is 16:9 and fills it. Never an `iframe`, and no link to the video next to it.',
             '- `url`: a link, a path of the site or an absolute address.',
+            '- `icon`: an icon name, `cms:<name>` or an icon of the theme. The template receives it as text: draw it with `{{ cms_icon(props.<name>) }}`: an `svg`, or nothing when the name is empty or unknown. A second argument gives `class`, `width`, `height` or `aria-label`; without an `aria-label` the icon is hidden from screen readers, which is right next to a text that says the same. An icon alone in a link or a button needs a `text` prop that names that link or button for screen readers (its `aria-label`, or a visually hidden text): the name depends on the place, never on the icon.',
+            \sprintf('- `reference`: the id of a record of the shop, `record` naming which: %s. The template receives the id, or null when there is none: it prints nothing of it, it hands it on to a component it draws that shows such records (below), a list of them as the rows its list reads (`{"name": "products", "type": "items", "items": [{"name": "id", "type": "reference", "record": "product", "required": true}]}`). The sample names records the user message lists under "Records of the shop for the sample", so the example shows them: the id of one of the kind the prop names, two to four rows for a list; null, or an empty list, only when the message lists none of that kind. The editor picks the records of a page, so a reference outside a row is never `required`.', implode(', ', PickedRecord::values())),
             '- `items`: a list of objects, `items` being the props of one (any type but `items`), `min` and `max` (at most 24). For rows, cards, steps.',
             '',
             '```json',
@@ -311,6 +399,7 @@ final readonly class ComponentPrompt
             '',
             \sprintf('- Tags: %s. Filters: %s. Tests: %s. Functions: %s. Nothing else: no include, no macro, no block, no `raw`.', implode(', ', SiteTemplateRenderer::TAGS), implode(', ', SiteTemplateRenderer::FILTERS), implode(', ', SiteTemplateRenderer::TESTS), implode(', ', SiteTemplateRenderer::FUNCTIONS)),
             \sprintf('- At most %d `for` inside each other: loop over a list, and over the list of an item, never deeper.', SiteTemplateRenderer::MAX_LOOP_DEPTH),
+            \sprintf("- A component the list marks \"Drawable\" is placed inside yours with `%s('Carousel', {slides: props.photos, title: props.heading, columns: 3})`, printed where it goes: the code of a component of the site or the name of a component of the theme, as the list writes it, between quotes; then a mapping of its props to values, each one of your props (`props.photos`, handed on as the page stores it) or a value written as it is (a text, a number, true or false), never the field of a row in a loop nor a computed value. What it shows is filled through your props: declare them with the type its props have, a list with rows of the fields its rows read, under the names they have there. It is drawn inside its own element with its own stylesheet: your stylesheet styles your parts, never what it draws. A component you draw draws none, and %d are drawn at most.", SiteTemplateRenderer::CALL, SiteTemplateRenderer::MAX_CALLS),
             '- Text is escaped when printed; an `html` prop is printed as it is.',
             '- No text of its own outside what it prints: the template writes markup and props, nothing else.',
             '- No `script`, `style`, `iframe`, `object`, `embed`, `form`, `link`, `meta`, no `on…` attribute, no `javascript:`. A YouTube, Vimeo or Dailymotion video is an `embed` prop, not an `iframe`.',

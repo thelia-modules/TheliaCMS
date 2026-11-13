@@ -18,13 +18,15 @@
       }
     ],
     "markup": {
-      "require": [],
+      "require": [
+        "cms-site--steps",
+        "cms-site--faq"
+      ],
       "forbid": []
     },
     "css": {
       "require": [],
       "forbid": []
     }
-  },
-  "gap": "N71"
+  }
 }

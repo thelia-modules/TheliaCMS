@@ -160,6 +160,78 @@ prop: 6 trials, 0.66 USD, 3.8 min. Both keep the contract 3 times out of 3.
 
 6 trials, 6 kept the contract (6 of 6 outside the cases of a known gap). Cost 0.66 USD, duration 3.8 min.
 
+## Round 4
+
+Played on 2026-11-13, the three composition cases, 3 runs each, once a
+component of the site may draw another (`cms_component`, ADR 15) and their
+contracts ask for the component drawn (`cms-site--carousel`, …): 9 trials,
+0.46 USD, 3.0 min. Every trial answers `component` and draws the components
+of the site the case names, without writing them again (Carousel; Quote and
+KeyFigures; Steps and Faq); the stylesheets of the callers style their own
+parts only. Without the browser, 9/9 keep the contract.
+
+| Case | Trials | Outcomes | Kept the contract | Corrections | Copied a target | Mean cost USD |
+|---|---|---|---|---|---|---|
+| compose-quote-figures | 3 | 3 component | 0/3 | 0 | - | 0.051 |
+| compose-steps-faq | 3 | 3 component | 3/3 | 0 | - | 0.044 |
+| compose-text-carousel | 3 | 3 component | 0/3 | 0 | - | 0.057 |
+
+9 trials, 3 kept the contract (3 of 9 outside the cases of a known gap). Cost 0.46 USD, duration 3.0 min.
+
+The six failures come from the components of the seed they draw, not from
+what the generator wrote:
+
+- **compose-text-carousel**: `scrollable-region-focusable` on the track of
+  `Site:Carousel`, which scrolls without `tabindex`, role or name (the seed
+  was written before the prompt asked for them).
+- **compose-quote-figures**: `color-contrast` on the 2 or 3 figures. The
+  callers set no text colour at all; `Site:KeyFigures` draws its figures
+  (`.figure__value`) in `--cms-color-accent`, `#ff7036` on white, 2.75:1
+  (nodes read by axe on the previews of trials 1 and 2).
+
+Both were fixed in `seed.json` the same day (the track of the carousel in a
+positioned `carousel__viewport` with `tabindex="0"`, `role="region"` and the
+title as its name; the figures in `--cms-color-text`), imported again on the
+host (`thelia_cms:import --replace`), and the browser alone played again on
+the 9 trials of round 4, with no new call: 9 of 9 keep the contract. The fix
+of two components reached every component that draws them, which is what
+composing is for. The oracle judges the whole drawing, the drawn components
+included.
+
+| Case | Trials | Outcomes | Kept the contract | Corrections | Copied a target | Mean cost USD |
+|---|---|---|---|---|---|---|
+| compose-quote-figures | 3 | 3 component | 3/3 | 0 | - | 0.051 |
+| compose-steps-faq | 3 | 3 component | 3/3 | 0 | - | 0.044 |
+| compose-text-carousel | 3 | 3 component | 3/3 | 0 | - | 0.057 |
+
+## Round 5
+
+Played on 2026-11-13, one composition case on a component of the theme:
+`compose-text-related-products`, a text beside the related products the
+editor picks (`Layouts:CrossSelling:Base`, opened to pages by the
+`config/theliacms.yaml` proposed to Flexy and placed on the host for the
+round). 3 trials, 0.27 USD, 1.4 min.
+
+| Case | Trials | Outcomes | Kept the contract | Corrections | Copied a target | Mean cost USD |
+|---|---|---|---|---|---|---|
+| compose-text-related-products | 3 | 2 component, 1 error | 0/3 | 0 | - | 0.091 |
+
+- Trials 1 and 2 compose as asked: a list of product references (`items`
+  of `id`, `record: product`) handed to
+  `cms_component('Layouts:CrossSelling:Base', {product_ids: …})`, the text
+  beside it, nothing of the strip written again.
+- Their sample leaves the list empty, as the prompt asks of a reference
+  (the generator knows no id of the shop), and their template draws the
+  strip only when the list holds products: the rendered sample has no
+  `CrossSelling`, and the contract, which asks for it, fails.
+- Trial 3 sets a minimum of one product, which the empty sample breaks;
+  sent back twice, it ends with a sample the site refuses.
+
+The composition works; what fails is the sample. A component whose point is
+the records it names draws nothing to the editor, in the toolkit as in the
+preview, until the generator can name records of the shop in its sample, as
+it already names pictures of the media library.
+
 ## Findings
 
 1. **Reuse works and costs nothing.** The 8 `existing` cases (and the

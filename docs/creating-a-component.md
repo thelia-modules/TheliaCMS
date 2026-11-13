@@ -329,12 +329,17 @@ What the generator writes, and what the site checks
   html, integer, boolean, choice, image (its address reaches the template),
   video (the address of its file reaches the template, which draws it in a
   `<video>` or a link: a `data-` attribute is not kept on a component of the
-  site), url, and items whose props are any of these but items.
+  site), url, icon, reference (the id of a product, a category, a folder, a
+  form or a menu, named by `record`: the template receives the id and hands
+  it on to a component of the theme it draws, and the editor picks the
+  record from the list of its kind), and items whose props are any of these
+  but items.
 - **A Twig template** rendered in a Twig of its own with the sandbox on
   (`Content/Site/SiteTemplateRenderer.php`): `if`, `for`, `set`, a few
-  filters that shape text, `cycle`, `min`, `max`; no `range` (its loops go
-  over its props), no more than two `for` inside each other, no include,
-  extends or use, no macro, nothing of the site. It receives `props` alone. It holds no text of its own, so a
+  filters that shape text, `cycle`, `min`, `max`, `cms_icon`, `cms_component`
+  (below); no `range` (its loops go over its props), no more than two `for`
+  inside each other, no include, extends or use, no macro, nothing of the
+  site. It receives `props` alone. It holds no text of its own, so a
   component serves every language of the site, and no `script`, `style`,
   `iframe`, `form`, `on…` attribute or `javascript:`. What it draws is
   filtered like a page that goes online, wherever it is drawn: a draft, the
@@ -360,14 +365,38 @@ What the generator writes, and what the site checks
   after the one of the blocks.
 - **A sample** that fills every prop: what the preview, the toolkit and the
   generator of pages are shown.
+- **Other components, drawn inside it** (ADR 15, ADR 16):
+  `{{ cms_component('Carousel', {slides: props.photos, title: props.heading, columns: 3}) }}`
+  draws the component kept for the whole site under that code, or a
+  component of the theme the catalogue offers under its name
+  (`cms_component('Layouts:Subheader:Base', {title: props.heading, tag: 'h2'})`).
+  A value is a prop of the caller, handed on as the page stores it (an id
+  for a picture), or a value written as it is (a text, a number, true or
+  false); the called component normalises it with its own schema and draws
+  it through its own section. The field of a row in a loop, a filter or any
+  other expression is refused. A component of the site is drawn inside its
+  own `cms-site--<code>` element; a component of the theme is drawn by the
+  theme once the caller's markup is filtered, so the attributes its
+  controllers read are kept. The validator refuses a prototype, a name the
+  catalogue does not offer, the component itself, a component of the site
+  that draws others (one level only), a key the called one does not declare,
+  and a prop of the caller that does not read as the prop it fills. A
+  rendering draws 24 components at most; a name that disappears or values
+  the schema refuses draw nothing and are logged. A component of the theme
+  that reads records (`Layouts:CrossSelling:Base` and its `product_ids`) is
+  given the `reference` props of the caller, a list of them as rows of one
+  `id` field; a reference to another kind of record is refused.
 
 Making, changing and keeping a component take the settings and the custom
 code permissions. A new version of a kept component is refused while a page
 holds props it no longer takes (`Content/Site/SiteComponentUsage.php`, every
 section named, draft and published); keeping one draws the drafts using it
 again, and the published pages change at their next publication. A component
-a page holds cannot be deleted. The kept components travel with the export of
-the site and are checked again on import.
+a page holds cannot be deleted, nor one another component draws
+(`Content/Site/SiteComponentCallers.php`), and a new version that no longer
+takes what such a caller passes is refused the same way. The kept components
+travel with the export of the site and are checked again on import, the
+ones other components draw first.
 
 ## The width of the images of a component
 

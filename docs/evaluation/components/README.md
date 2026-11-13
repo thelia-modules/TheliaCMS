@@ -123,6 +123,12 @@ folder), `--case` (repeatable, a filter), `--runs` (default 3), `--out`
 - A generation that fails (refused three times, provider down) is a trial: the
   file holds `error`, the answers received and the cost the ledger recorded, and
   the round goes on.
+- The round runs in a visit of the shop the command lends the generator
+  (`BenchShopRequest`: a request to the home page, its session, the URL
+  service of the core). A component of the theme reads the catalogue through
+  `resources()`, which needs them; without them the sample of a component that
+  draws one (`Layouts:CrossSelling:Base`) failed with "No current request
+  found", and was refused as drawing nothing (round 6).
 - The generator keeps nothing but its line of the AI ledger: no component is
   saved. `thelia_cms:component-bench:check` calls no API and can be run as often
   as the contracts change; it rewrites `verdict` in each file.
@@ -230,9 +236,10 @@ dev site, before the seed: 6 components.
 | `Partial:cms-page-list` | Partial | Pages of a type, rendered live |
 
 By origin: 4 module, 2 partial, **0 theme**, 0 site. The active theme (Flexy)
-has no `config/theliacms.yaml`, so it opens no component to pages: no case
-targets a component of the theme. A case of that kind needs a theme that
-declares some.
+has no `config/theliacms.yaml`, so it opens no component to pages. Only
+`compose-text-related-products` targets a component of the theme: it needs
+a theme that opens `Layouts:CrossSelling:Base` and documents its
+`productIds` (proposed to Flexy in thelia-templates/flexy#346).
 
 Once the seed is imported (all `ready`, ids 1 to 6 in `cms_component`):
 
@@ -278,6 +285,7 @@ what is asked. Outcomes are the accepted ones.
 | `compose-text-carousel` | composition | text left, carousel right | component (gap N71) | `cms:richtext` + `Site:Carousel` |
 | `compose-quote-figures` | composition | a quote above three figures | component (gap N71) | `Site:Quote` + `Site:KeyFigures` |
 | `compose-steps-faq` | composition | steps followed by a FAQ | component (gap N71) | `Site:Steps` + `Site:Faq` |
+| `compose-text-related-products` | composition | text beside the related products the editor picks | component | `cms:richtext` + `Layouts:CrossSelling:Base` (a theme that opens it) |
 | `trap-google-map` | trap | embedded Google map | component, no `<iframe` | |
 | `trap-newsletter-form` | trap | sign-up field and button | existing `Partial:cms-form`, or component without `<form` / `<input` | |
 

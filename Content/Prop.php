@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Content;
 
+use TheliaCMS\Media\Icon\IconName;
+
 /**
  * One prop of a section: its name, its type, and what a value of it may be.
  *
@@ -38,6 +40,9 @@ final readonly class Prop
      * JSON schema and of the catalogue sheet, `editorOnlyChoices` lists the
      * values of a choice the model is not offered, and `editor` names the
      * control the form draws the prop with
+     *
+     * `record` names what a Reference points at (`product`, `category`…), so
+     * two references are known to name the same kind of record
      * @param list<string> $editorOnlyChoices
      */
     public function __construct(
@@ -61,6 +66,7 @@ final readonly class Prop
         public bool $editorOnly = false,
         public array $editorOnlyChoices = [],
         public ?string $editor = null,
+        public ?string $record = null,
     ) {
         if (1 !== preg_match('/^[a-z][a-z0-9_]*$/', $name)) {
             throw new \InvalidArgumentException(\sprintf('A prop name is lowercase letters, digits and underscores: "%s" given.', $name));
@@ -107,6 +113,7 @@ final readonly class Prop
             $only,
             $onlyChoices,
             $editor,
+            $this->record,
         );
     }
 
@@ -138,6 +145,7 @@ final readonly class Prop
             $this->editorOnly,
             $this->editorOnlyChoices,
             $this->editor,
+            $this->record,
         );
     }
 
@@ -204,6 +212,11 @@ final readonly class Prop
         return new self($name, PropType::Embed, $label, '', $required, $help, max: 2048);
     }
 
+    public static function icon(string $name, string $label, bool $required = false, ?string $help = null): self
+    {
+        return new self($name, PropType::Icon, $label, '', $required, $help, max: IconName::MAXIMUM_REFERENCE_LENGTH);
+    }
+
     public static function url(string $name, string $label, string $default = '', bool $required = false, ?string $help = null): self
     {
         return new self($name, PropType::Url, $label, $default, $required, $help, max: 2048);
@@ -218,16 +231,13 @@ final readonly class Prop
     }
 
     /**
-     * @param string $source what the id names: `page`, `menu`, `form`, `product`, `category`, `folder`
-     */
-    /**
-     * @param string      $source     what the reference names, for the model: "a page", "a product"
+     * @param string      $source     what the id names, for the model and for the record it is: `page`, `menu`, `form`, `product`, `category`, `folder`
      * @param string|null $picker     the address of the list a screen picks the record from, `{id, name}` rows
      * @param bool        $searchable whether the picker answers `?q=` with the matching rows rather than listing them all
      */
     public static function reference(string $name, string $label, string $source, bool $required = true, ?string $help = null, ?string $picker = null, bool $searchable = false): self
     {
-        return new self($name, PropType::Reference, $label, null, $required, trim($source.'. '.($help ?? '')), picker: $picker, searchable: $searchable);
+        return new self($name, PropType::Reference, $label, null, $required, trim($source.'. '.($help ?? '')), picker: $picker, searchable: $searchable, record: $source);
     }
 
     public static function json(string $name, string $label, mixed $default = [], ?string $help = null): self
@@ -247,7 +257,7 @@ final readonly class Prop
         if (!$this->required) {
             $description .= match ($this->type) {
                 PropType::Image, PropType::Video, PropType::Reference => ' 0 when there is none.',
-                PropType::Text, PropType::Html, PropType::Url, PropType::Embed, PropType::Json => ' Empty when not needed.',
+                PropType::Text, PropType::Html, PropType::Url, PropType::Embed, PropType::Icon, PropType::Json => ' Empty when not needed.',
                 PropType::Items => ' An empty list when not needed.',
                 default => '',
             };
@@ -265,6 +275,7 @@ final readonly class Prop
             PropType::Video => ['type' => $this->required ? 'integer' : ['integer', 'null']],
             PropType::Url => ['type' => 'string', 'maxLength' => $this->max ?? 2048],
             PropType::Embed => ['type' => 'string', 'maxLength' => $this->max ?? 2048],
+            PropType::Icon => ['type' => 'string', 'maxLength' => IconName::MAXIMUM_REFERENCE_LENGTH],
             PropType::Items => [
                 'type' => 'array',
                 'minItems' => $this->minItems ?? 0,

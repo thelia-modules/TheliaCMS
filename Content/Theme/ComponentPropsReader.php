@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Content\Theme;
 
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use TheliaCMS\Content\PickedRecord;
 use TheliaCMS\Content\Prop;
 use TheliaCMS\Content\PropSchema;
 use TheliaCMS\Content\PropType;
@@ -36,6 +37,7 @@ use Twig\Environment;
  * rendered page, and a prop may name what the site holds: `image`
  * for a picture of the media library, handed to the component as its address,
  * `video` for a video of the library, handed to it as the address of its file,
+ * `icon` for the name of an icon (`cms:<name>` or one of the theme), printed with `ux_icon()`,
  * `product`, `category`, `folder`, `form` or `menu` for one record picked by
  * its id, and `product[]` or `category[]` for several, in the order they were
  * picked. The component receives the ids, as it would from a template of the
@@ -46,18 +48,6 @@ use Twig\Environment;
  */
 final readonly class ComponentPropsReader
 {
-    /** The records a prop may name, and the picker that lists each. */
-    private const array SOURCES = [
-        'product' => 'admin.cms.partials.sources.products',
-        'category' => 'admin.cms.partials.sources.categories',
-        'folder' => 'admin.cms.partials.sources.folders',
-        'form' => 'admin.cms.partials.sources.forms',
-        'menu' => 'admin.cms.partials.sources.menus',
-    ];
-
-    /** The records too many to list in a select: the editor searches them. */
-    private const array SEARCHED = ['product', 'category'];
-
     /** How many records a list of them may hold. */
     private const int MAX_IDS = 12;
 
@@ -386,8 +376,12 @@ final readonly class ComponentPropsReader
             return Prop::video($name, $name, $required, $description);
         }
 
+        if (\in_array('icon', $kinds, true)) {
+            return Prop::icon($name, $name, $required, $description);
+        }
+
         foreach ($kinds as $kind) {
-            if (isset(self::SOURCES[$kind])) {
+            if (null !== PickedRecord::tryFrom($kind)) {
                 return $this->reference($name, $kind, $required, $description);
             }
         }
@@ -479,7 +473,7 @@ final readonly class ComponentPropsReader
         $choices = [];
 
         foreach ($kinds as $kind) {
-            if (isset(self::SOURCES[$kind]) || 1 === preg_match('/^(?:array|list|iterable|object)\b|\[\]$/', $kind)) {
+            if (null !== PickedRecord::tryFrom($kind) || 1 === preg_match('/^(?:array|list|iterable|object)\b|\[\]$/', $kind)) {
                 return null;
             }
 
@@ -494,6 +488,10 @@ final readonly class ComponentPropsReader
 
         if (\in_array('video', $kinds, true)) {
             return Prop::video($name, $name, $required, $help);
+        }
+
+        if (\in_array('icon', $kinds, true)) {
+            return Prop::icon($name, $name, $required, $help);
         }
 
         if ([] !== $choices) {
@@ -530,12 +528,12 @@ final readonly class ComponentPropsReader
     {
         return Prop::reference(
             $name,
-            'id' === $name ? ucfirst($record) : $name,
+            $name,
             $record,
             $required,
             $description,
-            $this->urls->generate(self::SOURCES[$record]),
-            \in_array($record, self::SEARCHED, true),
+            $this->urls->generate(PickedRecord::from($record)->pickerRoute()),
+            PickedRecord::from($record)->isSearched(),
         );
     }
 
@@ -545,7 +543,7 @@ final readonly class ComponentPropsReader
     private static function namesOneRecord(string $type): bool
     {
         foreach (self::kinds($type) as $kind) {
-            if ('image' === $kind || 'video' === $kind || isset(self::SOURCES[$kind])) {
+            if ('image' === $kind || 'video' === $kind || null !== PickedRecord::tryFrom($kind)) {
                 return true;
             }
         }
@@ -567,7 +565,7 @@ final readonly class ComponentPropsReader
             if (1 === preg_match('/^(?:(\w+)\[\]|(?:list|array)<(\w+)>)$/', $kind, $match)) {
                 $record = '' !== ($match[1] ?? '') ? $match[1] : $match[2];
 
-                if (isset(self::SOURCES[$record])) {
+                if (null !== PickedRecord::tryFrom($record)) {
                     return $record;
                 }
             }
