@@ -27,7 +27,6 @@
         "type": "items",
         "min": 1,
         "with": [
-          "url",
           "text"
         ]
       }

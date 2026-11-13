@@ -282,6 +282,29 @@ Played on 2026-11-13 on TheliaCMS 2.28.0, the case
   `button` to the band, which the list describes (« one object, held as a
   list of one row: `href`, `label` »): the button of the theme is never drawn.
 - Accepted by the generator at the first answer, no correction.
+- Judged again with the contract of round 9 (rows of `text`, see below): still
+  0/3, for the same two reasons.
+
+## Round 9
+
+Played on 2026-11-13, the same case, with the rule that a part the drawn
+component offers is handed to it (`ComponentPrompt::OFFERED_PARTS_RULE`).
+3 trials, 0.17 USD, 0.8 min.
+
+| Case | Trials | Outcomes | Kept the contract | Corrections | Copied a target | Mean cost USD |
+|---|---|---|---|---|---|---|
+| compose-text-related-products-button | 3 | 3 component | 3/3 | 0 | - | 0.058 |
+
+- The three hand the button to the band:
+  `cms_component('Layouts:CrossSelling:Base', {title: props.products_title,
+  product_ids: props.product_ids, button: props.button})`, `button` declared
+  as a list of at most one row (`href`, `label`), the sample
+  `[{"href": "/collection-salon", "label": "Voir toute la collection"}]`. The
+  button of the theme is drawn (`button-style--secondary`).
+- The contract first asked rows of `url` and `text`: the three declare `href`
+  as `text`, the type the theme gives it (`{href: string, label: string}`),
+  as the prompt asks. The contract asks rows of `text` now.
+- Accepted by the generator at the first answer, no correction.
 
 ## Findings
 
