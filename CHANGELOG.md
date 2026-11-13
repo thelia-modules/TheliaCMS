@@ -59,6 +59,10 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- **A block of live content with a required text is added from the section
+  picker.** Its sample left the text empty and the draft refused it ("is
+  required."), so such a block could not be added by hand at all: a required
+  text with no default now starts with its label, which the author replaces.
 - **A record picked in the form of a section reads by its name.** A product
   or a category already chosen showed its number (`#3`) instead of its name;
   a row holding records only (the products of a band) is titled by the first
