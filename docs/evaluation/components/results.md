@@ -306,6 +306,22 @@ component offers is handed to it (`ComponentPrompt::OFFERED_PARTS_RULE`).
   as the prompt asks. The contract asks rows of `text` now.
 - Accepted by the generator at the first answer, no correction.
 
+## Round 10
+
+Played on 2026-11-13 with a component of the site that may draw a heading of
+the site (`cms_component('cms:heading', …)`, ADR 17), the case
+`compose-heading-team`. 3 trials, 0.17 USD, 0.9 min.
+
+| Case | Trials | Outcomes | Kept the contract | Corrections | Copied a target | Mean cost USD |
+|---|---|---|---|---|---|---|
+| compose-heading-team | 3 | 3 component | 0/3 | 0 | - | 0.058 |
+
+- The three draw the portraits as asked and write the heading themselves
+  (`<h2 class="team__title">{{ props.title }}</h2>`), never with
+  `cms:heading`. The prompt lists the heading as drawable and says a
+  component may draw it; it does not say to.
+- Accepted by the generator at the first answer, no correction.
+
 ## Findings
 
 1. **Reuse works and costs nothing.** The 8 `existing` cases (and the
