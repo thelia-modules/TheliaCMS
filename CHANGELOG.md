@@ -22,6 +22,11 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - **Coming back from a save in a card of the SEO of the modules opens that
   tab again.** SEOne sends the editor back with `current_tab=seo`, as on the
   catalogue screens; the editor opened its general tab.
+- **An object prop of the theme, as the page generator reads it.** The sheet
+  of the catalogue the page generator reads told a prop such as the button of
+  a band (`{href, label}`, held as at most one row) as a « list of 0 to 1
+  items »; it now tells one object, held as a list of one row or an empty
+  list, as the component generator already did.
 
 ## [2.28.0] - 2026-11-13
 
