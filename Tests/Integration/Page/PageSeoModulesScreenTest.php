@@ -76,6 +76,25 @@ final class PageSeoModulesScreenTest extends AdminScreenTestCase
         self::assertSame($this->say('Each card is saved by its own button. The Save of the page saves the settings of the page only.'), trim($screen->filter('#tab-seo-modules [data-testid="cms-page-seo-modules-help"]')->text()), 'The panel says which button saves what.');
     }
 
+    /**
+     * SEOne sends the editor back with `current_tab=seo` after a save in its card: its tab opens again, not the
+     * general one.
+     */
+    public function testComingBackFromASaveOfAModuleOpensItsTab(): void
+    {
+        $page = $this->createPage('Retour du module', published: false);
+
+        $screen = $this->screen(\sprintf('/admin/cms/pages/%d?current_tab=seo', $page->getId()));
+
+        self::assertStringContainsString('active', (string) $screen->filter('[data-testid="cms-page-tab-seo-modules"]')->attr('class'));
+        self::assertStringContainsString('show active', (string) $screen->filter('#tab-seo-modules')->attr('class'));
+        self::assertStringNotContainsString('active', (string) $screen->filter('[data-testid="cms-page-tab-general"]')->attr('class'));
+        self::assertStringNotContainsString('active', (string) $screen->filter('#tab-general')->attr('class'));
+
+        $plain = $this->screen(\sprintf('/admin/cms/pages/%d', $page->getId()));
+        self::assertStringContainsString('show active', (string) $plain->filter('#tab-general')->attr('class'), 'Without it, the general tab.');
+    }
+
     public function testANewPageAndAModelShowNoSeoOfTheModules(): void
     {
         self::assertSame(0, $this->screen('/admin/cms/pages/new')->filter('[data-testid="cms-page-tab-seo-modules"], #tab-seo-modules')->count(), 'No id to attach it to.');

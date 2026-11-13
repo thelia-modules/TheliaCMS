@@ -22,6 +22,9 @@
        no id to attach them to; a model is never published. A capture, not a filtered value: it stays
        markup, a filter would hand back a string the escaper would print as text. #}
     {% set seo_module_cards %}{% if not is_new and not is_model %}{{ hook_cards(['cmspage.seo.update-form', 'tab-seo.update-form', 'tab-seo.bottom'], { cmspage_id: page.id, id: page.id, type: 'cmspage' }) }}{% endif %}{% endset %}
+    {# A module sends the editor back with `current_tab=seo` after a save in its card (SEOne, as on the
+       catalogue screens): its tab opens again. #}
+    {% set seo_modules_open = seo_module_cards|trim is not empty and app.request.query.get('current_tab') == 'seo' %}
 
     {% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: block('title') } %}
         {% block title %}
@@ -77,7 +80,7 @@
     <div class="bo-tab-bar">
         <ul class="nav nav-tabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-general" type="button" data-testid="cms-page-tab-general">
+                <button class="nav-link{{ seo_modules_open ? '' : ' active' }}" data-bs-toggle="tab" data-bs-target="#tab-general" type="button" data-testid="cms-page-tab-general">
                     {{ 'General'|trans({}, 'theliacms') }}
                 </button>
             </li>
@@ -95,7 +98,7 @@
             </li>
             {% if seo_module_cards|trim is not empty %}
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-seo-modules" type="button" data-testid="cms-page-tab-seo-modules">
+                    <button class="nav-link{{ seo_modules_open ? ' active' : '' }}" data-bs-toggle="tab" data-bs-target="#tab-seo-modules" type="button" data-testid="cms-page-tab-seo-modules">
                         {{ 'Search engines (modules)'|trans({}, 'theliacms') }}
                     </button>
                 </li>
@@ -138,7 +141,7 @@
         <input type="hidden" name="_token" value="{{ assignToken() }}">
         {{ form_errors(form) }}
         <div class="tab-content">
-            <div class="tab-pane fade show active" id="tab-general" role="tabpanel">
+            <div class="tab-pane fade{{ seo_modules_open ? '' : ' show active' }}" id="tab-general" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-lg-8">
                         {{ form_row(form.title) }}
@@ -224,7 +227,7 @@
                 {# The SEO a module adds to a page (SEOne: robots, H1, structured data), on the hooks the
                    catalogue screens call in their SEO tab. Each card brings its own form, saved by its
                    module: out of the settings form, as the documents. #}
-                <div class="tab-pane fade" id="tab-seo-modules" role="tabpanel" data-testid="cms-page-seo-modules">
+                <div class="tab-pane fade{{ seo_modules_open ? ' show active' : '' }}" id="tab-seo-modules" role="tabpanel" data-testid="cms-page-seo-modules">
                     {# The bar under the panels saves the settings of the page only: each card here has its own button. #}
                     <p class="form-text mt-0 mb-3" data-testid="cms-page-seo-modules-help">{{ 'Each card is saved by its own button. The Save of the page saves the settings of the page only.'|trans({}, 'theliacms') }}</p>
                     {{ seo_module_cards }}

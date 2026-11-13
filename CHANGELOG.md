@@ -19,6 +19,9 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - **The tab of the SEO of the modules says which button saves what.** Each
   card is saved by its own button; the Save of the page saves its settings
   only.
+- **Coming back from a save in a card of the SEO of the modules opens that
+  tab again.** SEOne sends the editor back with `current_tab=seo`, as on the
+  catalogue screens; the editor opened its general tab.
 
 ## [2.28.0] - 2026-11-13
 
