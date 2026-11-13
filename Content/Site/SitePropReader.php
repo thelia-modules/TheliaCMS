@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Content\Site;
 
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use TheliaCMS\Content\PickedRecord;
 use TheliaCMS\Content\Prop;
 use TheliaCMS\Content\PropSchema;
 use TheliaCMS\Content\PropType;
@@ -25,10 +27,13 @@ use TheliaCMS\Content\PropType;
  *     {"name": "title", "type": "text", "label": "Heading", "required": true, "max": 120, "help": "…"}
  *     {"name": "style", "type": "choice", "label": "Style", "choices": {"light": "Light", "dark": "Dark"}, "default": "light"}
  *     {"name": "plans", "type": "items", "label": "Plans", "min": 1, "max": 4, "items": [ … ]}
+ *     {"name": "products", "type": "items", "label": "Products", "items": [{"name": "id", "type": "reference", "label": "Product", "record": "product", "required": true}]}
  *
- * The types are those of Content\Prop a sandboxed template can print: a
- * reference or a JSON value would need a function to be of any use, and an
- * item never holds items.
+ * The types are those of Content\Prop a sandboxed template can print or hand
+ * on: a reference reaches the template as an id, of use to a component of the
+ * theme it draws with `cms_component()` (ADR 16), which reads the record. A
+ * JSON value would need a function to be of any use, and an item never holds
+ * items.
  */
 final readonly class SitePropReader
 {
@@ -37,12 +42,20 @@ final readonly class SitePropReader
      *
      * @var list<string>
      */
-    public const array TYPES = ['text', 'html', 'integer', 'boolean', 'choice', 'image', 'video', 'embed', 'url', 'icon', 'items'];
+    public const array TYPES = ['text', 'html', 'integer', 'boolean', 'choice', 'image', 'video', 'embed', 'url', 'icon', 'reference', 'items'];
 
     /** @var list<string> */
-    private const array ITEM_TYPES = ['text', 'html', 'integer', 'boolean', 'choice', 'image', 'video', 'embed', 'url', 'icon'];
+    private const array ITEM_TYPES = ['text', 'html', 'integer', 'boolean', 'choice', 'image', 'video', 'embed', 'url', 'icon', 'reference'];
 
     private const int MAX_PROPS = 20;
+
+    /**
+     * @param UrlGeneratorInterface|null $urls the router that gives a reference the list its editor picks from; none outside a request of the site, in a test
+     */
+    public function __construct(
+        private ?UrlGeneratorInterface $urls = null,
+    ) {
+    }
 
     /**
      * @param list<mixed> $props
@@ -157,6 +170,7 @@ final readonly class SitePropReader
                 PropType::Embed => Prop::embed($name, $label, $required, $help),
                 PropType::Url => Prop::url($name, $label, \is_string($default) ? $default : '', $required, $help),
                 PropType::Icon => Prop::icon($name, $label, $required, $help),
+                PropType::Reference => $this->reference($spec, $name, $label, $required, $help, $where, $problems),
                 PropType::Items => $this->items($spec, $name, $label, $help, $where, $problems),
                 default => null,
             };
@@ -221,6 +235,23 @@ final readonly class SitePropReader
         }
 
         return Prop::choice($name, $label, $read, $default, $help);
+    }
+
+    /**
+     * @param array<mixed> $spec
+     * @param list<string> $problems
+     */
+    private function reference(array $spec, string $name, string $label, bool $required, ?string $help, string $where, array &$problems): ?Prop
+    {
+        $record = PickedRecord::tryFrom(\is_string($spec['record'] ?? null) ? $spec['record'] : '');
+
+        if (null === $record) {
+            $problems[] = \sprintf('%s needs "record", one of %s.', $where, implode(', ', PickedRecord::values()));
+
+            return null;
+        }
+
+        return Prop::reference($name, $label, $record->value, $required, $help, $this->urls?->generate($record->pickerRoute()), $record->isSearched());
     }
 
     /**

@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Unit\Content\Site;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use TheliaCMS\Content\PropType;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SitePropReader;
@@ -53,7 +54,7 @@ final class SitePropReaderTest extends TestCase
         try {
             (new SitePropReader())->read([
                 ['name' => 'Title', 'type' => 'text', 'label' => 'Heading'],
-                ['name' => 'page', 'type' => 'reference', 'label' => 'Page'],
+                ['name' => 'page', 'type' => 'reference', 'label' => 'Page', 'record' => 'page'],
                 ['name' => 'tone', 'type' => 'choice', 'label' => 'Tone', 'choices' => ['light', 'dark']],
                 ['name' => 'rows', 'type' => 'items', 'label' => 'Rows', 'items' => [['name' => 'cells', 'type' => 'items', 'label' => 'Cells', 'items' => [['name' => 'a', 'type' => 'text', 'label' => 'A']]]]],
                 ['name' => 'count', 'type' => 'integer', 'label' => 'Count', 'min' => 5, 'max' => 1],
@@ -63,7 +64,7 @@ final class SitePropReaderTest extends TestCase
         } catch (InvalidSiteComponentException $exception) {
             self::assertCount(6, $exception->problems, implode("\n", $exception->problems));
             self::assertStringContainsString('lowercase', $exception->problems[0]);
-            self::assertStringContainsString('"reference"', $exception->problems[1], 'A reference needs a function to be of use: not offered.');
+            self::assertStringContainsString('"page" needs "record", one of product, category, folder, form, menu.', $exception->problems[1], 'A page is no record a component of the theme reads.');
             self::assertStringContainsString('value => label', $exception->problems[2]);
             self::assertStringContainsString('"rows.cells"', $exception->problems[3], 'An item never holds items.');
             self::assertStringContainsString('min ≤ default ≤ max', $exception->problems[4]);
@@ -89,6 +90,24 @@ final class SitePropReaderTest extends TestCase
         self::assertSame(PropType::Icon, $schema->props[0]->type);
         self::assertTrue($schema->props[0]->required);
         self::assertSame(PropType::Icon, $schema->props[1]->items[0]->type);
+    }
+
+    public function testAReferenceNamesItsRecordAndTheListItsEditorPicksFrom(): void
+    {
+        $urls = $this->createStub(UrlGeneratorInterface::class);
+        $urls->method('generate')->willReturnCallback(static fn (string $route): string => '/'.$route);
+
+        $schema = (new SitePropReader($urls))->read([
+            ['name' => 'category', 'type' => 'reference', 'label' => 'Category', 'record' => 'category'],
+            ['name' => 'products', 'type' => 'items', 'label' => 'Products', 'items' => [['name' => 'id', 'type' => 'reference', 'label' => 'Product', 'record' => 'product', 'required' => true]]],
+            ['name' => 'menu', 'type' => 'reference', 'label' => 'Menu', 'record' => 'menu'],
+        ]);
+
+        [$category, $products, $menu] = $schema->props;
+        self::assertSame([PropType::Reference, 'category', '/admin.cms.partials.sources.categories', true], [$category->type, $category->record, $category->picker, $category->searchable]);
+        self::assertSame([PropType::Reference, 'product', '/admin.cms.partials.sources.products', true], [$products->items[0]->type, $products->items[0]->record, $products->items[0]->picker, $products->items[0]->searchable]);
+        self::assertFalse($menu->searchable, 'The menus are few enough to be listed.');
+        self::assertSame(['category' => null, 'products' => [['id' => 12]], 'menu' => null], $schema->normalize(['products' => [['id' => '12']]]), 'An id is stored as a number.');
     }
 
     public function testTheGeneratorIsToldAboutTheIcon(): void

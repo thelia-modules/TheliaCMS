@@ -58,6 +58,8 @@ final class ComponentCallValidationTest extends TestCase
         yield 'a prop of another type' => ['{{ cms_component("Carousel", {title: props.photos}) }}', 'Line 1: props.photos is of type items, and the prop "title" of Carousel of type text.'];
         yield 'rows without a required field' => ['{{ cms_component("Carousel", {slides: props.links}) }}', 'Line 1: the rows of props.links have no "image", which the rows of "slides" of Carousel need'];
         yield 'the field of a row' => ['{% for link in props.links %}{{ cms_component("Echo", {said: link.alt}) }}{% endfor %}', 'Line 1: cms_component passes "said" something else than a prop'];
+        yield 'rows naming another record' => ['{{ cms_component("Shelf", {products: props.categories}) }}', 'Line 1: "id" of the rows of props.categories names a category, and Shelf reads a product.'];
+        yield 'a reference to another record' => ['{{ cms_component("Shelf", {lead: props.section}) }}', 'Line 1: props.section names a category, and the prop "lead" of Shelf a product.'];
         yield 'rows with a field of another type' => ['{{ cms_component("Carousel", {slides: props.wrong}) }}', 'Line 1: "image" of the rows of props.wrong is of type text, and Carousel reads it as of type image.'];
     }
 
@@ -84,6 +86,13 @@ final class ComponentCallValidationTest extends TestCase
         }
     }
 
+    public function testTheProductsAPageStoresAreHandedOnToAComponentThatShowsProducts(): void
+    {
+        $kept = $this->validator()->validate($this->row('{{ cms_component("Shelf", {products: props.picked, lead: props.star}) }}'));
+
+        self::assertSame('Row', $kept->code);
+    }
+
     public function testATextAndAMarkupPropReadAsEachOther(): void
     {
         $kept = $this->validator()->validate($this->row('{{ cms_component("Echo", {said: props.body}) }}'));
@@ -99,6 +108,10 @@ final class ComponentCallValidationTest extends TestCase
             ['name' => 'photos', 'type' => 'items', 'label' => 'Photos', 'items' => [['name' => 'image', 'type' => 'image', 'label' => 'Image'], ['name' => 'alt', 'type' => 'text', 'label' => 'Text']]],
             ['name' => 'links', 'type' => 'items', 'label' => 'Links', 'items' => [['name' => 'alt', 'type' => 'text', 'label' => 'Text']]],
             ['name' => 'wrong', 'type' => 'items', 'label' => 'Wrong', 'items' => [['name' => 'image', 'type' => 'text', 'label' => 'Image']]],
+            ['name' => 'picked', 'type' => 'items', 'label' => 'Products', 'items' => [['name' => 'id', 'type' => 'reference', 'label' => 'Product', 'record' => 'product', 'required' => true]]],
+            ['name' => 'categories', 'type' => 'items', 'label' => 'Categories', 'items' => [['name' => 'id', 'type' => 'reference', 'label' => 'Category', 'record' => 'category', 'required' => true]]],
+            ['name' => 'star', 'type' => 'reference', 'label' => 'Product', 'record' => 'product'],
+            ['name' => 'section', 'type' => 'reference', 'label' => 'Category', 'record' => 'category'],
         ], ['heading' => 'Photos', 'body' => '<p>Hello</p>', 'photos' => [['image' => 'https://example.com/a.jpg', 'alt' => 'A']]], '<div class="row"><h2>{{ props.heading }}</h2>'.$call.'</div>');
     }
 
@@ -106,6 +119,10 @@ final class ComponentCallValidationTest extends TestCase
     {
         $components = new InMemorySiteComponents([
             new SiteComponent('Carousel', 'Carousel', 'Photos in a row.', self::CAROUSEL_PROPS, [], '<section>{% for slide in props.slides %}<img src="{{ slide.image }}" alt="{{ slide.alt }}">{% endfor %}</section>'),
+            new SiteComponent('Shelf', 'Shelf', 'Products in a row.', [
+                ['name' => 'lead', 'type' => 'reference', 'label' => 'Product first', 'record' => 'product'],
+                ['name' => 'products', 'type' => 'items', 'label' => 'Products', 'items' => [['name' => 'id', 'type' => 'reference', 'label' => 'Product', 'record' => 'product', 'required' => true]]],
+            ], [], '<ul data-lead="{{ props.lead }}">{% for product in props.products %}<li>{{ product.id }}</li>{% endfor %}</ul>'),
             new SiteComponent('Echo', 'Echo', 'Says a word.', [['name' => 'said', 'type' => 'html', 'label' => 'Said']], [], '<p>{{ props.said }}</p>'),
             new SiteComponent('Calling', 'Calling', 'Calls another.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '<p>{{ props.said }}</p>{{ cms_component("Echo", {said: "x"}) }}'),
             new SiteComponent('Gallery', 'Gallery', 'Calls the carousel.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '<div>{{ cms_component("Carousel", {title: props.said}) }}</div>'),

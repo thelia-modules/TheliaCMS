@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Generation\Component;
 
 use TheliaCMS\Content\ImageFraming;
+use TheliaCMS\Content\PickedRecord;
 use TheliaCMS\Content\Prop;
 use TheliaCMS\Content\PropType;
 use TheliaCMS\Content\SectionCatalog;
@@ -223,7 +224,11 @@ final readonly class ComponentPrompt
             static fn (Prop $prop): string => \sprintf(
                 '`%s` (%s%s)',
                 $prop->name,
-                PropType::Items === $prop->type ? 'list of rows: '.self::propsLine($prop->items) : $prop->type->value,
+                match ($prop->type) {
+                    PropType::Items => 'list of rows: '.self::propsLine($prop->items),
+                    PropType::Reference => 'reference, record '.$prop->record,
+                    default => $prop->type->value,
+                },
                 $prop->required ? ', required' : '',
             ),
             array_values(array_filter($props, static fn (Prop $prop): bool => !ImageFraming::isFraming($prop))),
@@ -351,6 +356,7 @@ final readonly class ComponentPrompt
             '- `embed`: a video of YouTube, Vimeo or Dailymotion, given as the https address of its page (an editor pastes it; the sample is such an address the brief gives, or empty). It is the only way to show such a video, in a row of an `items` list too (a video per card of a carousel). The template receives the markup of a facade, a play button that loads the player when the visitor clicks, or null when there is none: print it as it is, `{{ props.video }}`, inside an element that sets its width; the facade is 16:9 and fills it. Never an `iframe`, and no link to the video next to it.',
             '- `url`: a link, a path of the site or an absolute address.',
             '- `icon`: an icon name, `cms:<name>` or an icon of the theme. The template receives it as text: draw it with `{{ cms_icon(props.<name>) }}`: an `svg`, or nothing when the name is empty or unknown. A second argument gives `class`, `width`, `height` or `aria-label`; without an `aria-label` the icon is hidden from screen readers, which is right next to a text that says the same. An icon alone in a link or a button needs a `text` prop that names that link or button for screen readers (its `aria-label`, or a visually hidden text): the name depends on the place, never on the icon.',
+            \sprintf('- `reference`: the id of a record of the shop, `record` naming which: %s. The template receives the id, or null when there is none: it prints nothing of it, it hands it on to a component it draws that shows such records (below), a list of them as the rows its list reads (`{"name": "products", "type": "items", "items": [{"name": "id", "type": "reference", "record": "product", "required": true}]}`). The sample holds null, or an empty list: the editor picks the records, so a reference outside a row is never `required`.', implode(', ', PickedRecord::values())),
             '- `items`: a list of objects, `items` being the props of one (any type but `items`), `min` and `max` (at most 24). For rows, cards, steps.',
             '',
             '```json',

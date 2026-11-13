@@ -41,7 +41,7 @@ final class SiteComponentValidatorTest extends TestCase
 
     public function testEveryProblemIsListedAtOnce(): void
     {
-        $component = new SiteComponent('price-table', '', 'A table.', [['name' => 'title', 'type' => 'reference', 'label' => 'Title']], [], '<div onclick="steal()">{{ props.title|raw }}</div>', '@import url(x.css);');
+        $component = new SiteComponent('price-table', '', 'A table.', [['name' => 'title', 'type' => 'json', 'label' => 'Title']], [], '<div onclick="steal()">{{ props.title|raw }}</div>', '@import url(x.css);');
 
         try {
             (new SiteComponentValidator())->validate($component);
@@ -51,7 +51,7 @@ final class SiteComponentValidatorTest extends TestCase
 
             self::assertStringContainsString('PascalCase', $problems);
             self::assertStringContainsString('label', $problems);
-            self::assertStringContainsString('"reference"', $problems);
+            self::assertStringContainsString('"json"', $problems);
             self::assertStringContainsString('"raw"', $problems);
             self::assertStringContainsString('onclick=', $problems);
             self::assertStringContainsString('@import', $problems);

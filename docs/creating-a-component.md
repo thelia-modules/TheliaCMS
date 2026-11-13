@@ -329,7 +329,11 @@ What the generator writes, and what the site checks
   html, integer, boolean, choice, image (its address reaches the template),
   video (the address of its file reaches the template, which draws it in a
   `<video>` or a link: a `data-` attribute is not kept on a component of the
-  site), url, and items whose props are any of these but items.
+  site), url, icon, reference (the id of a product, a category, a folder, a
+  form or a menu, named by `record`: the template receives the id and hands
+  it on to a component of the theme it draws, and the editor picks the
+  record from the list of its kind), and items whose props are any of these
+  but items.
 - **A Twig template** rendered in a Twig of its own with the sandbox on
   (`Content/Site/SiteTemplateRenderer.php`): `if`, `for`, `set`, a few
   filters that shape text, `cycle`, `min`, `max`, `cms_icon`, `cms_component`
@@ -378,9 +382,10 @@ What the generator writes, and what the site checks
   that draws others (one level only), a key the called one does not declare,
   and a prop of the caller that does not read as the prop it fills. A
   rendering draws 24 components at most; a name that disappears or values
-  the schema refuses draw nothing and are logged. A component of the site
-  declares no `reference` prop: a component of the theme that reads records
-  (products, categories) can only be given the props the caller can hold.
+  the schema refuses draw nothing and are logged. A component of the theme
+  that reads records (`Layouts:CrossSelling:Base` and its `product_ids`) is
+  given the `reference` props of the caller, a list of them as rows of one
+  `id` field; a reference to another kind of record is refused.
 
 Making, changing and keeping a component take the settings and the custom
 code permissions. A new version of a kept component is refused while a page
