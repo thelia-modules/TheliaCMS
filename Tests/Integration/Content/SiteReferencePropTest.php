@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Tests\Integration\Content;
 
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Model\Lang;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Content\Document;
@@ -24,6 +25,7 @@ use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageContentQuery;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaCMS\TheliaCMS;
 
 /**
  * A `reference` prop of a component of the site in the back office: the
@@ -73,6 +75,38 @@ final class SiteReferencePropTest extends AdminScreenTestCase
         $content = CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne();
         $props = Document::fromJson($content?->getDraftDocument())?->section('shelf')->props ?? [];
         self::assertSame([$category->getId(), [['id' => $other->getId()]]], [$props['category'] ?? null, $props['products'] ?? null], 'The page stores the ids as numbers.');
+    }
+
+    /**
+     * Sabotage: label the field of the row `ucfirst($record)` without the
+     * translator, or drop the record from the source of the title of a row.
+     */
+    public function testARowOfRecordsAloneReadsByTheKindOfRecordAndIsTitledByTheOneChosen(): void
+    {
+        $fixtures = new FixtureFactory($this->getPropelConnection());
+        $product = $fixtures->product($fixtures->category(), $fixtures->taxRule(), $fixtures->currency());
+
+        $this->getService(SiteComponentRepository::class)->save(new SiteComponent(
+            'BareShelf',
+            'Shelf',
+            'Products only.',
+            [['name' => 'products', 'type' => 'items', 'label' => 'Products', 'items' => [['name' => 'id', 'type' => 'reference', 'label' => 'id', 'record' => 'product', 'required' => true]]]],
+            ['products' => []],
+            '<section>{% for product in props.products %}<span>{{ product.id }}</span>{% endfor %}</section>',
+        ), SiteComponentRepository::STATUS_DRAFT);
+
+        $page = $this->createPage('Bare shelf page', published: false);
+        $this->client->request('GET', '/admin/cms/pages');
+        $this->getService(CmsPageWriter::class)->saveContent($page, $this->locale(), new Document([
+            new Section('bare', 'Site:BareShelf', ['products' => [['id' => $product->getId()]]]),
+        ]));
+
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-bare"] form[data-cms-section-form]');
+        $field = $form->filter('input[name="cms_section_bare[products][0][id]"]');
+        $label = $form->filter(\sprintf('label[for="%s"]', $field->attr('id')));
+
+        self::assertSame($this->getService(TranslatorInterface::class)->trans('Product', [], TheliaCMS::DOMAIN_NAME), rtrim(trim($label->text()), ' *'), 'The `id` of a row reads as the kind of record, in the language of the editor.');
+        self::assertSame($field->attr('id').'_picker', $form->filter('[data-cms-item-title]')->attr('data-cms-item-source'), 'The row is titled by the record its picker shows.');
     }
 
     private function url(CmsPage $page): string

@@ -39,6 +39,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   row in a loop or a computed value is no longer accepted: a component that
   did so is refused at its next save.
 
+### Fixed
+
+- **A record picked in the form of a section reads by its name.** A product
+  or a category already chosen showed its number (`#3`) instead of its name;
+  a row holding records only (the products of a band) is titled by the first
+  one rather than "A row without a title"; a row added to such a list gets
+  its picker. The fields of the components of the theme read in the language
+  of the editor: the kind of record of a row ("Produit", "Catégorie"), and
+  "Texte en gras", "Texte du lien", the size of a picture, the wishlist.
+
 ## [2.27.0] - 2026-11-13
 
 ### Added
