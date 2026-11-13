@@ -10,7 +10,7 @@ is step 3 of that plan, the browser script is step 4.
 ## What is here
 
 - `seed.json`: the components of the site every run starts from.
-- `cases/<id>.json`: one case per file, 28 cases.
+- `cases/<id>.json`: one case per file, 30 cases.
 - Runs are written to `var/eval/components/<round>/<case>/<n>.json`, out of
   the repository.
 
@@ -287,6 +287,7 @@ what is asked. Outcomes are the accepted ones.
 | `compose-quote-figures` | composition | a quote above three figures | component (gap N71) | `Site:Quote` + `Site:KeyFigures` |
 | `compose-steps-faq` | composition | steps followed by a FAQ | component (gap N71) | `Site:Steps` + `Site:Faq` |
 | `compose-text-related-products` | composition | text beside the related products the editor picks | component | `cms:richtext` + `Layouts:CrossSelling:Base` (a theme that opens it) |
+| `compose-text-related-products-button` | composition | the same, with a button under the products | component, the button of the theme drawn | `cms:richtext` + `Layouts:CrossSelling:Base` (its object prop `button`) |
 | `trap-google-map` | trap | embedded Google map | component, no `<iframe` | |
 | `trap-newsletter-form` | trap | sign-up field and button | existing `Partial:cms-form`, or component without `<form` / `<input` | |
 

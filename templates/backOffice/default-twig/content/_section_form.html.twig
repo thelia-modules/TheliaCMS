@@ -81,8 +81,9 @@
                     {% endfor %}
                 </ol>
                 <p class="visually-hidden" role="status" aria-live="polite" data-cms-items-status></p>
+                {# A list of one row at most is an object (a button): added by its name. #}
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-cms-items-add hidden>
-                    <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ 'Add a row'|trans({}, 'theliacms') }}
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ 1 == child.vars.attr['data-cms-items-max']|default(12) ? 'Add %label%'|trans({'%label%': domain is same as(false) ? child.vars.label : child.vars.label|trans(child.vars.label_translation_parameters, domain)}, 'theliacms') : 'Add a row'|trans({}, 'theliacms') }}
                 </button>
                 {% do child.setRendered %}
             </fieldset>
@@ -227,9 +228,12 @@
     {# The first text that says something: a line of text, else a text of
        paragraphs, so a slide made of one text still reads by its words. #}
     {% set texts = item.children|filter(child => 'text' in child.vars.block_prefixes and child.vars.value is not iterable and child.vars.attr['data-cms-image-picker'] is not defined and child.vars.attr['data-cms-video-picker'] is not defined and child.vars.attr.placeholder is not defined and not (child.vars.name ends with '__url')) %}
-    {% set lines = texts|filter(child => child.vars.attr['data-cms-html'] is not defined) %}
+    {# Where a row leads (the `href` of a button) names it only when nothing
+       else does: a button reads by what it says. #}
+    {% set links = texts|filter(child => child.vars.attr['data-cms-html'] is not defined and ('url' in child.vars.block_prefixes or child.vars.name in ['href', 'url', 'link'] or child.vars.name ends with '_url' or child.vars.name ends with '_link')) %}
+    {% set lines = texts|filter(child => child.vars.attr['data-cms-html'] is not defined and child not in links) %}
     {% set paragraphs = texts|filter(child => child.vars.attr['data-cms-html'] is defined) %}
-    {% set named = lines|filter(child => (child.vars.value ?? '')|trim is not empty)|first ?: paragraphs|filter(child => (child.vars.value ?? '')|striptags|trim is not empty)|first ?: lines|first ?: paragraphs|first %}
+    {% set named = lines|filter(child => (child.vars.value ?? '')|trim is not empty)|first ?: paragraphs|filter(child => (child.vars.value ?? '')|striptags|trim is not empty)|first ?: links|filter(child => (child.vars.value ?? '')|trim is not empty)|first ?: lines|first ?: paragraphs|first ?: links|first %}
     {# A row of records alone (the products of a band) reads by the name of
        the first one: the script draws it once the picker has it. #}
     {% set record = named ? null : item.children|filter(child => child.vars.attr['data-cms-picker'] is defined)|first %}
