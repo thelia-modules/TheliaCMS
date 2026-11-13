@@ -1,0 +1,38 @@
+{
+  "id": "compose-text-related-products",
+  "family": "composition",
+  "locale": "fr_FR",
+  "request": "Un texte de présentation à gauche et, à droite, les produits liés que l'éditeur choisit un par un.",
+  "oracle": {
+    "outcome": [
+      "component"
+    ],
+    "target": [
+      "cms:richtext",
+      "Layouts:CrossSelling:Base"
+    ],
+    "props": [
+      {
+        "type": "html|text",
+        "min": 1
+      },
+      {
+        "type": "items",
+        "min": 1,
+        "with": [
+          "reference"
+        ]
+      }
+    ],
+    "markup": {
+      "require": [
+        "class=\"[^\"]*\\bCrossSelling\\b"
+      ],
+      "forbid": []
+    },
+    "css": {
+      "require": [],
+      "forbid": []
+    }
+  }
+}
