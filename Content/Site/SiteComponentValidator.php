@@ -16,6 +16,7 @@ namespace TheliaCMS\Content\Site;
 
 use TheliaCMS\Content\InvalidDocumentException;
 use TheliaCMS\Content\Pipeline\PublishedContentSanitizer;
+use TheliaCMS\Content\PropSchema;
 
 /**
  * Says whether a component written by the model can be kept, and gives it
@@ -38,6 +39,7 @@ final readonly class SiteComponentValidator
         private SiteTemplateRenderer $renderer = new SiteTemplateRenderer(),
         private SiteCssScoper $scoper = new SiteCssScoper(),
         private PublishedContentSanitizer $sanitizer = new PublishedContentSanitizer(),
+        private ?KeptSiteComponents $components = null,
     ) {
     }
 
@@ -70,6 +72,10 @@ final readonly class SiteComponentValidator
 
         $templateProblems = $this->renderer->problems($component->template);
         $problems = [...$problems, ...$templateProblems];
+
+        if ([] === $templateProblems) {
+            $problems = [...$problems, ...$this->callProblems($component, $schema)];
+        }
 
         // The publication filters what a page shows, but a draft is drawn in
         // the back office before it: what runs code is refused here already.
@@ -138,6 +144,78 @@ final readonly class SiteComponentValidator
         }
 
         return $kept;
+    }
+
+    /**
+     * The components the template draws with `cms_component` (ADR 15): kept
+     * for the site, not itself, one level deep, given props they declare,
+     * and a prop of the caller passed as it is of the type the called one
+     * reads. Without the components of the site (a unit test) a call is not
+     * checked, and draws nothing.
+     *
+     * @return list<string>
+     */
+    private function callProblems(SiteComponent $component, ?PropSchema $schema): array
+    {
+        $calls = $this->renderer->calls($component->template);
+
+        if (null === $this->components) {
+            return [];
+        }
+
+        $problems = [];
+
+        if ([] !== $calls) {
+            foreach ($this->components->all() as $other) {
+                if ($other->code !== $component->code && \in_array($component->code, array_map(static fn (SiteComponentCall $call): string => $call->code, $this->renderer->calls($other->template)), true)) {
+                    $problems[] = \sprintf('The component %s is drawn by %s: a component draws others one level deep, so one that another draws cannot draw any itself.', $component->code, $other->code);
+                }
+            }
+        }
+
+        $own = null === $schema ? [] : SiteComponentCallFit::byName($schema->props);
+
+        foreach ($calls as $call) {
+            if ($call->code === $component->code) {
+                $problems[] = \sprintf('Line %d: the component draws itself.', $call->line);
+
+                continue;
+            }
+
+            $called = $this->components->kept($call->code);
+
+            if (null === $called) {
+                $problems[] = \sprintf('Line %d: the site keeps no component %s: a component draws only the components kept for the whole site, by their code.', $call->line, $call->code);
+
+                continue;
+            }
+
+            if ([] !== $this->renderer->calls($called->template)) {
+                $problems[] = \sprintf('Line %d: %s draws other components itself, and a component draws others one level deep only: draw what it draws next to it instead.', $call->line, $call->code);
+            }
+
+            try {
+                $props = SiteComponentCallFit::byName($this->props->read($called->props)->props);
+            } catch (InvalidSiteComponentException) {
+                $problems[] = \sprintf('Line %d: the props of %s no longer read: it cannot be drawn.', $call->line, $call->code);
+
+                continue;
+            }
+
+            foreach ($call->keys as $key) {
+                if (!isset($props[$key])) {
+                    $problems[] = \sprintf('Line %d: %s has no prop "%s"; its props are %s.', $call->line, $call->code, $key, implode(', ', array_keys($props)));
+
+                    continue;
+                }
+
+                if (isset($call->props[$key], $own[$call->props[$key]])) {
+                    $problems = [...$problems, ...SiteComponentCallFit::mismatches($own[$call->props[$key]], $props[$key], $call)];
+                }
+            }
+        }
+
+        return $problems;
     }
 
     /**

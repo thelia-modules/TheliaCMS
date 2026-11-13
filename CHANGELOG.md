@@ -9,6 +9,21 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- **A component of the site draws another.** Its template may call
+  `cms_component('Carousel', {slides: props.photos})`: the component kept for
+  the whole site under that code is drawn there, inside its own element, so
+  its stylesheet applies, with the values given (the props of the caller, as
+  its template reads them). One level only: a component another draws calls
+  none itself, and a rendering draws 24 at most. When the component is saved,
+  the code must name a component kept for the site (not a prototype, not
+  itself), the keys must be props of it, and a prop of the caller passed as
+  it is must be of the type it reads (a list must give the fields its rows
+  need). A component another draws is not deleted, its sheet names who draws
+  it, and a new version of it that no longer takes what a caller passes is
+  not kept. The preview of a component prints the stylesheets of the ones it
+  draws. An import brings the components drawn by others first. The
+  generator of components is told the codes and props of the components it
+  may draw, and to draw them rather than write them again. See ADR 15.
 - **The page generator knows the icons.** The catalogue the model reads lists,
   once, the names an `icon` prop may hold: the icons of the media library
   (`cms:<name>`) then those of the theme, alphabetical, cut at 200 names with

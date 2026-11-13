@@ -25,7 +25,7 @@ use TheliaCMS\Model\CmsComponentQuery;
  * nothing but that its code is free. Only the `ready` ones are components of
  * the catalogue; a `draft` is the one an editor is still looking at.
  */
-final readonly class SiteComponentRepository
+final readonly class SiteComponentRepository implements KeptSiteComponents
 {
     public const string STATUS_DRAFT = 'draft';
 
@@ -92,6 +92,13 @@ final readonly class SiteComponentRepository
         $model->setStatus(self::STATUS_READY)
             ->setUpdatedBy($this->securityContext?->getAdminUser()?->getId())
             ->save();
+    }
+
+    public function kept(string $code): ?SiteComponent
+    {
+        $model = CmsComponentQuery::create()->filterByStatus(self::STATUS_READY)->findOneByCode($code);
+
+        return null === $model ? null : self::fromModel($model);
     }
 
     public function find(string $code): ?SiteComponent

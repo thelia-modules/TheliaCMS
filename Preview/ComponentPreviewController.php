@@ -21,6 +21,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use TheliaCMS\Content\EmbedFacade;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
+use TheliaCMS\Content\Site\SiteComponentCall;
 use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentSection;
 use TheliaCMS\Content\Site\SiteComponentStyles;
@@ -80,7 +81,15 @@ final readonly class ComponentPreviewController
         $section = new SiteComponentSection($component, $schema, $this->renderer, facade: $this->facade);
         // Inline, a `<` could close the element: the validator refuses one,
         // and an older row is escaped all the same.
-        $css = str_replace('<', '\\3c ', $this->styles->scoped($component));
+        // With the stylesheets of the components it draws: a candidate is not
+        // in the served stylesheet yet, and the preview prints its own only.
+        $css = str_replace('<', '\\3c ', implode("\n", array_unique(array_filter([
+            $this->styles->scoped($component),
+            ...array_map(
+                fn (SiteComponentCall $call): string => null === ($called = $this->components->kept($call->code)) ? '' : $this->styles->scoped($called),
+                $this->renderer->calls($component->template),
+            ),
+        ]))));
         $html = ('' === $css ? '' : '<style>'.$css.'</style>').$section->render($section->normalizeProps($component->sample), $locale);
 
         $page = new PublishedPage(
