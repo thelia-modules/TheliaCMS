@@ -57,6 +57,21 @@
     --cms-color-accent-surface: #f0f1f3;
 
     --cms-color-error: var(--color-error, #b3261e);
+
+    /* Headings. A theme gives the size of a heading on a phone (`-m`) and on
+       a wider screen (`-d`), as Flexy does, and switches at 48rem; one that
+       gives the wide size only keeps it on a phone. */
+    --cms-font-size-h1: var(--font-size-h1-m, var(--font-size-h1-d, 2rem));
+    --cms-font-size-h2: var(--font-size-h2-m, var(--font-size-h2-d, 1.5rem));
+    --cms-font-size-h3: var(--font-size-h3-m, var(--font-size-h3-d, 1.25rem));
+  }
+
+  @media (min-width: 48rem) {
+    :root {
+      --cms-font-size-h1: var(--font-size-h1-d, 2.5rem);
+      --cms-font-size-h2: var(--font-size-h2-d, 1.75rem);
+      --cms-font-size-h3: var(--font-size-h3-d, 1.375rem);
+    }
   }
 
   /* Both names: the module renders `cms-page__content`, and the class was
@@ -102,16 +117,16 @@
   }
 
   :is(.cms-page__content, .cms-page-content):not(:has(> [class*="cms-"])) h1 {
-    font-size: var(--font-size-h1-d, 2.5rem);
+    font-size: var(--cms-font-size-h1);
   }
 
   :is(.cms-page__content, .cms-page-content):not(:has(> [class*="cms-"])) h2 {
-    font-size: var(--font-size-h2-d, 1.75rem);
+    font-size: var(--cms-font-size-h2);
     margin-top: 1.5rem;
   }
 
   :is(.cms-page__content, .cms-page-content):not(:has(> [class*="cms-"])) h3 {
-    font-size: var(--font-size-h3-d, 1.375rem);
+    font-size: var(--cms-font-size-h3);
     margin-top: 1rem;
   }
 
@@ -141,15 +156,15 @@
   }
 
   .cms-richtext h1 {
-    font-size: var(--font-size-h1-d, 2.5rem);
+    font-size: var(--cms-font-size-h1);
   }
 
   .cms-richtext h2 {
-    font-size: var(--font-size-h2-d, 1.75rem);
+    font-size: var(--cms-font-size-h2);
   }
 
   .cms-richtext h3 {
-    font-size: var(--font-size-h3-d, 1.375rem);
+    font-size: var(--cms-font-size-h3);
   }
 
   .cms-richtext :is(ul, ol) {
@@ -210,7 +225,7 @@
 
   .cms-columns__title {
     margin: 0 0 2rem;
-    font-size: var(--font-size-h2-d, 1.75rem);
+    font-size: var(--cms-font-size-h2);
     font-weight: var(--font-weight-h2, 600);
     line-height: 1.2;
   }
@@ -268,7 +283,7 @@
 
   .cms-columns__heading {
     margin: 0 0 0.5rem;
-    font-size: var(--font-size-h3-d, 1.375rem);
+    font-size: var(--cms-font-size-h3);
     font-weight: var(--font-weight-h2, 600);
     line-height: 1.25;
   }
@@ -748,7 +763,7 @@
   .cms-page__title {
     margin: 0;
     color: var(--cms-color-text);
-    font-size: var(--font-size-h1-d, 2.5rem);
+    font-size: var(--cms-font-size-h1);
     font-weight: var(--font-weight-h1, 700);
     line-height: 1.15;
     text-wrap: balance;
@@ -803,7 +818,7 @@
 
   .cms-page-list__title {
     margin: 0 0 2rem;
-    font-size: var(--font-size-h2-d, 1.75rem);
+    font-size: var(--cms-font-size-h2);
     font-weight: var(--font-weight-h2, 600);
     line-height: 1.2;
   }
@@ -843,7 +858,7 @@
 
   .cms-page-card__title {
     margin: 0;
-    font-size: var(--font-size-h3-d, 1.375rem);
+    font-size: var(--cms-font-size-h3);
     font-weight: var(--font-weight-h3, 600);
     line-height: 1.25;
   }

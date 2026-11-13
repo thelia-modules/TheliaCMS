@@ -9,6 +9,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- **Headings at the size of a phone on a phone.** The headings the blocks
+  draw (free text, columns, list of pages, the title of the page when the
+  module draws it) took the size the theme gives a wide screen
+  (`--font-size-h2-d`) on every screen: on a phone, a heading of a section
+  stood larger than the title of the page (36px against 28px on Flexy). They
+  take the size the theme gives a phone (`--font-size-h2-m`) below 48rem, as
+  the theme does, and the wide size from there; a theme that gives the wide
+  size only keeps it.
 - **Saving a card of the SEO of the modules comes back to the page.** The
   calls the scripts of the back office send (address of the page, media
   library, tree of the pages, menus, writing aid) said nothing of being
