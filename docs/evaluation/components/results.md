@@ -189,9 +189,20 @@ what the generator wrote:
   (`.figure__value`) in `--cms-color-accent`, `#ff7036` on white, 2.75:1
   (nodes read by axe on the previews of trials 1 and 2).
 
-A fix of those two components reaches every caller at its next drawing: that
-is what composing is for. The oracle judges the whole drawing, the drawn
-components included.
+Both were fixed in `seed.json` the same day (the track of the carousel in a
+positioned `carousel__viewport` with `tabindex="0"`, `role="region"` and the
+title as its name; the figures in `--cms-color-text`), imported again on the
+host (`thelia_cms:import --replace`), and the browser alone played again on
+the 9 trials of round 4, with no new call: 9 of 9 keep the contract. The fix
+of two components reached every component that draws them, which is what
+composing is for. The oracle judges the whole drawing, the drawn components
+included.
+
+| Case | Trials | Outcomes | Kept the contract | Corrections | Copied a target | Mean cost USD |
+|---|---|---|---|---|---|---|
+| compose-quote-figures | 3 | 3 component | 3/3 | 0 | - | 0.051 |
+| compose-steps-faq | 3 | 3 component | 3/3 | 0 | - | 0.044 |
+| compose-text-carousel | 3 | 3 component | 3/3 | 0 | - | 0.057 |
 
 ## Findings
 
