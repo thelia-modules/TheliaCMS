@@ -2088,4 +2088,11 @@ return [
     'The video could not be converted. It may be damaged or in a format ffmpeg cannot read.' => 'The video could not be converted. It may be damaged or in a format ffmpeg cannot read.',
     'The video file is missing from the library.' => 'The video file is missing from the library.',
     'The video could not be converted, for a reason the server did not give.' => 'The video could not be converted, for a reason the server did not give.',
+    'A heading on its own, between two sections: it opens a part of the page. Level 2 under the title of the page, level 3 under a heading of level 2, never a level skipped.' => 'A heading on its own, between two sections: it opens a part of the page. Level 2 under the title of the page, level 3 under a heading of level 2, never a level skipped.',
+    'Level' => 'Level',
+    'Level 2, a part of the page' => 'Level 2, a part of the page',
+    'Level 3, under a heading of level 2' => 'Level 3, under a heading of level 2',
+    'Level 4, under a heading of level 3' => 'Level 4, under a heading of level 3',
+    'The title of the page is the only heading of level 1.' => 'The title of the page is the only heading of level 1.',
+    'A heading on its own, at level 2, 3 or 4.' => 'A heading on its own, at level 2, 3 or 4.',
 ];

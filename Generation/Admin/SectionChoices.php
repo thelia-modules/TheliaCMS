@@ -55,6 +55,7 @@ final readonly class SectionChoices
      */
     private const array KNOWN = [
         'cms:richtext' => ['family' => self::TEXT, 'icon' => 'text-paragraph', 'label' => 'Free text', 'summary' => 'Paragraphs, headings and lists.'],
+        'cms:heading' => ['family' => self::TEXT, 'icon' => 'type-h2', 'label' => 'Heading', 'summary' => 'A heading on its own, at level 2, 3 or 4.'],
         'cms:image' => ['family' => self::TEXT, 'icon' => 'image', 'label' => 'Image', 'summary' => 'One picture of the library, with an optional caption.'],
         'cms:columns' => ['family' => self::TEXT, 'icon' => 'layout-three-columns', 'label' => 'Columns', 'summary' => 'Two to four columns: an image, a heading and a short text each.'],
         'cms:highlights' => ['family' => self::TEXT, 'icon' => 'layout-sidebar-inset', 'label' => 'Highlights', 'summary' => 'One to three blocks: a picture with a title, a catchphrase and a button each.'],
