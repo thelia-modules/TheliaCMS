@@ -701,7 +701,8 @@ final class SectionEditScreenTest extends AdminScreenTestCase
             ->save();
 
         $screen = $this->screen($this->url($page));
-        $list = $screen->filter('[data-testid="cms-section-edit-row"] [data-cms-items]');
+        // The list of products, by its name: the band has another one, its button (an object, one row at most).
+        $list = $screen->filter('[data-testid="cms-section-edit-row"] [data-cms-items][data-cms-items-name="cms_section_row[product_ids]"]');
         self::assertSame(1, $list->count());
         self::assertStringContainsString('cms_section_row[product_ids][__name__]', (string) $list->attr('data-prototype'), 'The rows are added from the prototype.');
 
