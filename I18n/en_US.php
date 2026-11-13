@@ -534,6 +534,7 @@ return [
     'Search by email address' => 'Search by email address',
     'Search engine indexing' => 'Search engine indexing',
     'Search engines and sharing' => 'Search engines and sharing',
+    'Search engines (modules)' => 'Search engines (modules)',
     'Seconds a shared cache may keep a page' => 'Seconds a shared cache may keep a page',
     'Section' => 'Section',
     'Select a block in the page to change its text, its spacing and its colours here.' => 'Select a block in the page to change its text, its spacing and its colours here.',

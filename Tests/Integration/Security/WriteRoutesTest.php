@@ -230,7 +230,13 @@ final class WriteRoutesTest extends AdminScreenTestCase
 
                 ++$posting;
 
-                if (1 !== $form->filter('input[name="_token"]')->count()) {
+                // The token of the module, or else the one of a Symfony form
+                // another module draws on the screen (SEOne in the page editor:
+                // `seone_form[_token]`), checked by that form when it is posted.
+                $tokens = $form->filter('input[name="_token"]')->count();
+                $formToken = $form->filter('input[type="hidden"][name$="[_token]"]')->count();
+
+                if (1 !== $tokens && !(0 === $tokens && 1 === $formToken)) {
                     $offending[] = \sprintf('%s: the form posting to %s carries no token', $url, (string) $form->attr('action'));
                 }
             });
