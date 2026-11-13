@@ -97,6 +97,12 @@ final readonly class SectionFormBuilder
         'thumbnail_image_id' => 'Poster image',
         'tag' => 'Heading level',
         'container' => 'Width',
+        'strong_text' => 'Text in bold',
+        'link_label' => 'Text of the link',
+        'img_width' => 'Width of the picture',
+        'img_height' => 'Height of the picture',
+        'wish_button' => 'Wishlist button',
+        'in_wishlist' => 'Drawn as in the wishlist',
     ];
 
     public function __construct(
@@ -386,9 +392,10 @@ final readonly class SectionFormBuilder
         ];
 
         // A prop of the theme labelled by its bare name gets words of its
-        // own, translated like the rest of the screen.
+        // own, translated like the rest of the screen; the `id` of a row
+        // that names a record reads as the kind of record.
         if ($prop->label === $prop->name || '' === $prop->label) {
-            $common['label'] = self::humanize($prop->name);
+            $common['label'] = self::humanize('id' === $prop->name && null !== $prop->record ? $prop->record : $prop->name);
             $common['label_translation_parameters'] = [];
             $common['translation_domain'] = 'theliacms';
         }

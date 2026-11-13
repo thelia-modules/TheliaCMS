@@ -230,6 +230,9 @@
     {% set lines = texts|filter(child => child.vars.attr['data-cms-html'] is not defined) %}
     {% set paragraphs = texts|filter(child => child.vars.attr['data-cms-html'] is defined) %}
     {% set named = lines|filter(child => (child.vars.value ?? '')|trim is not empty)|first ?: paragraphs|filter(child => (child.vars.value ?? '')|striptags|trim is not empty)|first ?: lines|first ?: paragraphs|first %}
+    {# A row of records alone (the products of a band) reads by the name of
+       the first one: the script draws it once the picker has it. #}
+    {% set record = named ? null : item.children|filter(child => child.vars.attr['data-cms-picker'] is defined)|first %}
     {# A space before each tag, so two paragraphs do not run into one word. #}
     {% set words = named ? (named.vars.value ?? '')|replace({'<': ' <'})|striptags|trim : '' %}
     {% set empty = 'A row without a title'|trans({}, 'theliacms') %}
@@ -239,7 +242,7 @@
         <span class="cms-content__item-grip cms-content__item-row-grip" data-cms-item-grip hidden
               title="{{ 'Drag to move this row'|trans({}, 'theliacms') }}" aria-hidden="true"><i class="bi bi-grip-vertical"></i></span>
         <details class="cms-content__item-fold" {{ item.vars.value is empty or not item.vars.valid ? 'open' }}>
-            <summary class="cms-content__item-summary"><span class="cms-content__item-title" data-cms-item-title data-cms-item-empty="{{ empty|e('html_attr') }}" {% if named %}data-cms-item-source="{{ named.vars.id }}"{% endif %}>{{ words is not empty ? words|slice(0, 80) : empty }}</span></summary>
+            <summary class="cms-content__item-summary"><span class="cms-content__item-title" data-cms-item-title data-cms-item-empty="{{ empty|e('html_attr') }}" {% if named %}data-cms-item-source="{{ named.vars.id }}"{% elseif record %}data-cms-item-source="{{ record.vars.id }}_picker"{% endif %}>{{ words is not empty ? words|slice(0, 80) : empty }}</span></summary>
             <div class="cms-content__item-fields">
                 {{ _self.fields(item) }}
             </div>
