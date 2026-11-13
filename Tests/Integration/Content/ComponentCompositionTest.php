@@ -57,6 +57,7 @@ final class ComponentCompositionTest extends AdminScreenTestCase
     public function testTheCatalogueDrawsTheComponentInsideTheOneThatCallsIt(): void
     {
         $this->keepBoth();
+        $this->getService(SectionCatalog::class)->reset();
         $row = $this->getService(SectionCatalog::class)->find('Site:ComposedRow');
 
         self::assertNotNull($row);
@@ -120,7 +121,7 @@ final class ComponentCompositionTest extends AdminScreenTestCase
         self::assertSame("  Drawable: `cms_component('ComposedQuote', {…})`, props `said` (text).", $after('Site:ComposedQuote'));
         self::assertStringNotContainsString('Drawable', $after('Site:ComposedRow'), 'A component that draws another is drawn by none.');
         self::assertStringNotContainsString('Drawable', $after('Site:ComposedDraft'), 'A prototype is drawn by none.');
-        self::assertStringContainsString("cms_component('Carousel', {slides: props.photos, title: props.heading})", implode("\n", array_column($prompt->system(), 'text')));
+        self::assertStringContainsString("cms_component('Carousel', {slides: props.photos, title: props.heading, columns: 3})", implode("\n", array_column($prompt->system(), 'text')));
     }
 
     public function testAGeneratedComponentThatDrawsAKeptOneEndsOnACandidateThatDrawsBoth(): void

@@ -86,7 +86,7 @@ final readonly class SiteComponentSection implements SectionDefinitionInterface
     public function render(array $props, string $locale): string
     {
         try {
-            $html = $this->renderer->render($this->component->template, self::forTemplate($this->schema->props, $props, $this->facade, $locale));
+            $html = $this->renderer->render($this->component->template, self::forTemplate($this->schema->props, $props, $this->facade, $locale), $props, $locale);
         } catch (Error $exception) {
             $this->logger?->error('TheliaCMS: the component {name} of the site cannot be drawn: {message}', ['name' => $this->name(), 'message' => $exception->getMessage()]);
 
@@ -96,7 +96,7 @@ final readonly class SiteComponentSection implements SectionDefinitionInterface
         // Filtered here rather than only at publication: a draft and a preview
         // are drawn in the back office before that, and what a markup prop
         // holds or a template assembles is written by a model.
-        $html = (string) $this->sanitizer->html($html);
+        $html = $this->renderer->placeTheme((string) $this->sanitizer->html($html));
 
         if ('' === trim($html)) {
             return '';

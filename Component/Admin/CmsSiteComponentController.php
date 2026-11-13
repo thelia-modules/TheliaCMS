@@ -24,6 +24,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use TheliaCMS\Content\Admin\SectionUsageFinder;
 use TheliaCMS\Content\SectionAvailability;
+use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentCallers;
@@ -82,6 +83,7 @@ final readonly class CmsSiteComponentController
         private SiteComponentPermission $permission,
         private SitePropRows $propRows,
         private SiteComponentCallers $callers,
+        private SectionCatalog $catalog,
     ) {
     }
 
@@ -233,6 +235,9 @@ final readonly class CmsSiteComponentController
             }
 
             $this->components->save($component, SiteComponentRepository::STATUS_READY, $replacing);
+            // The check of its calls may have built the catalogue of this
+            // request: the drafts are drawn again with the version kept.
+            $this->catalog->reset();
         } catch (InvalidSiteComponentException $exception) {
             $this->support->flash($request, 'danger', implode(' ', $exception->problems));
 

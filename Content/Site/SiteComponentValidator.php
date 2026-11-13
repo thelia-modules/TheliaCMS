@@ -40,6 +40,7 @@ final readonly class SiteComponentValidator
         private SiteCssScoper $scoper = new SiteCssScoper(),
         private PublishedContentSanitizer $sanitizer = new PublishedContentSanitizer(),
         private ?KeptSiteComponents $components = null,
+        private ?DrawableSections $sections = null,
     ) {
     }
 
@@ -159,7 +160,7 @@ final readonly class SiteComponentValidator
     {
         $calls = $this->renderer->calls($component->template);
 
-        if (null === $this->components) {
+        if (null === $this->components || null === $this->sections) {
             return [];
         }
 
@@ -182,20 +183,24 @@ final readonly class SiteComponentValidator
                 continue;
             }
 
-            $called = $this->components->kept($call->code);
+            // A component of the site is read where it is kept, never from a
+            // catalogue built earlier in the request; one of the theme from
+            // what the catalogue offers.
+            $kept = str_contains($call->code, ':') ? null : $this->components->kept($call->code);
+            $called = str_contains($call->code, ':') ? $this->sections->find($call->name()) : null;
 
-            if (null === $called) {
-                $problems[] = \sprintf('Line %d: the site keeps no component %s: a component draws only the components kept for the whole site, by their code.', $call->line, $call->code);
+            if (null === $kept && null === $called) {
+                $problems[] = \sprintf('Line %d: the catalogue offers no component %s: a component draws a component kept for the whole site, by its code, or a component of the theme, by its name, as the catalogue offers them.', $call->line, $call->code);
 
                 continue;
             }
 
-            if ([] !== $this->renderer->calls($called->template)) {
+            if (null !== $kept && [] !== $this->renderer->calls($kept->template)) {
                 $problems[] = \sprintf('Line %d: %s draws other components itself, and a component draws others one level deep only: draw what it draws next to it instead.', $call->line, $call->code);
             }
 
             try {
-                $props = SiteComponentCallFit::byName($this->props->read($called->props)->props);
+                $props = SiteComponentCallFit::byName(null !== $kept ? $this->props->read($kept->props)->props : $called->schema()->props);
             } catch (InvalidSiteComponentException) {
                 $problems[] = \sprintf('Line %d: the props of %s no longer read: it cannot be drawn.', $call->line, $call->code);
 

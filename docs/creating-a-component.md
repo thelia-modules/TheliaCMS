@@ -361,22 +361,26 @@ What the generator writes, and what the site checks
   after the one of the blocks.
 - **A sample** that fills every prop: what the preview, the toolkit and the
   generator of pages are shown.
-- **Other components of the site, drawn inside it** (ADR 15):
-  `{{ cms_component('Carousel', {slides: props.photos, title: props.heading}) }}`
-  draws the component kept for the whole site under that code, inside its
-  own `cms-site--<code>` element, with the values given in the form the
-  caller's template reads its props in (an address for an image). The code
-  is written between quotes and the values as a mapping: the validator reads
-  both in the tree of the template. It refuses a prototype, a code the site
-  does not keep, the component itself, a component that draws others (one
-  level only), a key that is not a prop of the drawn one, and a prop of the
-  caller passed as it is that does not read as the prop it fills (another
-  type, a list whose rows lack a required field). A rendering draws 24
-  components at most; a code that disappears draws nothing and is logged.
-  What the drawn component shows is filled through the props of the caller,
-  so the editor form, the translation and the media usage read the caller
-  alone. Its stylesheet applies as on any page; the caller styles its own
-  parts.
+- **Other components, drawn inside it** (ADR 15, ADR 16):
+  `{{ cms_component('Carousel', {slides: props.photos, title: props.heading, columns: 3}) }}`
+  draws the component kept for the whole site under that code, or a
+  component of the theme the catalogue offers under its name
+  (`cms_component('Layouts:Subheader:Base', {title: props.heading, tag: 'h2'})`).
+  A value is a prop of the caller, handed on as the page stores it (an id
+  for a picture), or a value written as it is (a text, a number, true or
+  false); the called component normalises it with its own schema and draws
+  it through its own section. The field of a row in a loop, a filter or any
+  other expression is refused. A component of the site is drawn inside its
+  own `cms-site--<code>` element; a component of the theme is drawn by the
+  theme once the caller's markup is filtered, so the attributes its
+  controllers read are kept. The validator refuses a prototype, a name the
+  catalogue does not offer, the component itself, a component of the site
+  that draws others (one level only), a key the called one does not declare,
+  and a prop of the caller that does not read as the prop it fills. A
+  rendering draws 24 components at most; a name that disappears or values
+  the schema refuses draw nothing and are logged. A component of the site
+  declares no `reference` prop: a component of the theme that reads records
+  (products, categories) can only be given the props the caller can hold.
 
 Making, changing and keeping a component take the settings and the custom
 code permissions. A new version of a kept component is refused while a page

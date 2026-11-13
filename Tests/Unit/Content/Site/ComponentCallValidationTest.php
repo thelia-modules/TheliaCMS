@@ -21,6 +21,7 @@ use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Content\Site\SitePropReader;
 use TheliaCMS\Content\Site\SiteTemplateRenderer;
+use TheliaCMS\Tests\Support\InMemoryDrawableSections;
 use TheliaCMS\Tests\Support\InMemorySiteComponents;
 
 /**
@@ -50,12 +51,13 @@ final class ComponentCallValidationTest extends TestCase
     public static function refusedCalls(): iterable
     {
         yield 'itself' => ['{{ cms_component("Row", {heading: props.heading}) }}', 'Line 1: the component draws itself.'];
-        yield 'a prototype' => ['{{ cms_component("Draft") }}', 'Line 1: the site keeps no component Draft'];
-        yield 'a code the site does not hold' => ['{{ cms_component("Slider") }}', 'Line 1: the site keeps no component Slider'];
+        yield 'a prototype' => ['{{ cms_component("Draft") }}', 'Line 1: the catalogue offers no component Draft'];
+        yield 'a code the site does not hold' => ['{{ cms_component("Slider") }}', 'Line 1: the catalogue offers no component Slider'];
         yield 'a component that draws others' => ['{{ cms_component("Calling") }}', 'Line 1: Calling draws other components itself'];
         yield 'a key the component does not declare' => ['{{ cms_component("Carousel", {pictures: props.photos}) }}', 'Line 1: Carousel has no prop "pictures"; its props are title, slides.'];
         yield 'a prop of another type' => ['{{ cms_component("Carousel", {title: props.photos}) }}', 'Line 1: props.photos is of type items, and the prop "title" of Carousel of type text.'];
         yield 'rows without a required field' => ['{{ cms_component("Carousel", {slides: props.links}) }}', 'Line 1: the rows of props.links have no "image", which the rows of "slides" of Carousel need'];
+        yield 'the field of a row' => ['{% for link in props.links %}{{ cms_component("Echo", {said: link.alt}) }}{% endfor %}', 'Line 1: cms_component passes "said" something else than a prop'];
         yield 'rows with a field of another type' => ['{{ cms_component("Carousel", {slides: props.wrong}) }}', 'Line 1: "image" of the rows of props.wrong is of type text, and Carousel reads it as of type image.'];
     }
 
@@ -111,6 +113,10 @@ final class ComponentCallValidationTest extends TestCase
             new SiteComponent('Draft', 'Draft', 'A prototype.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '<p>draft</p>'),
         ]);
 
-        return new SiteComponentValidator(new SitePropReader(), new SiteTemplateRenderer(null, $components), components: $components);
+        $sections = new InMemoryDrawableSections(array_values(array_filter($components->all(), static fn (SiteComponent $component): bool => null !== $components->kept($component->code))));
+        $renderer = new SiteTemplateRenderer(null, $sections);
+        $sections->renderer = $renderer;
+
+        return new SiteComponentValidator(new SitePropReader(), $renderer, components: $components, sections: $sections);
     }
 }

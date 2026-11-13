@@ -22,6 +22,7 @@ use TheliaCMS\Content\SectionDefinitionInterface;
 use TheliaCMS\Content\Site\SiteComponent;
 use TheliaCMS\Content\Site\SiteComponentSection;
 use TheliaCMS\Content\Site\SiteTemplateRenderer;
+use TheliaCMS\Content\Theme\ThemeComponentSection;
 use TheliaCMS\Front\BlockStyles;
 use TheliaCMS\Generation\ShopContext;
 use TheliaCMS\Skill\SkillRepository;
@@ -139,6 +140,8 @@ final readonly class ComponentPrompt
             );
         }
 
+        $offered = $this->catalog->offered();
+
         foreach ($this->catalog->all() as $name => $definition) {
             if (null !== $request->current && $name === $request->current->name()) {
                 continue;
@@ -146,7 +149,7 @@ final readonly class ComponentPrompt
 
             $lines[] = \sprintf('- `%s` (%s): %s', $name, $definition->label(), $definition->description());
 
-            if (null !== $drawable = $this->drawable($definition)) {
+            if (null !== $drawable = $this->drawable($definition, $offered)) {
                 $lines[] = '  '.$drawable;
             }
         }
@@ -186,17 +189,29 @@ final readonly class ComponentPrompt
     }
 
     /**
-     * How a component of the site kept for the whole site is drawn inside
-     * another: its code and its props, the fields of its rows included; null
-     * for anything else, and for a component that draws others itself.
+     * How a component is drawn inside another (ADR 15, ADR 16): a component
+     * of the site kept for the whole site by its code, a component of the
+     * theme the catalogue offers by its name, with its props, the fields of
+     * its rows included; null for anything else, and for a component of the
+     * site that draws others itself.
+     *
+     * @param array<string, SectionDefinitionInterface> $offered
      */
-    private function drawable(SectionDefinitionInterface $definition): ?string
+    private function drawable(SectionDefinitionInterface $definition, array $offered): ?string
     {
-        if (!$definition instanceof SiteComponentSection || $definition->prototype || [] !== $this->renderer->calls($definition->component->template)) {
+        if ($definition instanceof SiteComponentSection) {
+            if ($definition->prototype || [] !== $this->renderer->calls($definition->component->template)) {
+                return null;
+            }
+
+            $name = $definition->component->code;
+        } elseif ($definition instanceof ThemeComponentSection && isset($offered[$definition->name()])) {
+            $name = $definition->name();
+        } else {
             return null;
         }
 
-        return \sprintf('Drawable: `cms_component(\'%s\', {…})`, props %s.', $definition->component->code, self::propsLine($definition->schema()->props));
+        return \sprintf('Drawable: `cms_component(\'%s\', {…})`, props %s.', $name, self::propsLine($definition->schema()->props));
     }
 
     /**
@@ -352,7 +367,7 @@ final readonly class ComponentPrompt
             '',
             \sprintf('- Tags: %s. Filters: %s. Tests: %s. Functions: %s. Nothing else: no include, no macro, no block, no `raw`.', implode(', ', SiteTemplateRenderer::TAGS), implode(', ', SiteTemplateRenderer::FILTERS), implode(', ', SiteTemplateRenderer::TESTS), implode(', ', SiteTemplateRenderer::FUNCTIONS)),
             \sprintf('- At most %d `for` inside each other: loop over a list, and over the list of an item, never deeper.', SiteTemplateRenderer::MAX_LOOP_DEPTH),
-            \sprintf("- A component of the site the list marks \"Drawable\" is placed inside yours with `%s('Carousel', {slides: props.photos, title: props.heading})`, printed where it goes: its code between quotes, then a mapping of its props to values (your props, the fields of a row in a loop, or a literal). What it shows is filled through your props: declare them with the type its props have, a list with rows of the fields its rows read, under the names they have there. It is drawn inside its own element with its own stylesheet: your stylesheet styles your parts, never what it draws. A component you draw draws none, and %d are drawn at most.", SiteTemplateRenderer::CALL, SiteTemplateRenderer::MAX_CALLS),
+            \sprintf("- A component the list marks \"Drawable\" is placed inside yours with `%s('Carousel', {slides: props.photos, title: props.heading, columns: 3})`, printed where it goes: the code of a component of the site or the name of a component of the theme, as the list writes it, between quotes; then a mapping of its props to values, each one of your props (`props.photos`, handed on as the page stores it) or a value written as it is (a text, a number, true or false), never the field of a row in a loop nor a computed value. What it shows is filled through your props: declare them with the type its props have, a list with rows of the fields its rows read, under the names they have there. It is drawn inside its own element with its own stylesheet: your stylesheet styles your parts, never what it draws. A component you draw draws none, and %d are drawn at most.", SiteTemplateRenderer::CALL, SiteTemplateRenderer::MAX_CALLS),
             '- Text is escaped when printed; an `html` prop is printed as it is.',
             '- No text of its own outside what it prints: the template writes markup and props, nothing else.',
             '- No `script`, `style`, `iframe`, `object`, `embed`, `form`, `link`, `meta`, no `on…` attribute, no `javascript:`. A YouTube, Vimeo or Dailymotion video is an `embed` prop, not an `iframe`.',

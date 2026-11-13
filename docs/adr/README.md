@@ -21,3 +21,4 @@ decision supersedes it with a new file.
 | [13](0013-videos-are-converted-in-the-background.md) | Videos are converted in the background, under the same id |
 | [14](0014-an-icon-is-a-named-svg-of-the-library.md) | An icon is a named SVG of the library |
 | [15](0015-a-component-of-the-site-draws-another-by-its-code.md) | A component of the site draws another by its code |
+| [16](0016-a-called-component-reads-the-stored-values-of-its-caller.md) | A called component reads the stored values of its caller |

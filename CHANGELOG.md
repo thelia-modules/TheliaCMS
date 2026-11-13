@@ -7,6 +7,24 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added
+
+- **A component of the site draws a component of the theme.**
+  `cms_component('Layouts:Subheader:Base', {title: props.heading, tag: 'h2'})`
+  draws a component of the theme the catalogue offers, by the theme, once
+  the markup of the caller is filtered: the attributes its controllers read
+  are kept. The generator of components is told which components of the
+  theme it may draw, with their props. See ADR 16.
+
+### Changed
+
+- **A called component reads what the page stores.** The values a
+  `cms_component` call passes are props of the caller, handed on as stored
+  (an id for a picture, with its framing), or values written as they are;
+  the called component normalises them with its own schema. A field of a
+  row in a loop or a computed value is no longer accepted: a component that
+  did so is refused at its next save.
+
 ## [2.27.0] - 2026-11-13
 
 ### Added
