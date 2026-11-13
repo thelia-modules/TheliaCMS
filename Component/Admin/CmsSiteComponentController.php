@@ -26,6 +26,7 @@ use TheliaCMS\Content\Admin\SectionUsageFinder;
 use TheliaCMS\Content\SectionAvailability;
 use TheliaCMS\Content\Site\InvalidSiteComponentException;
 use TheliaCMS\Content\Site\SiteComponent;
+use TheliaCMS\Content\Site\SiteComponentCallers;
 use TheliaCMS\Content\Site\SiteComponentPermission;
 use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentUsage;
@@ -80,6 +81,7 @@ final readonly class CmsSiteComponentController
         private CmsPageWriter $writer,
         private SiteComponentPermission $permission,
         private SitePropRows $propRows,
+        private SiteComponentCallers $callers,
     ) {
     }
 
@@ -222,8 +224,12 @@ final readonly class CmsSiteComponentController
 
             // The pages may have changed since the candidate was written: what
             // they hold now is what the version must still take.
-            if (null !== $replacing && [] !== $breakages = $this->pagesUsing->breakages($component, $this->props->read($component->props))) {
-                throw InvalidSiteComponentException::because($breakages);
+            if (null !== $replacing) {
+                $schema = $this->props->read($component->props);
+
+                if ([] !== $breakages = [...$this->pagesUsing->breakages($component, $schema), ...$this->callers->breakages($component, $schema)]) {
+                    throw InvalidSiteComponentException::because($breakages);
+                }
             }
 
             $this->components->save($component, SiteComponentRepository::STATUS_READY, $replacing);
@@ -270,6 +276,7 @@ final readonly class CmsSiteComponentController
             'preview_url' => $this->previews->component($component, $request->getLocale()),
             'history' => $this->candidates->history($id),
             'pages' => $this->usage->pageCounts()[$kept->name()] ?? 0,
+            'callers' => $this->callers->of($component),
             'prototype' => $prototype,
             'offered' => !$prototype && $this->availability->isOffered($kept->name()),
             'may_make' => $this->mayMake(),
@@ -345,6 +352,13 @@ final readonly class CmsSiteComponentController
 
         if ($pages > 0) {
             $this->support->flash($request, 'danger', $this->support->translate('"%label%" is used by %count% page(s): take it out of them before deleting it.', ['%label%' => $kept->label, '%count%' => $pages]));
+
+            return $this->support->redirect('admin.cms.components.site.show', ['component' => $component]);
+        }
+
+        // A component that another draws would leave it drawing nothing there.
+        if ([] !== $callers = $this->callers->of($component)) {
+            $this->support->flash($request, 'danger', $this->support->translate('"%label%" is drawn by %components%: take it out of them before deleting it.', ['%label%' => $kept->label, '%components%' => implode(', ', array_map(static fn (SiteComponent $caller): string => $caller->label, $callers))]));
 
             return $this->support->redirect('admin.cms.components.site.show', ['component' => $component]);
         }

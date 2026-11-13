@@ -1,6 +1,6 @@
 # 15. A component of the site draws another by its code
 
-Date: 2026-11-13. Status: proposed.
+Date: 2026-11-13. Status: accepted.
 
 ## Context
 
