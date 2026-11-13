@@ -29,6 +29,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   of a component that names records takes their ids, so the toolkit shows a
   band of related products rather than an empty one. A sample naming a
   record the shop does not show goes back for correction.
+- **A component of the theme takes an object.** A prop documented
+  `{href: string, label: string}|null` (the button under a band of related
+  products) is filled in the form as one row of those fields and handed to
+  the component as that row; it was a line of text, which made the component
+  fail and the band vanish. A component of the site passes it from a list of
+  one row, an address reading as a text; a call that passes a text is
+  refused when the component is saved.
 
 ### Changed
 
