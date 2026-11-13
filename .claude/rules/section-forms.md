@@ -31,3 +31,4 @@ Le formulaire d'une section, dans le tiroir de l'écran de contenu d'une page, e
 - Rangement en grille : `.cms-content__item-fields`, `.cms-content__field` (subgrid) dans `content-editor.css`.
 - Une ligne de liste : macro `item` de `_section_form.html.twig` (repli sous le numéro et le premier texte, outils haut/bas/✕ hors du `summary`).
 - Les attributs qui décident de la largeur d'un champ : `data-cms-long`, `data-cms-wide` posés par `SectionFormBuilder::addProp()`.
+- Twig : une fonction fléchée rangée par `{% set %}` ne s'appelle pas (`isLink(child)` échoue) ; écrire la condition dans le `filter`, ou filtrer une liste puis tester `child not in liste` (macro `item`).
