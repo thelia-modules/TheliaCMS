@@ -102,6 +102,13 @@ from two places:
   field per row, and stays a list of strings, `["one", "two"]`, in the
   document and in the component; a blank row is dropped. `product[]` and the
   other lists of records are not affected, see below.
+- an object, `{href: string, label: string}` (with `|null` when it may be
+  left out), is one row of those fields: the form offers one row at most,
+  typed and helped like the rows of a list (`{# @prop button.label What the
+  button says #}`), the document stores a list of one row, and the component
+  receives the row, `button.href`, `button.label`, or nothing when the row is
+  empty (its own default plays). The example of the theme writes the object
+  as it is. An object whose fields a row cannot hold stays a JSON prop.
 - a prop may name what the site holds: `image` is a picture of the media
   library (its id, the path the library serves it from, such as
   `/image-library/17/full/max/0/default.webp`, or the `https://` address of a

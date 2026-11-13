@@ -198,6 +198,29 @@ final class ComponentPropsReaderTest extends TestCase
         self::assertSame([], $read['id_lists'], 'Rows of fields are not lists of ids.');
     }
 
+    public function testAnObjectIsReadAsOneRowOfItsFields(): void
+    {
+        $read = $this->reader()->readSource(<<<'TWIG'
+            {# @prop button {href: string, label: string}|null The button under the band #}
+            {# @prop button.label What the button says #}
+            {# @prop cta {href: string, label: string} A link that has to be there #}
+            {# @prop raw {nested: list<string>} An object whose fields a row cannot hold #}
+            {% props button = null, cta, raw = null %}
+            TWIG);
+        $props = $this->byName($read);
+
+        self::assertSame(PropType::Items, $props['button']->type);
+        self::assertSame([0, 1], [$props['button']->minItems, $props['button']->maxItems], 'An object is one row at most.');
+        self::assertFalse($props['button']->required);
+        self::assertSame(['href', 'label'], array_map(static fn (Prop $field): string => $field->name, $props['button']->items));
+        self::assertSame(PropType::Text, $props['button']->items[0]->type);
+        self::assertSame('What the button says', $props['button']->items[1]->help);
+        self::assertSame([1, 1], [$props['cta']->minItems, $props['cta']->maxItems], 'An object without default nor null needs its row.');
+        self::assertSame(PropType::Json, $props['raw']->type, 'An object a row cannot hold stays JSON, never a text.');
+        self::assertSame(['button', 'cta'], $read['objects']);
+        self::assertSame([], $read['id_lists']);
+    }
+
     public function testAListMayDeclareHowManyRowsItHolds(): void
     {
         $props = $this->byName($this->reader()->readSource(<<<'TWIG'

@@ -69,7 +69,7 @@ final readonly class ThemeComponentSections implements SectionProviderInterface,
                 $twigNames[$prop->name] = self::twigName($prop->name);
             }
 
-            yield new ThemeComponentSection($component, $read['description'], $schema, $twigNames, $this->renderer, $read['id_lists'], self::example($declaration->examples[$component] ?? []), $this->localeSwitcher, $this->packages, $this->icons, $this->logger);
+            yield new ThemeComponentSection($component, $read['description'], $schema, $twigNames, $this->renderer, $read['id_lists'], self::example($declaration->examples[$component] ?? [], $read['objects']), $this->localeSwitcher, $this->packages, $this->icons, $this->logger, $read['objects']);
         }
     }
 
@@ -94,18 +94,21 @@ final readonly class ThemeComponentSections implements SectionProviderInterface,
 
     /**
      * The example of the theme, read with the names the props of a document
-     * use: the theme writes `embedUrl` as the component does.
+     * use: the theme writes `embedUrl` as the component does, and an object
+     * as an object, which a document holds as a list of one row.
      *
      * @param array<string, mixed> $props
+     * @param list<string>         $objects the props that hold one object
      *
      * @return array<string, mixed>
      */
-    private static function example(array $props): array
+    private static function example(array $props, array $objects): array
     {
         $example = [];
 
         foreach ($props as $name => $value) {
-            $example[ComponentPropsReader::propName((string) $name)] = $value;
+            $name = ComponentPropsReader::propName((string) $name);
+            $example[$name] = \in_array($name, $objects, true) ? ThemeComponentSection::objectAsRows($value) : $value;
         }
 
         return $example;

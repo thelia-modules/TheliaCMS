@@ -60,6 +60,7 @@ final class ComponentCallValidationTest extends TestCase
         yield 'the field of a row' => ['{% for link in props.links %}{{ cms_component("Echo", {said: link.alt}) }}{% endfor %}', 'Line 1: cms_component passes "said" something else than a prop'];
         yield 'rows naming another record' => ['{{ cms_component("Shelf", {products: props.categories}) }}', 'Line 1: "id" of the rows of props.categories names a category, and Shelf reads a product.'];
         yield 'a reference to another record' => ['{{ cms_component("Shelf", {lead: props.section}) }}', 'Line 1: props.section names a category, and the prop "lead" of Shelf a product.'];
+        yield 'a text for an object' => ['{{ cms_component("Band", {button: props.heading}) }}', 'Line 1: props.heading is of type text, and the prop "button" of Band of type items.'];
         yield 'rows with a field of another type' => ['{{ cms_component("Carousel", {slides: props.wrong}) }}', 'Line 1: "image" of the rows of props.wrong is of type text, and Carousel reads it as of type image.'];
     }
 
@@ -93,6 +94,13 @@ final class ComponentCallValidationTest extends TestCase
         self::assertSame('Row', $kept->code);
     }
 
+    public function testAnObjectIsHandedOnAsOneRowWhoseAddressReadsAsAText(): void
+    {
+        $kept = $this->validator()->validate($this->row('{{ cms_component("Band", {button: props.cta}) }}'));
+
+        self::assertSame('Row', $kept->code);
+    }
+
     public function testATextAndAMarkupPropReadAsEachOther(): void
     {
         $kept = $this->validator()->validate($this->row('{{ cms_component("Echo", {said: props.body}) }}'));
@@ -112,6 +120,7 @@ final class ComponentCallValidationTest extends TestCase
             ['name' => 'categories', 'type' => 'items', 'label' => 'Categories', 'items' => [['name' => 'id', 'type' => 'reference', 'label' => 'Category', 'record' => 'category', 'required' => true]]],
             ['name' => 'star', 'type' => 'reference', 'label' => 'Product', 'record' => 'product'],
             ['name' => 'section', 'type' => 'reference', 'label' => 'Category', 'record' => 'category'],
+            ['name' => 'cta', 'type' => 'items', 'label' => 'Button', 'max' => 1, 'items' => [['name' => 'href', 'type' => 'url', 'label' => 'Address', 'required' => true], ['name' => 'label', 'type' => 'text', 'label' => 'Label', 'required' => true]]],
         ], ['heading' => 'Photos', 'body' => '<p>Hello</p>', 'photos' => [['image' => 'https://example.com/a.jpg', 'alt' => 'A']]], '<div class="row"><h2>{{ props.heading }}</h2>'.$call.'</div>');
     }
 
@@ -123,6 +132,9 @@ final class ComponentCallValidationTest extends TestCase
                 ['name' => 'lead', 'type' => 'reference', 'label' => 'Product first', 'record' => 'product'],
                 ['name' => 'products', 'type' => 'items', 'label' => 'Products', 'items' => [['name' => 'id', 'type' => 'reference', 'label' => 'Product', 'record' => 'product', 'required' => true]]],
             ], [], '<ul data-lead="{{ props.lead }}">{% for product in props.products %}<li>{{ product.id }}</li>{% endfor %}</ul>'),
+            new SiteComponent('Band', 'Band', 'A band with a button.', [
+                ['name' => 'button', 'type' => 'items', 'label' => 'Button', 'max' => 1, 'items' => [['name' => 'href', 'type' => 'text', 'label' => 'Address', 'required' => true], ['name' => 'label', 'type' => 'text', 'label' => 'Label', 'required' => true]]],
+            ], [], '<div>{% for button in props.button %}<a href="{{ button.href }}">{{ button.label }}</a>{% endfor %}</div>'),
             new SiteComponent('Echo', 'Echo', 'Says a word.', [['name' => 'said', 'type' => 'html', 'label' => 'Said']], [], '<p>{{ props.said }}</p>'),
             new SiteComponent('Calling', 'Calling', 'Calls another.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '<p>{{ props.said }}</p>{{ cms_component("Echo", {said: "x"}) }}'),
             new SiteComponent('Gallery', 'Gallery', 'Calls the carousel.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], [], '<div>{{ cms_component("Carousel", {title: props.said}) }}</div>'),

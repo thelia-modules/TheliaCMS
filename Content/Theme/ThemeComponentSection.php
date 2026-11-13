@@ -49,6 +49,7 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
      * @param array<string, mixed>  $example   props the theme shows the component with, by the name the schema uses
      * @param Packages|null         $packages  what turns the path of a file of the theme into the address it is served from
      * @param KnownIcons|null       $icons     when given, an icon prop the site does not hold is handed to the component empty, so that `ux_icon(value)` never asks Iconify for it nor raises
+     * @param list<string>          $objects   the props that hold one object, stored as a list of one row and handed to the component as that row
      */
     public function __construct(
         private string $component,
@@ -62,6 +63,7 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
         private ?Packages $packages = null,
         private ?KnownIcons $icons = null,
         private ?LoggerInterface $logger = null,
+        private array $objects = [],
     ) {
     }
 
@@ -127,6 +129,12 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
 
     public function normalizeProps(array $props): array
     {
+        foreach ($this->objects as $name) {
+            if (\array_key_exists($name, $props)) {
+                $props[$name] = self::objectAsRows($props[$name]);
+            }
+        }
+
         $props = $this->schema->normalize($props);
         ImageFraming::assertZoomSteps($this->schema->props, $props);
 
@@ -283,6 +291,12 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
             // component as it spells them, as a prop of its own is.
             if (\in_array($name, $rowLists, true) && \is_array($value)) {
                 $value = array_map(static fn (mixed $row): mixed => \is_array($row) ? self::twigKeys($row) : $row, $value);
+            }
+
+            // An object is stored as a list of one row: the component reads
+            // the row, and nothing when the row holds nothing.
+            if (\in_array($name, $this->objects, true) && \is_array($value)) {
+                $value = self::filledRow($value);
             }
 
             // A prop left empty is left to the default of the component, which
@@ -461,6 +475,63 @@ final readonly class ThemeComponentSection implements SectionDefinitionInterface
         }
 
         return [];
+    }
+
+    /**
+     * The value of an object prop as the schema holds it, a list of one row:
+     * an object written as such, by a theme in its example or by a component
+     * of the site in its call, or as the JSON of one, becomes that row. A
+     * text, which a form or a page stored before the prop was read as an
+     * object, never drew anything (the component reads its fields) and is
+     * dropped, as are the rows the form sends with every field left empty.
+     * Any other list is left to the schema.
+     */
+    public static function objectAsRows(mixed $value): mixed
+    {
+        if (\is_string($value)) {
+            try {
+                $value = json_decode($value, true, 32, \JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                return null;
+            }
+
+            if (!\is_array($value)) {
+                return null;
+            }
+        }
+
+        if (!\is_array($value) || [] === $value) {
+            return $value;
+        }
+
+        if (!array_is_list($value)) {
+            return [$value];
+        }
+
+        return array_values(array_filter($value, static fn (mixed $row): bool => !\is_array($row) || null !== self::filledRow([$row])));
+    }
+
+    /**
+     * The first row of a list when one of its fields holds something, else
+     * null: a row the form sends with every field left empty.
+     *
+     * @param array<mixed> $rows
+     */
+    private static function filledRow(array $rows): ?array
+    {
+        $row = $rows[array_key_first($rows) ?? 0] ?? null;
+
+        if (!\is_array($row)) {
+            return null;
+        }
+
+        foreach ($row as $field) {
+            if (null !== $field && '' !== $field && [] !== $field) {
+                return $row;
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -227,7 +227,7 @@ final readonly class ComponentPrompt
                 '`%s` (%s%s)',
                 $prop->name,
                 match ($prop->type) {
-                    PropType::Items => 'list of rows: '.self::propsLine($prop->items),
+                    PropType::Items => (1 === $prop->maxItems ? 'one object, held as a list of one row: ' : 'list of rows: ').self::propsLine($prop->items),
                     PropType::Reference => 'reference, record '.$prop->record,
                     default => $prop->type->value,
                 },

@@ -150,6 +150,39 @@ final class ThemeComponentSectionTest extends TestCase
         self::assertSame([['image' => 'https://example.com/a.webp', 'imageAlt' => 'A field', 'buttonLabel' => 'Read more']], $received['items'], 'Stored under the names of the schema, handed back as the template reads the row.');
     }
 
+    public function testAnObjectReachesTheComponentAsItsRow(): void
+    {
+        $received = null;
+        $section = $this->bandWithButton([], $received);
+
+        $section->render($section->normalizeProps(['button' => [['href' => '/shop', 'label' => 'See all']]]), 'fr_FR');
+        self::assertSame(['href' => '/shop', 'label' => 'See all'], $received[1]['button'] ?? null);
+
+        $section->render($section->normalizeProps(['button' => ['href' => '/shop', 'label' => 'Written as an object']]), 'fr_FR');
+        self::assertSame(['href' => '/shop', 'label' => 'Written as an object'], $received[1]['button'] ?? null, 'A component of the site may pass the object itself.');
+    }
+
+    public function testAnObjectLeftEmptyIsLeftToTheComponent(): void
+    {
+        $received = null;
+        $section = $this->bandWithButton([], $received);
+
+        foreach ([[], [['href' => '', 'label' => '']], 'See all', '', null] as $stored) {
+            $section->render($section->normalizeProps(['button' => $stored]), 'fr_FR');
+            self::assertArrayNotHasKey('button', $received[1], 'Nothing reaches the component for '.json_encode($stored).': its own default plays, and a text never drew a button.');
+        }
+    }
+
+    public function testTheExampleOfTheThemeMayWriteAnObject(): void
+    {
+        $received = null;
+        $section = $this->bandWithButton(['button' => [['href' => '/new', 'label' => 'New']]], $received);
+
+        self::assertSame([['href' => '/new', 'label' => 'New']], $section->sample()['button']);
+        $section->renderExample('fr_FR');
+        self::assertSame(['href' => '/new', 'label' => 'New'], $received[1]['button'] ?? null);
+    }
+
     public function testAPictureOfTheThemeInARowIsDrawnInTheExampleOnly(): void
     {
         $received = null;
@@ -174,6 +207,25 @@ final class ThemeComponentSectionTest extends TestCase
      * @param array<string, mixed>      $example
      * @param array<string, mixed>|null $received the props the component is drawn with
      */
+    /**
+     * @param array<string, mixed> $example
+     */
+    private function bandWithButton(array $example, ?array &$received): ThemeComponentSection
+    {
+        $renderer = $this->createStub(ComponentRendererInterface::class);
+        $renderer->method('createAndRender')->willReturnCallback(static function (string $name, array $props) use (&$received): string {
+            $received = [$name, $props];
+
+            return '<div></div>';
+        });
+        $schema = new PropSchema([
+            Prop::text('title', 'title', '', false),
+            Prop::items('button', 'button', [Prop::text('href', 'href', '', true, 500), Prop::text('label', 'label', '', true, 500)], 0, 1),
+        ]);
+
+        return new ThemeComponentSection('Layouts:CrossSelling:Base', '', $schema, ['title' => 'title', 'button' => 'button'], $renderer, [], $example, objects: ['button']);
+    }
+
     private function recipeWith(array $example, ?array &$received): ThemeComponentSection
     {
         $renderer = $this->createStub(ComponentRendererInterface::class);
