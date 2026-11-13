@@ -73,6 +73,7 @@ final class PageSeoModulesScreenTest extends AdminScreenTestCase
         self::assertSame((string) $page->getId(), $module->filter('input[name="object_id"]')->attr('value'));
         self::assertSame(TheliaCMS::PAGE_VIEW, $module->filter('input[name="object_type"]')->attr('value'), 'Named as the view of the site, the one SEOne reads.');
         self::assertSame(0, $screen->filter('form#cms-page-settings-form [data-testid="a-seo-module"]')->count(), 'Never inside the settings form: a form in a form is dropped by the browser.');
+        self::assertSame($this->say('Each card is saved by its own button. The Save of the page saves the settings of the page only.'), trim($screen->filter('#tab-seo-modules [data-testid="cms-page-seo-modules-help"]')->text()), 'The panel says which button saves what.');
     }
 
     public function testANewPageAndAModelShowNoSeoOfTheModules(): void

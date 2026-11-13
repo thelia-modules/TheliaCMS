@@ -7,6 +7,19 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Fixed
+
+- **Saving a card of the SEO of the modules comes back to the page.** The
+  calls the scripts of the back office send (address of the page, media
+  library, tree of the pages, menus, writing aid) said nothing of being
+  calls: the core kept the last one as the page to come back to, and SEOne,
+  after a save in the tab of the SEO of the modules, sent the editor to an
+  address that only answers a POST (405). Every call now sends
+  `X-Requested-With: XMLHttpRequest`, kept by a test on every script.
+- **The tab of the SEO of the modules says which button saves what.** Each
+  card is saved by its own button; the Save of the page saves its settings
+  only.
+
 ## [2.28.0] - 2026-11-13
 
 ### Added

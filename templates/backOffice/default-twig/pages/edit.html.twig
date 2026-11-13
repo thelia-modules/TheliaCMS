@@ -225,6 +225,8 @@
                    catalogue screens call in their SEO tab. Each card brings its own form, saved by its
                    module: out of the settings form, as the documents. #}
                 <div class="tab-pane fade" id="tab-seo-modules" role="tabpanel" data-testid="cms-page-seo-modules">
+                    {# The bar under the panels saves the settings of the page only: each card here has its own button. #}
+                    <p class="form-text mt-0 mb-3" data-testid="cms-page-seo-modules-help">{{ 'Each card is saved by its own button. The Save of the page saves the settings of the page only.'|trans({}, 'theliacms') }}</p>
                     {{ seo_module_cards }}
                 </div>
             {% endif %}
