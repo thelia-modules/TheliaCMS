@@ -535,6 +535,7 @@ return [
     'Search engine indexing' => 'Search engine indexing',
     'Search engines and sharing' => 'Search engines and sharing',
     'Search engines (modules)' => 'Search engines (modules)',
+    'Each card is saved by its own button. The Save of the page saves the settings of the page only.' => 'Each card is saved by its own button. The Save of the page saves the settings of the page only.',
     'Seconds a shared cache may keep a page' => 'Seconds a shared cache may keep a page',
     'Section' => 'Section',
     'Select a block in the page to change its text, its spacing and its colours here.' => 'Select a block in the page to change its text, its spacing and its colours here.',

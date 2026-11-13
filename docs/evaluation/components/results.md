@@ -264,6 +264,48 @@ Played on 2026-11-13 with both fixes, the same case. 3 trials, 0.18 USD,
 - The check first judged them 0/3: it draws the sample again, and ran outside
   the visit of the shop the round runs in. It runs in it now.
 
+## Round 8
+
+Played on 2026-11-13 on TheliaCMS 2.28.0, the case
+`compose-text-related-products-button` (the same request, with a button
+« Voir toute la collection » under the products), Flexy with the object prop
+`button` of `Layouts:CrossSelling:Base`. 3 trials, 0.20 USD, 1.0 min.
+
+| Case | Trials | Outcomes | Kept the contract | Corrections | Copied a target | Mean cost USD |
+|---|---|---|---|---|---|---|
+| compose-text-related-products-button | 3 | 3 component | 0/3 | 0 | - | 0.067 |
+
+- The three compose the products as in round 7 (`product_ids`, products of
+  the list) and add the button, but draw it themselves: two props
+  `button_label` (text) and `button_link` (url), and a link of their own
+  under `cms_component('Layouts:CrossSelling:Base', …)`. None passes
+  `button` to the band, which the list describes (« one object, held as a
+  list of one row: `href`, `label` »): the button of the theme is never drawn.
+- Accepted by the generator at the first answer, no correction.
+- Judged again with the contract of round 9 (rows of `text`, see below): still
+  0/3, for the same two reasons.
+
+## Round 9
+
+Played on 2026-11-13, the same case, with the rule that a part the drawn
+component offers is handed to it (`ComponentPrompt::OFFERED_PARTS_RULE`).
+3 trials, 0.17 USD, 0.8 min.
+
+| Case | Trials | Outcomes | Kept the contract | Corrections | Copied a target | Mean cost USD |
+|---|---|---|---|---|---|---|
+| compose-text-related-products-button | 3 | 3 component | 3/3 | 0 | - | 0.058 |
+
+- The three hand the button to the band:
+  `cms_component('Layouts:CrossSelling:Base', {title: props.products_title,
+  product_ids: props.product_ids, button: props.button})`, `button` declared
+  as a list of at most one row (`href`, `label`), the sample
+  `[{"href": "/collection-salon", "label": "Voir toute la collection"}]`. The
+  button of the theme is drawn (`button-style--secondary`).
+- The contract first asked rows of `url` and `text`: the three declare `href`
+  as `text`, the type the theme gives it (`{href: string, label: string}`),
+  as the prompt asks. The contract asks rows of `text` now.
+- Accepted by the generator at the first answer, no correction.
+
 ## Findings
 
 1. **Reuse works and costs nothing.** The 8 `existing` cases (and the

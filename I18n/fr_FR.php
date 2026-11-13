@@ -535,6 +535,7 @@ return [
     'Search engine indexing' => 'Indexation par les moteurs de recherche',
     'Search engines and sharing' => 'Moteurs de recherche et partage',
     'Search engines (modules)' => 'Moteurs de recherche (modules)',
+    'Each card is saved by its own button. The Save of the page saves the settings of the page only.' => 'Chaque carte s\'enregistre par son propre bouton. L\'enregistrement de la page n\'enregistre que les réglages de la page.',
     'Seconds a shared cache may keep a page' => 'Secondes de conservation d’une page par un cache partagé',
     'Section' => 'Section',
     'Select a block in the page to change its text, its spacing and its colours here.' => 'Sélectionnez un bloc dans la page pour modifier ici son texte, ses espacements et ses couleurs.',

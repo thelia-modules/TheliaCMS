@@ -1,0 +1,46 @@
+{
+  "id": "compose-text-related-products-button",
+  "family": "composition",
+  "locale": "fr_FR",
+  "request": "Un texte de présentation à gauche et, à droite, les produits liés que l'éditeur choisit un par un, avec sous les produits un bouton « Voir toute la collection » qui mène à la page de la collection.",
+  "oracle": {
+    "outcome": [
+      "component"
+    ],
+    "target": [
+      "cms:richtext",
+      "Layouts:CrossSelling:Base"
+    ],
+    "props": [
+      {
+        "type": "html|text",
+        "min": 1
+      },
+      {
+        "type": "items",
+        "min": 1,
+        "with": [
+          "reference"
+        ]
+      },
+      {
+        "type": "items",
+        "min": 1,
+        "with": [
+          "text"
+        ]
+      }
+    ],
+    "markup": {
+      "require": [
+        "class=\"[^\"]*\\bCrossSelling\\b",
+        "class=\"[^\"]*\\bbutton-style--secondary\\b"
+      ],
+      "forbid": []
+    },
+    "css": {
+      "require": [],
+      "forbid": []
+    }
+  }
+}

@@ -9,12 +9,39 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed
 
+- **A part a drawn component offers is handed to it.** Asked for related
+  products with a button under them, the generator of components drew the
+  band of the theme and a link of its own beside it, though the band offers
+  a button (round 8 of the bench: 3 trials out of 3). Its prompt now says that
+  a part the drawn component offers among its props (its heading, its button)
+  is handed to it, never drawn again beside it.
 - **A button in the form of a section reads by what it says.** A row is
   folded under its words before its link: the button of a band of the theme
   (`{href, label}`) reads « Voir tout le catalogue », no longer « /catalogue »;
   a row whose only text is a link still reads by it. A list of one row at most
   (an object such as that button) is added by its name, « Ajouter « Bouton » »,
   no longer « Ajouter une ligne ».
+
+### Fixed
+
+- **Saving a card of the SEO of the modules comes back to the page.** The
+  calls the scripts of the back office send (address of the page, media
+  library, tree of the pages, menus, writing aid) said nothing of being
+  calls: the core kept the last one as the page to come back to, and SEOne,
+  after a save in the tab of the SEO of the modules, sent the editor to an
+  address that only answers a POST (405). Every call now sends
+  `X-Requested-With: XMLHttpRequest`, kept by a test on every script.
+- **The tab of the SEO of the modules says which button saves what.** Each
+  card is saved by its own button; the Save of the page saves its settings
+  only.
+- **Coming back from a save in a card of the SEO of the modules opens that
+  tab again.** SEOne sends the editor back with `current_tab=seo`, as on the
+  catalogue screens; the editor opened its general tab.
+- **An object prop of the theme, as the page generator reads it.** The sheet
+  of the catalogue the page generator reads told a prop such as the button of
+  a band (`{href, label}`, held as at most one row) as a « list of 0 to 1
+  items »; it now tells one object, held as a list of one row or an empty
+  list, as the component generator already did.
 
 ## [2.28.0] - 2026-11-13
 
