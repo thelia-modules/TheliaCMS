@@ -45,6 +45,7 @@ final class ComponentBenchRunCommand extends Command
         private readonly ComponentBenchGenerators $generators,
         private readonly GeneratorSettings $settings,
         private readonly BenchPreviews $previews,
+        private readonly BenchShopRequest $shop,
     ) {
         parent::__construct();
     }
@@ -127,6 +128,24 @@ final class ComponentBenchRunCommand extends Command
             }
         }
 
+        $played = 0;
+        $skipped = 0;
+        // The components of the theme read the catalogue through the request
+        // of a visit, which the command line does not have.
+        $close = $this->shop->open();
+
+        try {
+            return $this->playAll($cases, $runs, $out, $round, $budget, $cumulative, $output);
+        } finally {
+            $close();
+        }
+    }
+
+    /**
+     * @param array<string, BenchCase> $cases
+     */
+    private function playAll(array $cases, int $runs, string $out, string $round, float $budget, float $cumulative, OutputInterface $output): int
+    {
         $played = 0;
         $skipped = 0;
 

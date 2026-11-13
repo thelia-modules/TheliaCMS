@@ -25,6 +25,7 @@ use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentUsage;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Evaluation\ComponentBench\BenchPreviews;
+use TheliaCMS\Evaluation\ComponentBench\BenchShopRequest;
 use TheliaCMS\Evaluation\ComponentBench\ComponentBenchGenerators;
 use TheliaCMS\Evaluation\ComponentBench\ComponentBenchRunCommand;
 use TheliaCMS\Evaluation\ComponentBench\TrialFiles;
@@ -260,6 +261,7 @@ final class ComponentBenchRunCommandTest extends CmsIntegrationTestCase
             ),
             $this->getService(GeneratorSettings::class),
             new BenchPreviews($link),
+            $this->getService(BenchShopRequest::class),
         );
         $tester = new CommandTester($command);
         $tester->execute($options + ['--cases' => $this->directory.'/cases', '--out' => $this->directory.'/out']);
