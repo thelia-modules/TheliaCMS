@@ -141,7 +141,7 @@
             fetch(tree.dataset.placeUrl.replace('{id}', id), {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { Accept: 'application/json' },
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 body: body,
             })
                 .then(function (response) {
