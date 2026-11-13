@@ -64,6 +64,7 @@
     --cms-font-size-h1: var(--font-size-h1-m, var(--font-size-h1-d, 2rem));
     --cms-font-size-h2: var(--font-size-h2-m, var(--font-size-h2-d, 1.5rem));
     --cms-font-size-h3: var(--font-size-h3-m, var(--font-size-h3-d, 1.25rem));
+    --cms-font-size-h4: var(--font-size-h4-m, var(--font-size-h4-d, 1.0625rem));
   }
 
   @media (min-width: 48rem) {
@@ -71,6 +72,7 @@
       --cms-font-size-h1: var(--font-size-h1-d, 2.5rem);
       --cms-font-size-h2: var(--font-size-h2-d, 1.75rem);
       --cms-font-size-h3: var(--font-size-h3-d, 1.375rem);
+      --cms-font-size-h4: var(--font-size-h4-d, 1.125rem);
     }
   }
 
@@ -154,15 +156,15 @@
   }
 
   h2.cms-heading__text {
-    font-size: var(--font-size-h2-d, 1.75rem);
+    font-size: var(--cms-font-size-h2);
   }
 
   h3.cms-heading__text {
-    font-size: var(--font-size-h3-d, 1.375rem);
+    font-size: var(--cms-font-size-h3);
   }
 
   h4.cms-heading__text {
-    font-size: var(--font-size-h4-d, 1.125rem);
+    font-size: var(--cms-font-size-h4);
   }
 
   /* What the author typed in that free text carries no class: the reset of a

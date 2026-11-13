@@ -31,9 +31,9 @@ final class HeadingScaleTest extends TestCase
 
         preg_match_all('/font-size:\s*var\(--font-size-h\d-[dm]\b/', $css, $direct);
         self::assertSame([], $direct[0], 'No heading reads the size of the theme for one screen only.');
-        self::assertGreaterThanOrEqual(11, preg_match_all('/font-size:\s*var\(--cms-font-size-h[1-3]\)/', $css));
+        self::assertGreaterThanOrEqual(14, preg_match_all('/font-size:\s*var\(--cms-font-size-h[1-4]\)/', $css));
 
-        foreach ([1, 2, 3] as $level) {
+        foreach ([1, 2, 3, 4] as $level) {
             self::assertStringContainsString(\sprintf('--cms-font-size-h%d: var(--font-size-h%1$d-m, var(--font-size-h%1$d-d,', $level), $css, 'On a phone, the phone size of the theme.');
             self::assertMatchesRegularExpression(\sprintf('/@media \(min-width: 48rem\) \{\s*:root \{[^}]*--cms-font-size-h%d: var\(--font-size-h%1$d-d,/', $level), $css, 'From 48rem, the wide size.');
         }
