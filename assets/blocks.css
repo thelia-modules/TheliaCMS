@@ -132,6 +132,13 @@
     width: var(--cms-block-inline);
   }
 
+  /* Drawn by a component of the site (ADR 17), it sits in the box of the
+     component, not at the width of a section of its own. */
+  .cms-site .cms-heading {
+    margin-inline: 0;
+    width: auto;
+  }
+
   .cms-heading__text {
     margin: 0;
     font-weight: var(--font-weight-h2, 600);

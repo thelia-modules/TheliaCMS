@@ -22,7 +22,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   and it stays a component another may draw. A level the heading does not
   offer, written in the call or offered by a `choice` prop of the caller, is
   refused when the component is saved; the generator of components is told
-  the levels.
+  the levels. Drawn by a component, the heading sits in the box of the
+  component, not at the width of a section of its own.
 
 ### Changed
 
