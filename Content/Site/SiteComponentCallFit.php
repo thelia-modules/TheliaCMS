@@ -28,16 +28,13 @@ final class SiteComponentCallFit
      * Where a prop of the caller does not read as the prop of the called
      * component it is passed to: another type, a reference to another kind of
      * record, or a list whose rows lack a required field or give it another
-     * type or another kind of record.
+     * type or another kind of record. An address reads as a text.
      *
      * @return list<string>
      */
     public static function mismatches(Prop $given, Prop $read, SiteComponentCall $call): array
     {
-        // Both print as text, the markup as it is: either reads as the other.
-        $textual = [PropType::Text, PropType::Html];
-
-        if ($given->type !== $read->type && !(\in_array($given->type, $textual, true) && \in_array($read->type, $textual, true))) {
+        if (!self::reads($given, $read)) {
             return [\sprintf('Line %d: props.%s is of type %s, and the prop "%s" of %s of type %s.', $call->line, $given->name, $given->type->value, $read->name, $call->code, $read->type->value)];
         }
 
@@ -61,7 +58,7 @@ final class SiteComponentCallFit
                 continue;
             }
 
-            if ($rows[$field->name]->type !== $field->type && !(\in_array($rows[$field->name]->type, $textual, true) && \in_array($field->type, $textual, true))) {
+            if (!self::reads($rows[$field->name], $field)) {
                 $problems[] = \sprintf('Line %d: "%s" of the rows of props.%s is of type %s, and %s reads it as of type %s.', $call->line, $field->name, $given->name, $rows[$field->name]->type->value, $call->code, $field->type->value);
             } elseif (self::namesAnotherRecord($rows[$field->name], $field)) {
                 $problems[] = \sprintf('Line %d: "%s" of the rows of props.%s names a %s, and %s reads a %s.', $call->line, $field->name, $given->name, $rows[$field->name]->record, $call->code, $field->record);
@@ -69,6 +66,19 @@ final class SiteComponentCallFit
         }
 
         return $problems;
+    }
+
+    /**
+     * Whether a value of the type given prints as the type read: the same
+     * type, a text and markup either way, an address as a text.
+     */
+    private static function reads(Prop $given, Prop $read): bool
+    {
+        $textual = [PropType::Text, PropType::Html];
+
+        return $given->type === $read->type
+            || (\in_array($given->type, $textual, true) && \in_array($read->type, $textual, true))
+            || (PropType::Url === $given->type && PropType::Text === $read->type);
     }
 
     private static function namesAnotherRecord(Prop $given, Prop $read): bool

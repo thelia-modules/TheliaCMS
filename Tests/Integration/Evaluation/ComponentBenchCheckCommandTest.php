@@ -17,18 +17,31 @@ namespace TheliaCMS\Tests\Integration\Evaluation;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\UX\TwigComponent\ComponentRendererInterface;
 use Thelia\Model\ConfigQuery;
+use TheliaCMS\Content\Prop;
+use TheliaCMS\Content\PropSchema;
+use TheliaCMS\Content\Site\SiteComponentValidator;
+use TheliaCMS\Content\Site\SitePropReader;
+use TheliaCMS\Content\Site\SiteTemplateRenderer;
+use TheliaCMS\Content\Theme\ThemeComponentSection;
 use TheliaCMS\Evaluation\ComponentBench\BenchPreviews;
+use TheliaCMS\Evaluation\ComponentBench\BenchShopRequest;
 use TheliaCMS\Evaluation\ComponentBench\ComponentBenchCheckCommand;
+use TheliaCMS\Evaluation\ComponentBench\ComponentOracle;
 use TheliaCMS\Evaluation\ComponentBench\TrialFiles;
 use TheliaCMS\Preview\ComponentPreviewLink;
 use TheliaCMS\Tests\Integration\CmsIntegrationTestCase;
+use TheliaCMS\Tests\Support\InMemoryDrawableSections;
 use TheliaCMS\Tests\Unit\Content\Site\PriceTable;
 
 /**
  * `thelia_cms:component-bench:check`: the oracle applied to the files of a
  * round, the verdict written into each, the table, and the previews signed
  * again. It calls nothing: the gateway is not even a dependency.
+ *
+ * Sabotage: the check judging outside the visit of the shop.
  */
 final class ComponentBenchCheckCommandTest extends CmsIntegrationTestCase
 {
@@ -84,6 +97,39 @@ final class ComponentBenchCheckCommandTest extends CmsIntegrationTestCase
         self::assertStringContainsString('- reuse-photo #2:', $display, 'What broke the contract is listed.');
     }
 
+    public function testASampleDrawingAComponentOfTheThemeIsJudgedInAVisitOfTheShop(): void
+    {
+        $stack = $this->getService(RequestStack::class);
+
+        while (null !== $stack->pop()) {
+        }
+
+        $this->writeCase('compose-shelf', ['outcome' => ['component']]);
+        $this->writeTrial('compose-shelf', 1, ['component' => [
+            'code' => 'TextShelf',
+            'label' => 'Text and products',
+            'description' => 'A heading above the products of the shop.',
+            'props' => [['name' => 'title', 'type' => 'text', 'label' => 'Heading']],
+            'sample' => ['title' => 'Our picks'],
+            'template' => "<section><h2>{{ props.title }}</h2>{{ cms_component('Layouts:Shelf:Base', {title: props.title}) }}</section>",
+            'css' => '',
+        ]]);
+
+        // As a component of the theme that reads the catalogue with resources():
+        // it raises when no visit is going on.
+        $renderer = $this->createStub(ComponentRendererInterface::class);
+        $renderer->method('createAndRender')->willReturnCallback(static fn (): string => null === $stack->getCurrentRequest() ? throw new \RuntimeException('No current request found') : '<div class="shelf">Products</div>');
+        $sections = new InMemoryDrawableSections(others: [new ThemeComponentSection('Layouts:Shelf:Base', '', new PropSchema([Prop::text('title', 'title', '', false)]), ['title' => 'title'], $renderer)]);
+        $site = new SiteTemplateRenderer(null, $sections);
+        $sections->renderer = $site;
+
+        $tester = $this->check(['--round' => 'round-t'], new ComponentOracle(new SiteComponentValidator(new SitePropReader(), $site, sections: $sections), new SitePropReader(), $site));
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+        self::assertSame([], TrialFiles::read($this->path('compose-shelf', 1))['verdict']['problems'], 'The sample draws the products, as it did in the run.');
+        self::assertNull($stack->getCurrentRequest(), 'The visit ends with the check.');
+    }
+
     public function testTheMarkdownOptionPrintsTheTableOnly(): void
     {
         $this->writeCase('reuse-photo', ['outcome' => ['existing'], 'target' => ['cms:image']]);
@@ -133,11 +179,11 @@ final class ComponentBenchCheckCommandTest extends CmsIntegrationTestCase
     /**
      * @param array<string, mixed> $options
      */
-    private function check(array $options): CommandTester
+    private function check(array $options, ComponentOracle $oracle = new ComponentOracle()): CommandTester
     {
         $router = static::getContainer()->get('router');
         $link = new ComponentPreviewLink($router, (string) static::getContainer()->getParameter('kernel.secret'));
-        $tester = new CommandTester(new ComponentBenchCheckCommand(new BenchPreviews($link)));
+        $tester = new CommandTester(new ComponentBenchCheckCommand(new BenchPreviews($link), $this->getService(BenchShopRequest::class), $oracle));
         $tester->execute($options + ['--cases' => $this->directory.'/cases', '--out' => $this->directory.'/out']);
 
         return $tester;

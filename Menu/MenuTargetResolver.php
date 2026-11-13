@@ -18,7 +18,7 @@ use Thelia\Model\CategoryQuery;
 use Thelia\Model\ContentQuery;
 use Thelia\Model\FolderQuery;
 use Thelia\Model\ProductQuery;
-use Thelia\Tools\URL;
+use TheliaCMS\Http\CoreUrls;
 use TheliaCMS\Model\CmsMenuItem;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
@@ -218,7 +218,7 @@ final readonly class MenuTargetResolver
      */
     private function rewrittenUrl(string $view, int $id, string $locale): ?string
     {
-        $urls = URL::getInstance();
+        $urls = CoreUrls::instance();
 
         if (null === $urls) {
             return null;

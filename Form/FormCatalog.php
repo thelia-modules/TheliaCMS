@@ -15,7 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Form;
 
 use Propel\Runtime\ActiveQuery\Criteria;
-use Thelia\Tools\URL;
+use TheliaCMS\Http\CoreUrls;
 use TheliaCMS\Menu\SiteRoot;
 use TheliaCMS\Model\CmsForm;
 use TheliaCMS\Model\CmsFormField;
@@ -151,7 +151,7 @@ final readonly class FormCatalog
             return null;
         }
 
-        $urls = URL::getInstance();
+        $urls = CoreUrls::instance();
 
         if (null === $urls) {
             return null;

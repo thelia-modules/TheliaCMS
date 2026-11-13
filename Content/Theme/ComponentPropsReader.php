@@ -41,7 +41,8 @@ use Twig\Environment;
  * `product`, `category`, `folder`, `form` or `menu` for one record picked by
  * its id, and `product[]` or `category[]` for several, in the order they were
  * picked. The component receives the ids, as it would from a template of the
- * theme.
+ * theme. An object, `{href: string, label: string}|null`, is held as one row
+ * of those fields and handed to the component as that row.
  *
  * Read at every call rather than cached: the theme is edited while the site
  * runs, and the schema has to follow the template.
@@ -76,7 +77,7 @@ final readonly class ComponentPropsReader
     }
 
     /**
-     * @return array{description: string, schema: PropSchema, documented: bool, id_lists: list<string>}
+     * @return array{description: string, schema: PropSchema, documented: bool, id_lists: list<string>, objects: list<string>}
      *
      * @throws \InvalidArgumentException when the theme chain has no such component
      */
@@ -94,7 +95,7 @@ final readonly class ComponentPropsReader
     /**
      * The same, off the source of a template.
      *
-     * @return array{description: string, schema: PropSchema, documented: bool, id_lists: list<string>}
+     * @return array{description: string, schema: PropSchema, documented: bool, id_lists: list<string>, objects: list<string>}
      */
     public function readSource(string $source): array
     {
@@ -103,6 +104,7 @@ final readonly class ComponentPropsReader
         $declared = self::declaredProps($source);
         $props = [];
         $idLists = [];
+        $objects = [];
 
         foreach ($declared as $name => $declaration) {
             $doc = $documented[$name] ?? ['type' => 'string', 'description' => '', 'min' => null, 'max' => null];
@@ -122,6 +124,8 @@ final readonly class ComponentPropsReader
         foreach ($props as $prop) {
             if (PropType::Items === $prop->type && self::isIdList($documented[$prop->name]['type'] ?? '')) {
                 $idLists[] = $prop->name;
+            } elseif (PropType::Items === $prop->type && null !== self::objectOf($documented[$prop->name]['type'] ?? '')) {
+                $objects[] = $prop->name;
             }
         }
 
@@ -130,6 +134,7 @@ final readonly class ComponentPropsReader
             'schema' => new PropSchema($props),
             'documented' => [] !== $documented,
             'id_lists' => $idLists,
+            'objects' => $objects,
         ];
     }
 
@@ -368,6 +373,13 @@ final readonly class ComponentPropsReader
             return $rows;
         }
 
+        $object = self::objectOf($type);
+        $fields = null === $object ? null : self::fields($object, $fieldHelps);
+
+        if (null !== $fields) {
+            return Prop::items($name, $name, $fields, $required ? 1 : 0, 1, $description);
+        }
+
         if (\in_array('image', $kinds, true)) {
             return Prop::image($name, $name, $required, $description);
         }
@@ -404,7 +416,7 @@ final readonly class ComponentPropsReader
             return Prop::integer($name, $name, \is_int($default) ? $default : 0, \PHP_INT_MIN, \PHP_INT_MAX, $description);
         }
 
-        if (array_intersect($kinds, ['array', 'list', 'iterable', 'object']) || preg_grep('/^(array|list)</', $kinds)) {
+        if (array_intersect($kinds, ['array', 'list', 'iterable', 'object']) || preg_grep('/^(array|list)<|^\{/', $kinds)) {
             return Prop::json($name, $name, \is_array($default) ? $default : [], $description);
         }
 
@@ -439,24 +451,55 @@ final readonly class ComponentPropsReader
                 continue;
             }
 
-            $fields = [];
+            $fields = self::fields($match[1], $fieldHelps);
 
-            foreach (self::splitTopLevel($match[1], true) as $field) {
-                if (1 !== preg_match('/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.+?)\s*$/s', $field, $parts)) {
-                    return null;
-                }
+            return null === $fields ? null : Prop::items($name, $name, $fields, $min, $max, $description);
+        }
 
-                $fieldName = self::propName($parts[1]);
-                $item = self::field($fieldName, $parts[2], $fieldHelps[$fieldName] ?? null);
+        return null;
+    }
 
-                if (null === $item) {
-                    return null;
-                }
+    /**
+     * The fields of a row, `name: string, image: image|null`, each typed as a
+     * prop of its own: null when one of them cannot be held by a row, or when
+     * there is none.
+     *
+     * @param array<string, string> $fieldHelps the help of each field
+     *
+     * @return list<Prop>|null
+     */
+    private static function fields(string $declaration, array $fieldHelps): ?array
+    {
+        $fields = [];
 
-                $fields[] = $item;
+        foreach (self::splitTopLevel($declaration, true) as $field) {
+            if (1 !== preg_match('/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.+?)\s*$/s', $field, $parts)) {
+                return null;
             }
 
-            return [] === $fields ? null : Prop::items($name, $name, $fields, $min, $max, $description);
+            $fieldName = self::propName($parts[1]);
+            $item = self::field($fieldName, $parts[2], $fieldHelps[$fieldName] ?? null);
+
+            if (null === $item) {
+                return null;
+            }
+
+            $fields[] = $item;
+        }
+
+        return [] === $fields ? null : $fields;
+    }
+
+    /**
+     * The fields an object type declares, `{href: string, label: string}`
+     * alone or with `|null`, without its braces; null for any other type.
+     */
+    private static function objectOf(string $type): ?string
+    {
+        foreach (self::kinds($type) as $kind) {
+            if (1 === preg_match('/^\{(.*)\}$/s', $kind, $match)) {
+                return $match[1];
+            }
         }
 
         return null;

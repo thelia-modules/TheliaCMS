@@ -38,6 +38,13 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   of a component that names records takes their ids, so the toolkit shows a
   band of related products rather than an empty one. A sample naming a
   record the shop does not show goes back for correction.
+- **A component of the theme takes an object.** A prop documented
+  `{href: string, label: string}|null` (the button under a band of related
+  products) is filled in the form as one row of those fields and handed to
+  the component as that row; it was a line of text, which made the component
+  fail and the band vanish. A component of the site passes it from a list of
+  one row, an address reading as a text; a call that passes a text is
+  refused when the component is saved.
 
 ### Changed
 
@@ -57,6 +64,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   its picker. The fields of the components of the theme read in the language
   of the editor: the kind of record of a row ("Produit", "Catégorie"), and
   "Texte en gras", "Texte du lien", the size of a picture, the wishlist.
+
+- **A menu, a sitemap, a form link or a search result no longer throws when the URL service of the core is not built yet.** `URL::getInstance()` throws instead of returning null, so the checks for null after it never ran: a component rendered before any service asked for the URL service, or a command, failed with "URL instance is not initialized". Every call now goes through `Http\CoreUrls::instance()`, which returns null then.
 
 ## [2.27.0] - 2026-11-13
 

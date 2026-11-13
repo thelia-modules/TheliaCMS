@@ -232,6 +232,38 @@ the records it names draws nothing to the editor, in the toolkit as in the
 preview, until the generator can name records of the shop in its sample, as
 it already names pictures of the media library.
 
+## Round 6
+
+Played on 2026-11-13, the same case once the generator is offered records of
+the shop for its sample. 3 trials, 0.55 USD, 0/3. The model names products of
+the list it is offered (ids 30 to 27) and a category; every sample is refused
+as drawing nothing, for two causes found by drawing the sample of trial 1
+again on the dev kernel, without any call:
+
+- the round ran on the command line, with no request, session nor URL
+  service: `resources()` of `Layouts:CrossSelling:Base` raised "No current
+  request found" (fixed: the round runs in a visit of the shop);
+- `button` of the band, an object (`{href, label}`), was read as a text: a
+  text made the template fail on `button.label` and the band vanish (fixed:
+  an object prop is one row of its fields).
+
+## Round 7
+
+Played on 2026-11-13 with both fixes, the same case. 3 trials, 0.18 USD,
+0.9 min.
+
+| Case | Trials | Outcomes | Kept the contract | Corrections | Copied a target | Mean cost USD |
+|---|---|---|---|---|---|---|
+| compose-text-related-products | 3 | 3 component | 3/3 | 0 | - | 0.062 |
+
+- The three compose as asked: a heading, a text, a link, and
+  `cms_component('Layouts:CrossSelling:Base', {title: props.products_title,
+  product_ids: props.product_ids})`, the sample naming three products of the
+  list (27, 28, 30; 26, 27, 28). None passes a button.
+- Accepted by the generator at the first answer, no correction.
+- The check first judged them 0/3: it draws the sample again, and ran outside
+  the visit of the shop the round runs in. It runs in it now.
+
 ## Findings
 
 1. **Reuse works and costs nothing.** The 8 `existing` cases (and the

@@ -19,7 +19,7 @@ use SEOne\Service\SeoDefaultModels\SEOneMicroDataTrait;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\ConfigQuery;
-use Thelia\Tools\URL;
+use TheliaCMS\Http\CoreUrls;
 use TheliaCMS\Menu\SiteRoot;
 use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Model\CmsPageQuery;
@@ -174,7 +174,7 @@ readonly class CmsPageSeoElement implements SeoElementInterface
 
     private function pageUrl(CmsPage $page): string
     {
-        $url = URL::getInstance()?->retrieve(TheliaCMS::PAGE_VIEW, $page->getId(), $this->langService->getLocale())->toString() ?? '';
+        $url = CoreUrls::instance()?->retrieve(TheliaCMS::PAGE_VIEW, $page->getId(), $this->langService->getLocale())->toString() ?? '';
 
         // The home page answers on the root only: its own address is a 301 to it.
         return '' !== $url && $this->isHome($page) ? SiteRoot::of($url) : $url;

@@ -20,6 +20,7 @@ use Symfony\Component\Filesystem\Filesystem;
 use Thelia\Model\ConfigQuery;
 use TheliaCMS\Evaluation\ComponentBench\BenchCase;
 use TheliaCMS\Evaluation\ComponentBench\BenchPreviews;
+use TheliaCMS\Evaluation\ComponentBench\BenchShopRequest;
 use TheliaCMS\Evaluation\ComponentBench\ComponentBenchGenerators;
 use TheliaCMS\Evaluation\ComponentBench\ComponentBenchRunCommand;
 use TheliaCMS\Evaluation\ComponentBench\ComponentOracle;
@@ -139,6 +140,7 @@ final class ComponentBenchReplayTest extends CmsIntegrationTestCase
             $this->getService(ComponentBenchGenerators::class),
             $this->getService(GeneratorSettings::class),
             $this->getService(BenchPreviews::class),
+            $this->getService(BenchShopRequest::class),
         );
         $tester = new CommandTester($command);
         $tester->execute(['--round' => 'replay', '--case' => [$recording['case']], '--runs' => '1', '--out' => $out]);
