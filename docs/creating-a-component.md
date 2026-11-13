@@ -332,9 +332,10 @@ What the generator writes, and what the site checks
   site), url, and items whose props are any of these but items.
 - **A Twig template** rendered in a Twig of its own with the sandbox on
   (`Content/Site/SiteTemplateRenderer.php`): `if`, `for`, `set`, a few
-  filters that shape text, `cycle`, `min`, `max`; no `range` (its loops go
-  over its props), no more than two `for` inside each other, no include,
-  extends or use, no macro, nothing of the site. It receives `props` alone. It holds no text of its own, so a
+  filters that shape text, `cycle`, `min`, `max`, `cms_icon`, `cms_component`
+  (below); no `range` (its loops go over its props), no more than two `for`
+  inside each other, no include, extends or use, no macro, nothing of the
+  site. It receives `props` alone. It holds no text of its own, so a
   component serves every language of the site, and no `script`, `style`,
   `iframe`, `form`, `on…` attribute or `javascript:`. What it draws is
   filtered like a page that goes online, wherever it is drawn: a draft, the
@@ -360,14 +361,33 @@ What the generator writes, and what the site checks
   after the one of the blocks.
 - **A sample** that fills every prop: what the preview, the toolkit and the
   generator of pages are shown.
+- **Other components of the site, drawn inside it** (ADR 15):
+  `{{ cms_component('Carousel', {slides: props.photos, title: props.heading}) }}`
+  draws the component kept for the whole site under that code, inside its
+  own `cms-site--<code>` element, with the values given in the form the
+  caller's template reads its props in (an address for an image). The code
+  is written between quotes and the values as a mapping: the validator reads
+  both in the tree of the template. It refuses a prototype, a code the site
+  does not keep, the component itself, a component that draws others (one
+  level only), a key that is not a prop of the drawn one, and a prop of the
+  caller passed as it is that does not read as the prop it fills (another
+  type, a list whose rows lack a required field). A rendering draws 24
+  components at most; a code that disappears draws nothing and is logged.
+  What the drawn component shows is filled through the props of the caller,
+  so the editor form, the translation and the media usage read the caller
+  alone. Its stylesheet applies as on any page; the caller styles its own
+  parts.
 
 Making, changing and keeping a component take the settings and the custom
 code permissions. A new version of a kept component is refused while a page
 holds props it no longer takes (`Content/Site/SiteComponentUsage.php`, every
 section named, draft and published); keeping one draws the drafts using it
 again, and the published pages change at their next publication. A component
-a page holds cannot be deleted. The kept components travel with the export of
-the site and are checked again on import.
+a page holds cannot be deleted, nor one another component draws
+(`Content/Site/SiteComponentCallers.php`), and a new version that no longer
+takes what such a caller passes is refused the same way. The kept components
+travel with the export of the site and are checked again on import, the
+ones other components draw first.
 
 ## The width of the images of a component
 

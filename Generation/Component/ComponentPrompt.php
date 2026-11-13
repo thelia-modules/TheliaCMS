@@ -14,8 +14,13 @@ declare(strict_types=1);
 
 namespace TheliaCMS\Generation\Component;
 
+use TheliaCMS\Content\ImageFraming;
+use TheliaCMS\Content\Prop;
+use TheliaCMS\Content\PropType;
 use TheliaCMS\Content\SectionCatalog;
+use TheliaCMS\Content\SectionDefinitionInterface;
 use TheliaCMS\Content\Site\SiteComponent;
+use TheliaCMS\Content\Site\SiteComponentSection;
 use TheliaCMS\Content\Site\SiteTemplateRenderer;
 use TheliaCMS\Front\BlockStyles;
 use TheliaCMS\Generation\ShopContext;
@@ -88,6 +93,7 @@ final readonly class ComponentPrompt
         private ShopContext $shop,
         private BlockStyles $blocks,
         private ?SampleMedia $media = null,
+        private SiteTemplateRenderer $renderer = new SiteTemplateRenderer(),
     ) {
     }
 
@@ -122,7 +128,7 @@ final readonly class ComponentPrompt
                 '',
                 '- `existing`: a component of this list already does what is asked, the request differing by its wording or its example only. Put its name, as written between backticks, in `existing`; say in `reason`, in one sentence in the language of the request, what it already does; leave every other field empty.',
                 '- `copy`: what is asked is a variant of a component named `Site:…` in this list (another look, one prop more or less). Put its name in `existing`; say in `reason` what the variant changes; leave every other field empty. You are sent its source, and write the variant under a new code.',
-                '- `component`: any other request, which none of these does. `existing` and `reason` stay empty.',
+                '- `component`: any other request, which none of these does. `existing` and `reason` stay empty. A request that puts together what components of the site marked "drawable" show (a text next to a carousel, a quote above figures) is a new component that draws them with `cms_component`, not one that writes them again.',
                 '',
             );
         } else {
@@ -139,6 +145,10 @@ final readonly class ComponentPrompt
             }
 
             $lines[] = \sprintf('- `%s` (%s): %s', $name, $definition->label(), $definition->description());
+
+            if (null !== $drawable = $this->drawable($definition)) {
+                $lines[] = '  '.$drawable;
+            }
         }
 
         $lines[] = '';
@@ -173,6 +183,36 @@ final readonly class ComponentPrompt
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * How a component of the site kept for the whole site is drawn inside
+     * another: its code and its props, the fields of its rows included; null
+     * for anything else, and for a component that draws others itself.
+     */
+    private function drawable(SectionDefinitionInterface $definition): ?string
+    {
+        if (!$definition instanceof SiteComponentSection || $definition->prototype || [] !== $this->renderer->calls($definition->component->template)) {
+            return null;
+        }
+
+        return \sprintf('Drawable: `cms_component(\'%s\', {…})`, props %s.', $definition->component->code, self::propsLine($definition->schema()->props));
+    }
+
+    /**
+     * @param list<Prop> $props
+     */
+    private static function propsLine(array $props): string
+    {
+        return implode(', ', array_map(
+            static fn (Prop $prop): string => \sprintf(
+                '`%s` (%s%s)',
+                $prop->name,
+                PropType::Items === $prop->type ? 'list of rows: '.self::propsLine($prop->items) : $prop->type->value,
+                $prop->required ? ', required' : '',
+            ),
+            array_values(array_filter($props, static fn (Prop $prop): bool => !ImageFraming::isFraming($prop))),
+        ));
     }
 
     /**
@@ -312,6 +352,7 @@ final readonly class ComponentPrompt
             '',
             \sprintf('- Tags: %s. Filters: %s. Tests: %s. Functions: %s. Nothing else: no include, no macro, no block, no `raw`.', implode(', ', SiteTemplateRenderer::TAGS), implode(', ', SiteTemplateRenderer::FILTERS), implode(', ', SiteTemplateRenderer::TESTS), implode(', ', SiteTemplateRenderer::FUNCTIONS)),
             \sprintf('- At most %d `for` inside each other: loop over a list, and over the list of an item, never deeper.', SiteTemplateRenderer::MAX_LOOP_DEPTH),
+            \sprintf("- A component of the site the list marks \"Drawable\" is placed inside yours with `%s('Carousel', {slides: props.photos, title: props.heading})`, printed where it goes: its code between quotes, then a mapping of its props to values (your props, the fields of a row in a loop, or a literal). What it shows is filled through your props: declare them with the type its props have, a list with rows of the fields its rows read, under the names they have there. It is drawn inside its own element with its own stylesheet: your stylesheet styles your parts, never what it draws. A component you draw draws none, and %d are drawn at most.", SiteTemplateRenderer::CALL, SiteTemplateRenderer::MAX_CALLS),
             '- Text is escaped when printed; an `html` prop is printed as it is.',
             '- No text of its own outside what it prints: the template writes markup and props, nothing else.',
             '- No `script`, `style`, `iframe`, `object`, `embed`, `form`, `link`, `meta`, no `on…` attribute, no `javascript:`. A YouTube, Vimeo or Dailymotion video is an `embed` prop, not an `iframe`.',

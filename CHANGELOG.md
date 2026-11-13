@@ -21,7 +21,9 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   need). A component another draws is not deleted, its sheet names who draws
   it, and a new version of it that no longer takes what a caller passes is
   not kept. The preview of a component prints the stylesheets of the ones it
-  draws. An import brings the components drawn by others first. See ADR 15.
+  draws. An import brings the components drawn by others first. The
+  generator of components is told the codes and props of the components it
+  may draw, and to draw them rather than write them again. See ADR 15.
 - **The page generator knows the icons.** The catalogue the model reads lists,
   once, the names an `icon` prop may hold: the icons of the media library
   (`cms:<name>`) then those of the theme, alphabetical, cut at 200 names with

@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace TheliaCMS\Tests\Integration\Content;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use Thelia\Domain\Ai\AiGatewayInterface;
 use TheliaCMS\Content\PropSchema;
 use TheliaCMS\Content\SectionCatalog;
 use TheliaCMS\Content\Site\SiteComponent;
@@ -22,6 +23,8 @@ use TheliaCMS\Content\Site\SiteComponentCallers;
 use TheliaCMS\Content\Site\SiteComponentRepository;
 use TheliaCMS\Content\Site\SiteComponentValidator;
 use TheliaCMS\Content\Site\SitePropReader;
+use TheliaCMS\Generation\Component\ComponentPrompt;
+use TheliaCMS\Generation\Component\ComponentRequest;
 use TheliaCMS\ImportExport\ImportOptions;
 use TheliaCMS\ImportExport\SiteDocument;
 use TheliaCMS\ImportExport\SiteExporter;
@@ -29,6 +32,7 @@ use TheliaCMS\ImportExport\SiteImporter;
 use TheliaCMS\Model\CmsComponentQuery;
 use TheliaCMS\Preview\ComponentPreviewLink;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
+use TheliaCMS\Tests\Support\FakeAiGateway;
 
 /**
  * A component of the site that draws another with `cms_component()`, wired
@@ -100,6 +104,51 @@ final class ComponentCompositionTest extends AdminScreenTestCase
 
         self::assertSame([], $report->warnings());
         self::assertSame(2, $report->createdCounts()['components'] ?? 0);
+    }
+
+    public function testTheGeneratorIsToldWhichComponentsItMayDrawAndWithWhatProps(): void
+    {
+        $this->keepBoth();
+        $this->getService(SiteComponentRepository::class)->save(new SiteComponent('ComposedDraft', 'Composed draft', 'A prototype.', [['name' => 'said', 'type' => 'text', 'label' => 'Said']], ['said' => 'x'], '<p>{{ props.said }}</p>'), SiteComponentRepository::STATUS_DRAFT);
+        $this->getService(SectionCatalog::class)->reset();
+        $prompt = $this->getService(ComponentPrompt::class);
+
+        $message = $prompt->userMessage(new ComponentRequest('Une citation à côté d’un titre.', $this->locale()));
+        $lines = explode("\n", $message);
+        $after = static fn (string $name): string => $lines[(int) array_search(true, array_map(static fn (string $line): bool => str_starts_with($line, '- `'.$name.'`'), $lines), true) + 1];
+
+        self::assertSame("  Drawable: `cms_component('ComposedQuote', {…})`, props `said` (text).", $after('Site:ComposedQuote'));
+        self::assertStringNotContainsString('Drawable', $after('Site:ComposedRow'), 'A component that draws another is drawn by none.');
+        self::assertStringNotContainsString('Drawable', $after('Site:ComposedDraft'), 'A prototype is drawn by none.');
+        self::assertStringContainsString("cms_component('Carousel', {slides: props.photos, title: props.heading})", implode("\n", array_column($prompt->system(), 'text')));
+    }
+
+    public function testAGeneratedComponentThatDrawsAKeptOneEndsOnACandidateThatDrawsBoth(): void
+    {
+        $this->keepBoth();
+        $api = new FakeAiGateway();
+        static::getContainer()->set(AiGatewayInterface::class, $api);
+        $api->answer(FakeAiGateway::response(ComponentPrompt::json(new SiteComponent(
+            'QuoteBand',
+            'Bandeau citation',
+            'Un titre au-dessus de la devise du site.',
+            [['name' => 'heading', 'type' => 'text', 'label' => 'Titre'], ['name' => 'motto', 'type' => 'text', 'label' => 'Devise']],
+            ['heading' => 'Notre devise', 'motto' => 'Moins, mais mieux.'],
+            '<section class="band"><h2>{{ props.heading }}</h2>{{ cms_component(\'ComposedQuote\', {said: props.motto}) }}</section>',
+            '.band { padding: 2rem; }',
+        ))));
+
+        $token = $this->tokenOfTheForm($this->screen('/admin/cms/components/site/new'), '/admin/cms/components/site/generate');
+        self::assertSame(302, $this->send('POST', '/admin/cms/components/site/generate', ['_token' => $token, 'request' => 'Notre devise sous un titre.']));
+        $screen = $this->screen((string) $this->client->getResponse()->headers->get('Location'));
+
+        self::assertSame('done', $screen->filter('[data-testid="cms-site-component-outcome"]')->attr('data-status'));
+        self::assertSame(1, $screen->filter('[data-testid="cms-site-component-keep"]')->count());
+
+        $this->client->request('GET', (string) $screen->filter('[data-testid="cms-site-component-frame"]')->attr('src'));
+        $page = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('<div class="cms-site cms-site--composed-quote"><blockquote class="quote">Moins, mais mieux.</blockquote></div>', $page);
+        self::assertStringContainsString('.cms-site--composed-quote .quote', $page);
     }
 
     private function keepBoth(): void

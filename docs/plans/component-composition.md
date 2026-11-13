@@ -1,6 +1,7 @@
 # Plan: a component of the site draws another (N71)
 
-Status: designed on 2026-11-13, not started. Decision in ADR 15. The cases
+Status: steps 1 to 4 and 6 done on 2026-11-13 on `feat/71-component-composition`;
+step 5 (the round of the bench) agreed by the maintainer. Decision in ADR 15. The cases
 `compose-*` of the bench of components measure it; a round needs the
 agreement of the maintainer (paid).
 
@@ -31,7 +32,7 @@ one.
   `compose-text-carousel`, `compose-quote-figures`, `compose-steps-faq`
   (`docs/evaluation/components/cases/`). The seed of the bench holds
   `Quote`, `ImageText`, `KeyFigures`, `Steps`, `Carousel` and `Faq`.
-- The icons (#153, 2.27.0) added `cms_icon()` to the sandbox and counts the
+- The icons (#153, 2.27.0) added `cms_icon()` to the sandbox and count the
   components whose template cites an icon: the same shape as this lot.
 
 ## Design (ADR 15)
