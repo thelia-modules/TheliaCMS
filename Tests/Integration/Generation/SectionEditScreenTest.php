@@ -813,6 +813,48 @@ final class SectionEditScreenTest extends AdminScreenTestCase
         self::assertSame(['Le vélo en ville', 'Nouveau', 'Une note de bas de page'], $summaries, 'An empty line of text gives way to the paragraphs; a row of paragraphs alone reads by them.');
     }
 
+    /**
+     * An object (a button: `{href, label}`, at most one row) reads by what it
+     * says, not by where it leads, and is added by its own name.
+     */
+    public function testARowReadsByItsWordsBeforeItsLinkAndAListOfOneRowIsAddedByItsName(): void
+    {
+        $props = [
+            ['name' => 'button', 'type' => 'items', 'label' => 'Button', 'max' => 1, 'items' => [
+                ['name' => 'href', 'type' => 'text', 'label' => 'Link'],
+                ['name' => 'label', 'type' => 'text', 'label' => 'Label'],
+            ]],
+            ['name' => 'more', 'type' => 'items', 'label' => 'More', 'max' => 1, 'items' => [
+                ['name' => 'address', 'type' => 'url', 'label' => 'Address'],
+                ['name' => 'label', 'type' => 'text', 'label' => 'Label'],
+            ]],
+            ['name' => 'links', 'type' => 'items', 'label' => 'Links', 'max' => 4, 'items' => [
+                ['name' => 'href', 'type' => 'text', 'label' => 'Link'],
+                ['name' => 'label', 'type' => 'text', 'label' => 'Label'],
+            ]],
+        ];
+        $this->getService(SiteComponentRepository::class)->save(new SiteComponent('Band', 'Band', 'A band with a button.', $props, ['button' => [], 'more' => [], 'links' => []], '<section></section>'), SiteComponentRepository::STATUS_DRAFT);
+        $page = $this->pageWith([new Section('band', 'Site:Band', [
+            'button' => [['href' => '/catalogue', 'label' => 'Voir tout le catalogue']],
+            'more' => [['address' => 'https://example.com/more', 'label' => 'En savoir plus']],
+            'links' => [['href' => '/contact', 'label' => ''], ['href' => '', 'label' => '']],
+        ])]);
+        $form = $this->screen($this->url($page))->filter('[data-testid="cms-section-edit-band"] form[data-cms-section-form]');
+        $translator = $this->getService(TranslatorInterface::class);
+
+        $summaries = $form->filter('li[data-cms-item] > details > summary')
+            ->each(static fn (Crawler $summary): string => trim((string) preg_replace('/\s+/', ' ', $summary->text())));
+
+        self::assertSame(['Voir tout le catalogue', 'En savoir plus', '/contact', $translator->trans('A row without a title', [], TheliaCMS::DOMAIN_NAME)], $summaries, 'The words of a row before its link; a link alone still names its row.');
+        self::assertSame('cms_section_band_button_0_label', $form->filter('summary [data-cms-item-source]')->first()->attr('data-cms-item-source'), 'The script follows the words, not the link.');
+        self::assertSame('cms_section_band_links_1_label', $form->filter('summary [data-cms-item-source]')->eq(3)->attr('data-cms-item-source'), 'An empty row is named by the field of its words as they are typed.');
+
+        $add = static fn (string $name): string => trim($form->filter(\sprintf('[data-cms-items][data-cms-items-name="cms_section_band[%s]"] [data-cms-items-add]', $name))->text());
+
+        self::assertSame($translator->trans('Add %label%', ['%label%' => 'Button'], TheliaCMS::DOMAIN_NAME), $add('button'), 'A list of one row at most is added by its name.');
+        self::assertSame($translator->trans('Add a row', [], TheliaCMS::DOMAIN_NAME), $add('links'));
+    }
+
     public function testTheTitleOfARowTakesTheLineAndTheKeptPartOfItsPictureIsFolded(): void
     {
         $form = $this->screen($this->url($this->pageWithHighlights()))->filter('[data-testid="cms-section-edit-hl"] form[data-cms-section-form]');

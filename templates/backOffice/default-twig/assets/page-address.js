@@ -100,7 +100,7 @@
             return fetch(input.getAttribute('data-proposal-url'), {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { Accept: 'application/json' },
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 body: body,
             })
                 .then(function (response) {
@@ -196,7 +196,7 @@
             fetch(input.getAttribute('data-check-url'), {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { Accept: 'application/json' },
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 body: body,
             })
                 .then(function (response) {

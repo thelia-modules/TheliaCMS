@@ -392,7 +392,10 @@ What the generator writes, and what the site checks
   the schema refuses draw nothing and are logged. A component of the theme
   that reads records (`Layouts:CrossSelling:Base` and its `product_ids`) is
   given the `reference` props of the caller, a list of them as rows of one
-  `id` field; a reference to another kind of record is refused.
+  `id` field; a reference to another kind of record is refused. A part the
+  called component offers among its props (its heading, the button of
+  `Layouts:CrossSelling:Base`) is handed to it rather than drawn again
+  beside it: the generator is told so (`ComponentPrompt::OFFERED_PARTS_RULE`).
   A heading of the site is drawn the same way (ADR 17):
   `cms_component('cms:heading', {text: props.title, level: 'h3'})`, at
   level `h2`, `h3` or `h4`, in place, at any depth, a drawn component
