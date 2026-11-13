@@ -18,7 +18,6 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Template\TemplateDefinition;
-use TheliaCMS\Model\CmsPage;
 use TheliaCMS\Page\Admin\CmsPageWriter;
 use TheliaCMS\Page\PageTypeWriter;
 use TheliaCMS\Tests\Integration\Security\AdminScreenTestCase;
@@ -82,9 +81,7 @@ final class PageSeoModulesScreenTest extends AdminScreenTestCase
 
         $this->getService(PageTypeWriter::class)->add(self::TYPE);
         $writer = $this->getService(CmsPageWriter::class);
-        \assert($writer instanceof CmsPageWriter);
         $model = $writer->createModel(self::TYPE, $this->locale(), 'Modèle');
-        \assert($model instanceof CmsPage);
 
         self::assertSame(0, $this->screen(\sprintf('/admin/cms/pages/%d', $model->getId()))->filter('[data-testid="cms-page-tab-seo-modules"], #tab-seo-modules')->count(), 'A model is never published.');
     }
@@ -92,7 +89,6 @@ final class PageSeoModulesScreenTest extends AdminScreenTestCase
     private function events(): EventDispatcherInterface
     {
         $dispatcher = $this->getService(EventDispatcherInterface::class);
-        \assert($dispatcher instanceof EventDispatcherInterface);
 
         return $dispatcher;
     }
