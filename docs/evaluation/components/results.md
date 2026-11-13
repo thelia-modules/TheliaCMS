@@ -184,10 +184,10 @@ what the generator wrote:
 - **compose-text-carousel**: `scrollable-region-focusable` on the track of
   `Site:Carousel`, which scrolls without `tabindex`, role or name (the seed
   was written before the prompt asked for them).
-- **compose-quote-figures**: `color-contrast` on 2 or 3 nodes. The callers set
-  no text colour at all; `Site:KeyFigures` draws its figures in
-  `--cms-color-accent` (3.4:1 on white), and `Site:Quote` its role in
-  `text-muted` on `surface`.
+- **compose-quote-figures**: `color-contrast` on the 2 or 3 figures. The
+  callers set no text colour at all; `Site:KeyFigures` draws its figures
+  (`.figure__value`) in `--cms-color-accent`, `#ff7036` on white, 2.75:1
+  (nodes read by axe on the previews of trials 1 and 2).
 
 A fix of those two components reaches every caller at its next drawing: that
 is what composing is for. The oracle judges the whole drawing, the drawn
