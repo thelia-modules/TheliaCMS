@@ -2086,4 +2086,11 @@ return [
     'The video could not be converted. It may be damaged or in a format ffmpeg cannot read.' => 'La vidéo n’a pas pu être convertie. Elle est peut-être abîmée ou dans un format que ffmpeg ne lit pas.',
     'The video file is missing from the library.' => 'Le fichier de la vidéo manque dans la médiathèque.',
     'The video could not be converted, for a reason the server did not give.' => 'La vidéo n’a pas pu être convertie, pour une raison que le serveur n’a pas donnée.',
+    'A heading on its own, between two sections: it opens a part of the page. Level 2 under the title of the page, level 3 under a heading of level 2, never a level skipped.' => 'Un titre seul, entre deux sections : il ouvre une partie de la page. Niveau 2 sous le titre de la page, niveau 3 sous un titre de niveau 2, sans jamais sauter de niveau.',
+    'Level' => 'Niveau',
+    'Level 2, a part of the page' => 'Niveau 2, une partie de la page',
+    'Level 3, under a heading of level 2' => 'Niveau 3, sous un titre de niveau 2',
+    'Level 4, under a heading of level 3' => 'Niveau 4, sous un titre de niveau 3',
+    'The title of the page is the only heading of level 1.' => 'Le titre de la page est le seul titre de niveau 1.',
+    'A heading on its own, at level 2, 3 or 4.' => 'Un titre seul, de niveau 2, 3 ou 4.',
 ];

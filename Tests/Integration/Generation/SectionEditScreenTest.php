@@ -20,6 +20,7 @@ use Thelia\Core\Security\AccessManager;
 use Thelia\Model\Lang;
 use Thelia\Test\FixtureFactory;
 use TheliaCMS\Content\Document;
+use TheliaCMS\Content\HeadingSection;
 use TheliaCMS\Content\Section;
 use TheliaCMS\Content\SectionAppearance;
 use TheliaCMS\Content\SectionAvailability;
@@ -371,6 +372,37 @@ final class SectionEditScreenTest extends AdminScreenTestCase
             $this->getService(TranslatorInterface::class)->trans('Paragraphs, headings and lists.', [], TheliaCMS::DOMAIN_NAME),
             trim($freeText->filter('.cms-content__add-description')->text()),
         );
+    }
+
+    /**
+     * A heading on its own: offered beside the free text, its level chosen
+     * among h2 to h4 in its form, drawn at that level.
+     */
+    public function testAHeadingIsAddedBesideTheFreeTextAndDrawnAtTheLevelChosen(): void
+    {
+        $page = $this->pageWith([new Section('title', HeadingSection::NAME, ['text' => 'Nos ateliers', 'level' => 'h2'])]);
+        $screen = $this->screen($this->url($page));
+
+        $offered = $screen->filter('[data-testid="cms-content-add-'.HeadingSection::NAME.'"]');
+        self::assertSame(1, $offered->count(), 'The heading is offered.');
+        self::assertSame('bi bi-type-h2', $offered->filter('.cms-content__add-icon i')->attr('class'));
+        $text = $screen->filter('.cms-content__add-list')->first();
+        self::assertSame(1, $text->filter('[data-testid="cms-content-add-cms:richtext"]')->count());
+        self::assertSame(1, $text->filter('[data-testid="cms-content-add-'.HeadingSection::NAME.'"]')->count(), 'In the family of the free text.');
+
+        $form = $screen->filter('[data-testid="cms-section-edit-title"] form[data-cms-section-form]');
+        $levels = $form->filter('[name="cms_section_title[level]"]')->each(static fn (Crawler $field): string => (string) ($field->attr('value') ?? ''));
+        $levels = [] !== array_filter($levels) ? $levels : $form->filter('[name="cms_section_title[level]"] option')->each(static fn (Crawler $option): string => (string) $option->attr('value'));
+        self::assertSame(HeadingSection::LEVELS, array_values(array_filter($levels)), 'Levels 2 to 4, never 1.');
+
+        $values = $form->form()->getPhpValues();
+        $values['cms_section_title']['text'] = 'Nos ateliers en région';
+        $values['cms_section_title']['level'] = 'h3';
+
+        self::assertSame(302, $this->send('POST', $form->form()->getUri(), $values));
+
+        $draft = (string) CmsPageContentQuery::create()->filterByPageId($page->getId())->filterByLocale($this->locale())->findOne()?->getDraftHtml();
+        self::assertStringContainsString('<h3 class="cms-heading__text">Nos ateliers en région</h3>', $draft);
     }
 
     public function testALongTextTakesTheWholeLineOfTheFormAndAShortOneHalf(): void

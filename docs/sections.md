@@ -30,6 +30,7 @@ component refuses, is rejected on the way in, every problem listed at once
 | Family | Names | Where they come from |
 |---|---|---|
 | Free text | `cms:richtext` | The module. A piece of markup as is, filtered on the rendered page like everything that goes online. |
+| Heading | `cms:heading` | The module. A heading on its own between two sections (`text`, 120 characters), at the level the editor chooses: `h2` (by default), `h3` or `h4`, never `h1`, which is the title of the page (ADR 10). Styled like the headings of the free text, under the class the theme names for it; the heading check of the publication reads its level like any other. |
 | Columns | `cms:columns` | The module. Two to four columns side by side, each an image (of the media library or an `https` address) over an optional heading and a short text, drawn with the grid of `blocks.css` and stacked below 48rem. |
 | Highlights | `cms:highlights` | The module. A band of one to three blocks, the first one the large one, each a picture under a title, a catchphrase and a button, with an optional picture for a screen narrower than 1024px (see [Highlights](#highlights)). |
 | Image | `cms:image` | The module. One picture (of the media library or an `https` address) with an optional caption, at the width of the reading column (by default), of the content, of the whole screen or at a size in pixels set by the editor, with an optional frame and the part of the picture kept (see [The size and the framing of an image](#the-size-and-the-framing-of-an-image)); nothing is drawn while no image is chosen. |

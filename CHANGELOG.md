@@ -7,6 +7,15 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added
+
+- **A Heading section** (`cms:heading`): a heading on its own between two
+  sections, at level 2 (by default), 3 or 4, chosen in its form; level 1
+  stays the title of the page. It is styled like the headings of the free
+  text, offered under « Text and media » of the dialog that adds a section,
+  and read by the heading check of the publication like any other heading.
+  The page generator finds it in the catalogue.
+
 ## [2.28.0] - 2026-11-13
 
 ### Added
