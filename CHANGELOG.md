@@ -7,6 +7,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [2.42.2] - 2026-11-26
+
 ### Fixed
 
 - **The components screen links to the toolkit again**, lost in 2.41.0: where
