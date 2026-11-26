@@ -187,6 +187,21 @@ final class PublishedContentSanitizerTest extends TestCase
     }
 
     /**
+     * An exclusive accordion keeps its group, the one place a published `name`
+     * does no harm; a named image would replace a global of the page.
+     */
+    public function testKeepsTheGroupOfAnExclusiveAccordionAndNoOtherName(): void
+    {
+        $sanitized = (string) $this->sanitizer->html(
+            '<details name="faq"><summary>A question</summary><p>An answer</p></details>'
+            .'<img src="/a.png" alt="" name="cookie">'
+        );
+
+        self::assertStringContainsString('<details name="faq">', $sanitized);
+        self::assertStringNotContainsString('cookie', $sanitized);
+    }
+
+    /**
      * The catalogue names each section by its own heading and hides decorative
      * icons; dropping those attributes on the way out would undo, silently, the
      * one thing the blocks are careful about.

@@ -220,6 +220,11 @@ final readonly class PublishedContentSanitizer
             // `open` is what an author toggles on a question that should start
             // expanded; without it a `<details>` always comes back closed.
             ->allowAttribute('open', ['details'])
+            // The group of an exclusive accordion: opening one question closes the
+            // others. Only on `details`, which the page never exposes by name;
+            // `name` stays out everywhere else (a named image or form replaces a
+            // global of the page).
+            ->allowAttribute('name', ['details'])
             // Controls a script reveals start hidden; without the attribute
             // they show, and do nothing, until it runs.
             ->allowAttribute('hidden', '*')

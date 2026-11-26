@@ -16,6 +16,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   template holding a button was refused. They are kept again, with their focus
   order; a published button is always of type `button`, so it cannot submit a
   form of the page, and `name`, `form` and the `form*` attributes stay out.
+  An exclusive accordion (`<details name>`) keeps its group: opening one
+  question closes the others again.
 
 ## [2.42.2] - 2026-11-26
 
