@@ -27,7 +27,9 @@ use TheliaCMS\TheliaCMS;
  *
  * The addresses come from the same service as the language switcher: hreflang
  * and the switcher disagreeing on where a translation lives is how a site ends
- * up advertising URLs no visitor is ever sent to.
+ * up advertising URLs no visitor is ever sent to. Advertising is narrower than
+ * switching: a language where the page is noindex or not visible is left out
+ * (AdvertisedLanguages), the switcher keeps it.
  */
 final readonly class CmsPageHreflangListener
 {
@@ -47,6 +49,6 @@ final readonly class CmsPageHreflangListener
         // alone. SEOne fills it in first, from the current URL and a `lang`
         // parameter, which would advertise a page answering 404 — and an empty
         // address is how SEOne is told to skip a language.
-        $event->setUrl($this->alternates->forLocale($event->getLang()->getLocale()) ?? '');
+        $event->setUrl($this->alternates->advertisedForLocale($event->getLang()->getLocale()) ?? '');
     }
 }

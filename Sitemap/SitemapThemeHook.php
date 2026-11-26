@@ -20,6 +20,7 @@ use Thelia\Core\Hook\Theme\ThemeHookInterface;
 use Thelia\Model\LangQuery;
 use Thelia\Tools\URL;
 use TheliaCMS\Http\CoreUrls;
+use TheliaCMS\Page\AdvertisedLanguages;
 use TheliaCMS\Page\PublicAddress;
 use TheliaCMS\Page\ScheduledChanges;
 use TheliaCMS\TheliaCMS;
@@ -151,21 +152,22 @@ final readonly class SitemapThemeHook implements ThemeHookInterface
      * one statement and without reading any content.
      *
      * The same conditions as `PublishedPageRepository::isReachable()`: online,
-     * in the language, with an HTML to serve. The languages are the active ones
-     * only, entries and alternates alike. A language marked noindex is left out
-     * of both.
+     * in the language, with an HTML to serve. Which languages may be advertised,
+     * entries and alternates alike, is AdvertisedLanguages' rule: active,
+     * visible, not marked noindex for the page.
      *
      * @return array<int, array<string, \DateTimeImmutable>> page id, then locale
      */
     private function publishedPages(\DateTimeImmutable $now): array
     {
         $bound = $now->format('Y-m-d H:i:s');
+        $rule = AdvertisedLanguages::LANGUAGE_CONDITION;
 
-        $statement = Propel::getConnection()->prepare(<<<'SQL'
+        $statement = Propel::getConnection()->prepare(<<<SQL
             SELECT p.id AS page_id, c.locale, c.published_at
             FROM cms_page p
             INNER JOIN cms_page_content c ON c.page_id = p.id
-            INNER JOIN lang l ON l.locale = c.locale AND l.active = 1
+            INNER JOIN lang l ON l.locale = c.locale
             LEFT JOIN cms_page_i18n i ON i.id = p.id AND i.locale = c.locale
             WHERE p.deleted_at IS NULL
               AND p.visible = 1
@@ -174,7 +176,7 @@ final readonly class SitemapThemeHook implements ThemeHookInterface
               AND (p.unpublish_at IS NULL OR p.unpublish_at > :now_removal)
               AND c.published_at IS NOT NULL
               AND c.published_html IS NOT NULL
-              AND COALESCE(i.noindex, 0) = 0
+              AND {$rule}
             ORDER BY p.id, c.locale
             SQL);
         $statement->execute(['now' => $bound, 'now_removal' => $bound]);
