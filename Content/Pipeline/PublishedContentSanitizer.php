@@ -185,6 +185,15 @@ final readonly class PublishedContentSanitizer
         $config = (new HtmlSanitizerConfig())
             ->withMaxInputLength($this->maxLength)
             ->allowSafeElements()
+            // The controls of a component (the arrows and dots of a carousel, the
+            // play button of a video) are buttons: Symfony no longer counts them
+            // as safe since 7.4.24. A published button can never submit a form
+            // of the page around it: its type is always `button`, and `name`,
+            // `form` and the `form*` attributes stay out.
+            ->allowElement('button', ['type'])
+            ->forceAttribute('button', 'type', 'button')
+            // The slides and the controls a script moves the focus to.
+            ->allowAttribute('tabindex', '*')
             ->allowAttribute('class', '*')
             ->allowAttribute('id', '*')
             ->allowAttribute('style', '*')

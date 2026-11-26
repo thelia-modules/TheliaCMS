@@ -7,6 +7,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Fixed
+
+- **The buttons of a component are kept on publication again.** Since
+  `symfony/html-sanitizer` 7.4.24, which no longer counts `<button>` and
+  `tabindex` as safe, a page published on an updated site lost the arrows and
+  dots of its carousels and the play button of its embedded videos, and a
+  template holding a button was refused. They are kept again, with their focus
+  order; a published button is always of type `button`, so it cannot submit a
+  form of the page, and `name`, `form` and the `form*` attributes stay out.
+
 ## [2.42.2] - 2026-11-26
 
 ### Fixed
