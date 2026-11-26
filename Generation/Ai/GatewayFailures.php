@@ -92,8 +92,12 @@ final readonly class GatewayFailures
      * What the guard says when a call is already running for the same page
      * in the same language.
      */
-    public function alreadyRunning(\DateTimeInterface $since, ?string $name): GenerationUnavailableException
+    public function alreadyRunning(?\DateTimeInterface $since, ?string $name): GenerationUnavailableException
     {
+        if (null === $since) {
+            return GenerationUnavailableException::because($this->say('A generation is already running for this page in this language.'));
+        }
+
         return GenerationUnavailableException::because($this->say('A generation is already running for this page in this language (started at %time% by %name%).', [
             '%time%' => $since->format('H:i'),
             '%name%' => $name ?? $this->say('another editor'),

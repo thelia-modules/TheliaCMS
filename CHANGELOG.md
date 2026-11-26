@@ -18,6 +18,14 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   form of the page, and `name`, `form` and the `form*` attributes stay out.
   An exclusive accordion (`<details name>`) keeps its group: opening one
   question closes the others again.
+- **Two generations of the same page could run, and be paid, together**: two
+  editors (or one editor and a second tab) starting a generation within the
+  same instant both passed the check "a generation is already running", and
+  both called the model. The ledger now holds the page with a claim that the
+  database makes unique: the second request is refused with the usual message
+  (flash, error of the stream, failure of the command), and a finished or dead
+  call gives the page back. Update 2.42.4 interrupts all but the newest running
+  call of a page before it adds the claim.
 
 ## [2.42.2] - 2026-11-26
 
