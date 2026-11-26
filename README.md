@@ -1838,7 +1838,9 @@ category it follows the rewritten URL of that object in the other language, and
 elsewhere it carries the current path over. A switcher built on a `?lang=`
 parameter alone sends the visitor back to the home page, losing the page they
 were reading; the same addresses feed the `hreflang` tags, so the two cannot
-drift apart.
+drift apart. The switcher keeps a language where the page is noindex (a visitor
+may go there); `hreflang` and the sitemap leave out a language where the page
+is noindex or not visible.
 
 When [SEOne][seone] is installed, CMS pages describe themselves to it: title,
 description, `WebPage` microdata, and a breadcrumb built from the page tree.

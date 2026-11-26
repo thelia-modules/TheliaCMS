@@ -21,6 +21,7 @@ use Thelia\Model\ConfigQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use TheliaCMS\Http\CoreUrls;
+use TheliaCMS\Page\AdvertisedLanguages;
 use TheliaCMS\Page\PublishedPageRepository;
 use TheliaCMS\TheliaCMS;
 
@@ -38,6 +39,7 @@ final readonly class AlternateUrls
     public function __construct(
         private RequestStack $requestStack,
         private PublishedPageRepository $pages,
+        private AdvertisedLanguages $advertised,
     ) {
     }
 
@@ -106,6 +108,30 @@ final readonly class AlternateUrls
         }
 
         return $this->sameUrlAnotherLanguage($request, $locale);
+    }
+
+    /**
+     * The address of the current CMS page in `$locale` for a crawler (hreflang):
+     * `forLocale()` unless the page is noindex or not visible in that language
+     * (AdvertisedLanguages), where it has nothing to advertise.
+     *
+     * @return string|null null when the page is not to be advertised in `$locale`
+     */
+    public function advertisedForLocale(string $locale): ?string
+    {
+        $request = $this->requestStack->getMainRequest();
+
+        if (null === $request) {
+            return null;
+        }
+
+        $pageId = $request->query->getInt(TheliaCMS::PAGE_VIEW.'_id');
+
+        if ($pageId <= 0 || !$this->advertised->isAdvertised($pageId, $locale)) {
+            return null;
+        }
+
+        return $this->forLocale($locale);
     }
 
     /**

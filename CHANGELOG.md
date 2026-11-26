@@ -7,6 +7,16 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Fixed
+
+- **Hreflang and the sitemap now follow one rule**: a language where a page is
+  marked noindex or is not visible is left out of both. Until now the hreflang
+  tags kept a language where the page is noindex, and the sitemap listed a
+  language that is active but not visible, with its entry and its `xhtml:link`
+  alternate on every page. The language switcher (`cms_page_alternates()`) is
+  not advertising and does not change: it keeps a language where the page is
+  noindex, since the page exists there and a visitor may go.
+
 ## [2.42.3] - 2026-11-26
 
 ### Fixed
