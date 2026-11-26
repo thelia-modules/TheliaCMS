@@ -141,13 +141,6 @@ final readonly class PageGenerator
      */
     public function generate(GenerationRequest $request, ?GenerationObserverInterface $observer = null): GenerationResult
     {
-        $running = $this->log->runningFor($request->target, $request->locale);
-
-        if (null !== $running) {
-            // No row for a refusal: the call that runs is the one the ledger shows.
-            throw $this->failures->alreadyRunning($running->getCreatedAt() ?? new \DateTimeImmutable(), $this->log->starterOf($running));
-        }
-
         $started = hrtime(true);
         $model = '';
         $prompt = $this->prompts->userMessage($request);
@@ -215,8 +208,10 @@ final readonly class PageGenerator
         /** @var list<UntrustedContent> $pages the pages read, handed to the model as data of a third party */
         $pages = [];
 
-        // The row exists from here: whatever happens next completes it.
-        $rowId = $this->log->begin($request, $prompt);
+        // The row exists from here, and holds the page: whatever happens next
+        // completes it. A refusal writes no row: the call that runs is the one
+        // the ledger shows. Nothing paid for comes before this line.
+        $rowId = $this->log->claim($request, $prompt);
 
         // A closure over references: the tokens, the turns and the pages read
         // are what they are when the outcome is written, not when the call

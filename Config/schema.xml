@@ -765,6 +765,7 @@
         <column defaultValue="0" name="retries" required="true" type="INTEGER"/>
         <column name="tools" type="CLOB"/>
         <column name="created_by" type="INTEGER"/>
+        <column name="running_claim" type="TINYINT"/>
 
         <index name="idx_cms_page_generation_target">
             <index-column name="target_type"/>
@@ -774,6 +775,13 @@
         <index name="idx_cms_page_generation_log">
             <index-column name="log_id"/>
         </index>
+        <!-- 1 while a generation of a page runs, NULL otherwise: NULLs never collide, so a finished run blocks nothing and a second run on the same target is refused by the database. -->
+        <unique name="unq_cms_page_generation_running">
+            <unique-column name="target_type"/>
+            <unique-column name="target_id"/>
+            <unique-column name="locale"/>
+            <unique-column name="running_claim"/>
+        </unique>
 
         <behavior name="timestampable"/>
     </table>

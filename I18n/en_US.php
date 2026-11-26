@@ -1613,6 +1613,7 @@ return [
     'The generation is still running (%figures%). Come back to this page in a moment.' => 'The generation is still running (%figures%). Come back to this page in a moment.',
     'The generation was interrupted before it ended (%figures%). Nothing was changed; try again.' => 'The generation was interrupted before it ended (%figures%). Nothing was changed; try again.',
     'The generation stopped on an unexpected error. Try again, and tell the person who looks after the site if it lasts.' => 'The generation stopped on an unexpected error. Try again, and tell the person who looks after the site if it lasts.',
+    'A generation is already running for this page in this language.' => 'A generation is already running for this page in this language.',
     'A generation is already running for this page in this language (started at %time% by %name%).' => 'A generation is already running for this page in this language (started at %time% by %name%).',
     'another editor' => 'another editor',
     'The answer was cut half way: the model is asked again.' => 'The answer was cut half way: the model is asked again.',

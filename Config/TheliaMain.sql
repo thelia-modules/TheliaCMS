@@ -663,9 +663,11 @@ CREATE TABLE `cms_page_generation`
     `retries` INTEGER DEFAULT 0 NOT NULL,
     `tools` LONGTEXT,
     `created_by` INTEGER,
+    `running_claim` TINYINT,
     `created_at` TIMESTAMP NULL,
     `updated_at` TIMESTAMP NULL,
     PRIMARY KEY (`id`),
+    UNIQUE INDEX `unq_cms_page_generation_running` (`target_type`, `target_id`, `locale`, `running_claim`),
     INDEX `idx_cms_page_generation_target` (`target_type`, `target_id`, `locale`),
     INDEX `idx_cms_page_generation_log` (`log_id`)
 ) ENGINE=InnoDB CHARACTER SET='utf8mb4' COLLATE='utf8mb4_general_ci' ROW_FORMAT=DYNAMIC;

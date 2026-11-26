@@ -15,10 +15,12 @@ declare(strict_types=1);
 namespace TheliaCMS\Generation;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use Propel\Runtime\Exception\PropelException;
 use Thelia\Core\Security\SecurityContext;
 use Thelia\Domain\Ai\AiProvenance;
 use Thelia\Model\AdminQuery;
 use TheliaCMS\Content\ProvenanceMark;
+use TheliaCMS\Generation\Ai\GatewayFailures;
 use TheliaCMS\Model\CmsPageGeneration;
 use TheliaCMS\Model\CmsPageGenerationQuery;
 
@@ -49,8 +51,12 @@ final readonly class GenerationLog
     /** A change made by hand, recorded with the calls so the history reads in order. */
     public const string KIND_MANUAL = 'manual';
 
+    /** The unique index that lets one generation of a page run at a time. */
+    public const string CLAIM_INDEX = 'unq_cms_page_generation_running';
+
     public function __construct(
         private SecurityContext $securityContext,
+        private GatewayFailures $failures,
     ) {
     }
 
@@ -107,6 +113,7 @@ final readonly class GenerationLog
             ->setProvenance(ProvenanceMark::encode($provenance))
             ->setWebPages([] === $webPages ? null : json_encode(array_map(static fn (WebPageRead $page): array => $page->toArray(), $webPages), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE))
             ->setLeftOut([] === $leftOut ? null : json_encode($leftOut, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE))
+            ->setRunningClaim(null)
             ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
         self::setDetails($row, $details);
 
@@ -191,6 +198,74 @@ final readonly class GenerationLog
         $row->save();
 
         return (int) $row->getId();
+    }
+
+    /**
+     * Writes the row of a generation of a page and holds the page with it:
+     * the row carries `running_claim = 1`, and a unique index over the target,
+     * the language and the claim lets one row alone hold it. Two requests made
+     * together cannot both pass: the database refuses the second, which is
+     * read as "already running", the way a call seen running is.
+     * Every write that ends the call puts the claim back to NULL.
+     *
+     * @throws GenerationUnavailableException when a generation already runs for the page in this language
+     */
+    public function claim(GenerationRequest $request, string $prompt): int
+    {
+        // The fast path, and the only one that sees a running row written
+        // without a claim (by a text, or by a version before the claim).
+        $running = $this->runningFor($request->target, $request->locale);
+
+        if (null !== $running) {
+            throw $this->refusal($running);
+        }
+
+        $row = (new CmsPageGeneration())
+            ->setTargetType($request->target->type)
+            ->setTargetId($request->target->id)
+            ->setLocale($request->locale)
+            ->setKind($request->kind)
+            ->setPrompt($prompt)
+            ->setBrief(self::briefJson($request->brief))
+            ->setStatus(self::STATUS_RUNNING)
+            ->setCostUsd('0.000000')
+            ->setRunningClaim(1)
+            ->setCreatedBy($this->securityContext->getAdminUser()?->getId());
+
+        try {
+            $row->save();
+        } catch (PropelException $exception) {
+            if (!self::isClaimRefused($exception)) {
+                throw $exception;
+            }
+
+            // The call that holds the page may have ended since: no detail then.
+            throw $this->refusal($this->runningFor($request->target, $request->locale));
+        }
+
+        return (int) $row->getId();
+    }
+
+    /**
+     * A duplicate key (1062) on the index of the claim, and no other: a
+     * foreign key gives the same SQLSTATE 23000.
+     */
+    private static function isClaimRefused(\Throwable $exception): bool
+    {
+        for ($cause = $exception; null !== $cause; $cause = $cause->getPrevious()) {
+            if ($cause instanceof \PDOException && 1062 === ($cause->errorInfo[1] ?? null) && str_contains($cause->getMessage(), self::CLAIM_INDEX)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function refusal(?CmsPageGeneration $running): GenerationUnavailableException
+    {
+        return null === $running
+            ? $this->failures->alreadyRunning(null, null)
+            : $this->failures->alreadyRunning($running->getCreatedAt() ?? new \DateTimeImmutable(), $this->starterOf($running));
     }
 
     /**
@@ -487,7 +562,7 @@ final readonly class GenerationLog
             $query->filterByLocale($locale);
         }
 
-        $query->update(['Status' => self::STATUS_INTERRUPTED]);
+        $query->update(['Status' => self::STATUS_INTERRUPTED, 'RunningClaim' => null]);
     }
 
     private function rowOf(?int $rowId): CmsPageGeneration
