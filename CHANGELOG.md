@@ -7,6 +7,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [2.42.4] - 2026-11-26
+
 ### Fixed
 
 - **Hreflang and the sitemap now follow one rule**: a language where a page is
