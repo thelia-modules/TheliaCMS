@@ -155,7 +155,7 @@ final class GenerationClaimTest extends CmsIntegrationTestCase
      * The table of the site before the update: no column, no index, and
      * several calls running for one page.
      *
-     * Sabotage: empty 2.42.4.sql, or drop the first UPDATE of it.
+     * Sabotage: empty 2.42.3.sql, or drop the first UPDATE of it.
      */
     public function testTheUpdateKeepsTheNewestRunningCallAndInterruptsTheOthers(): void
     {
@@ -285,6 +285,6 @@ final class GenerationClaimTest extends CmsIntegrationTestCase
     {
         $connection = $this->getPropelConnection();
         self::assertInstanceOf(ConnectionInterface::class, $connection);
-        (new TheliaCMS())->update('2.42.3', '2.42.4', $connection);
+        (new TheliaCMS())->update('2.42.2', '2.42.3', $connection);
     }
 }

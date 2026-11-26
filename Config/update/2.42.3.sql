@@ -1,4 +1,4 @@
--- 2.42.4: a second generation of a page, in the same language, is refused by
+-- 2.42.3: a second generation of a page, in the same language, is refused by
 -- the database itself. Until now the guard read the ledger, then wrote the
 -- row of the call some lines later: two requests made together both passed
 -- and both paid the model.
