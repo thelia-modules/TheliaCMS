@@ -7,6 +7,8 @@ this module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [2.42.3] - 2026-11-26
+
 ### Fixed
 
 - **The buttons of a component are kept on publication again.** Since
